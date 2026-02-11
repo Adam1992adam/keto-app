@@ -1,0 +1,350 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { supabase, getProfile, isSubscriptionActive } from '../../lib/supabase';
+
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+if (!accessToken) return Astro.redirect('/login');
+
+const { data: { user } } = await supabase.auth.getUser(accessToken);
+if (!user) return Astro.redirect('/login');
+
+const profile = await getProfile(user.id);
+if (!profile || !isSubscriptionActive(profile)) {
+  return Astro.redirect('/dashboard/upgrade');
+}
+
+const weekParam = Astro.url.searchParams.get('week') || '1';
+const weekNumber = parseInt(weekParam);
+const startDay = (weekNumber - 1) * 7 + 1;
+const endDay = startDay + 6;
+
+const { data: mealPlans } = await supabase
+  .from('meal_plans')
+  .select('*, recipe:recipes(*)')
+  .eq('plan_type', 'basic_30')
+  .gte('day_number', startDay)
+  .lte('day_number', endDay)
+  .order('day_number');
+
+// Smart ingredient aggregation
+const ingredientMap = new Map();
+
+mealPlans?.forEach(meal => {
+  if (meal.recipe?.ingredients) {
+    meal.recipe.ingredients.forEach((ing: any) => {
+      const key = ing.item.toLowerCase().trim();
+      if (ingredientMap.has(key)) {
+        const existing = ingredientMap.get(key);
+        const newAmount = parseFloat(existing.amount || 0) + parseFloat(ing.amount || 0);
+        ingredientMap.set(key, {
+          item: ing.item,
+          amount: Math.ceil(newAmount * 10) / 10, // Round up
+          unit: existing.unit || ing.unit,
+          count: existing.count + 1
+        });
+      } else {
+        ingredientMap.set(key, { ...ing, count: 1 });
+      }
+    });
+  }
+});
+
+const shoppingList = Array.from(ingredientMap.values()).sort((a, b) => 
+  a.item.localeCompare(b.item)
+);
+
+// Smart categorization
+const categories: any = {
+  'Proteins & Meat': {
+    keywords: ['eggs', 'chicken', 'beef', 'pork', 'salmon', 'shrimp', 'tuna', 'bacon', 'sausage', 'ham', 'steak', 'ribeye', 'pepperoni'],
+    icon: '🥩',
+    tip: 'Buy in bulk and freeze portions for savings'
+  },
+  'Dairy & Cheese': {
+    keywords: ['cheese', 'butter', 'cream', 'yogurt', 'feta', 'parmesan', 'mozzarella', 'cheddar', 'ricotta', 'blue cheese'],
+    icon: '🧀',
+    tip: 'Check expiry dates - buy what you\'ll use this week'
+  },
+  'Fresh Vegetables': {
+    keywords: ['avocado', 'spinach', 'lettuce', 'broccoli', 'asparagus', 'cauliflower', 'zucchini', 'tomato', 'cucumber', 'pepper', 'mushroom', 'onion', 'celery', 'green beans'],
+    icon: '🥬',
+    tip: 'Buy fresh and store properly to last the week'
+  },
+  'Nuts & Seeds': {
+    keywords: ['almonds', 'macadamia', 'pine nuts', 'chia', 'peanut'],
+    icon: '🥜',
+    tip: 'Buy in bulk and store in airtight containers'
+  },
+  'Pantry Staples': {
+    keywords: ['olive oil', 'coconut', 'almond flour', 'soy sauce', 'mustard', 'mayo', 'vanilla', 'baking powder', 'protein powder', 'cocoa'],
+    icon: '🏺',
+    tip: 'Stock up on these - they last months'
+  },
+  'Herbs & Spices': {
+    keywords: ['salt', 'pepper', 'garlic', 'paprika', 'thyme', 'basil', 'ginger', 'chives', 'dill', 'rosemary', 'cinnamon'],
+    icon: '🌿',
+    tip: 'Fresh herbs add amazing flavor - grow your own!'
+  }
+};
+
+const categorizedList: any = {};
+Object.keys(categories).forEach(cat => {
+  categorizedList[cat] = [];
+});
+categorizedList['Other'] = [];
+
+shoppingList.forEach(item => {
+  let categorized = false;
+  for (const [category, data] of Object.entries(categories)) {
+    if ((data as any).keywords.some((kw: string) => item.item.toLowerCase().includes(kw))) {
+      categorizedList[category].push(item);
+      categorized = true;
+      break;
+    }
+  }
+  if (!categorized) {
+    categorizedList['Other'].push(item);
+  }
+});
+
+// Calculate total items and estimated cost
+const totalItems = shoppingList.length;
+const estimatedCost = shoppingList.reduce((sum, item) => {
+  const basePrices: any = {
+    'eggs': 0.3, 'chicken': 3, 'beef': 5, 'cheese': 4, 'butter': 0.5,
+    'avocado': 1.5, 'broccoli': 2, 'almonds': 1
+  };
+  const key = Object.keys(basePrices).find(k => item.item.toLowerCase().includes(k));
+  return sum + (key ? basePrices[key] * item.count : 2);
+}, 0);
+---
+
+<BaseLayout title="Shopping List - Keto App">
+  <div class="min-h-screen bg-gradient-to-br from-emerald-50 to-green-50">
+    
+    <nav class="bg-white shadow-md border-b sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <a href="/dashboard" class="text-2xl font-bold text-emerald-600 flex items-center gap-2">
+            <span>🥑</span>
+            <span>Keto App</span>
+          </a>
+          
+          <div class="flex items-center gap-4">
+            <a href="/dashboard" class="text-emerald-600 hover:text-emerald-700 font-medium">
+              ← Dashboard
+            </a>
+            <span class="text-gray-700 font-medium">{profile.full_name}</span>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-emerald-600 to-green-600 rounded-2xl shadow-2xl p-8 mb-8 text-white">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div>
+            <h1 class="text-4xl font-bold mb-2">🛒 Smart Shopping List</h1>
+            <p class="text-emerald-100 text-lg">Week {weekNumber} • Days {startDay}-{endDay}</p>
+            <p class="text-emerald-200 text-sm mt-1">Automatically calculated from your meal plan</p>
+          </div>
+          <div class="text-center bg-white/20 backdrop-blur-sm rounded-xl p-4">
+            <p class="text-emerald-100 text-sm">Estimated Total</p>
+            <p class="text-4xl font-bold">${Math.round(estimatedCost)}</p>
+            <p class="text-emerald-200 text-xs">{totalItems} items</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Smart Tips -->
+      <div class="grid md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-blue-500">
+          <div class="flex items-start gap-3">
+            <span class="text-3xl">💡</span>
+            <div>
+              <h3 class="font-bold text-gray-800 mb-1">Smart Tip</h3>
+              <p class="text-sm text-gray-600">Shop once a week to save time and reduce impulse buys</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-green-500">
+          <div class="flex items-start gap-3">
+            <span class="text-3xl">💰</span>
+            <div>
+              <h3 class="font-bold text-gray-800 mb-1">Save Money</h3>
+              <p class="text-sm text-gray-600">Buy proteins in bulk and freeze for later use</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-purple-500">
+          <div class="flex items-start gap-3">
+            <span class="text-3xl">📱</span>
+            <div>
+              <h3 class="font-bold text-gray-800 mb-1">Pro Tip</h3>
+              <p class="text-sm text-gray-600">Print or screenshot this list before heading to the store</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-wrap gap-4 mb-8">
+        <button 
+          onclick="window.print()" 
+          class="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white font-semibold rounded-xl shadow-lg hover:bg-emerald-700 hover:shadow-xl transition-all"
+        >
+          <span class="text-xl">🖨️</span>
+          <span>Print List</span>
+        </button>
+        
+        <button 
+          onclick="copyToClipboard()" 
+          class="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all"
+        >
+          <span class="text-xl">📋</span>
+          <span>Copy List</span>
+        </button>
+      </div>
+
+      <!-- Shopping List -->
+      <div class="bg-white rounded-2xl shadow-2xl p-8 mb-8" id="shopping-list-content">
+        
+        <!-- Print Header -->
+        <div class="text-center mb-8 print-only hidden">
+          <h2 class="text-3xl font-bold text-gray-900 mb-2">Keto Shopping List</h2>
+          <p class="text-gray-600">Week {weekNumber} • {new Date().toLocaleDateString()}</p>
+        </div>
+
+        {Object.entries(categorizedList).map(([category, items]: [string, any]) => (
+          items.length > 0 && (
+            <div class="mb-8 page-break-inside-avoid">
+              <div class="flex items-center gap-3 mb-4 pb-3 border-b-2 border-emerald-500">
+                <span class="text-3xl">{categories[category]?.icon || '📦'}</span>
+                <h3 class="text-xl font-bold text-gray-900">{category}</h3>
+                <span class="ml-auto text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                  {items.length} items
+                </span>
+              </div>
+              
+              {categories[category]?.tip && (
+                <div class="bg-emerald-50 border-l-4 border-emerald-500 p-3 mb-4 rounded no-print">
+                  <p class="text-sm text-emerald-800">💡 <strong>Tip:</strong> {categories[category].tip}</p>
+                </div>
+              )}
+              
+              <ul class="space-y-2">
+                {items.map((item: any, idx: number) => (
+                  <li class="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg transition group">
+                    <input 
+                      type="checkbox" 
+                      id={'item-' + category + '-' + idx}
+                      class="mt-1 w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500 no-print cursor-pointer"
+                    />
+                    <label for={'item-' + category + '-' + idx} class="flex-1 cursor-pointer">
+                      <div class="flex items-baseline gap-2">
+                        <span class="font-semibold text-gray-800">
+                          {item.amount} {item.unit}
+                        </span>
+                        <span class="text-gray-700">{item.item}</span>
+                        {item.count > 1 && (
+                          <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                            {item.count} recipes
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        ))}
+
+        <!-- Summary -->
+        <div class="mt-8 pt-8 border-t-2 border-gray-200 text-center">
+          <div class="grid md:grid-cols-3 gap-4 mb-4">
+            <div class="bg-blue-50 rounded-lg p-4">
+              <p class="text-3xl font-bold text-blue-600">{totalItems}</p>
+              <p class="text-sm text-gray-600">Total Items</p>
+            </div>
+            <div class="bg-green-50 rounded-lg p-4">
+              <p class="text-3xl font-bold text-green-600">${Math.round(estimatedCost)}</p>
+              <p class="text-sm text-gray-600">Est. Cost</p>
+            </div>
+            <div class="bg-purple-50 rounded-lg p-4">
+              <p class="text-3xl font-bold text-purple-600">Week {weekNumber}</p>
+              <p class="text-sm text-gray-600">Meal Plan</p>
+            </div>
+          </div>
+          <p class="text-xs text-gray-500">Generated on {new Date().toLocaleDateString()} • Keto App</p>
+        </div>
+      </div>
+
+      <!-- Week Navigation -->
+      <div class="flex justify-center gap-4 mb-8">
+        {weekNumber > 1 && (
+          <a 
+            href={'/dashboard/shopping-list?week=' + (weekNumber - 1)}
+            class="px-6 py-3 bg-white border-2 border-emerald-500 text-emerald-700 rounded-xl hover:bg-emerald-50 transition font-semibold shadow-md"
+          >
+            ← Week {weekNumber - 1}
+          </a>
+        )}
+        {weekNumber < 4 && (
+          <a 
+            href={'/dashboard/shopping-list?week=' + (weekNumber + 1)}
+            class="px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition font-semibold shadow-lg"
+          >
+            Week {weekNumber + 1} →
+          </a>
+        )}
+      </div>
+
+    </main>
+  </div>
+
+  <style>
+    @media print {
+      nav, .no-print, button {
+        display: none !important;
+      }
+      
+      .print-only {
+        display: block !important;
+      }
+      
+      body {
+        background: white !important;
+      }
+      
+      .page-break-inside-avoid {
+        page-break-inside: avoid;
+      }
+      
+      #shopping-list-content {
+        box-shadow: none !important;
+        border: 1px solid #ddd;
+      }
+    }
+  </style>
+
+  <script is:inline>
+    function copyToClipboard() {
+      const items = [];
+      document.querySelectorAll('label').forEach(label => {
+        const text = label.textContent.trim();
+        if (text && !text.includes('recipes')) {
+          items.push('□ ' + text.replace(/\s+/g, ' '));
+        }
+      });
+      
+      navigator.clipboard.writeText(items.join('\n')).then(() => {
+        alert('✅ Shopping list copied to clipboard!');
+      });
+    }
+  </script>
+</BaseLayout>

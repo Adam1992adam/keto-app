@@ -1,0 +1,204 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { supabase, getProfile, isSubscriptionActive } from '../../lib/supabase';
+
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+if (!accessToken) return Astro.redirect('/login');
+
+const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken);
+if (authError || !user) return Astro.redirect('/login');
+
+const profile = await getProfile(user.id);
+if (!profile) return Astro.redirect('/login');
+
+const hasAccess = isSubscriptionActive(profile);
+if (!hasAccess) return Astro.redirect('/dashboard/upgrade');
+
+// جلب اليوم من الرابط بشكل ديناميكي
+const dayParam = Astro.url.searchParams.get('day');
+const currentDay = dayParam ? parseInt(dayParam) : 1;
+const planType = 'basic_30';
+
+const { data: mealPlans } = await supabase
+  .from('meal_plans')
+  .select('*, recipe:recipes(*)')
+  .eq('plan_type', planType)
+  .eq('day_number', currentDay)
+  .order('order_index');
+
+const todayMeals = mealPlans || [];
+
+const totalMacros = todayMeals.reduce((acc, meal) => {
+  const r = meal.recipe || {};
+  return {
+    calories: acc.calories + (r.calories || 0),
+    protein: acc.protein + (r.protein || 0),
+    fat: acc.fat + (r.fat || 0),
+    carbs: acc.carbs + (r.net_carbs || 0),
+  };
+}, { calories: 0, protein: 0, fat: 0, carbs: 0 });
+
+const welcome = Astro.url.searchParams.get('welcome');
+
+const mealEmojis = {
+  breakfast: '☀️',
+  lunch: '🌞',
+  dinner: '🌙',
+  snack: '🍎',
+};
+
+const mealNames = {
+  breakfast: 'Breakfast',
+  lunch: 'Lunch',
+  dinner: 'Dinner',
+  snack: 'Snack',
+};
+---
+
+<BaseLayout title="Dashboard - Keto App">
+  <div class="min-h-screen bg-emerald-50/30">
+    
+    <nav class="bg-white shadow-sm border-b sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <a href="/dashboard" class="text-2xl font-bold text-emerald-600">
+            🥑 Keto App
+          </a>
+          
+          <div class="flex items-center gap-6">
+            <div class="hidden md:flex items-center gap-4">
+              <a href="/dashboard" class="text-emerald-600 font-semibold">Dashboard</a>
+              <a href="/dashboard/shopping-list" class="text-gray-600 hover:text-emerald-600 transition">Shopping</a>
+              <a href="/dashboard/profile" class="text-gray-600 hover:text-emerald-600 transition">Profile</a>
+            </div>
+
+            <div class="flex items-center gap-4 border-l pl-4">
+              <span class="text-gray-700 font-medium">{profile.full_name}</span>
+              <form action="/api/auth/logout" method="POST">
+                <button type="submit" class="text-red-600 hover:text-red-700 font-medium transition text-sm">
+                  Logout
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      
+      <div class="bg-emerald-600 rounded-2xl shadow-xl p-8 mb-8 text-white">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-4xl font-bold mb-2">Day {currentDay} Progress</h1>
+            <p class="text-emerald-100 text-lg">You're {Math.round((currentDay/30)*100)}% through your journey! 🎯</p>
+          </div>
+          <div class="text-7xl">🥑</div>
+        </div>
+      </div>
+
+      {welcome && (
+        <div class="bg-green-50 border-2 border-green-300 rounded-xl p-6 mb-8">
+          <h2 class="text-2xl font-bold text-green-800 mb-2">
+            🎉 Welcome {profile.full_name}!
+          </h2>
+          <p class="text-green-700">Your account is ready. Let's start!</p>
+        </div>
+      )}
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-xl shadow-md p-6 border-t-4 border-emerald-500">
+          <h3 class="text-gray-600 text-sm font-semibold uppercase">Current Plan</h3>
+          <p class="text-4xl font-bold text-emerald-600">30 Days</p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-6 border-t-4 border-blue-500">
+          <h3 class="text-gray-600 text-sm font-semibold uppercase">Current Day</h3>
+          <p class="text-4xl font-bold text-gray-800">{currentDay} / 30</p>
+          <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+            <div class="bg-blue-500 h-2 rounded-full" style={`width: ${(currentDay / 30) * 100}%`}></div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-6 border-t-4 border-purple-500">
+          <h3 class="text-gray-600 text-sm font-semibold uppercase">Remaining</h3>
+          <p class="text-4xl font-bold text-purple-600">{30 - currentDay} Days</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-lg p-8 mb-8">
+        <div class="flex justify-between items-center mb-8">
+          <h2 class="text-3xl font-bold text-gray-900">🍽️ Today's Meals</h2>
+          <div class="flex gap-2">
+            <a href={currentDay > 1 ? `/dashboard?day=${currentDay - 1}` : '#'} 
+               class={`px-4 py-2 rounded-lg font-medium transition ${currentDay > 1 ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+               ← Prev
+            </a>
+            <a href={currentDay < 30 ? `/dashboard?day=${currentDay + 1}` : '#'} 
+               class={`px-4 py-2 rounded-lg font-medium transition ${currentDay < 30 ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
+               Next →
+            </a>
+          </div>
+        </div>
+
+        <div class="mb-6">
+          <a 
+            href="/dashboard/shopping-list?week=1" 
+            class="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+          >
+            <span class="text-2xl">🛒</span>
+            <span>View This Week's Shopping List</span>
+          </a>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6">
+          {todayMeals.length > 0 ? (
+            todayMeals.map((meal) => (
+              <div class="border-2 border-gray-100 rounded-xl overflow-hidden hover:border-emerald-500 transition-all">
+                {meal.recipe?.image_url && (
+                  <img src={meal.recipe.image_url} alt="" class="w-full h-48 object-cover" />
+                )}
+                <div class="p-6">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span>{mealEmojis[meal.meal_type]}</span>
+                    <span class="font-bold text-emerald-700 uppercase text-sm">{mealNames[meal.meal_type]}</span>
+                  </div>
+                  <h3 class="text-xl font-bold mb-4">{meal.recipe?.title}</h3>
+                  <div class="grid grid-cols-4 gap-2 text-center text-xs mb-4">
+                    <div class="bg-gray-50 p-2 rounded"><strong>{meal.recipe?.calories}</strong><br/>Cal</div>
+                    <div class="bg-gray-50 p-2 rounded"><strong>{meal.recipe?.protein}g</strong><br/>Prot</div>
+                    <div class="bg-gray-50 p-2 rounded"><strong>{meal.recipe?.fat}g</strong><br/>Fat</div>
+                    <div class="bg-gray-50 p-2 rounded"><strong>{meal.recipe?.net_carbs}g</strong><br/>Carbs</div>
+                  </div>
+                  <a href={`/dashboard/recipe/${meal.recipe?.id}`} class="block w-full text-center bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 transition">
+                    View Recipe
+                  </a>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div class="col-span-2 text-center py-12 text-gray-400">No meals found for today.</div>
+          )}
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-lg p-8">
+        <h2 class="text-2xl font-bold mb-6 text-gray-800">📆 30-Day Plan</h2>
+        <div class="grid grid-cols-7 gap-2 sm:gap-4">
+          {Array.from({ length: 30 }, (_, i) => i + 1).map((day) => (
+            <a 
+              href={`/dashboard?day=${day}`}
+              class={`aspect-square flex items-center justify-center rounded-lg font-bold transition-all border-2 
+                ${day === currentDay 
+                  ? 'bg-emerald-600 text-white border-emerald-600 scale-105 shadow-md' 
+                  : 'bg-white text-gray-600 border-gray-100 hover:border-emerald-300'}`}
+            >
+              {day}
+            </a>
+          ))}
+        </div>
+      </div>
+
+    </main>
+  </div>
+</BaseLayout>
