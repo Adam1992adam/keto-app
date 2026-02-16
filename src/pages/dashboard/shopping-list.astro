@@ -18,6 +18,11 @@ const weekNumber = parseInt(weekParam);
 const startDay = (weekNumber - 1) * 7 + 1;
 const endDay = startDay + 6;
 
+// Validate week (1-5 for 30 days)
+if (weekNumber < 1 || weekNumber > 5) {
+  return Astro.redirect('/dashboard/shopping-list?week=1');
+}
+
 const { data: mealPlans } = await supabase
   .from('meal_plans')
   .select('*, recipe:recipes(*)')
@@ -294,7 +299,7 @@ const estimatedCost = shoppingList.reduce((sum, item) => {
             ← Week {weekNumber - 1}
           </a>
         )}
-        {weekNumber < 4 && (
+        {weekNumber < 5 && (
           <a 
             href={'/dashboard/shopping-list?week=' + (weekNumber + 1)}
             class="px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition font-semibold shadow-lg"

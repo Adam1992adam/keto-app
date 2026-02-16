@@ -1,227 +1,374 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
-import { supabase, getProfile, isSubscriptionActive } from '../../../lib/supabase';
+import { supabase, getProfile, getUserJourney, getDailyTasks } from '../../../lib/supabase';
 
-// Auth check
+const { id } = Astro.params;
 const accessToken = Astro.cookies.get('sb-access-token')?.value;
+
 if (!accessToken) return Astro.redirect('/login');
 
 const { data: { user } } = await supabase.auth.getUser(accessToken);
 if (!user) return Astro.redirect('/login');
 
 const profile = await getProfile(user.id);
-if (!profile || !isSubscriptionActive(profile)) {
-  return Astro.redirect('/dashboard/upgrade');
-}
+const journey = await getUserJourney(user.id);
 
-// Get recipe ID from URL
-const { id } = Astro.params;
+if (!profile || !journey) return Astro.redirect('/login');
 
-// Fetch recipe
-const { data: recipe, error } = await supabase
+// Get recipe
+const { data: recipe } = await supabase
   .from('recipes')
   .select('*')
   .eq('id', id)
   .single();
 
-if (error || !recipe) {
-  return Astro.redirect('/dashboard');
-}
+if (!recipe) return Astro.redirect('/dashboard');
 
-// Difficulty colors
+// Find which meal plan this recipe belongs to
+const { data: mealPlan } = await supabase
+  .from('meal_plans')
+  .select('*')
+  .eq('recipe_id', id)
+  .eq('day_number', journey.current_day)
+  .single();
+
+// Get daily tasks to check completion status
+const dailyTasks = await getDailyTasks(user.id, journey.current_day);
+const task = mealPlan ? dailyTasks.find(t => t.task_type === mealPlan.meal_type) : null;
+const isCompleted = task?.completed || false;
+const canComplete = mealPlan && !isCompleted;
+
+// Parse JSON fields
+const ingredients = recipe.ingredients || [];
+const instructions = recipe.instructions || [];
+const tips = recipe.tips || [];
+const tags = recipe.tags || [];
+
+// Difficulty badge colors
 const difficultyColors = {
-  easy: 'bg-green-100 text-green-800 border-green-300',
-  medium: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  hard: 'bg-red-100 text-red-800 border-red-300',
+  easy: 'emerald',
+  medium: 'blue',
+  hard: 'orange'
 };
 
-const difficultyLabels = {
-  easy: 'Easy',
-  medium: 'Medium',
-  hard: 'Hard',
-};
+const difficultyColor = difficultyColors[recipe.difficulty] || 'gray';
 ---
 
-<BaseLayout title={recipe.title + ' - Keto App'}>
-  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50">
+<BaseLayout title={`${recipe.title} - Keto Journey`}>
+  <div class="min-h-screen pb-12">
+    
     <!-- Navigation -->
-    <nav class="bg-white shadow-sm border-b sticky top-0 z-10">
+    <nav class="nav-premium">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
-          <div class="flex items-center gap-4">
-            <a href="/dashboard" class="text-2xl font-bold text-primary-600">
-              🥑 Keto App
-            </a>
-            <span class="text-gray-400">|</span>
-            <a href="/dashboard" class="text-gray-600 hover:text-primary-600 transition">
-              ← Back to Dashboard
-            </a>
-          </div>
+          <a href="/dashboard" class="flex items-center gap-3">
+            <span class="text-4xl">🥑</span>
+            <span class="text-xl font-bold text-gradient-emerald">Keto Journey</span>
+          </a>
           
           <div class="flex items-center gap-4">
-            <span class="text-gray-700">{profile.full_name}</span>
-            <form action="/api/auth/logout" method="POST">
-              <button type="submit" class="text-red-600 hover:text-red-700 font-medium">
-                Logout
-              </button>
-            </form>
+            <a href="/dashboard" class="btn-ghost">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+              </svg>
+              Back to Dashboard
+            </a>
           </div>
         </div>
       </div>
     </nav>
 
-    <main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Recipe Header with Gradient -->
-      <div class="bg-gradient-to-r from-primary-600 to-emerald-600 rounded-2xl shadow-xl p-8 mb-8 text-white">
-        <div class="flex items-start justify-between mb-4">
-          <div class="flex-1">
-            <h1 class="text-4xl font-bold mb-3">{recipe.title}</h1>
-            <p class="text-primary-100 text-lg">{recipe.description}</p>
-          </div>
-          <div>
-            <span class={'px-4 py-2 rounded-full text-sm font-semibold border-2 ' + difficultyColors[recipe.difficulty]}>
-              {difficultyLabels[recipe.difficulty]}
-            </span>
-          </div>
-        </div>
-
-        <!-- Quick Info -->
-        <div class="flex flex-wrap gap-6 mt-6">
-          <div class="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm">
-            <span class="text-2xl">⏱️</span>
-            <div>
-              <p class="text-xs text-primary-100">Prep Time</p>
-              <p class="font-semibold">{recipe.prep_time} min</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm">
-            <span class="text-2xl">🍳</span>
-            <div>
-              <p class="text-xs text-primary-100">Cook Time</p>
-              <p class="font-semibold">{recipe.cook_time} min</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg backdrop-blur-sm">
-            <span class="text-2xl">🍽️</span>
-            <div>
-              <p class="text-xs text-primary-100">Servings</p>
-              <p class="font-semibold">{recipe.servings}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Nutrition Facts - Cards Grid -->
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <div class="bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-200 rounded-xl p-4 text-center hover:shadow-lg transition-all">
-          <p class="text-3xl font-bold text-red-600">{recipe.calories}</p>
-          <p class="text-sm text-red-700 font-medium">Calories</p>
-        </div>
-        <div class="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl p-4 text-center hover:shadow-lg transition-all">
-          <p class="text-3xl font-bold text-blue-600">{recipe.protein}g</p>
-          <p class="text-sm text-blue-700 font-medium">Protein</p>
-        </div>
-        <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-yellow-200 rounded-xl p-4 text-center hover:shadow-lg transition-all">
-          <p class="text-3xl font-bold text-yellow-600">{recipe.fat}g</p>
-          <p class="text-sm text-yellow-700 font-medium">Fat</p>
-        </div>
-        <div class="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-xl p-4 text-center hover:shadow-lg transition-all">
-          <p class="text-3xl font-bold text-green-600">{recipe.net_carbs}g</p>
-          <p class="text-sm text-green-700 font-medium">Net Carbs</p>
-        </div>
-        <div class="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl p-4 text-center hover:shadow-lg transition-all">
-          <p class="text-3xl font-bold text-purple-600">{recipe.fiber}g</p>
-          <p class="text-sm text-purple-700 font-medium">Fiber</p>
-        </div>
-        <div class="bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-200 rounded-xl p-4 text-center hover:shadow-lg transition-all">
-          <p class="text-3xl font-bold text-orange-600">{recipe.carbs}g</p>
-          <p class="text-sm text-orange-700 font-medium">Total Carbs</p>
-        </div>
-      </div>
-
-      <div class="grid lg:grid-cols-2 gap-8">
-        <!-- Ingredients -->
-        <div class="bg-white rounded-2xl shadow-lg p-6 border-2 border-primary-100">
-          <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <span class="text-3xl">🛒</span>
-            Ingredients
-          </h2>
-          <ul class="space-y-3">
-            {recipe.ingredients.map((ingredient, index) => (
-              <li class="flex items-start gap-3 p-3 rounded-lg hover:bg-primary-50 transition-colors">
-                <input 
-                  type="checkbox" 
-                  id={'ingredient-' + index}
-                  class="mt-1 w-5 h-5 text-primary-600 rounded focus:ring-primary-500"
-                />
-                <label for={'ingredient-' + index} class="flex-1 cursor-pointer">
-                  <span class="font-medium text-gray-800">{ingredient.amount} {ingredient.unit}</span>
-                  <span class="text-gray-700"> {ingredient.item}</span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <!-- Instructions -->
-        <div class="bg-white rounded-2xl shadow-lg p-6 border-2 border-primary-100">
-          <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <span class="text-3xl">👨‍🍳</span>
-            Instructions
-          </h2>
-          <ol class="space-y-4">
-            {recipe.instructions.map((step, index) => (
-              <li class="flex gap-4">
-                <span class="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-full flex items-center justify-center font-bold shadow-md">
-                  {index + 1}
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      
+      <!-- Recipe Header with Image -->
+      <div class="mb-8 animate-slide-up-fade">
+        {recipe.image_url && (
+          <div class="relative h-96 rounded-3xl overflow-hidden shadow-2xl mb-8">
+            <img 
+              src={recipe.image_url} 
+              alt={recipe.title}
+              class="w-full h-full object-cover"
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+            
+            <div class="absolute inset-x-0 bottom-0 p-8">
+              <div class="flex flex-wrap items-center gap-3 mb-4">
+                <span class={`badge badge-${difficultyColor} text-base px-4 py-2 backdrop-blur-sm bg-white/90`}>
+                  {recipe.difficulty.charAt(0).toUpperCase() + recipe.difficulty.slice(1)}
                 </span>
-                <p class="flex-1 text-gray-700 pt-1">{step}</p>
-              </li>
-            ))}
-          </ol>
+                <span class="badge bg-white/90 text-gray-700 text-base px-4 py-2 backdrop-blur-sm">
+                  ⏱️ {recipe.prep_time + recipe.cook_time} mins total
+                </span>
+                <span class="badge bg-white/90 text-gray-700 text-base px-4 py-2 backdrop-blur-sm">
+                  🍽️ {recipe.servings} serving{recipe.servings > 1 ? 's' : ''}
+                </span>
+                {isCompleted && (
+                  <span class="badge-gradient text-base px-4 py-2 backdrop-blur-sm animate-pulse-ring">
+                    ✓ Completed
+                  </span>
+                )}
+              </div>
+              <h1 class="text-5xl font-bold text-white mb-3">{recipe.title}</h1>
+              <p class="text-xl text-white/90 max-w-3xl">{recipe.description}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-8">
+        
+        <!-- Main Content -->
+        <div class="lg:col-span-2 space-y-8">
+          
+          <!-- Macros Overview -->
+          <div class="card-premium p-8 animate-scale-in">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <span class="text-3xl">📊</span>
+              Nutrition Facts
+            </h2>
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+              <div class="text-center p-6 bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl border-2 border-red-200 shadow-sm">
+                <p class="text-4xl font-bold text-red-600 mb-2">{recipe.calories}</p>
+                <p class="text-sm font-bold text-red-600 uppercase tracking-wide">Calories</p>
+              </div>
+              <div class="text-center p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl border-2 border-blue-200 shadow-sm">
+                <p class="text-4xl font-bold text-blue-600 mb-2">{recipe.protein}g</p>
+                <p class="text-sm font-bold text-blue-600 uppercase tracking-wide">Protein</p>
+              </div>
+              <div class="text-center p-6 bg-gradient-to-br from-yellow-50 to-amber-50 rounded-2xl border-2 border-yellow-200 shadow-sm">
+                <p class="text-4xl font-bold text-yellow-600 mb-2">{recipe.fat}g</p>
+                <p class="text-sm font-bold text-yellow-600 uppercase tracking-wide">Fat</p>
+              </div>
+              <div class="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border-2 border-green-200 shadow-sm">
+                <p class="text-4xl font-bold text-green-600 mb-2">{recipe.net_carbs}g</p>
+                <p class="text-sm font-bold text-green-600 uppercase tracking-wide">Net Carbs</p>
+              </div>
+              <div class="text-center p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border-2 border-purple-200 shadow-sm">
+                <p class="text-4xl font-bold text-purple-600 mb-2">{recipe.fiber}g</p>
+                <p class="text-sm font-bold text-purple-600 uppercase tracking-wide">Fiber</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ingredients -->
+          <div class="card-premium p-8 animate-slide-up-fade">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <span class="text-3xl">🛒</span>
+              Ingredients
+            </h2>
+            <div class="space-y-3">
+              {ingredients.map((ingredient, index) => (
+                <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-xl hover:bg-emerald-50 transition-all group animate-slide-up-fade" style={`animation-delay: ${index * 0.05}s`}>
+                  <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md group-hover:scale-110 transition-transform">
+                    {index + 1}
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-lg font-semibold text-gray-900">
+                      {ingredient.amount} {ingredient.unit} {ingredient.item}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <!-- Instructions -->
+          <div class="card-premium p-8 animate-slide-up-fade">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <span class="text-3xl">👨‍🍳</span>
+              Instructions
+            </h2>
+            <div class="space-y-6">
+              {instructions.map((instruction, index) => (
+                <div class="flex gap-6 animate-slide-up-fade" style={`animation-delay: ${index * 0.1}s`}>
+                  <div class="flex-shrink-0">
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                      {index + 1}
+                    </div>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-lg text-gray-700 leading-relaxed">{instruction}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <!-- Tips -->
+          {tips.length > 0 && (
+            <div class="card-premium p-8 bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200 animate-scale-in">
+              <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <span class="text-3xl">💡</span>
+                Pro Tips
+              </h2>
+              <div class="space-y-4">
+                {tips.map((tip, index) => (
+                  <div class="flex items-start gap-4 animate-fade-in" style={`animation-delay: ${index * 0.1}s`}>
+                    <span class="text-2xl">✨</span>
+                    <p class="text-lg text-gray-700 leading-relaxed">{tip}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
-      </div>
 
-      <!-- Tips (if available) -->
-      {recipe.tips && recipe.tips.length > 0 && (
-        <div class="mt-8 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-2xl p-6 shadow-lg">
-          <h2 class="text-2xl font-bold text-blue-900 mb-4 flex items-center gap-2">
-            <span class="text-3xl">💡</span>
-            Chef's Tips
-          </h2>
-          <ul class="space-y-2">
-            {recipe.tips.map((tip) => (
-              <li class="flex items-start gap-2 text-blue-800">
-                <span class="text-blue-500 mt-1">▸</span>
-                <span>{tip}</span>
-              </li>
-            ))}
-          </ul>
+        <!-- Sidebar -->
+        <div class="space-y-6">
+          
+          <!-- Quick Info Card -->
+          <div class="card-premium p-6 sticky top-24 space-y-6">
+            
+            <!-- Time Info -->
+            <div>
+              <h3 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">Time Required</h3>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
+                  <span class="text-gray-700 font-medium">Prep Time</span>
+                  <span class="font-bold text-blue-600">{recipe.prep_time} min</span>
+                </div>
+                <div class="flex items-center justify-between p-3 bg-orange-50 rounded-xl">
+                  <span class="text-gray-700 font-medium">Cook Time</span>
+                  <span class="font-bold text-orange-600">{recipe.cook_time} min</span>
+                </div>
+                <div class="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-500 to-green-600 rounded-xl text-white shadow-lg">
+                  <span class="font-bold">Total Time</span>
+                  <span class="font-bold text-xl">{recipe.prep_time + recipe.cook_time} min</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-gray-100 pt-6">
+              <h3 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">Details</h3>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-600">Difficulty</span>
+                  <span class={`badge badge-${difficultyColor} capitalize`}>
+                    {recipe.difficulty}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-600">Servings</span>
+                  <span class="font-bold text-gray-900">{recipe.servings}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tags -->
+            {tags.length > 0 && (
+              <div class="border-t border-gray-100 pt-6">
+                <h3 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">Tags</h3>
+                <div class="flex flex-wrap gap-2">
+                  {tags.map(tag => (
+                    <span class="badge-blue text-sm capitalize">{tag}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <!-- Action Button -->
+            {canComplete && (
+              <form action="/api/tasks/complete" method="POST" class="border-t border-gray-100 pt-6" id="complete-form">
+                <input type="hidden" name="taskType" value={mealPlan.meal_type} />
+                <button 
+                  type="submit"
+                  class="btn-primary w-full btn-lg shadow-2xl"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  Mark as Completed
+                </button>
+              </form>
+            )}
+
+            {isCompleted && (
+              <div class="border-t border-gray-100 pt-6">
+                <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-2xl p-6 text-center">
+                  <div class="text-5xl mb-3 animate-bounce">✅</div>
+                  <p class="font-bold text-green-700 text-lg">Already Completed!</p>
+                  <p class="text-sm text-green-600 mt-2">You earned +{task?.xp_earned || 25} XP</p>
+                </div>
+              </div>
+            )}
+
+            <!-- Quick Actions -->
+            <div class="border-t border-gray-100 pt-6 space-y-3">
+              <a href="/dashboard" class="btn-secondary w-full">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                </svg>
+                Back to Dashboard
+              </a>
+              <button 
+                onclick="window.print()" 
+                class="btn-ghost w-full"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                </svg>
+                Print Recipe
+              </button>
+            </div>
+
+          </div>
+
         </div>
-      )}
 
-      <!-- Action Buttons -->
-      <div class="mt-8 flex flex-wrap gap-4 justify-center">
-        <button class="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-xl transition-all transform hover:scale-105">
-          ✓ Mark as Completed
-        </button>
-        <button class="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-xl transition-all transform hover:scale-105">
-          ⭐ Save to Favorites
-        </button>
-        <button class="bg-gradient-to-r from-gray-700 to-gray-800 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-xl transition-all transform hover:scale-105">
-          🖨️ Print Recipe
-        </button>
       </div>
 
-      <!-- Back Button -->
-      <div class="mt-8 text-center">
-        <a 
-          href="/dashboard" 
-          class="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-semibold"
-        >
-          ← Back to Dashboard
-        </a>
-      </div>
     </main>
   </div>
+
+  <script>
+    const form = document.getElementById('complete-form');
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        const taskType = formData.get('taskType');
+
+        try {
+          const res = await fetch('/api/tasks/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ taskType })
+          });
+
+          if (res.ok) {
+            // Show success notification
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 card-premium p-6 shadow-2xl z-50 animate-slide-up-fade max-w-sm';
+            notification.innerHTML = `
+              <div class="flex items-center gap-4">
+                <span class="text-5xl">🎉</span>
+                <div>
+                  <p class="font-bold text-gray-900 text-lg">Task Completed!</p>
+                  <p class="text-sm text-gray-600">You earned XP points</p>
+                </div>
+              </div>
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          alert('Failed to complete task. Please try again.');
+        }
+      });
+    }
+  </script>
+
+  <style>
+    @media print {
+      nav, .sidebar, button {
+        display: none !important;
+      }
+    }
+  </style>
 </BaseLayout>

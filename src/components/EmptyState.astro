@@ -1,0 +1,52 @@
+---
+interface Props {
+  icon?: string;
+  title: string;
+  description: string;
+  actionText?: string;
+  actionUrl?: string;
+  actionOnClick?: string;
+}
+
+const { icon = '📭', title, description, actionText, actionUrl, actionOnClick } = Astro.props;
+---
+
+<div class="flex flex-col items-center justify-center py-16 px-4 text-center">
+  <div class="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-6 animate-float">
+    <span class="text-7xl opacity-50">{icon}</span>
+  </div>
+  
+  <h3 class="text-2xl font-bold text-gray-900 mb-3">{title}</h3>
+  <p class="text-gray-600 max-w-md mb-8">{description}</p>
+  
+  {(actionText && (actionUrl || actionOnClick)) && (
+    actionUrl ? (
+      <a 
+        href={actionUrl}
+        class="btn-primary btn-lg inline-flex items-center gap-2"
+      >
+        <span>✨</span>
+        <span>{actionText}</span>
+      </a>
+    ) : (
+      <button 
+        onclick={actionOnClick}
+        class="btn-primary btn-lg inline-flex items-center gap-2"
+      >
+        <span>✨</span>
+        <span>{actionText}</span>
+      </button>
+    )
+  )}
+</div>
+
+<style>
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+</style>

@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { supabase, getProfile, isSubscriptionActive, getWeightLogs, getAchievements, calculateBMI, calculateCalorieTarget } from '../../lib/supabase';
+import { supabase, getProfile, isSubscriptionActive, getWeightLogs, getUserJourney, getDailyTasks, getWaterIntake, getXPTransactions, calculateBMI, calculateCalorieTarget } from '../../lib/supabase';
 
 const accessToken = Astro.cookies.get('sb-access-token')?.value;
 if (!accessToken) return Astro.redirect('/login');
@@ -13,43 +13,69 @@ if (!profile || !isSubscriptionActive(profile)) {
   return Astro.redirect('/dashboard/upgrade');
 }
 
+// Get Journey Data
+const journey = await getUserJourney(user.id);
+const currentDay = journey?.current_day || 1;
+
+// ✅ إضافة المتغيرات للـ Notifications
+const dailyTasks = await getDailyTasks(user.id, currentDay);
+const waterIntake = await getWaterIntake(user.id, currentDay);
+const canInteract = true;
+const incompleteTasks = dailyTasks?.filter(t => !t.completed) || [];
+
 // Get comprehensive stats
 const weightLogs = await getWeightLogs(user.id, 30);
-const achievements = await getAchievements(user.id);
 
-// Get completed days with full details
-const { data: completedDays } = await supabase
-  .from('daily_progress')
+// Get all tasks for all days to calculate stats
+const { data: allTasks } = await supabase
+  .from('daily_tasks')
   .select('*')
   .eq('user_id', user.id)
-  .order('day_number', { ascending: false });
+  .order('day_number', { ascending: true });
 
-const totalDaysCompleted = completedDays?.length || 0;
+// Get XP transactions
+const xpTransactions = await getXPTransactions(user.id, 30);
 
-// Calculate current streak
-function calculateStreak(days: any[]) {
-  if (!days.length) return 0;
-  let streak = 0;
-  const today = new Date().setHours(0, 0, 0, 0);
-  let checkDate = new Date(days[0].completed_at).setHours(0, 0, 0, 0);
-  
-  for (const day of days) {
-    const dayDate = new Date(day.completed_at).setHours(0, 0, 0, 0);
-    const diff = Math.floor((checkDate - dayDate) / (1000 * 60 * 60 * 24));
-    
-    if (diff === 0 || diff === 1) {
-      streak++;
-      checkDate = dayDate - (1000 * 60 * 60 * 24);
-    } else {
-      break;
-    }
-  }
-  
-  return streak;
+// Completion data by day
+const completionData = [];
+for (let day = 1; day <= Math.min(journey.current_day, 30); day++) {
+  const dayTasks = allTasks?.filter(t => t.day_number === day) || [];
+  const dayCompleted = dayTasks.filter(t => t.completed).length;
+  const dayTotal = dayTasks.length;
+  const percentage = dayTotal > 0 ? Math.round((dayCompleted / dayTotal) * 100) : 0;
+  completionData.push({ 
+    day, 
+    percentage, 
+    completed: dayCompleted, 
+    total: dayTotal 
+  });
 }
 
-const currentStreak = calculateStreak(completedDays || []);
-const longestStreak = currentStreak;
+console.log('Completion Data:', completionData);
+
+// XP data by day
+const xpData = [];
+let cumulativeXP = 0;
+for (let day = 1; day <= Math.min(journey.current_day, 30); day++) {
+  const dayXP = xpTransactions?.filter(t => t.day_number === day)
+    .reduce((sum, t) => sum + (t.xp_amount || 0), 0) || 0;
+  cumulativeXP += dayXP;
+  xpData.push({ 
+    day, 
+    xp: cumulativeXP, 
+    daily: dayXP 
+  });
+}
+
+console.log('XP Data:', xpData);
+
+// Stats from Journey
+const totalDaysCompleted = journey?.current_day ? journey.current_day - 1 : 0;
+const currentStreak = journey?.streak_days || 0;
+const longestStreak = journey?.longest_streak || 0;
+const perfectDays = journey?.perfect_days || 0;
+const totalXP = journey?.total_xp || 0;
+const level = journey?.level || 1;
 
 // Weight stats
 const currentWeight = profile.weight_kg || 0;
@@ -87,16 +113,18 @@ const daysLeft = profile.subscription_end_date
 
 const subscriptionProgress = daysLeft > 0 ? ((30 - daysLeft) / 30) * 100 : 100;
 
-// Achievement system
+// Achievement system updated
 const achievementsList = [
-  { id: 'first_day', name: 'First Step', description: 'Complete your first day', icon: '🎯', unlocked: totalDaysCompleted >= 1 },
-  { id: 'week_1', name: 'Week Warrior', description: 'Complete 7 days', icon: '📅', unlocked: totalDaysCompleted >= 7 },
-  { id: 'week_2', name: 'Two Weeks Strong', description: 'Complete 14 days', icon: '💪', unlocked: totalDaysCompleted >= 14 },
+  { id: 'first_day', name: 'First Step', description: 'Complete your first day', icon: '🎯', unlocked: perfectDays >= 1 },
+  { id: 'week_1', name: 'Week Warrior', description: 'Complete 7 days perfectly', icon: '📅', unlocked: perfectDays >= 7 },
+  { id: 'week_2', name: 'Two Weeks Strong', description: 'Complete 14 days perfectly', icon: '💪', unlocked: perfectDays >= 14 },
   { id: 'streak_7', name: 'On Fire', description: '7 day streak', icon: '🔥', unlocked: currentStreak >= 7 },
+  { id: 'level_5', name: 'Level Master', description: 'Reach Level 5', icon: '⭐', unlocked: level >= 5 },
+  { id: 'xp_500', name: 'XP Hunter', description: 'Earn 500 XP', icon: '🏅', unlocked: totalXP >= 500 },
   { id: 'weight_loss_1kg', name: 'First Kilo', description: 'Lose 1kg', icon: '⚖️', unlocked: weightChange >= 1 },
   { id: 'weight_loss_5kg', name: 'Five Down', description: 'Lose 5kg', icon: '🏆', unlocked: weightChange >= 5 },
-  { id: 'halfway', name: 'Halfway Hero', description: 'Complete 15 days', icon: '⭐', unlocked: totalDaysCompleted >= 15 },
-  { id: 'champion', name: 'Keto Champion', description: 'Complete 30 days', icon: '👑', unlocked: totalDaysCompleted >= 30 },
+  { id: 'halfway', name: 'Halfway Hero', description: 'Reach Day 15', icon: '🌟', unlocked: currentDay >= 15 },
+  { id: 'champion', name: 'Keto Champion', description: 'Complete 30 days', icon: '👑', unlocked: currentDay >= 30 },
 ];
 
 const unlockedAchievements = achievementsList.filter(a => a.unlocked);
@@ -112,16 +140,38 @@ const chartData = weightLogs.length > 0
 
 const chartDataJSON = JSON.stringify(chartData);
 
-// Activity summary
-const totalMealsCompleted = completedDays?.reduce((sum, day) => sum + (day.meals_completed || 0), 0) || 0;
-const totalWaterGlasses = completedDays?.reduce((sum, day) => sum + (day.water_glasses || 0), 0) || 0;
-const totalExerciseMinutes = completedDays?.reduce((sum, day) => sum + (day.exercise_minutes || 0), 0) || 0;
+// Prepare completion chart data
+const completionChartData = completionData.map(d => ({
+  day: 'Day ' + d.day,
+  percentage: d.percentage
+}));
+const completionChartJSON = JSON.stringify(completionChartData);
+
+// Prepare XP chart data
+const xpChartData = xpData.map(d => ({
+  day: 'Day ' + d.day,
+  xp: d.xp
+}));
+const xpChartJSON = JSON.stringify(xpChartData);
+
+// Activity summary from tasks
+const totalTasksCompleted = allTasks?.filter(t => t.completed).length || 0;
+const totalMealsCompleted = allTasks?.filter(t => t.completed && ['breakfast', 'lunch', 'dinner', 'snack'].includes(t.task_type)).length || 0;
+
+// Water glasses from water_intake table
+const { data: waterData } = await supabase
+  .from('water_intake')
+  .select('glasses_count')
+  .eq('user_id', user.id);
+const totalWaterGlasses = waterData?.reduce((sum, w) => sum + w.glasses_count, 0) || 0;
+
+const totalExerciseMinutes = 0; // Placeholder - not tracking exercise yet
 ---
 
 <BaseLayout title="Profile - Keto App">
   <div class="min-h-screen bg-gradient-to-br from-gray-50 via-emerald-50 to-green-50">
     
-    <!-- Premium Navigation -->
+    <!-- Premium Navigation with Notification Bell -->
     <nav class="bg-white/80 backdrop-blur-xl shadow-lg border-b border-gray-200 sticky top-0 z-50">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
@@ -131,22 +181,111 @@ const totalExerciseMinutes = completedDays?.reduce((sum, day) => sum + (day.exer
           </a>
           
           <div class="flex items-center gap-6">
-            <a href="/dashboard" class="text-gray-600 hover:text-emerald-600 transition font-medium flex items-center gap-2">
-              <span>📊</span>
-              <span>Dashboard</span>
-            </a>
-            <a href="/dashboard/shopping-list" class="text-gray-600 hover:text-emerald-600 transition font-medium flex items-center gap-2">
-              <span>🛒</span>
-              <span>Shopping</span>
-            </a>
-            <span class="text-emerald-700 font-bold flex items-center gap-2">
-              <span>👤</span>
-              <span>Profile</span>
-            </span>
+            <!-- Navigation Links -->
+            <div class="flex items-center gap-4">
+              <a href="/dashboard" class="text-gray-600 hover:text-emerald-600 transition font-medium flex items-center gap-2">
+                <span>📊</span>
+                <span>Dashboard</span>
+              </a>
+              <a href="/dashboard/shopping-list" class="text-gray-600 hover:text-emerald-600 transition font-medium flex items-center gap-2">
+                <span>🛒</span>
+                <span>Shopping</span>
+              </a>
+              <span class="text-emerald-700 font-bold flex items-center gap-2">
+                <span>👤</span>
+                <span>Profile</span>
+              </span>
+            </div>
+
+            <!-- Notification Bell (only if there are incomplete tasks) -->
+            <div class="flex items-center gap-3 pl-4 border-l border-gray-200">
+              {incompleteTasks.length > 0 && (
+                <button
+                  onclick="toggleNotificationPanel()"
+                  class="relative p-2 rounded-xl hover:bg-gray-100 transition-all group"
+                  id="notification-bell-btn"
+                >
+                  <svg class="w-6 h-6 text-gray-600 group-hover:text-emerald-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                  </svg>
+                  <span class="absolute -top-1 -right-1 bg-gradient-to-br from-red-500 to-pink-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse shadow-lg">
+                    {incompleteTasks.length}
+                  </span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
     </nav>
+
+    <!-- Notification Panel (Hidden by default) -->
+    {incompleteTasks.length > 0 && (
+      <div 
+        id="notification-panel" 
+        class="fixed top-20 right-6 z-40 hidden max-w-md w-full animate-slide-in-right"
+      >
+        <div class="card-premium p-6 shadow-2xl bg-white rounded-2xl">
+          <!-- Header -->
+          <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+            <div class="flex items-center gap-3">
+              <span class="text-3xl">🔔</span>
+              <div>
+                <h3 class="text-lg font-bold text-gray-900">Notifications</h3>
+                <p class="text-xs text-gray-500">Day {currentDay} Updates</p>
+              </div>
+            </div>
+            <button
+              onclick="toggleNotificationPanel()"
+              class="text-gray-400 hover:text-gray-600"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Task List -->
+          <div class="space-y-2 max-h-96 overflow-y-auto">
+            {incompleteTasks.map(task => (
+              <div class="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition flex items-center justify-between group">
+                <div class="flex items-center gap-3 flex-1">
+                  <span class="text-2xl">
+                    {task.task_type === 'breakfast' && '🍳'}
+                    {task.task_type === 'lunch' && '🥗'}
+                    {task.task_type === 'dinner' && '🍽️'}
+                    {task.task_type === 'snack' && '🍎'}
+                    {task.task_type === 'water' && '💧'}
+                    {task.task_type === 'weight' && '⚖️'}
+                    {task.task_type === 'reflection' && '📝'}
+                  </span>
+                  <div class="flex-1">
+                    <p class="font-semibold text-gray-900 text-sm">{task.task_title}</p>
+                    <p class="text-xs text-gray-500">+{task.xp_earned} XP</p>
+                  </div>
+                </div>
+                
+                  href="/dashboard"
+                  class="opacity-0 group-hover:opacity-100 transition-opacity bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1 rounded-lg text-sm font-semibold"
+                >
+                  Go
+                </a>
+              </div>
+            ))}
+          </div>
+
+          <!-- Quick Action -->
+          <div class="mt-4 pt-4 border-t border-gray-200">
+            
+              href="/dashboard"
+              class="block w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold py-3 px-4 rounded-xl text-center hover:shadow-lg transition-all"
+            >
+              📊 Go to Dashboard
+            </a>
+          </div>
+        </div>
+      </div>
+    )}
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       
@@ -422,6 +561,88 @@ const totalExerciseMinutes = completedDays?.reduce((sum, day) => sum + (day.exer
                     <span class="text-2xl">➕</span>
                     <span>Add Your First Weight Entry</span>
                   </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <!-- 🆕 XP Progress Chart -->
+          <div class="bg-gradient-to-br from-white to-yellow-50 rounded-2xl shadow-xl p-8 border-2 border-yellow-100">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <span class="text-3xl">⚡</span>
+              <span>XP Progress</span>
+            </h2>
+            
+            {xpData.length > 0 ? (
+              <div class="space-y-6">
+                <div class="relative h-80 bg-white rounded-2xl p-6 shadow-inner border border-gray-100">
+                  <canvas id="xpChart"></canvas>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-4">
+                  <div class="bg-gradient-to-br from-yellow-50 to-orange-100 rounded-2xl p-5 border-2 border-yellow-200">
+                    <p class="text-xs font-semibold text-yellow-600 uppercase mb-1">Total XP</p>
+                    <p class="text-4xl font-bold text-yellow-700">{totalXP}</p>
+                  </div>
+                  
+                  <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-5 border-2 border-purple-200">
+                    <p class="text-xs font-semibold text-purple-600 uppercase mb-1">Level</p>
+                    <p class="text-4xl font-bold text-purple-700">{level}</p>
+                  </div>
+                  
+                  <div class="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl p-5 border-2 border-green-200">
+                    <p class="text-xs font-semibold text-green-600 uppercase mb-1">To Next</p>
+                    <p class="text-4xl font-bold text-green-700">{100 - (totalXP % 100)}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div class="h-64 flex items-center justify-center text-gray-400">
+                <div class="text-center">
+                  <span class="text-6xl mb-4 block">⚡</span>
+                  <p>Start completing tasks to earn XP!</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <!-- 🆕 Daily Completion Chart -->
+          <div class="bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-xl p-8 border-2 border-blue-100">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <span class="text-3xl">📊</span>
+              <span>Daily Completion Rate</span>
+            </h2>
+            
+            {completionData.length > 0 ? (
+              <div class="space-y-6">
+                <div class="relative h-80 bg-white rounded-2xl p-6 shadow-inner border border-gray-100">
+                  <canvas id="completionChart"></canvas>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-4">
+                  <div class="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl p-5 border-2 border-green-200">
+                    <p class="text-xs font-semibold text-green-600 uppercase mb-1">Perfect Days</p>
+                    <p class="text-4xl font-bold text-green-700">{perfectDays}</p>
+                  </div>
+                  
+                  <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-5 border-2 border-blue-200">
+                    <p class="text-xs font-semibold text-blue-600 uppercase mb-1">Tasks Done</p>
+                    <p class="text-4xl font-bold text-blue-700">{totalTasksCompleted}</p>
+                  </div>
+                  
+                  <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-5 border-2 border-orange-200">
+                    <p class="text-xs font-semibold text-orange-600 uppercase mb-1">Avg Rate</p>
+                    <p class="text-4xl font-bold text-orange-700">
+                      {completionData.length > 0 ? Math.round(completionData.reduce((sum, d) => sum + d.percentage, 0) / completionData.length) : 0}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div class="h-64 flex items-center justify-center text-gray-400">
+                <div class="text-center">
+                  <span class="text-6xl mb-4 block">📊</span>
+                  <p>Complete your first day to see stats!</p>
                 </div>
               </div>
             )}
@@ -1014,6 +1235,126 @@ const totalExerciseMinutes = completedDays?.reduce((sum, day) => sum + (day.exer
     }
   </script>
 
+  <!-- 🆕 XP Chart Script -->
+  <script define:vars={{ xpChartJSON }}>
+    const xpChartData = JSON.parse(xpChartJSON);
+    
+    if (xpChartData.length > 0) {
+      const canvas = document.getElementById('xpChart');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        
+        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(234, 179, 8, 0.5)');
+        gradient.addColorStop(1, 'rgba(234, 179, 8, 0)');
+        
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: xpChartData.map(d => d.day),
+            datasets: [{
+              label: 'Total XP',
+              data: xpChartData.map(d => d.xp),
+              borderColor: '#eab308',
+              backgroundColor: gradient,
+              borderWidth: 3,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 5,
+              pointHoverRadius: 8,
+              pointBackgroundColor: '#eab308',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                padding: 12,
+                callbacks: {
+                  label: (context) => context.parsed.y + ' XP'
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                ticks: {
+                  callback: (value) => value + ' XP'
+                }
+              },
+              x: {
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+    }
+  </script>
+
+  <!-- 🆕 Completion Chart Script -->
+  <script define:vars={{ completionChartJSON }}>
+    const completionChartData = JSON.parse(completionChartJSON);
+    
+    if (completionChartData.length > 0) {
+      const canvas = document.getElementById('completionChart');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: completionChartData.map(d => d.day),
+            datasets: [{
+              label: 'Completion %',
+              data: completionChartData.map(d => d.percentage),
+              backgroundColor: completionChartData.map(d => 
+                d.percentage === 100 ? '#10b981' : 
+                d.percentage >= 75 ? '#3b82f6' :
+                d.percentage >= 50 ? '#f59e0b' : '#ef4444'
+              ),
+              borderRadius: 8,
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                padding: 12,
+                callbacks: {
+                  label: (context) => context.parsed.y + '% completed'
+                }
+              }
+            },
+            scales: {
+              y: {
+                min: 0,
+                max: 100,
+                grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                ticks: {
+                  callback: (value) => value + '%'
+                }
+              },
+              x: {
+                grid: { display: false }
+              }
+            }
+          }
+        });
+      }
+    }
+  </script>
+
   <!-- Form Handlers -->
   <script is:inline>
     // Avatar Upload
@@ -1159,4 +1500,92 @@ const totalExerciseMinutes = completedDays?.reduce((sum, day) => sum + (day.exer
       animation: shimmer 2s infinite;
     }
   </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+
+<script is:inline define:vars={{ chartDataJSON, xpChartJSON, completionChartJSON }}>
+  // ننتظر حتى يتم تحميل الصفحة والمكتبة بالكامل
+  window.addEventListener('load', function() {
+    if (typeof Chart === 'undefined') {
+      console.error('Chart.js failed to load!');
+      return;
+    }
+
+    // --- إعدادات عامة للرسوم البيانية ---
+    const commonOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: false, grid: { display: false } },
+        x: { grid: { display: false } }
+      }
+    };
+
+    // --- 1. رسم بياني للوزن ---
+    const weightCtx = document.getElementById('weightChart');
+    if (weightCtx) {
+      const data = JSON.parse(chartDataJSON);
+      new Chart(weightCtx, {
+        type: 'line',
+        data: {
+          labels: data.map(d => d.date),
+          datasets: [{
+            data: data.map(d => d.weight),
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 3
+          }]
+        },
+        options: commonOptions
+      });
+    }
+
+    // --- 2. رسم بياني للـ XP ---
+    const xpCtx = document.getElementById('xpChart');
+    if (xpCtx) {
+      const data = JSON.parse(xpChartJSON);
+      new Chart(xpCtx, {
+        type: 'line',
+        data: {
+          labels: data.map(d => d.day),
+          datasets: [{
+            data: data.map(d => d.xp),
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 3
+          }]
+        },
+        options: commonOptions
+      });
+    }
+
+    // --- 3. رسم بياني لمعدل الإكمال ---
+    const completionCtx = document.getElementById('completionChart');
+    if (completionCtx) {
+      const data = JSON.parse(completionChartJSON);
+      new Chart(completionCtx, {
+        type: 'bar',
+        data: {
+          labels: data.map(d => d.day),
+          datasets: [{
+            data: data.map(d => d.percentage),
+            backgroundColor: '#3b82f6',
+            borderRadius: 8
+          }]
+        },
+        options: {
+          ...commonOptions,
+          scales: { y: { beginAtZero: true, max: 100 } }
+        }
+      });
+    }
+  });
+</script>
+
 </BaseLayout>
+

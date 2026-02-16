@@ -1,0 +1,345 @@
+---
+interface Props {
+  tasks: any[];
+  waterIntake: any;
+  currentDay: number;
+  canInteract: boolean;
+}
+
+const { tasks, waterIntake, currentDay, canInteract } = Astro.props;
+
+const incompleteTasks = tasks.filter(t => !t.completed);
+const totalTasks = tasks.length;
+const completedTasks = totalTasks - incompleteTasks.length;
+const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+// Check specific task types
+const needsBreakfast = incompleteTasks.some(t => t.task_type === 'breakfast');
+const needsLunch = incompleteTasks.some(t => t.task_type === 'lunch');
+const needsDinner = incompleteTasks.some(t => t.task_type === 'dinner');
+const needsWater = waterIntake?.glasses_count < waterIntake?.target_glasses;
+
+// Time-based suggestions
+const hour = new Date().getHours();
+let timeSuggestion = '';
+let suggestionIcon = '✨';
+
+if (hour >= 6 && hour < 10 && needsBreakfast) {
+  timeSuggestion = 'Good morning! Time for breakfast';
+  suggestionIcon = '☀️';
+} else if (hour >= 12 && hour < 14 && needsLunch) {
+  timeSuggestion = 'Lunchtime! Don\'t skip your meal';
+  suggestionIcon = '🌞';
+} else if (hour >= 18 && hour < 21 && needsDinner) {
+  timeSuggestion = 'Dinner time! Complete your evening meal';
+  suggestionIcon = '🌙';
+} else if (needsWater) {
+  timeSuggestion = 'Stay hydrated! Drink some water';
+  suggestionIcon = '💧';
+}
+
+// Motivational messages
+let motivationMessage = '';
+if (progressPercent === 100) {
+  motivationMessage = 'Perfect! You completed all tasks today!';
+  suggestionIcon = '🎉';
+} else if (progressPercent >= 75) {
+  motivationMessage = 'Almost there! Just a few more tasks';
+  suggestionIcon = '🔥';
+} else if (progressPercent >= 50) {
+  motivationMessage = 'Great progress! Keep it up';
+  suggestionIcon = '💪';
+} else if (progressPercent >= 25) {
+  motivationMessage = 'Good start! Stay focused';
+  suggestionIcon = '🎯';
+} else {
+  motivationMessage = 'Let\'s make today count!';
+  suggestionIcon = '✨';
+}
+
+const displayMessage = timeSuggestion || motivationMessage;
+---
+
+<!-- Floating Notification Bell -->
+<div class="fixed top-20 right-6 z-50">
+  <button
+    onclick="toggleNotificationPanel()"
+    class="relative bg-gradient-to-br from-emerald-500 to-green-600 text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-all duration-300 animate-pulse-glow"
+    id="notification-bell"
+  >
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+    </svg>
+    {incompleteTasks.length > 0 && (
+      <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center animate-bounce">
+        {incompleteTasks.length}
+      </span>
+    )}
+  </button>
+</div>
+
+<!-- Notification Panel (Hidden by default) -->
+<div 
+  id="notification-panel" 
+  class="fixed top-20 right-6 z-40 hidden max-w-md w-full animate-slide-in-right"
+>
+  <div class="card-premium p-6 shadow-2xl">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+      <div class="flex items-center gap-3">
+        <span class="text-3xl">{suggestionIcon}</span>
+        <div>
+          <h3 class="text-lg font-bold text-gray-900">Notifications</h3>
+          <p class="text-xs text-gray-500">Day {currentDay} Updates</p>
+        </div>
+      </div>
+      <button
+        onclick="toggleNotificationPanel()"
+        class="text-gray-400 hover:text-gray-600"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Main Message -->
+    {canInteract && incompleteTasks.length > 0 && (
+      <div class="mb-4">
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-xl border-2 border-purple-200">
+          <p class="font-bold text-gray-900 mb-2">{displayMessage}</p>
+          <div class="flex items-center gap-2 mb-3">
+            <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                class="h-full bg-gradient-to-r from-emerald-500 to-green-600 transition-all duration-500"
+                style={`width: ${progressPercent}%`}
+              ></div>
+            </div>
+            <span class="text-sm font-bold text-emerald-600">{progressPercent}%</span>
+          </div>
+          <p class="text-sm text-gray-600">
+            {incompleteTasks.length} task{incompleteTasks.length !== 1 ? 's' : ''} remaining
+          </p>
+        </div>
+      </div>
+    )}
+
+    <!-- Task List -->
+    {incompleteTasks.length > 0 ? (
+      <div class="space-y-2 max-h-96 overflow-y-auto">
+        {incompleteTasks.map(task => (
+          <div class="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition flex items-center justify-between group">
+            <div class="flex items-center gap-3 flex-1">
+              <span class="text-2xl">
+                {task.task_type === 'breakfast' && '🍳'}
+                {task.task_type === 'lunch' && '🥗'}
+                {task.task_type === 'dinner' && '🍽️'}
+                {task.task_type === 'snack' && '🍎'}
+                {task.task_type === 'water' && '💧'}
+                {task.task_type === 'weight' && '⚖️'}
+                {task.task_type === 'reflection' && '📝'}
+              </span>
+              <div class="flex-1">
+                <p class="font-semibold text-gray-900 text-sm">{task.task_title}</p>
+                <p class="text-xs text-gray-500">+{task.xp_earned} XP</p>
+              </div>
+            </div>
+            <button
+              onclick={`quickCompleteTask('${task.task_type}')`}
+              class="opacity-0 group-hover:opacity-100 transition-opacity btn-primary btn-sm"
+            >
+              ✓
+            </button>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <div class="text-center py-8">
+        <span class="text-6xl mb-4 block">🎉</span>
+        <p class="font-bold text-gray-900 text-lg">All Done!</p>
+        <p class="text-gray-600 text-sm">You completed all tasks for today</p>
+      </div>
+    )}
+
+    <!-- Water Reminder -->
+    {needsWater && (
+      <div class="mt-4 pt-4 border-t border-gray-200">
+        <div class="bg-gradient-to-r from-cyan-50 to-blue-50 p-4 rounded-lg border-2 border-blue-200">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl animate-pulse">💧</span>
+              <div>
+                <p class="font-bold text-sm text-gray-900">Hydration Alert</p>
+                <p class="text-xs text-gray-600">
+                  {waterIntake.glasses_count}/{waterIntake.target_glasses} glasses
+                </p>
+              </div>
+            </div>
+            <button
+              onclick="scrollToWater()"
+              class="btn-primary btn-sm"
+            >
+              Track
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+</div>
+
+<!-- Banner Version (Optional - shows at top of page) -->
+{canInteract && incompleteTasks.length > 0 && incompleteTasks.length <= 3 && (
+  <div class="card-premium p-4 mb-6 bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 border-2 border-purple-200 animate-slide-down">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl animate-bounce">{suggestionIcon}</span>
+        <div>
+          <p class="font-bold text-gray-900">{displayMessage}</p>
+          <p class="text-sm text-gray-600">{incompleteTasks.length} task{incompleteTasks.length !== 1 ? 's' : ''} left</p>
+        </div>
+      </div>
+      <button
+        onclick="document.querySelector('.animate-slide-down')?.remove()"
+        class="text-gray-400 hover:text-gray-600"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+)}
+
+<!-- Toast Container -->
+<div id="toast-container" class="fixed bottom-6 right-6 z-50 space-y-3 max-w-sm">
+</div>
+
+<script is:inline>
+  function toggleNotificationPanel() {
+    const panel = document.getElementById('notification-panel');
+    const bell = document.getElementById('notification-bell');
+    
+    if (panel && bell) {
+      if (panel.classList.contains('hidden')) {
+        panel.classList.remove('hidden');
+        bell.classList.add('scale-110');
+      } else {
+        panel.classList.add('hidden');
+        bell.classList.remove('scale-110');
+      }
+    }
+  }
+
+  function scrollToWater() {
+    document.getElementById('water-glasses')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    toggleNotificationPanel();
+  }
+
+  async function quickCompleteTask(taskType) {
+    try {
+      const res = await fetch('/api/tasks/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskType })
+      });
+
+      if (res.ok) {
+        showToast('✅ Task completed! +XP earned', 'success');
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        showToast('❌ Failed to complete task', 'error');
+      }
+    } catch (error) {
+      showToast('❌ An error occurred', 'error');
+    }
+  }
+
+  function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const colors = {
+      success: 'from-green-500 to-emerald-600',
+      error: 'from-red-500 to-pink-600',
+      info: 'from-blue-500 to-cyan-600'
+    };
+
+    const toast = document.createElement('div');
+    toast.className = `
+      bg-gradient-to-r ${colors[type]} text-white p-4 rounded-xl shadow-2xl 
+      animate-slide-in-right flex items-center gap-3
+    `;
+    
+    toast.innerHTML = `
+      <span class="text-2xl">
+        ${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}
+      </span>
+      <p class="font-semibold">${message}</p>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.animation = 'slide-out-right 0.3s ease-out';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+
+  // Make functions global
+  window.showToast = showToast;
+  window.quickCompleteTask = quickCompleteTask;
+  window.toggleNotificationPanel = toggleNotificationPanel;
+  window.scrollToWater = scrollToWater;
+
+  // Auto-show notification on page load if there are tasks
+  setTimeout(() => {
+    const incompleteTasks = document.querySelectorAll('#notification-panel .group').length;
+    if (incompleteTasks > 0 && incompleteTasks <= 3) {
+      // showToast('💡 You have ' + incompleteTasks + ' pending tasks!', 'info');
+    }
+  }, 2000);
+</script>
+
+<style>
+  @keyframes slide-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(100px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-out-right {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(100px);
+    }
+  }
+
+  @keyframes slide-down {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.4s ease-out;
+  }
+
+  .animate-slide-down {
+    animation: slide-down 0.5s ease-out;
+  }
+</style>

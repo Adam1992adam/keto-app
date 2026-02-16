@@ -321,3 +321,18 @@ export async function getDayCompletionRate(userId: string, dayNumber: number): P
   const completedTasks = tasks.filter(t => t.completed).length;
   return Math.round((completedTasks / tasks.length) * 100);
 }
+
+// 🆕 Update current_day based on time passed
+export async function updateCurrentDay(userId: string) {
+  try {
+    const { data, error } = await supabase.rpc('update_current_day', {
+      user_id_param: userId
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error updating current day:', error);
+    return null;
+  }
+}

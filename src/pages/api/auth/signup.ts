@@ -1,3 +1,4 @@
+// src/pages/api/auth/signup.ts
 import type { APIRoute } from 'astro';
 import { supabase } from '../../../lib/supabase';
 
@@ -16,7 +17,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     return redirect('/signup?error=weak');
   }
 
-  // Sign up the user
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -24,7 +24,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       data: {
         full_name: fullName,
       },
-      // تعطيل تأكيد البريد الإلكتروني
       emailRedirectTo: undefined,
     },
   });
@@ -41,7 +40,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     return redirect('/signup?error=auth');
   }
 
-  // Calculate end date based on plan
   const endDate = new Date();
   switch (plan) {
     case 'advanced_6m':
@@ -50,12 +48,12 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     case 'pro_12m':
       endDate.setDate(endDate.getDate() + 365);
       break;
-    default: // basic_30
+    default:
       endDate.setDate(endDate.getDate() + 30);
   }
 
-  // Create profile (with error handling)
   try {
+    // 1. Create profile
     const { error: profileError } = await supabase.from('profiles').insert({
       id: data.user.id,
       email,
@@ -69,11 +67,31 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     if (profileError) {
       console.error('Profile creation error:', profileError);
     }
+
+    // 🆕 2. Create journey
+    const { error: journeyError } = await supabase.from('user_journey').insert({
+      user_id: data.user.id,
+      start_date: new Date().toISOString().split('T')[0],
+      current_day: 1,
+      status: 'active',
+      total_xp: 0,
+      level: 1,
+    });
+
+    if (journeyError) {
+      console.error('Journey creation error:', journeyError);
+    }
+
+    // 🆕 3. Initialize Day 1 tasks
+    await supabase.rpc('initialize_daily_tasks', {
+      user_id_param: data.user.id,
+      day_number_param: 1
+    });
+
   } catch (err) {
-    console.error('Profile creation failed:', err);
+    console.error('Setup failed:', err);
   }
 
-  // Set session cookies if session exists
   if (data.session) {
     cookies.set('sb-access-token', data.session.access_token, {
       path: '/',
@@ -91,10 +109,8 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       maxAge: 60 * 60 * 24 * 30,
     });
 
-    // Redirect to dashboard
     return redirect('/dashboard?welcome=true');
   }
 
-  // If no session (email confirmation required)
   return redirect('/login?message=Account created! Please check your email to confirm.');
 };
