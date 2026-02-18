@@ -1,8 +1,9 @@
-import type { APIRoute } from 'astro';
+mport type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 
 export const GET: APIRoute = async ({ request, locals }) => {
 try {
+// الوصول لبيئة تشغيل كلوفلار ستحل مشكلة Error 500
 // @ts-ignore
 const env = locals.runtime?.env;
 
