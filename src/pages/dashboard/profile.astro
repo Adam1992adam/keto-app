@@ -1,6 +1,12 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import { supabase, getProfile, isSubscriptionActive, getWeightLogs, getUserJourney, getDailyTasks, getWaterIntake, getXPTransactions, calculateBMI, calculateCalorieTarget } from '../../lib/supabase';
+import { 
+  supabase, getProfile, isSubscriptionActive, getWeightLogs, 
+  getUserJourney, getDailyTasks, getWaterIntake, getXPTransactions, 
+  calculateBMI, calculateCalorieTarget,
+  formatWeight, formatHeight, weightLabel,
+  kgToLbs, getPlan,
+  type UnitSystem
+} from '../../lib/supabase';
 
 const accessToken = Astro.cookies.get('sb-access-token')?.value;
 if (!accessToken) return Astro.redirect('/login');
@@ -9,1583 +15,735 @@ const { data: { user } } = await supabase.auth.getUser(accessToken);
 if (!user) return Astro.redirect('/login');
 
 const profile = await getProfile(user.id);
-if (!profile || !isSubscriptionActive(profile)) {
-  return Astro.redirect('/dashboard/upgrade');
-}
+if (!profile || !isSubscriptionActive(profile)) return Astro.redirect('/dashboard/upgrade');
 
-// Get Journey Data
+// ── Units & Plan ───────────────────────────────────────────
+const units: UnitSystem = (profile.preferred_units as UnitSystem) || 'imperial';
+const wLabel = weightLabel(units);
+const plan = getPlan(profile.subscription_tier);
+
+// ── Journey & Tasks ────────────────────────────────────────
 const journey = await getUserJourney(user.id);
 const currentDay = journey?.current_day || 1;
-
-// ✅ إضافة المتغيرات للـ Notifications
 const dailyTasks = await getDailyTasks(user.id, currentDay);
-const waterIntake = await getWaterIntake(user.id, currentDay);
-const canInteract = true;
-const incompleteTasks = dailyTasks?.filter(t => !t.completed) || [];
+await getWaterIntake(user.id, currentDay);
+const incompleteTasks = dailyTasks?.filter(
+  t => t.task_type !== 'reflection' && t.task_type !== 'weight' && !t.completed
+) || [];
 
-// Get comprehensive stats
 const weightLogs = await getWeightLogs(user.id, 30);
-
-// Get all tasks for all days to calculate stats
 const { data: allTasks } = await supabase
-  .from('daily_tasks')
-  .select('*')
-  .eq('user_id', user.id)
+  .from('daily_tasks').select('*').eq('user_id', user.id)
   .order('day_number', { ascending: true });
-
-// Get XP transactions
 const xpTransactions = await getXPTransactions(user.id, 30);
 
-// Completion data by day
-const completionData = [];
-for (let day = 1; day <= Math.min(journey.current_day, 30); day++) {
-  const dayTasks = allTasks?.filter(t => t.day_number === day) || [];
-  const dayCompleted = dayTasks.filter(t => t.completed).length;
-  const dayTotal = dayTasks.length;
-  const percentage = dayTotal > 0 ? Math.round((dayCompleted / dayTotal) * 100) : 0;
-  completionData.push({ 
-    day, 
-    percentage, 
-    completed: dayCompleted, 
-    total: dayTotal 
-  });
+// ── Charts data ────────────────────────────────────────────
+const completionData: {day:number;percentage:number;completed:number;total:number}[] = [];
+for (let day = 1; day <= Math.min(journey?.current_day || 1, 30); day++) {
+  const dt = allTasks?.filter(t => t.day_number === day) || [];
+  const dc = dt.filter(t => t.completed).length;
+  completionData.push({ day, percentage: dt.length > 0 ? Math.round((dc / dt.length) * 100) : 0, completed: dc, total: dt.length });
+}
+const xpData: {day:number;xp:number}[] = [];
+let cXP = 0;
+for (let day = 1; day <= Math.min(journey?.current_day || 1, 30); day++) {
+  cXP += xpTransactions?.filter(t => t.day_number === day).reduce((s,t) => s + (t.xp_amount||0), 0) || 0;
+  xpData.push({ day, xp: cXP });
 }
 
-console.log('Completion Data:', completionData);
-
-// XP data by day
-const xpData = [];
-let cumulativeXP = 0;
-for (let day = 1; day <= Math.min(journey.current_day, 30); day++) {
-  const dayXP = xpTransactions?.filter(t => t.day_number === day)
-    .reduce((sum, t) => sum + (t.xp_amount || 0), 0) || 0;
-  cumulativeXP += dayXP;
-  xpData.push({ 
-    day, 
-    xp: cumulativeXP, 
-    daily: dayXP 
-  });
-}
-
-console.log('XP Data:', xpData);
-
-// Stats from Journey
+// ── Stats ──────────────────────────────────────────────────
 const totalDaysCompleted = journey?.current_day ? journey.current_day - 1 : 0;
-const currentStreak = journey?.streak_days || 0;
-const longestStreak = journey?.longest_streak || 0;
-const perfectDays = journey?.perfect_days || 0;
-const totalXP = journey?.total_xp || 0;
-const level = journey?.level || 1;
+const currentStreak  = journey?.streak_days    || 0;
+const longestStreak  = journey?.longest_streak || 0;
+const perfectDays    = journey?.perfect_days   || 0;
+const totalXP        = journey?.total_xp       || 0;
+const level          = journey?.level          || 1;
 
-// Weight stats
 const currentWeight = profile.weight_kg || 0;
-const startWeight = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight_kg : currentWeight;
-const weightChange = startWeight - currentWeight;
-const targetWeight = profile.target_weight_kg || currentWeight - 5;
-const weightToLose = currentWeight - targetWeight;
+const startWeight   = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight_kg : currentWeight;
+const weightChange  = startWeight - currentWeight;
+const targetWeight  = profile.target_weight_kg || currentWeight - 5;
+const weightToLose  = currentWeight - targetWeight;
 const progressPercent = weightToLose > 0 ? ((startWeight - currentWeight) / (startWeight - targetWeight)) * 100 : 0;
 
-// Calculate BMI
 const bmi = profile.weight_kg && profile.height_cm ? await calculateBMI(profile.weight_kg, profile.height_cm) : null;
-
-function getBMICategory(bmi: number | null) {
-  if (!bmi) return { label: 'Unknown', color: 'gray' };
-  if (bmi < 18.5) return { label: 'Underweight', color: 'blue' };
-  if (bmi < 25) return { label: 'Normal', color: 'green' };
-  if (bmi < 30) return { label: 'Overweight', color: 'yellow' };
+function getBMICategory(b: number | null) {
+  if (!b)     return { label: 'Unknown',     color: 'gray'   };
+  if (b < 18.5) return { label: 'Underweight', color: 'blue'   };
+  if (b < 25)   return { label: 'Normal',      color: 'green'  };
+  if (b < 30)   return { label: 'Overweight',  color: 'yellow' };
   return { label: 'Obese', color: 'red' };
 }
-
-const bmiCategory = getBMICategory(bmi);
-
-// Calorie target
+const bmiCategory   = getBMICategory(bmi);
 const calorieTarget = await calculateCalorieTarget(profile);
+const fatGrams      = Math.round((calorieTarget * 0.70) / 9);
+const proteinGrams  = Math.round((calorieTarget * 0.25) / 4);
+const carbGrams     = Math.round((calorieTarget * 0.05) / 4);
 
-// Calculate macros (Keto: 70% fat, 25% protein, 5% carbs)
-const fatGrams = Math.round((calorieTarget * 0.70) / 9);
-const proteinGrams = Math.round((calorieTarget * 0.25) / 4);
-const carbGrams = Math.round((calorieTarget * 0.05) / 4);
-
-// Days left in subscription
-const daysLeft = profile.subscription_end_date 
-  ? Math.max(0, Math.ceil((new Date(profile.subscription_end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-  : 0;
-
+const daysLeft = profile.subscription_end_date
+  ? Math.max(0, Math.ceil((new Date(profile.subscription_end_date).getTime() - Date.now()) / 86400000)) : 0;
 const subscriptionProgress = daysLeft > 0 ? ((30 - daysLeft) / 30) * 100 : 100;
 
-// Achievement system updated
 const achievementsList = [
-  { id: 'first_day', name: 'First Step', description: 'Complete your first day', icon: '🎯', unlocked: perfectDays >= 1 },
-  { id: 'week_1', name: 'Week Warrior', description: 'Complete 7 days perfectly', icon: '📅', unlocked: perfectDays >= 7 },
-  { id: 'week_2', name: 'Two Weeks Strong', description: 'Complete 14 days perfectly', icon: '💪', unlocked: perfectDays >= 14 },
-  { id: 'streak_7', name: 'On Fire', description: '7 day streak', icon: '🔥', unlocked: currentStreak >= 7 },
-  { id: 'level_5', name: 'Level Master', description: 'Reach Level 5', icon: '⭐', unlocked: level >= 5 },
-  { id: 'xp_500', name: 'XP Hunter', description: 'Earn 500 XP', icon: '🏅', unlocked: totalXP >= 500 },
-  { id: 'weight_loss_1kg', name: 'First Kilo', description: 'Lose 1kg', icon: '⚖️', unlocked: weightChange >= 1 },
-  { id: 'weight_loss_5kg', name: 'Five Down', description: 'Lose 5kg', icon: '🏆', unlocked: weightChange >= 5 },
-  { id: 'halfway', name: 'Halfway Hero', description: 'Reach Day 15', icon: '🌟', unlocked: currentDay >= 15 },
-  { id: 'champion', name: 'Keto Champion', description: 'Complete 30 days', icon: '👑', unlocked: currentDay >= 30 },
+  { name:'First Step',       description:'Complete your first day',   icon:'🎯', unlocked: perfectDays  >= 1  },
+  { name:'Week Warrior',     description:'Complete 7 days perfectly', icon:'📅', unlocked: perfectDays  >= 7  },
+  { name:'Two Weeks Strong', description:'Complete 14 days perfectly',icon:'💪', unlocked: perfectDays  >= 14 },
+  { name:'On Fire',          description:'7 day streak',              icon:'🔥', unlocked: currentStreak>= 7  },
+  { name:'Level Master',     description:'Reach Level 5',             icon:'⭐', unlocked: level        >= 5  },
+  { name:'XP Hunter',        description:'Earn 500 XP',               icon:'🏅', unlocked: totalXP      >= 500 },
+  { name:'First Kilo',       description:'Lose 1 kg / 2.2 lbs',      icon:'⚖️', unlocked: weightChange >= 1  },
+  { name:'Five Down',        description:'Lose 5 kg / 11 lbs',       icon:'🏆', unlocked: weightChange >= 5  },
+  { name:'Halfway Hero',     description:'Reach Day 15',              icon:'🌟', unlocked: currentDay   >= 15 },
+  { name:'Keto Champion',    description:'Complete 30 days',          icon:'👑', unlocked: currentDay   >= 30 },
 ];
-
 const unlockedAchievements = achievementsList.filter(a => a.unlocked);
-const lockedAchievements = achievementsList.filter(a => !a.unlocked);
+const lockedAchievements   = achievementsList.filter(a => !a.unlocked);
 
-// Prepare weight chart data
-const chartData = weightLogs.length > 0 
-  ? weightLogs.reverse().map(log => ({
-      date: new Date(log.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      weight: log.weight_kg
-    }))
-  : [];
-
-const chartDataJSON = JSON.stringify(chartData);
-
-// Prepare completion chart data
-const completionChartData = completionData.map(d => ({
-  day: 'Day ' + d.day,
-  percentage: d.percentage
+// Weight chart converted to display units
+const chartData = weightLogs.slice().reverse().map(log => ({
+  date: new Date(log.date).toLocaleDateString('en-US', { month:'short', day:'numeric' }),
+  weight: units === 'imperial' ? kgToLbs(log.weight_kg) : log.weight_kg,
 }));
-const completionChartJSON = JSON.stringify(completionChartData);
+const weightChartLabel = units === 'imperial' ? 'lbs' : 'kg';
 
-// Prepare XP chart data
-const xpChartData = xpData.map(d => ({
-  day: 'Day ' + d.day,
-  xp: d.xp
-}));
-const xpChartJSON = JSON.stringify(xpChartData);
-
-// Activity summary from tasks
 const totalTasksCompleted = allTasks?.filter(t => t.completed).length || 0;
-const totalMealsCompleted = allTasks?.filter(t => t.completed && ['breakfast', 'lunch', 'dinner', 'snack'].includes(t.task_type)).length || 0;
+const totalMealsCompleted = allTasks?.filter(t => t.completed && ['breakfast','lunch','dinner','snack'].includes(t.task_type)).length || 0;
+const { data: waterData } = await supabase.from('water_intake').select('glasses_count').eq('user_id', user.id);
+const totalWaterGlasses = waterData?.reduce((s,w) => s + w.glasses_count, 0) || 0;
 
-// Water glasses from water_intake table
-const { data: waterData } = await supabase
-  .from('water_intake')
-  .select('glasses_count')
-  .eq('user_id', user.id);
-const totalWaterGlasses = waterData?.reduce((sum, w) => sum + w.glasses_count, 0) || 0;
+// Display helpers
+const displayWeight       = formatWeight(currentWeight, units);
+const displayTargetWeight = formatWeight(targetWeight,  units);
+const displayHeight       = profile.height_cm
+  ? (units === 'imperial'
+      ? (() => { const ti = profile.height_cm! / 2.54; return `${Math.floor(ti/12)}'${Math.round(ti%12)}"`; })()
+      : `${profile.height_cm} cm`)
+  : '—';
 
-const totalExerciseMinutes = 0; // Placeholder - not tracking exercise yet
+// Edit form input defaults
+const weightInputVal = profile.weight_kg ? (units==='imperial' ? kgToLbs(profile.weight_kg) : profile.weight_kg) : '';
+const targetInputVal = profile.target_weight_kg ? (units==='imperial' ? kgToLbs(profile.target_weight_kg) : profile.target_weight_kg) : '';
+const heightFtVal = profile.height_cm && units==='imperial' ? Math.floor(profile.height_cm/2.54/12) : '';
+const heightInVal = profile.height_cm && units==='imperial' ? Math.round((profile.height_cm/2.54)%12) : '';
 ---
 
-<BaseLayout title="Profile - Keto App">
-  <div class="min-h-screen bg-gradient-to-br from-gray-50 via-emerald-50 to-green-50">
-    
-    <!-- Premium Navigation with Notification Bell -->
-    <nav class="bg-white/80 backdrop-blur-xl shadow-lg border-b border-gray-200 sticky top-0 z-50">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-16">
-          <a href="/dashboard" class="flex items-center gap-3 group">
-            <span class="text-3xl animate-float">🥑</span>
-            <span class="text-2xl font-bold gradient-text">Keto App</span>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Profile – Keto Journey</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root{--bg-primary:#fff;--bg-secondary:#f9fafb;--bg-card:#fff;--text-primary:#111827;--text-secondary:#6b7280;--border-color:#e5e7eb;--accent-primary:#10b981;--accent-secondary:#34d399;--shadow-sm:0 1px 3px rgba(0,0,0,.1);--shadow-md:0 4px 6px rgba(0,0,0,.1);--shadow-lg:0 10px 15px rgba(0,0,0,.1);--shadow-xl:0 20px 25px rgba(0,0,0,.15);}
+    [data-theme="dark"]{--bg-primary:#1a1a2e;--bg-secondary:#16213e;--bg-card:#0f3460;--text-primary:#eaeaea;--text-secondary:#a0aec0;--border-color:#2d3748;--shadow-sm:0 1px 3px rgba(0,0,0,.3);--shadow-md:0 4px 6px rgba(0,0,0,.4);--shadow-lg:0 10px 15px rgba(0,0,0,.5);--shadow-xl:0 20px 25px rgba(0,0,0,.6);}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-secondary);color:var(--text-primary);transition:all .3s ease;}
+    .container{max-width:1400px;margin:0 auto;padding:0 1.5rem;}
+    nav{background:var(--bg-primary);border-bottom:1px solid var(--border-color);padding:1rem 0;position:sticky;top:0;z-index:50;box-shadow:var(--shadow-md);}
+    nav a{color:var(--text-secondary);text-decoration:none;padding:.5rem 1rem;border-radius:.75rem;font-weight:500;transition:all .3s ease;}
+    nav a:hover,nav a.active{color:var(--accent-primary);background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(52,211,153,.1));transform:translateY(-2px);}
+    .theme-toggle{position:relative;width:60px;height:30px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:9999px;cursor:pointer;box-shadow:inset 0 2px 4px rgba(0,0,0,.2),var(--shadow-md);transition:all .3s;}
+    .theme-toggle-slider{position:absolute;top:3px;left:3px;width:24px;height:24px;background:white;border-radius:50%;transition:all .3s;box-shadow:0 2px 4px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:.75rem;}
+    [data-theme="dark"] .theme-toggle{background:linear-gradient(135deg,#2d3561,#1a1f3a);}
+    [data-theme="dark"] .theme-toggle-slider{transform:translateX(30px);background:#1a1a2e;color:#fbbf24;}
+    .notification-bell{position:relative;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));border:none;width:2.5rem;height:2.5rem;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s;box-shadow:var(--shadow-md);}
+    .notification-bell:hover{transform:translateY(-4px) scale(1.05);box-shadow:var(--shadow-xl);}
+    .notification-badge{position:absolute;top:-4px;right:-4px;background:linear-gradient(135deg,#ef4444,#dc2626);color:white;width:20px;height:20px;border-radius:50%;font-size:.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
+    .notification-dropdown{position:absolute;top:calc(100% + .5rem);right:0;width:380px;max-height:500px;background:var(--bg-card);border-radius:1.5rem;box-shadow:var(--shadow-xl);border:1px solid var(--border-color);display:none;overflow:hidden;}
+    .notification-dropdown.active{display:block;animation:slideDown .4s cubic-bezier(.68,-.55,.265,1.55);}
+    @keyframes slideDown{from{opacity:0;transform:translateY(-20px) scale(.95);}to{opacity:1;transform:translateY(0) scale(1);}}
+    .notification-item{padding:1rem 1.5rem;border-bottom:1px solid var(--border-color);display:flex;gap:1rem;align-items:center;transition:all .3s;cursor:pointer;}
+    .notification-item:hover{background:linear-gradient(90deg,rgba(16,185,129,.05),transparent);transform:translateX(4px);}
+    .notification-icon{width:3rem;height:3rem;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));border-radius:1rem;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;}
+    .hero-profile{background:linear-gradient(135deg,#10b981,#059669,#047857);border-radius:2rem;padding:3rem;margin-bottom:2rem;box-shadow:var(--shadow-xl);position:relative;overflow:hidden;}
+    .hero-profile::before{content:'';position:absolute;top:-50%;right:-50%;width:200%;height:200%;background:radial-gradient(circle,rgba(255,255,255,.1) 0%,transparent 70%);animation:rotate 20s linear infinite;}
+    @keyframes rotate{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+    .avatar-3d{width:10rem;height:10rem;border-radius:50%;border:5px solid white;box-shadow:0 10px 30px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:5rem;background:rgba(255,255,255,.2);backdrop-filter:blur(10px);position:relative;transition:all .4s;}
+    .avatar-3d:hover{transform:scale(1.1) rotateY(10deg);}
+    .avatar-edit-btn{position:absolute;bottom:.5rem;right:.5rem;background:white;color:var(--accent-primary);width:3rem;height:3rem;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:1.5rem;cursor:pointer;box-shadow:var(--shadow-lg);transition:all .3s;}
+    .avatar-edit-btn:hover{transform:scale(1.15) rotate(15deg);}
+    .stat-card-3d{background:var(--bg-card);border-radius:1.5rem;padding:2rem;border:1px solid var(--border-color);box-shadow:var(--shadow-lg);transition:all .4s cubic-bezier(.68,-.55,.265,1.55);position:relative;overflow:hidden;}
+    .stat-card-3d::before{content:'';position:absolute;top:-50%;right:-50%;width:200%;height:200%;background:radial-gradient(circle,rgba(16,185,129,.05) 0%,transparent 70%);animation:rotate 15s linear infinite;}
+    .stat-card-3d:hover{transform:translateY(-10px) scale(1.02);box-shadow:var(--shadow-xl);border-color:var(--accent-primary);}
+    .stat-icon-3d{width:4rem;height:4rem;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));border-radius:1.25rem;display:flex;align-items:center;justify-content:center;font-size:2rem;margin-bottom:1.5rem;box-shadow:var(--shadow-md);position:relative;z-index:1;}
+    .card-3d{background:var(--bg-card);border-radius:1.5rem;padding:2rem;box-shadow:var(--shadow-lg);border:1px solid var(--border-color);transition:all .3s;}
+    .card-3d:hover{box-shadow:var(--shadow-xl);transform:translateY(-4px);}
+    .btn-3d{display:inline-flex;align-items:center;gap:.5rem;padding:.875rem 1.75rem;border-radius:1rem;font-weight:700;cursor:pointer;border:none;text-decoration:none;transition:all .3s cubic-bezier(.68,-.55,.265,1.55);position:relative;overflow:hidden;}
+    .btn-3d::before{content:'';position:absolute;top:50%;left:50%;width:0;height:0;border-radius:50%;background:rgba(255,255,255,.3);transform:translate(-50%,-50%);transition:width .6s,height .6s;}
+    .btn-3d:hover::before{width:300px;height:300px;}
+    .btn-primary-3d{background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));color:white;box-shadow:var(--shadow-md);}
+    .btn-primary-3d:hover{transform:translateY(-4px) scale(1.05);box-shadow:var(--shadow-xl);}
+    .btn-secondary-3d{background:var(--bg-card);color:var(--text-primary);border:2px solid var(--border-color);}
+    .btn-secondary-3d:hover{border-color:var(--accent-primary);transform:translateY(-2px);}
+    .progress-3d{width:100%;height:1rem;background:var(--border-color);border-radius:9999px;overflow:hidden;box-shadow:inset 0 2px 4px rgba(0,0,0,.1);}
+    .progress-fill-3d{height:100%;background:linear-gradient(90deg,var(--accent-primary),var(--accent-secondary),#3b82f6);border-radius:9999px;transition:width .6s cubic-bezier(.68,-.55,.265,1.55);position:relative;}
+    .progress-fill-3d::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);animation:shimmer 2s infinite;}
+    @keyframes shimmer{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+    .achievement-badge{background:var(--bg-card);border-radius:1.25rem;padding:1.25rem;border:2px solid var(--border-color);transition:all .3s;display:flex;align-items:center;gap:1rem;}
+    .achievement-badge.unlocked{background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(52,211,153,.1));border-color:var(--accent-primary);}
+    .achievement-badge:hover{transform:scale(1.05);box-shadow:var(--shadow-lg);}
+    .units-toggle-wrap{display:inline-flex;background:rgba(0,0,0,.2);backdrop-filter:blur(10px);border-radius:1rem;padding:.375rem;gap:.375rem;}
+    .units-btn{padding:.625rem 1.25rem;border-radius:.75rem;border:none;font-weight:700;font-size:.9375rem;cursor:pointer;transition:all .3s cubic-bezier(.68,-.55,.265,1.55);}
+    .units-btn.active{background:white;color:#059669;}
+    .units-btn.inactive{background:transparent;color:rgba(255,255,255,.7);}
+    .units-btn.inactive:hover{color:white;}
+    .form-input{width:100%;padding:1rem;border:2px solid var(--border-color);border-radius:1rem;background:var(--bg-secondary);color:var(--text-primary);font-size:1rem;transition:all .3s;}
+    .form-input:focus{outline:none;border-color:var(--accent-primary);box-shadow:0 0 0 3px rgba(16,185,129,.1);}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);z-index:100;display:none;align-items:center;justify-content:center;padding:1rem;}
+    .modal-overlay.active{display:flex;}
+    .modal-content{background:var(--bg-primary);border-radius:2rem;box-shadow:var(--shadow-xl);max-width:600px;width:100%;max-height:90vh;overflow-y:auto;animation:modalSlideUp .4s cubic-bezier(.68,-.55,.265,1.55);}
+    @keyframes modalSlideUp{from{opacity:0;transform:translateY(50px) scale(.9);}to{opacity:1;transform:translateY(0) scale(1);}}
+    .modal-header{background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));padding:2rem;border-radius:2rem 2rem 0 0;color:white;}
+    .grid{display:grid;gap:1.5rem;}
+    .grid-2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));}
+    .grid-3{grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+    .grid-4{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));}
+    .flex{display:flex;align-items:center;}
+    .flex-between{display:flex;justify-content:space-between;align-items:center;}
+    .gap-2{gap:1rem;}.gap-3{gap:1.5rem;}
+    .mb-4{margin-bottom:2rem;}
+    @media(max-width:768px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}.notification-dropdown{width:calc(100vw - 2rem);right:-1rem;}.hero-profile{padding:2rem;}.avatar-3d{width:8rem;height:8rem;font-size:4rem;}}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <div class="flex-between">
+      <div class="flex gap-2">
+        <span style="font-size:2.5rem;">🥑</span>
+        <div>
+          <h1 style="font-size:1.375rem;font-weight:800;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Keto Journey</h1>
+          <p style="font-size:.8125rem;color:var(--text-secondary);font-weight:600;">{plan.name} Plan · {plan.durationDays} Days</p>
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <a href="/dashboard/">Dashboard</a>
+        <a href="/dashboard/shopping-list">Shopping</a>
+        <a href="/dashboard/recipes">Recipes</a>
+        <a href="/dashboard/profile" class="active">Profile</a>
+        <a href="/dashboard/notifications">🔔 Reminders</a>
+        <div class="flex gap-2" style="padding-left:1rem;border-left:1px solid var(--border-color);position:relative;">
+          <div class="theme-toggle" id="themeToggle"><div class="theme-toggle-slider"><span id="themeIcon">☀️</span></div></div>
+          {incompleteTasks.length > 0 && (
+            <div style="position:relative;">
+              <button class="notification-bell" id="notif-bell">
+                <span style="color:white;">🔔</span>
+                <span class="notification-badge">{incompleteTasks.length}</span>
+              </button>
+              <div class="notification-dropdown" id="notificationDropdown">
+                <div style="padding:1.5rem;border-bottom:1px solid var(--border-color);background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(52,211,153,.1));">
+                  <h3 style="font-size:1.125rem;font-weight:800;color:var(--accent-primary);display:flex;align-items:center;gap:.75rem;"><span>🔔</span><span>{incompleteTasks.length} Pending</span></h3>
+                </div>
+                <div style="max-height:400px;overflow-y:auto;">
+                  {incompleteTasks.map(task => (
+                    <div class="notification-item">
+                      <div class="notification-icon">{task.task_type==='breakfast'&&'🍳'}{task.task_type==='lunch'&&'🥗'}{task.task_type==='dinner'&&'🍽️'}{task.task_type==='snack'&&'🍎'}{task.task_type==='water'&&'💧'}</div>
+                      <div style="flex:1;"><div style="font-weight:700;color:var(--text-primary);">{task.task_title}</div><div style="font-size:.8125rem;color:var(--text-secondary);">+{task.xp_earned} XP</div></div>
+                    </div>
+                  ))}
+                </div>
+                <div style="padding:1.25rem;border-top:1px solid var(--border-color);text-align:center;">
+                  <a href="/dashboard/" class="btn-3d btn-primary-3d" style="width:100%;justify-content:center;">View All Tasks →</a>
+                </div>
+              </div>
+            </div>
+          )}
+          <a href="/dashboard/profile" style="width:2.5rem;height:2.5rem;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;text-decoration:none;font-size:1.125rem;">
+            {profile.full_name.charAt(0).toUpperCase()}
           </a>
-          
-          <div class="flex items-center gap-6">
-            <!-- Navigation Links -->
-            <div class="flex items-center gap-4">
-              <a href="/dashboard" class="text-gray-600 hover:text-emerald-600 transition font-medium flex items-center gap-2">
-                <span>📊</span>
-                <span>Dashboard</span>
-              </a>
-              <a href="/dashboard/shopping-list" class="text-gray-600 hover:text-emerald-600 transition font-medium flex items-center gap-2">
-                <span>🛒</span>
-                <span>Shopping</span>
-              </a>
-              <span class="text-emerald-700 font-bold flex items-center gap-2">
-                <span>👤</span>
-                <span>Profile</span>
-              </span>
-            </div>
-
-            <!-- Notification Bell (only if there are incomplete tasks) -->
-            <div class="flex items-center gap-3 pl-4 border-l border-gray-200">
-              {incompleteTasks.length > 0 && (
-                <button
-                  onclick="toggleNotificationPanel()"
-                  class="relative p-2 rounded-xl hover:bg-gray-100 transition-all group"
-                  id="notification-bell-btn"
-                >
-                  <svg class="w-6 h-6 text-gray-600 group-hover:text-emerald-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                  </svg>
-                  <span class="absolute -top-1 -right-1 bg-gradient-to-br from-red-500 to-pink-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse shadow-lg">
-                    {incompleteTasks.length}
-                  </span>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </nav>
-
-    <!-- Notification Panel (Hidden by default) -->
-    {incompleteTasks.length > 0 && (
-      <div 
-        id="notification-panel" 
-        class="fixed top-20 right-6 z-40 hidden max-w-md w-full animate-slide-in-right"
-      >
-        <div class="card-premium p-6 shadow-2xl bg-white rounded-2xl">
-          <!-- Header -->
-          <div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
-            <div class="flex items-center gap-3">
-              <span class="text-3xl">🔔</span>
-              <div>
-                <h3 class="text-lg font-bold text-gray-900">Notifications</h3>
-                <p class="text-xs text-gray-500">Day {currentDay} Updates</p>
-              </div>
-            </div>
-            <button
-              onclick="toggleNotificationPanel()"
-              class="text-gray-400 hover:text-gray-600"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
-          </div>
-
-          <!-- Task List -->
-          <div class="space-y-2 max-h-96 overflow-y-auto">
-            {incompleteTasks.map(task => (
-              <div class="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition flex items-center justify-between group">
-                <div class="flex items-center gap-3 flex-1">
-                  <span class="text-2xl">
-                    {task.task_type === 'breakfast' && '🍳'}
-                    {task.task_type === 'lunch' && '🥗'}
-                    {task.task_type === 'dinner' && '🍽️'}
-                    {task.task_type === 'snack' && '🍎'}
-                    {task.task_type === 'water' && '💧'}
-                    {task.task_type === 'weight' && '⚖️'}
-                    {task.task_type === 'reflection' && '📝'}
-                  </span>
-                  <div class="flex-1">
-                    <p class="font-semibold text-gray-900 text-sm">{task.task_title}</p>
-                    <p class="text-xs text-gray-500">+{task.xp_earned} XP</p>
-                  </div>
-                </div>
-                
-                  href="/dashboard"
-                  class="opacity-0 group-hover:opacity-100 transition-opacity bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1 rounded-lg text-sm font-semibold"
-                >
-                  Go
-                </a>
-              </div>
-            ))}
-          </div>
-
-          <!-- Quick Action -->
-          <div class="mt-4 pt-4 border-t border-gray-200">
-            
-              href="/dashboard"
-              class="block w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold py-3 px-4 rounded-xl text-center hover:shadow-lg transition-all"
-            >
-              📊 Go to Dashboard
-            </a>
-          </div>
-        </div>
-      </div>
-    )}
-
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      
-      <!-- Hero Profile Header -->
-      <div class="relative overflow-hidden bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 rounded-3xl shadow-2xl p-8 mb-8 animate-slide-up">
-        <!-- Decorative circles -->
-        <div class="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-        <div class="absolute -bottom-20 -left-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-        
-        <div class="relative z-10 flex flex-col lg:flex-row items-center gap-8">
-          <!-- Avatar Section -->
-          <div class="relative group">
-            <div class="w-40 h-40 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-7xl border-4 border-white shadow-2xl overflow-hidden ring-4 ring-white/50">
-              {profile.avatar_url && profile.avatar_url.startsWith('emoji:') ? (
-                <span class="text-7xl">{profile.avatar_url.replace('emoji:', '')}</span>
-              ) : profile.avatar_url ? (
-                <img src={profile.avatar_url} alt={profile.full_name} class="w-full h-full object-cover" />
-              ) : (
-                <span class="animate-pulse-slow">👤</span>
-              )}
-            </div>
-            <button 
-              onclick="document.getElementById('avatar-modal').classList.remove('hidden')"
-              class="absolute bottom-2 right-2 bg-white text-emerald-600 rounded-full p-3 shadow-xl hover:scale-110 transition-all duration-300 hover:rotate-12"
-            >
-              <span class="text-xl">📷</span>
-            </button>
-          </div>
-          
-          <!-- Profile Info -->
-          <div class="flex-1 text-center lg:text-left text-white">
-            <div class="flex items-center gap-3 justify-center lg:justify-start mb-3">
-              <h1 class="text-5xl font-bold text-shadow-lg">{profile.full_name}</h1>
-              <button 
-                onclick="document.getElementById('edit-modal').classList.remove('hidden')"
-                class="bg-white/20 backdrop-blur-sm p-2 rounded-lg hover:bg-white/30 transition"
-              >
-                <span class="text-xl">✏️</span>
-              </button>
-            </div>
-            <p class="text-emerald-100 text-lg mb-6">{profile.email}</p>
-            
-            <div class="flex flex-wrap gap-3 justify-center lg:justify-start">
-              <span class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white font-semibold shadow-xl">
-                <span class="text-xl">⭐</span>
-                <span>{profile.subscription_tier === 'basic_30' ? '30-Day Plan' : 'Premium'}</span>
-              </span>
-              <span class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white font-semibold shadow-xl">
-                <span class="text-xl">🔥</span>
-                <span>{currentStreak} Day Streak</span>
-              </span>
-              <span class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white font-semibold shadow-xl">
-                <span class="text-xl">🏆</span>
-                <span>{unlockedAchievements.length}/{achievementsList.length} Badges</span>
-              </span>
-            </div>
-          </div>
-          
-          <!-- Days Counter -->
-          <div class="bg-white/20 backdrop-blur-sm rounded-2xl p-6 text-center shadow-xl">
-            <div class="text-emerald-100 text-sm font-medium mb-2">Days Completed</div>
-            <div class="text-6xl font-bold text-white mb-2">{totalDaysCompleted}</div>
-            <div class="text-emerald-100 text-sm">out of 30 days</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Stats Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <!-- Weight Card -->
-        <div class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border-l-4 border-blue-500">
-          <div class="flex items-center justify-between mb-4">
-            <span class="text-3xl">⚖️</span>
-            <span class={'px-3 py-1 rounded-full text-xs font-bold ' + (weightChange >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
-              {weightChange >= 0 ? '↓' : '↑'} {Math.abs(weightChange).toFixed(1)} kg
-            </span>
-          </div>
-          <h3 class="text-gray-500 text-sm font-medium mb-1">Current Weight</h3>
-          <p class="text-3xl font-bold text-gray-900">{currentWeight.toFixed(1)} <span class="text-xl text-gray-500">kg</span></p>
-          <div class="mt-4 pt-4 border-t border-gray-100">
-            <div class="flex justify-between text-xs text-gray-500 mb-2">
-              <span>Progress</span>
-              <span>{Math.min(100, progressPercent).toFixed(0)}%</span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-2">
-              <div class="bg-gradient-to-r from-emerald-500 to-green-600 h-2 rounded-full transition-all duration-500" style={'width: ' + Math.min(100, progressPercent) + '%'}></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- BMI Card -->
-        <div class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border-l-4 border-purple-500">
-          <div class="flex items-center justify-between mb-4">
-            <span class="text-3xl">📏</span>
-            <span class={'px-3 py-1 rounded-full text-xs font-bold bg-' + bmiCategory.color + '-100 text-' + bmiCategory.color + '-700'}>
-              {bmiCategory.label}
-            </span>
-          </div>
-          <h3 class="text-gray-500 text-sm font-medium mb-1">Body Mass Index</h3>
-          <p class="text-3xl font-bold text-gray-900">{bmi ? bmi.toFixed(1) : 'N/A'}</p>
-          <div class="mt-4 pt-4 border-t border-gray-100">
-            <p class="text-xs text-gray-500">
-              Height: {profile.height_cm || 'N/A'} cm
-            </p>
-          </div>
-        </div>
-
-        <!-- Streak Card -->
-        <div class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border-l-4 border-orange-500">
-          <div class="flex items-center justify-between mb-4">
-            <span class="text-3xl">🔥</span>
-            <span class="px-3 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-700">
-              Active
-            </span>
-          </div>
-          <h3 class="text-gray-500 text-sm font-medium mb-1">Current Streak</h3>
-          <p class="text-3xl font-bold text-gray-900">{currentStreak} <span class="text-xl text-gray-500">days</span></p>
-          <div class="mt-4 pt-4 border-t border-gray-100">
-            <p class="text-xs text-gray-500">
-              Longest: {longestStreak} days
-            </p>
-          </div>
-        </div>
-
-        <!-- Subscription Card -->
-        <div class="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border-l-4 border-green-500">
-          <div class="flex items-center justify-between mb-4">
-            <span class="text-3xl">📅</span>
-            <span class={'px-3 py-1 rounded-full text-xs font-bold ' + (daysLeft > 7 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700')}>
-              {daysLeft} days left
-            </span>
-          </div>
-          <h3 class="text-gray-500 text-sm font-medium mb-1">Subscription</h3>
-          <p class="text-3xl font-bold text-gray-900">30 Days</p>
-          <div class="mt-4 pt-4 border-t border-gray-100">
-            <div class="w-full bg-gray-200 rounded-full h-2">
-              <div class="bg-gradient-to-r from-emerald-500 to-green-600 h-2 rounded-full transition-all duration-500" style={'width: ' + subscriptionProgress + '%'}></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Main Content Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        <!-- Left Column -->
-        <div class="lg:col-span-2 space-y-8">
-          
-          <!-- Weight Progress Chart -->
-          <div class="bg-gradient-to-br from-white to-emerald-50 rounded-2xl shadow-xl p-8 border-2 border-emerald-100">
-            <div class="flex items-center justify-between mb-6">
-              <div>
-                <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                  <span class="text-3xl">📈</span>
-                  <span>Weight Progress</span>
-                </h2>
-                <p class="text-sm text-gray-500 mt-1">Your journey over time</p>
-              </div>
-              <button 
-                onclick="document.getElementById('weight-modal').classList.remove('hidden')"
-                class="bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold py-3 px-6 rounded-xl hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
-              >
-                <span>➕</span>
-                <span>Add Weight</span>
-              </button>
-            </div>
-            
-            {chartData.length > 1 ? (
-              <div class="space-y-6">
-                <!-- Chart Container -->
-                <div class="relative h-80 bg-white rounded-2xl p-6 shadow-inner border border-gray-100">
-                  <canvas id="weightChart"></canvas>
-                </div>
-                
-                <!-- Stats Row -->
-                <div class="grid grid-cols-3 gap-4">
-                  <div class="relative overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-5 border-2 border-blue-200 hover:scale-105 transition-transform duration-300">
-                    <div class="absolute top-0 right-0 w-20 h-20 bg-blue-200/30 rounded-full -mr-10 -mt-10"></div>
-                    <div class="relative">
-                      <p class="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Starting</p>
-                      <p class="text-4xl font-bold text-blue-700 mb-1">{startWeight.toFixed(1)}</p>
-                      <p class="text-xs text-blue-600">kg</p>
-                    </div>
-                  </div>
-                  
-                  <div class="relative overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl p-5 border-2 border-green-200 hover:scale-105 transition-transform duration-300">
-                    <div class="absolute top-0 right-0 w-20 h-20 bg-green-200/30 rounded-full -mr-10 -mt-10"></div>
-                    <div class="relative">
-                      <p class="text-xs font-semibold text-green-600 uppercase tracking-wide mb-1">Current</p>
-                      <p class="text-4xl font-bold text-green-700 mb-1">{currentWeight.toFixed(1)}</p>
-                      <p class="text-xs text-green-600">kg</p>
-                    </div>
-                  </div>
-                  
-                  <div class="relative overflow-hidden bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-5 border-2 border-purple-200 hover:scale-105 transition-transform duration-300">
-                    <div class="absolute top-0 right-0 w-20 h-20 bg-purple-200/30 rounded-full -mr-10 -mt-10"></div>
-                    <div class="relative">
-                      <p class="text-xs font-semibold text-purple-600 uppercase tracking-wide mb-1">Goal</p>
-                      <p class="text-4xl font-bold text-purple-700 mb-1">{targetWeight.toFixed(1)}</p>
-                      <p class="text-xs text-purple-600">kg</p>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Progress Bar -->
-                <div class="bg-gradient-to-r from-gray-50 to-emerald-50 rounded-2xl p-6 border-2 border-emerald-200">
-                  <div class="flex items-center justify-between mb-3">
-                    <div>
-                      <span class="text-sm font-bold text-gray-700">Progress to Goal</span>
-                      <p class="text-xs text-gray-500 mt-1">
-                        {weightChange > 0 ? 'Lost: ' + weightChange.toFixed(1) + ' kg' : 'No change yet'}
-                      </p>
-                    </div>
-                    <div class="text-right">
-                      <span class="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
-                        {Math.min(100, Math.round(progressPercent))}%
-                      </span>
-                    </div>
-                  </div>
-                  <div class="relative w-full bg-gray-200 rounded-full h-5 overflow-hidden shadow-inner">
-                    <div 
-                      class="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 rounded-full transition-all duration-1000 ease-out"
-                      style={'width: ' + Math.min(100, progressPercent) + '%'}
-                    >
-                      <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent shimmer-animation"></div>
-                    </div>
-                  </div>
-                  
-                  <div class="flex justify-between mt-4 text-xs text-gray-500">
-                    <span class={progressPercent >= 0 ? 'font-bold text-green-600' : ''}>Start</span>
-                    <span class={progressPercent >= 25 ? 'font-bold text-green-600' : ''}>25%</span>
-                    <span class={progressPercent >= 50 ? 'font-bold text-green-600' : ''}>50%</span>
-                    <span class={progressPercent >= 75 ? 'font-bold text-green-600' : ''}>75%</span>
-                    <span class={progressPercent >= 100 ? 'font-bold text-green-600' : ''}>Goal 🎯</span>
-                  </div>
-                </div>
-
-                <!-- Weight Insights -->
-                <div class="grid grid-cols-2 gap-4">
-                  <div class="bg-white rounded-xl p-4 border-2 border-gray-200">
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-sm font-semibold text-gray-600">Total Change</span>
-                      <span class="text-2xl">{weightChange >= 0 ? '📉' : '📈'}</span>
-                    </div>
-                    <p class={'text-3xl font-bold ' + (weightChange >= 0 ? 'text-green-600' : 'text-red-600')}>
-                      {weightChange >= 0 ? '-' : '+'}{Math.abs(weightChange).toFixed(1)} kg
-                    </p>
-                  </div>
-                  
-                  <div class="bg-white rounded-xl p-4 border-2 border-gray-200">
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-sm font-semibold text-gray-600">Avg. Weekly</span>
-                      <span class="text-2xl">📊</span>
-                    </div>
-                    <p class="text-3xl font-bold text-blue-600">
-                      {weightLogs.length >= 2 ? (weightChange / Math.ceil(weightLogs.length / 7)).toFixed(1) : '0.0'} kg
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div class="relative h-80 flex flex-col items-center justify-center bg-gradient-to-br from-emerald-50 to-green-50 rounded-2xl border-2 border-dashed border-emerald-300">
-                <div class="text-center">
-                  <span class="text-8xl mb-6 block animate-float">📊</span>
-                  <h3 class="text-2xl font-bold text-gray-800 mb-3">Start Tracking Your Progress</h3>
-                  <p class="text-gray-600 mb-6 max-w-md">
-                    Log your weight regularly to see your amazing transformation journey!
-                  </p>
-                  <button 
-                    onclick="document.getElementById('weight-modal').classList.remove('hidden')"
-                    class="bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold py-4 px-8 rounded-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 inline-flex items-center gap-3"
-                  >
-                    <span class="text-2xl">➕</span>
-                    <span>Add Your First Weight Entry</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <!-- 🆕 XP Progress Chart -->
-          <div class="bg-gradient-to-br from-white to-yellow-50 rounded-2xl shadow-xl p-8 border-2 border-yellow-100">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <span class="text-3xl">⚡</span>
-              <span>XP Progress</span>
-            </h2>
-            
-            {xpData.length > 0 ? (
-              <div class="space-y-6">
-                <div class="relative h-80 bg-white rounded-2xl p-6 shadow-inner border border-gray-100">
-                  <canvas id="xpChart"></canvas>
-                </div>
-                
-                <div class="grid grid-cols-3 gap-4">
-                  <div class="bg-gradient-to-br from-yellow-50 to-orange-100 rounded-2xl p-5 border-2 border-yellow-200">
-                    <p class="text-xs font-semibold text-yellow-600 uppercase mb-1">Total XP</p>
-                    <p class="text-4xl font-bold text-yellow-700">{totalXP}</p>
-                  </div>
-                  
-                  <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-5 border-2 border-purple-200">
-                    <p class="text-xs font-semibold text-purple-600 uppercase mb-1">Level</p>
-                    <p class="text-4xl font-bold text-purple-700">{level}</p>
-                  </div>
-                  
-                  <div class="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl p-5 border-2 border-green-200">
-                    <p class="text-xs font-semibold text-green-600 uppercase mb-1">To Next</p>
-                    <p class="text-4xl font-bold text-green-700">{100 - (totalXP % 100)}</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div class="h-64 flex items-center justify-center text-gray-400">
-                <div class="text-center">
-                  <span class="text-6xl mb-4 block">⚡</span>
-                  <p>Start completing tasks to earn XP!</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <!-- 🆕 Daily Completion Chart -->
-          <div class="bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-xl p-8 border-2 border-blue-100">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <span class="text-3xl">📊</span>
-              <span>Daily Completion Rate</span>
-            </h2>
-            
-            {completionData.length > 0 ? (
-              <div class="space-y-6">
-                <div class="relative h-80 bg-white rounded-2xl p-6 shadow-inner border border-gray-100">
-                  <canvas id="completionChart"></canvas>
-                </div>
-                
-                <div class="grid grid-cols-3 gap-4">
-                  <div class="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl p-5 border-2 border-green-200">
-                    <p class="text-xs font-semibold text-green-600 uppercase mb-1">Perfect Days</p>
-                    <p class="text-4xl font-bold text-green-700">{perfectDays}</p>
-                  </div>
-                  
-                  <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-5 border-2 border-blue-200">
-                    <p class="text-xs font-semibold text-blue-600 uppercase mb-1">Tasks Done</p>
-                    <p class="text-4xl font-bold text-blue-700">{totalTasksCompleted}</p>
-                  </div>
-                  
-                  <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-5 border-2 border-orange-200">
-                    <p class="text-xs font-semibold text-orange-600 uppercase mb-1">Avg Rate</p>
-                    <p class="text-4xl font-bold text-orange-700">
-                      {completionData.length > 0 ? Math.round(completionData.reduce((sum, d) => sum + d.percentage, 0) / completionData.length) : 0}%
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div class="h-64 flex items-center justify-center text-gray-400">
-                <div class="text-center">
-                  <span class="text-6xl mb-4 block">📊</span>
-                  <p>Complete your first day to see stats!</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <!-- Daily Nutrition -->
-          <div class="bg-white rounded-2xl shadow-lg p-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <span class="text-3xl">🥑</span>
-              <span>Daily Nutrition Targets</span>
-            </h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div class="p-4 bg-gradient-to-br from-orange-50 to-red-50 rounded-xl border-2 border-orange-200">
-                <div class="flex items-center gap-3 mb-2">
-                  <span class="text-3xl">🔥</span>
-                  <div>
-                    <h3 class="text-sm text-gray-600 font-medium">Calories</h3>
-                    <p class="text-2xl font-bold text-orange-600">{calorieTarget}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div class="p-4 bg-gradient-to-br from-red-50 to-pink-50 rounded-xl border-2 border-red-200">
-                <div class="flex items-center gap-3 mb-2">
-                  <span class="text-3xl">🥩</span>
-                  <div>
-                    <h3 class="text-sm text-gray-600 font-medium">Protein</h3>
-                    <p class="text-2xl font-bold text-red-600">{proteinGrams}g</p>
-                  </div>
-                </div>
-              </div>
-
-              <div class="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-200">
-                <div class="flex items-center gap-3 mb-2">
-                  <span class="text-3xl">🥓</span>
-                  <div>
-                    <h3 class="text-sm text-gray-600 font-medium">Fat</h3>
-                    <p class="text-2xl font-bold text-green-600">{fatGrams}g</p>
-                  </div>
-                </div>
-              </div>
-
-              <div class="p-4 bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl border-2 border-amber-200">
-                <div class="flex items-center gap-3 mb-2">
-                  <span class="text-3xl">🌾</span>
-                  <div>
-                    <h3 class="text-sm text-gray-600 font-medium">Net Carbs</h3>
-                    <p class="text-2xl font-bold text-amber-600">{carbGrams}g</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="mt-6 p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
-              <p class="text-sm text-blue-800">
-                <strong>Keto Ratio:</strong> 70% Fat, 25% Protein, 5% Carbs
-              </p>
-            </div>
-          </div>
-
-          <!-- Activity Summary -->
-          <div class="bg-white rounded-2xl shadow-lg p-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <span class="text-3xl">📊</span>
-              <span>Activity Summary</span>
-            </h2>
-            
-            <div class="grid grid-cols-3 gap-4">
-              <div class="text-center p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border-2 border-purple-200">
-                <span class="text-4xl mb-2 block">🍽️</span>
-                <p class="text-2xl font-bold text-purple-600">{totalMealsCompleted}</p>
-                <p class="text-sm text-gray-600 mt-1">Meals</p>
-              </div>
-
-              <div class="text-center p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl border-2 border-blue-200">
-                <span class="text-4xl mb-2 block">💧</span>
-                <p class="text-2xl font-bold text-blue-600">{totalWaterGlasses}</p>
-                <p class="text-sm text-gray-600 mt-1">Glasses</p>
-              </div>
-
-              <div class="text-center p-4 bg-gradient-to-br from-orange-50 to-red-50 rounded-xl border-2 border-orange-200">
-                <span class="text-4xl mb-2 block">🏃</span>
-                <p class="text-2xl font-bold text-orange-600">{totalExerciseMinutes}</p>
-                <p class="text-sm text-gray-600 mt-1">Minutes</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right Column -->
-        <div class="space-y-8">
-          
-          <!-- Achievements -->
-          <div class="bg-white rounded-2xl shadow-lg p-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <span class="text-3xl">🏆</span>
-              <span>Achievements</span>
-            </h2>
-            
-            {unlockedAchievements.length > 0 && (
-              <div class="mb-6">
-                <h3 class="text-sm font-semibold text-green-600 mb-3 uppercase">Unlocked</h3>
-                <div class="space-y-3 max-h-64 overflow-y-auto custom-scrollbar">
-                  {unlockedAchievements.map(achievement => (
-                    <div class="flex items-center gap-3 p-3 bg-green-50 rounded-xl border-2 border-green-200 hover:shadow-md transition">
-                      <span class="text-3xl">{achievement.icon}</span>
-                      <div class="flex-1">
-                        <h4 class="font-bold text-gray-900">{achievement.name}</h4>
-                        <p class="text-xs text-gray-600">{achievement.description}</p>
-                      </div>
-                      <span class="text-green-600 text-xl">✓</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {lockedAchievements.length > 0 && (
-              <div>
-                <h3 class="text-sm font-semibold text-gray-400 mb-3 uppercase">Locked</h3>
-                <div class="space-y-3">
-                  {lockedAchievements.map(achievement => (
-                    <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border-2 border-gray-200 opacity-60">
-                      <span class="text-3xl grayscale">{achievement.icon}</span>
-                      <div class="flex-1">
-                        <h4 class="font-bold text-gray-600">{achievement.name}</h4>
-                        <p class="text-xs text-gray-500">{achievement.description}</p>
-                      </div>
-                      <span class="text-gray-400 text-xl">🔒</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <!-- Quick Actions -->
-          <div class="bg-gradient-to-br from-emerald-50 to-green-50 rounded-2xl shadow-lg p-6 border-2 border-emerald-200">
-            <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span class="text-2xl">⚡</span>
-              <span>Quick Actions</span>
-            </h2>
-            
-            <div class="space-y-3">
-              <a 
-                href="/dashboard"
-                class="block w-full bg-white hover:bg-emerald-50 border-2 border-emerald-200 text-gray-900 font-semibold py-3 px-4 rounded-xl transition-all duration-300 text-center hover:scale-105"
-              >
-                📊 Go to Dashboard
-              </a>
-
-              <button 
-                onclick="document.getElementById('edit-modal').classList.remove('hidden')"
-                class="w-full bg-white hover:bg-emerald-50 border-2 border-emerald-200 text-gray-900 font-semibold py-3 px-4 rounded-xl transition-all duration-300 hover:scale-105"
-              >
-                ✏️ Edit Profile
-              </button>
-
-              <form action="/api/auth/logout" method="POST">
-                <button 
-                  type="submit"
-                  class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 hover:scale-105"
-                >
-                  🚪 Logout
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <!-- Avatar Modal -->
-    <div id="avatar-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-slide-up">
-        <div class="bg-gradient-to-r from-emerald-600 to-green-600 p-6 rounded-t-2xl">
-          <div class="flex items-center justify-between">
-            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
-              <span class="text-3xl">📷</span>
-              <span>Change Avatar</span>
-            </h2>
-            <button 
-              onclick="document.getElementById('avatar-modal').classList.add('hidden')"
-              class="text-white/80 hover:text-white text-3xl transition"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-
-        <div class="p-6">
-          <div class="flex justify-center mb-6">
-            <div id="avatar-preview" class="w-32 h-32 rounded-full bg-gray-100 flex items-center justify-center text-6xl overflow-hidden border-4 border-gray-200">
-              {profile.avatar_url && profile.avatar_url.startsWith('emoji:') ? (
-                <span class="text-6xl">{profile.avatar_url.replace('emoji:', '')}</span>
-              ) : profile.avatar_url ? (
-                <img src={profile.avatar_url} alt="Avatar" class="w-full h-full object-cover" />
-              ) : (
-                <span>👤</span>
-              )}
-            </div>
-          </div>
-
-          <div class="mb-6">
-            <label class="block text-sm font-bold text-gray-700 mb-2">Upload Image</label>
-            <input 
-              type="file" 
-              id="avatar-upload"
-              accept="image/*"
-              class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-emerald-500 focus:outline-none"
-            />
-            <p class="text-xs text-gray-500 mt-2">Max 2MB, JPG/PNG</p>
-          </div>
-
-          <div class="mb-6">
-            <label class="block text-sm font-bold text-gray-700 mb-2">Or Choose an Emoji</label>
-            <div class="grid grid-cols-8 gap-2">
-              {['👤', '😊', '😎', '🤠', '👨', '👩', '🧔', '👱', '🦸', '🧙', '🧝', '🧛', '🧟', '🤖', '👾', '😺'].map(emoji => (
-                <button
-                  type="button"
-                  onclick={'selectEmoji("' + emoji + '")'}
-                  class="text-4xl hover:scale-125 transition-transform duration-200 p-2 rounded-lg hover:bg-gray-100"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onclick="saveAvatar()"
-            class="w-full bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold py-3 px-6 rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105"
-          >
-            💾 Save Avatar
-          </button>
         </div>
       </div>
     </div>
+  </div>
+</nav>
 
-    <!-- Edit Profile Modal -->
-    <div id="edit-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slide-up">
-        <div class="bg-gradient-to-r from-emerald-600 to-green-600 p-6 rounded-t-2xl sticky top-0">
-          <div class="flex items-center justify-between">
-            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
-              <span class="text-3xl">✏️</span>
-              <span>Edit Profile</span>
-            </h2>
-            <button 
-              onclick="document.getElementById('edit-modal').classList.add('hidden')"
-              class="text-white/80 hover:text-white text-3xl transition"
-            >
-              ×
-            </button>
-          </div>
+<div class="container" style="padding-top:2rem;padding-bottom:4rem;">
+
+  <!-- Hero -->
+  <div class="hero-profile">
+    <div style="position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;gap:2rem;">
+      <div style="position:relative;">
+        <div class="avatar-3d">
+          {profile.avatar_url?.startsWith('emoji:') ? <span>{profile.avatar_url.replace('emoji:','')}</span>
+          : profile.avatar_url ? <img src={profile.avatar_url} alt={profile.full_name} style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>
+          : <span>👤</span>}
         </div>
-
-        <form id="edit-form" class="p-6 space-y-4">
-          <div>
-            <label class="block text-sm font-bold text-gray-700 mb-2">Full Name</label>
-            <input 
-              type="text" 
-              name="full_name"
-              value={profile.full_name}
-              class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none transition"
-              required
-            />
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-bold text-gray-700 mb-2">Age</label>
-              <input 
-                type="number" 
-                name="age"
-                value={profile.age || ''}
-                class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none transition"
-              />
-            </div>
-
-            <div>
-              <label class="block text-sm font-bold text-gray-700 mb-2">Gender</label>
-              <select 
-                name="gender"
-                class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none transition"
-              >
-                <option value="">Select...</option>
-                <option value="male" selected={profile.gender === 'male'}>Male</option>
-                <option value="female" selected={profile.gender === 'female'}>Female</option>
-                <option value="other" selected={profile.gender === 'other'}>Other</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-bold text-gray-700 mb-2">Weight (kg)</label>
-              <input 
-                type="number" 
-                name="weight_kg"
-                value={profile.weight_kg || ''}
-                step="0.1"
-                class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none transition"
-              />
-            </div>
-
-            <div>
-              <label class="block text-sm font-bold text-gray-700 mb-2">Height (cm)</label>
-              <input 
-                type="number" 
-                name="height_cm"
-                value={profile.height_cm || ''}
-                class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none transition"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-bold text-gray-700 mb-2">Target Weight (kg)</label>
-            <input 
-              type="number" 
-              name="target_weight_kg"
-              value={profile.target_weight_kg || ''}
-              step="0.1"
-              class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none transition"
-            />
-          </div>
-
-          <div>
-            <label class="block text-sm font-bold text-gray-700 mb-2">Goal</label>
-            <select 
-              name="goal"
-              class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none transition"
-            >
-              <option value="">Select...</option>
-              <option value="lose_weight" selected={profile.goal === 'lose_weight'}>Lose Weight</option>
-              <option value="maintain" selected={profile.goal === 'maintain'}>Maintain Weight</option>
-              <option value="gain_muscle" selected={profile.goal === 'gain_muscle'}>Gain Muscle</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm font-bold text-gray-700 mb-2">Activity Level</label>
-            <select 
-              name="activity_level"
-              class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 outline-none transition"
-            >
-              <option value="">Select...</option>
-              <option value="sedentary" selected={profile.activity_level === 'sedentary'}>Sedentary</option>
-              <option value="light" selected={profile.activity_level === 'light'}>Light</option>
-              <option value="moderate" selected={profile.activity_level === 'moderate'}>Moderate</option>
-              <option value="active" selected={profile.activity_level === 'active'}>Active</option>
-              <option value="very_active" selected={profile.activity_level === 'very_active'}>Very Active</option>
-            </select>
-          </div>
-
-          <div class="flex gap-3 pt-4">
-            <button
-              type="submit"
-              class="flex-1 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold py-3 px-6 rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105"
-            >
-              💾 Save Changes
-            </button>
-            <button
-              type="button"
-              onclick="document.getElementById('edit-modal').classList.add('hidden')"
-              class="bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-xl hover:bg-gray-300 transition"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+        <button class="avatar-edit-btn" id="open-avatar-modal">📷</button>
       </div>
-    </div>
-
-    <!-- Add Weight Modal -->
-    <div id="weight-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-slide-up">
-        <div class="bg-gradient-to-r from-emerald-600 to-green-600 p-6 rounded-t-2xl">
-          <div class="flex items-center justify-between">
-            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
-              <span class="text-3xl">⚖️</span>
-              <span>Add Weight Entry</span>
-            </h2>
-            <button 
-              onclick="document.getElementById('weight-modal').classList.add('hidden')"
-              class="text-white/80 hover:text-white text-3xl transition"
-            >
-              ×
-            </button>
-          </div>
+      <div style="text-align:center;color:white;">
+        <div style="display:flex;align-items:center;gap:1rem;justify-content:center;margin-bottom:1rem;">
+          <h1 style="font-size:3rem;font-weight:900;text-shadow:0 4px 8px rgba(0,0,0,.3);">{profile.full_name}</h1>
+          <button id="open-edit-modal" style="background:rgba(255,255,255,.2);backdrop-filter:blur(10px);border:none;padding:.75rem;border-radius:1rem;cursor:pointer;font-size:1.5rem;transition:all .3s;">✏️</button>
         </div>
-
-        <form id="weight-form" class="p-6 space-y-5">
-          <div>
-            <label class="block text-sm font-bold text-gray-700 mb-2">Weight (kg)</label>
-            <div class="relative">
-              <input 
-                type="number" 
-                name="weight_kg" 
-                step="0.1"
-                min="30"
-                max="300"
-                placeholder="Enter your weight"
-                class="w-full px-4 py-4 pr-12 border-2 border-gray-300 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all outline-none text-lg font-semibold"
-                required
-              />
-              <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">kg</span>
-            </div>
-          </div>
-          
-          <div>
-            <label class="block text-sm font-bold text-gray-700 mb-2">Date</label>
-            <input 
-              type="date" 
-              name="date" 
-              value={new Date().toISOString().split('T')[0]}
-              max={new Date().toISOString().split('T')[0]}
-              class="w-full px-4 py-4 border-2 border-gray-300 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all outline-none"
-              required
-            />
-          </div>
-          
-          <div>
-            <label class="block text-sm font-bold text-gray-700 mb-2">Notes (optional)</label>
-            <textarea 
-              name="notes" 
-              rows="3"
-              placeholder="How are you feeling today?"
-              class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all outline-none resize-none"
-            ></textarea>
-          </div>
-          
-          <div class="flex gap-3 pt-2">
-            <button 
-              type="submit" 
-              class="flex-1 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-bold py-4 px-6 rounded-xl hover:shadow-xl transition-all duration-300 hover:scale-105"
-            >
-              ✅ Add Entry
-            </button>
-            <button 
-              type="button"
-              onclick="document.getElementById('weight-modal').classList.add('hidden')"
-              class="bg-gray-200 text-gray-700 font-semibold py-4 px-6 rounded-xl hover:bg-gray-300 transition"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+        <p style="font-size:1.125rem;opacity:.9;margin-bottom:1.5rem;">{profile.email}</p>
+        <div style="display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;margin-bottom:1.5rem;">
+          <span style="display:inline-flex;align-items:center;gap:.5rem;padding:.75rem 1.5rem;background:rgba(255,255,255,.25);backdrop-filter:blur(10px);border-radius:9999px;font-weight:800;">
+            <span style="font-size:1.5rem;">{plan.emoji}</span><span>{plan.name} Plan</span>
+          </span>
+          <span style="display:inline-flex;align-items:center;gap:.5rem;padding:.75rem 1.5rem;background:rgba(255,255,255,.2);backdrop-filter:blur(10px);border-radius:9999px;font-weight:700;">
+            🔥 {currentStreak} Day Streak
+          </span>
+          <span style="display:inline-flex;align-items:center;gap:.5rem;padding:.75rem 1.5rem;background:rgba(255,255,255,.2);backdrop-filter:blur(10px);border-radius:9999px;font-weight:700;">
+            🏆 {unlockedAchievements.length}/{achievementsList.length} Badges
+          </span>
+        </div>
+        <!-- Units Toggle -->
+        <div class="units-toggle-wrap">
+          <button onclick="setUnits('imperial')" class={`units-btn ${units==='imperial'?'active':'inactive'}`}>🇺🇸 lbs / ft</button>
+          <button onclick="setUnits('metric')"   class={`units-btn ${units==='metric'  ?'active':'inactive'}`}>🌍 kg / cm</button>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,.2);backdrop-filter:blur(10px);border-radius:2rem;padding:2rem;text-align:center;box-shadow:var(--shadow-xl);">
+        <div style="font-size:.875rem;opacity:.9;margin-bottom:.5rem;font-weight:600;">Days Completed</div>
+        <div style="font-size:4rem;font-weight:900;text-shadow:0 4px 8px rgba(0,0,0,.3);">{totalDaysCompleted}</div>
+        <div style="font-size:.875rem;opacity:.9;">out of {plan.durationDays} days</div>
       </div>
     </div>
   </div>
 
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Stats Grid -->
+  <div class="grid grid-4 mb-4">
+    <div class="stat-card-3d">
+      <div class="stat-icon-3d">⚖️</div>
+      <div style="font-size:.875rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;position:relative;z-index:1;">Current Weight</div>
+      <div style="font-size:2rem;font-weight:900;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;position:relative;z-index:1;">{displayWeight}</div>
+      <div style="font-size:.875rem;color:var(--text-secondary);margin-top:.5rem;position:relative;z-index:1;">Target: {displayTargetWeight}</div>
+      <div style="margin-top:1rem;position:relative;z-index:1;"><div class="progress-3d" style="height:6px;"><div class="progress-fill-3d" style={`width:${Math.min(100,progressPercent)}%`}></div></div></div>
+    </div>
+    <div class="stat-card-3d">
+      <div class="stat-icon-3d">📏</div>
+      <div style="font-size:.875rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;position:relative;z-index:1;">Height / BMI</div>
+      <div style="font-size:2rem;font-weight:900;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;position:relative;z-index:1;">{displayHeight}</div>
+      <div style="margin-top:1rem;position:relative;z-index:1;"><span style="padding:.375rem 1rem;border-radius:9999px;font-size:.8125rem;font-weight:700;background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(52,211,153,.15));color:var(--accent-primary);border:2px solid var(--accent-primary);">BMI {bmi?bmi.toFixed(1):'N/A'} — {bmiCategory.label}</span></div>
+    </div>
+    <div class="stat-card-3d">
+      <div class="stat-icon-3d">🔥</div>
+      <div style="font-size:.875rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;position:relative;z-index:1;">Streak</div>
+      <div style="font-size:2.5rem;font-weight:900;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;position:relative;z-index:1;">{currentStreak} <span style="font-size:1.25rem;opacity:.7;">days</span></div>
+      <div style="margin-top:1rem;font-size:.8125rem;color:var(--text-secondary);position:relative;z-index:1;">Longest: {longestStreak} days</div>
+    </div>
+    <div class="stat-card-3d">
+      <div class="stat-icon-3d">📅</div>
+      <div style="font-size:.875rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;position:relative;z-index:1;">Days Left</div>
+      <div style="font-size:2.5rem;font-weight:900;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;position:relative;z-index:1;">{daysLeft}</div>
+      <div style="margin-top:1rem;position:relative;z-index:1;"><div class="progress-3d" style="height:6px;"><div class="progress-fill-3d" style={`width:${subscriptionProgress}%`}></div></div></div>
+    </div>
+  </div>
 
-  <!-- Weight Chart Script -->
-  <script define:vars={{ chartDataJSON }}>
-    const chartData = JSON.parse(chartDataJSON);
-    
-    if (chartData.length > 1) {
-      const canvas = document.getElementById('weightChart');
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        
-        // Create gradient
-        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-        gradient.addColorStop(0, 'rgba(16, 185, 129, 0.5)');
-        gradient.addColorStop(0.5, 'rgba(16, 185, 129, 0.25)');
-        gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
-        
-        // Calculate dynamic scale
-        const weights = chartData.map(d => d.weight);
-        const minWeight = Math.min(...weights);
-        const maxWeight = Math.max(...weights);
-        const range = maxWeight - minWeight;
-        const suggestedMin = Math.floor(minWeight - range * 0.2);
-        const suggestedMax = Math.ceil(maxWeight + range * 0.2);
-        
-        new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: chartData.map(d => d.date),
-            datasets: [{
-              label: 'Weight',
-              data: chartData.map(d => d.weight),
-              borderColor: '#10b981',
-              backgroundColor: gradient,
-              borderWidth: 4,
-              fill: true,
-              tension: 0.4,
-              pointRadius: 7,
-              pointHoverRadius: 10,
-              pointBackgroundColor: '#10b981',
-              pointBorderColor: '#fff',
-              pointBorderWidth: 3,
-              pointHoverBackgroundColor: '#059669',
-              pointHoverBorderColor: '#fff',
-              pointHoverBorderWidth: 4
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                display: false
-              },
-              tooltip: {
-                enabled: true,
-                backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                padding: 16,
-                titleFont: { size: 14, weight: 'bold' },
-                bodyFont: { size: 18, weight: 'bold' },
-                displayColors: false,
-                borderColor: '#10b981',
-                borderWidth: 2,
-                cornerRadius: 12,
-                callbacks: {
-                  title: function(context) {
-                    return context[0].label;
-                  },
-                  label: function(context) {
-                    return context.parsed.y.toFixed(1) + ' kg';
-                  },
-                  afterLabel: function(context) {
-                    if (context.dataIndex > 0) {
-                      const current = context.parsed.y;
-                      const previous = context.chart.data.datasets[0].data[context.dataIndex - 1];
-                      const change = previous - current;
-                      return change >= 0 
-                        ? '↓ ' + change.toFixed(1) + ' kg lost'
-                        : '↑ ' + Math.abs(change).toFixed(1) + ' kg gained';
-                    }
-                    return 'Starting weight';
-                  }
-                }
-              }
-            },
-            scales: {
-              y: {
-                min: suggestedMin,
-                max: suggestedMax,
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.06)',
-                  drawBorder: false
-                },
-                ticks: {
-                  font: { size: 13, weight: '600' },
-                  color: '#4b5563',
-                  padding: 10,
-                  callback: function(value) {
-                    return value.toFixed(1) + ' kg';
-                  }
-                },
-                border: {
-                  display: false
-                }
-              },
-              x: {
-                grid: {
-                  display: false,
-                  drawBorder: false
-                },
-                ticks: {
-                  font: { size: 12, weight: '600' },
-                  color: '#6b7280',
-                  maxRotation: 45,
-                  minRotation: 45,
-                  padding: 10
-                },
-                border: {
-                  display: false
-                }
-              }
-            },
-            interaction: {
-              intersect: false,
-              mode: 'index'
-            },
-            animation: {
-              duration: 2000,
-              easing: 'easeInOutQuart'
-            }
-          }
-        });
-      }
+  <!-- Content Grid -->
+  <div class="grid grid-2">
+    <!-- Left -->
+    <div style="display:flex;flex-direction:column;gap:2rem;">
+
+      <!-- Weight Chart -->
+      <div class="card-3d">
+        <div class="flex-between mb-4">
+          <div>
+            <h2 style="font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:flex;align-items:center;gap:.75rem;">📈 Weight Progress</h2>
+            <p style="font-size:.875rem;color:var(--text-secondary);margin-top:.25rem;">Showing in {units==='imperial'?'lbs':'kg'}</p>
+          </div>
+          <button id="open-weight-modal" class="btn-3d btn-primary-3d">➕ Add Weight</button>
+        </div>
+        {chartData.length > 1 ? (
+          <div style="position:relative;height:300px;"><canvas id="weightChart"></canvas></div>
+        ) : (
+          <div style="height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(16,185,129,.05),rgba(52,211,153,.05));border-radius:1rem;border:2px dashed var(--accent-primary);">
+            <span style="font-size:5rem;margin-bottom:1rem;">📊</span>
+            <h3 style="font-size:1.5rem;font-weight:700;margin-bottom:.75rem;">Start Tracking</h3>
+            <p style="color:var(--text-secondary);margin-bottom:1.5rem;">Log your weight to see progress!</p>
+            <button id="open-weight-modal-2" class="btn-3d btn-primary-3d">➕ Add First Entry</button>
+          </div>
+        )}
+      </div>
+
+      <!-- XP Chart -->
+      <div class="card-3d">
+        <h2 style="font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;">⚡ XP Progress</h2>
+        {xpData.length>0 ? <div style="position:relative;height:300px;"><canvas id="xpChart"></canvas></div>
+        : <div style="height:300px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);text-align:center;"><div><span style="font-size:4rem;display:block;margin-bottom:1rem;">⚡</span><p>Complete tasks to earn XP!</p></div></div>}
+      </div>
+
+      <!-- Completion Chart -->
+      <div class="card-3d">
+        <h2 style="font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;">📊 Daily Completion</h2>
+        {completionData.length>0 ? <div style="position:relative;height:300px;"><canvas id="completionChart"></canvas></div>
+        : <div style="height:300px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);text-align:center;"><div><span style="font-size:4rem;display:block;margin-bottom:1rem;">📊</span><p>Complete your first day!</p></div></div>}
+      </div>
+
+      <!-- Nutrition -->
+      <div class="card-3d">
+        <h2 style="font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;">🥑 Daily Nutrition Targets</h2>
+        <div class="grid grid-2" style="gap:1rem;">
+          {[
+            {icon:'🔥',label:'Calories',value:`${calorieTarget} kcal`,color:'#ef4444',bg:'rgba(239,68,68,.1)'},
+            {icon:'🥩',label:'Protein', value:`${proteinGrams}g`,     color:'#dc2626',bg:'rgba(220,38,38,.1)'},
+            {icon:'🥓',label:'Fat',     value:`${fatGrams}g`,         color:'#10b981',bg:'rgba(16,185,129,.1)'},
+            {icon:'🌾',label:'Net Carbs',value:`${carbGrams}g`,      color:'#f59e0b',bg:'rgba(245,158,11,.1)'},
+          ].map(item=>(
+            <div style={`padding:1.25rem;background:${item.bg};border-radius:1rem;border:2px solid ${item.color};`}>
+              <div style="display:flex;align-items:center;gap:.75rem;">
+                <span style="font-size:2.5rem;">{item.icon}</span>
+                <div><div style="font-size:.8125rem;color:var(--text-secondary);font-weight:600;">{item.label}</div><div style={`font-size:1.75rem;font-weight:800;color:${item.color};`}>{item.value}</div></div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style="margin-top:1.5rem;padding:1.25rem;background:linear-gradient(135deg,rgba(59,130,246,.1),rgba(37,99,235,.1));border-radius:1rem;border:2px solid #3b82f6;text-align:center;">
+          <p style="font-weight:700;color:#2563eb;">Keto Ratio: 70% Fat · 25% Protein · 5% Carbs</p>
+        </div>
+      </div>
+
+      <!-- Activity -->
+      <div class="card-3d">
+        <h2 style="font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;">📊 Activity Summary</h2>
+        <div class="grid grid-3">
+          {[
+            {icon:'🍽️',label:'Meals',  value:totalMealsCompleted, color:'#7c3aed',bg:'rgba(139,92,246,.1)',border:'#8b5cf6'},
+            {icon:'💧',label:'Glasses', value:totalWaterGlasses,   color:'#2563eb',bg:'rgba(59,130,246,.1)', border:'#3b82f6'},
+            {icon:'✅',label:'Tasks',   value:totalTasksCompleted, color:'#d97706',bg:'rgba(245,158,11,.1)', border:'#f59e0b'},
+          ].map(item=>(
+            <div style={`text-align:center;padding:1.5rem;background:${item.bg};border-radius:1rem;border:2px solid ${item.border};`}>
+              <span style="font-size:3rem;display:block;margin-bottom:.75rem;">{item.icon}</span>
+              <div style={`font-size:2rem;font-weight:800;color:${item.color};margin-bottom:.5rem;`}>{item.value}</div>
+              <div style="font-size:.875rem;color:var(--text-secondary);font-weight:600;">{item.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right -->
+    <div style="display:flex;flex-direction:column;gap:2rem;">
+      <!-- Achievements -->
+      <div class="card-3d">
+        <h2 style="font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;">🏆 Achievements</h2>
+        {unlockedAchievements.length>0&&(
+          <div style="margin-bottom:2rem;">
+            <h3 style="font-size:.875rem;font-weight:700;color:var(--accent-primary);text-transform:uppercase;margin-bottom:1rem;">✅ Unlocked ({unlockedAchievements.length})</h3>
+            <div style="display:flex;flex-direction:column;gap:.75rem;max-height:280px;overflow-y:auto;">
+              {unlockedAchievements.map(a=>(
+                <div class="achievement-badge unlocked">
+                  <span style="font-size:2.5rem;">{a.icon}</span>
+                  <div style="flex:1;"><h4 style="font-weight:700;color:var(--text-primary);">{a.name}</h4><p style="font-size:.8125rem;color:var(--text-secondary);">{a.description}</p></div>
+                  <span style="color:var(--accent-primary);font-size:1.5rem;">✓</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {lockedAchievements.length>0&&(
+          <div>
+            <h3 style="font-size:.875rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;margin-bottom:1rem;">🔒 Locked ({lockedAchievements.length})</h3>
+            <div style="display:flex;flex-direction:column;gap:.75rem;">
+              {lockedAchievements.slice(0,5).map(a=>(
+                <div class="achievement-badge" style="opacity:.6;">
+                  <span style="font-size:2.5rem;filter:grayscale(1);">{a.icon}</span>
+                  <div style="flex:1;"><h4 style="font-weight:700;color:var(--text-secondary);">{a.name}</h4><p style="font-size:.8125rem;color:var(--text-secondary);">{a.description}</p></div>
+                  <span style="color:var(--text-secondary);">🔒</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card-3d" style="background:linear-gradient(135deg,rgba(16,185,129,.05),rgba(52,211,153,.05));border:2px solid var(--accent-primary);">
+        <h2 style="font-size:1.25rem;font-weight:800;margin-bottom:1.5rem;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:flex;align-items:center;gap:.75rem;">⚡ Quick Actions</h2>
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+          <a href="/dashboard/" class="btn-3d btn-primary-3d" style="width:100%;justify-content:center;">📊 Go to Dashboard</a>
+          <a href="/dashboard/recipes" class="btn-3d btn-secondary-3d" style="width:100%;justify-content:center;">🍽️ View Recipes</a>
+          <button id="open-edit-modal-2" class="btn-3d btn-secondary-3d" style="width:100%;justify-content:center;">✏️ Edit Profile</button>
+          <form action="/api/auth/logout" method="POST">
+            <button type="submit" class="btn-3d" style="width:100%;justify-content:center;background:linear-gradient(135deg,#ef4444,#dc2626);color:white;box-shadow:var(--shadow-md);">🚪 Logout</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Avatar Modal -->
+<div class="modal-overlay" id="avatarModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="flex-between">
+        <h2 style="font-size:1.75rem;font-weight:900;display:flex;align-items:center;gap:.75rem;"><span>📷</span><span>Change Avatar</span></h2>
+        <button id="close-avatar-modal" style="background:rgba(255,255,255,.2);border:none;width:2.5rem;height:2.5rem;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;cursor:pointer;">×</button>
+      </div>
+    </div>
+    <div style="padding:2rem;">
+      <div style="display:flex;justify-content:center;margin-bottom:2rem;">
+        <div id="avatar-preview" style="width:8rem;height:8rem;border-radius:50%;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;font-size:4rem;overflow:hidden;border:4px solid var(--border-color);">
+          {profile.avatar_url?.startsWith('emoji:') ? <span>{profile.avatar_url.replace('emoji:','')}</span> : profile.avatar_url ? <img src={profile.avatar_url} alt="Avatar" style="width:100%;height:100%;object-fit:cover;"/> : <span>👤</span>}
+        </div>
+      </div>
+      <div style="margin-bottom:1.5rem;">
+        <label style="display:block;font-size:.875rem;font-weight:700;margin-bottom:.5rem;">Upload Image</label>
+        <input type="file" id="avatar-upload" accept="image/*" class="form-input"/>
+        <p style="font-size:.8125rem;color:var(--text-secondary);margin-top:.5rem;">Max 2MB · JPG/PNG</p>
+      </div>
+      <div style="margin-bottom:1.5rem;">
+        <label style="display:block;font-size:.875rem;font-weight:700;margin-bottom:.75rem;">Or Choose Emoji</label>
+        <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:.5rem;">
+          {['👤','😊','😎','🤠','👨','👩','🧔','👱','🦸','🧙','🧝','🧛','🧟','🤖','👾','😺'].map(emoji=>(
+            <button type="button" data-emoji={emoji} class="emoji-btn" style="font-size:2rem;padding:.5rem;border:2px solid var(--border-color);background:var(--bg-secondary);border-radius:.75rem;cursor:pointer;transition:all .3s;">{emoji}</button>
+          ))}
+        </div>
+      </div>
+      <button id="save-avatar-btn" class="btn-3d btn-primary-3d" style="width:100%;justify-content:center;">💾 Save Avatar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="flex-between">
+        <h2 style="font-size:1.75rem;font-weight:900;display:flex;align-items:center;gap:.75rem;"><span>✏️</span><span>Edit Profile</span></h2>
+        <button id="close-edit-modal" style="background:rgba(255,255,255,.2);border:none;width:2.5rem;height:2.5rem;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;cursor:pointer;">×</button>
+      </div>
+    </div>
+    <form id="edit-form" style="padding:2rem;display:flex;flex-direction:column;gap:1.5rem;">
+      <div>
+        <label style="display:block;font-size:.875rem;font-weight:700;margin-bottom:.5rem;">Full Name</label>
+        <input type="text" name="full_name" value={profile.full_name} class="form-input" required/>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;">
+        <div>
+          <label style="display:block;font-size:.875rem;font-weight:700;margin-bottom:.5rem;">Age</label>
+          <input type="number" name="age" value={profile.age||''} class="form-input"/>
+        </div>
+        <div>
+          <label style="display:block;font-size:.875rem;font-weight:700;margin-bottom:.5rem;">Gender</label>
+          <select name="gender" class="form-input">
+            <option value="">Select…</option>
+            <option value="male"   selected={profile.gender==='male'}>Male</option>
+            <option value="female" selected={profile.gender==='female'}>Female</option>
+            <option value="other"  selected={profile.gender==='other'}>Other</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="display:block;font-size:.875rem;font-weight:700;margin-bottom:.5rem;">Weight ({wLabel})</label>
+        <input type="number" name="weight_display" value={weightInputVal} step="0.1" class="form-input" placeholder={`Enter weight in ${wLabel}`}/>
+        <p style="font-size:.8125rem;color:var(--text-secondary);margin-top:.375rem;">Currently: {displayWeight}</p>
+      </div>
+      {units==='imperial' ? (
+        <div>
+          <label style="display:block;font-size:.875rem;font-weight:700;margin-bottom:.5rem;">Height (ft / in)</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+            <input type="number" name="height_ft" value={heightFtVal} min="3" max="8" class="form-input" placeholder="feet"/>
+            <input type="number" name="height_in" value={heightInVal} min="0" max="11" class="form-input" placeholder="inches"/>
+          </div>
+          <p style="font-size:.8125rem;color:var(--text-secondary);margin-top:.375rem;">Currently: {displayHeight}</p>
+        </div>
+      ) : (
+        <div>
+          <label style="display:block;font-size:.875rem;font-weight:700;margin-bottom:.5rem;">Height (cm)</label>
+          <input type="number" name="height_cm" value={profile.height_cm||''} class="form-input" placeholder="Enter height in cm"/>
+        </div>
+      )}
+      <div>
+        <label style="display:block;font-size:.875rem;font-weight:700;margin-bottom:.5rem;">Target Weight ({wLabel})</label>
+        <input type="number" name="target_weight_display" value={targetInputVal} step="0.1" class="form-input"/>
+      </div>
+      <div>
+        <label style="display:block;font-size:.875rem;font-weight:700;margin-bottom:.5rem;">Goal</label>
+        <select name="goal" class="form-input">
+          <option value="">Select…</option>
+          <option value="lose_weight"  selected={profile.goal==='lose_weight'}>Lose Weight</option>
+          <option value="maintain"     selected={profile.goal==='maintain'}>Maintain Weight</option>
+          <option value="gain_muscle"  selected={profile.goal==='gain_muscle'}>Gain Muscle</option>
+        </select>
+      </div>
+      <div>
+        <label style="display:block;font-size:.875rem;font-weight:700;margin-bottom:.5rem;">Activity Level</label>
+        <select name="activity_level" class="form-input">
+          <option value="">Select…</option>
+          <option value="sedentary"   selected={profile.activity_level==='sedentary'}>Sedentary (no exercise)</option>
+          <option value="light"       selected={profile.activity_level==='light'}>Light (1–3 days/week)</option>
+          <option value="moderate"    selected={profile.activity_level==='moderate'}>Moderate (3–5 days/week)</option>
+          <option value="active"      selected={profile.activity_level==='active'}>Active (6–7 days/week)</option>
+          <option value="very_active" selected={profile.activity_level==='very_active'}>Very Active (2×/day)</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:1rem;padding-top:.5rem;">
+        <button type="submit" class="btn-3d btn-primary-3d" style="flex:1;justify-content:center;">💾 Save Changes</button>
+        <button type="button" id="close-edit-modal-2" class="btn-3d btn-secondary-3d">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Weight Modal -->
+<div class="modal-overlay" id="weightModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="flex-between">
+        <h2 style="font-size:1.75rem;font-weight:900;display:flex;align-items:center;gap:.75rem;"><span>⚖️</span><span>Add Weight Entry</span></h2>
+        <button id="close-weight-modal" style="background:rgba(255,255,255,.2);border:none;width:2.5rem;height:2.5rem;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;cursor:pointer;">×</button>
+      </div>
+    </div>
+    <form id="weight-form" style="padding:2rem;display:flex;flex-direction:column;gap:1.5rem;">
+      <div>
+        <label style="display:block;font-size:.875rem;font-weight:700;margin-bottom:.5rem;">Weight ({wLabel})</label>
+        <input type="number" name="weight_display" step="0.1" min="50" max="700" placeholder={`Enter in ${wLabel}`} class="form-input" style="font-size:1.25rem;font-weight:700;" required/>
+        <p style="font-size:.8125rem;color:var(--text-secondary);margin-top:.375rem;">{units==='imperial'?'Will be converted to kg automatically':'Saved directly in kg'}</p>
+      </div>
+      <div>
+        <label style="display:block;font-size:.875rem;font-weight:700;margin-bottom:.5rem;">Date</label>
+        <input type="date" name="date" value={new Date().toISOString().split('T')[0]} max={new Date().toISOString().split('T')[0]} class="form-input" required/>
+      </div>
+      <div>
+        <label style="display:block;font-size:.875rem;font-weight:700;margin-bottom:.5rem;">Notes (optional)</label>
+        <textarea name="notes" rows="3" placeholder="How are you feeling?" class="form-input" style="resize:none;"></textarea>
+      </div>
+      <div style="display:flex;gap:1rem;">
+        <button type="submit" class="btn-3d btn-primary-3d" style="flex:1;justify-content:center;">✅ Add Entry</button>
+        <button type="button" id="close-weight-modal-2" class="btn-3d btn-secondary-3d">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script is:inline define:vars={{
+  chartData: JSON.stringify(chartData),
+  xpData: JSON.stringify(xpData),
+  completionData: JSON.stringify(completionData),
+  currentUnits: units,
+  weightChartLabel
+}}>
+  // Dark Mode
+  const html = document.documentElement;
+  const themeIcon = document.getElementById('themeIcon');
+  const saved = localStorage.getItem('theme') || 'light';
+  html.setAttribute('data-theme', saved);
+  if (themeIcon) themeIcon.textContent = saved==='dark'?'🌙':'☀️';
+  document.getElementById('themeToggle')?.addEventListener('click', function() {
+    const next = html.getAttribute('data-theme')==='dark'?'light':'dark';
+    html.setAttribute('data-theme', next);
+    if (themeIcon) themeIcon.textContent = next==='dark'?'🌙':'☀️';
+    localStorage.setItem('theme', next);
+  });
+
+  // Notifications
+  const bell = document.getElementById('notif-bell');
+  const drop = document.getElementById('notificationDropdown');
+  if (bell && drop) {
+    bell.addEventListener('click', e => { e.stopPropagation(); drop.classList.toggle('active'); });
+    document.addEventListener('click', e => { if (!drop.contains(e.target)&&!bell.contains(e.target)) drop.classList.remove('active'); });
+  }
+
+  // Modals
+  [
+    { m:'avatarModal',  o:['open-avatar-modal'],                          c:['close-avatar-modal'] },
+    { m:'editModal',    o:['open-edit-modal','open-edit-modal-2'],         c:['close-edit-modal','close-edit-modal-2'] },
+    { m:'weightModal',  o:['open-weight-modal','open-weight-modal-2'],     c:['close-weight-modal','close-weight-modal-2'] },
+  ].forEach(({ m, o, c }) => {
+    const el = document.getElementById(m);
+    if (!el) return;
+    o.forEach(id => document.getElementById(id)?.addEventListener('click', e => { e.preventDefault(); el.classList.add('active'); }));
+    c.forEach(id => document.getElementById(id)?.addEventListener('click', () => el.classList.remove('active')));
+    el.addEventListener('click', e => { if (e.target===el) el.classList.remove('active'); });
+  });
+
+  // Units Toggle
+  async function setUnits(u) {
+    const res = await fetch('/api/profile/update-units', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ units:u }) });
+    if (res.ok) window.location.reload();
+    else alert('Failed to update units');
+  }
+  window.setUnits = setUnits;
+
+  // Avatar
+  let avatarData = null;
+  const upload = document.getElementById('avatar-upload');
+  const preview = document.getElementById('avatar-preview');
+  if (upload) {
+    upload.addEventListener('change', function(e) {
+      const f = e.target.files[0];
+      if (!f) return;
+      if (f.size > 2*1024*1024) { alert('❌ Max 2MB'); return; }
+      const r = new FileReader();
+      r.onload = ev => { if (preview) { preview.innerHTML='<img src="'+ev.target.result+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>'; avatarData=ev.target.result; } };
+      r.readAsDataURL(f);
+    });
+  }
+  document.querySelectorAll('.emoji-btn').forEach(b => b.addEventListener('click', function() {
+    const e = this.getAttribute('data-emoji');
+    if (preview) { preview.innerHTML='<span style="font-size:4rem;">'+e+'</span>'; avatarData='emoji:'+e; }
+  }));
+  document.getElementById('save-avatar-btn')?.addEventListener('click', async function() {
+    if (!avatarData) { alert('❌ Select an avatar first'); return; }
+    const res = await fetch('/api/profile/update-avatar', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ avatar:avatarData }) });
+    if (res.ok) window.location.reload();
+    else alert('❌ Failed to update avatar');
+  });
+
+  // Edit Form (with unit conversion)
+  document.getElementById('edit-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(this).entries());
+    const w = parseFloat(d.weight_display), t = parseFloat(d.target_weight_display);
+    if (currentUnits === 'imperial') {
+      if (!isNaN(w)) d.weight_kg = (w/2.20462).toFixed(2);
+      if (!isNaN(t)) d.target_weight_kg = (t/2.20462).toFixed(2);
+      const ft = parseFloat(d.height_ft)||0, inch = parseFloat(d.height_in)||0;
+      d.height_cm = Math.round((ft*12+inch)*2.54);
+    } else {
+      if (!isNaN(w)) d.weight_kg = w;
+      if (!isNaN(t)) d.target_weight_kg = t;
     }
-  </script>
+    delete d.weight_display; delete d.target_weight_display; delete d.height_ft; delete d.height_in;
+    const res = await fetch('/api/profile/update', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) });
+    if (res.ok) window.location.reload();
+    else alert('❌ Failed to update profile');
+  });
 
-  <!-- 🆕 XP Chart Script -->
-  <script define:vars={{ xpChartJSON }}>
-    const xpChartData = JSON.parse(xpChartJSON);
-    
-    if (xpChartData.length > 0) {
-      const canvas = document.getElementById('xpChart');
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        
-        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-        gradient.addColorStop(0, 'rgba(234, 179, 8, 0.5)');
-        gradient.addColorStop(1, 'rgba(234, 179, 8, 0)');
-        
-        new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: xpChartData.map(d => d.day),
-            datasets: [{
-              label: 'Total XP',
-              data: xpChartData.map(d => d.xp),
-              borderColor: '#eab308',
-              backgroundColor: gradient,
-              borderWidth: 3,
-              fill: true,
-              tension: 0.4,
-              pointRadius: 5,
-              pointHoverRadius: 8,
-              pointBackgroundColor: '#eab308',
-              pointBorderColor: '#fff',
-              pointBorderWidth: 2
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                padding: 12,
-                callbacks: {
-                  label: (context) => context.parsed.y + ' XP'
-                }
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                grid: { color: 'rgba(0, 0, 0, 0.05)' },
-                ticks: {
-                  callback: (value) => value + ' XP'
-                }
-              },
-              x: {
-                grid: { display: false }
-              }
-            }
-          }
-        });
-      }
-    }
-  </script>
+  // Weight Form (with unit conversion)
+  document.getElementById('weight-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(this).entries());
+    const v = parseFloat(d.weight_display);
+    d.weight_kg = currentUnits==='imperial' ? (v/2.20462).toFixed(2) : v;
+    delete d.weight_display;
+    const res = await fetch('/api/profile/add-weight', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(d) });
+    if (res.ok) window.location.reload();
+    else { const err = await res.json(); alert('❌ '+(err.error||'Failed')); }
+  });
 
-  <!-- 🆕 Completion Chart Script -->
-  <script define:vars={{ completionChartJSON }}>
-    const completionChartData = JSON.parse(completionChartJSON);
-    
-    if (completionChartData.length > 0) {
-      const canvas = document.getElementById('completionChart');
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        
-        new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: completionChartData.map(d => d.day),
-            datasets: [{
-              label: 'Completion %',
-              data: completionChartData.map(d => d.percentage),
-              backgroundColor: completionChartData.map(d => 
-                d.percentage === 100 ? '#10b981' : 
-                d.percentage >= 75 ? '#3b82f6' :
-                d.percentage >= 50 ? '#f59e0b' : '#ef4444'
-              ),
-              borderRadius: 8,
-              borderWidth: 0
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                padding: 12,
-                callbacks: {
-                  label: (context) => context.parsed.y + '% completed'
-                }
-              }
-            },
-            scales: {
-              y: {
-                min: 0,
-                max: 100,
-                grid: { color: 'rgba(0, 0, 0, 0.05)' },
-                ticks: {
-                  callback: (value) => value + '%'
-                }
-              },
-              x: {
-                grid: { display: false }
-              }
-            }
-          }
-        });
-      }
-    }
-  </script>
-
-  <!-- Form Handlers -->
-  <script is:inline>
-    // Avatar Upload
-    let selectedAvatarData = null;
-
-    const avatarUpload = document.getElementById('avatar-upload');
-    if (avatarUpload) {
-      avatarUpload.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-          if (file.size > 2 * 1024 * 1024) {
-            alert('❌ File too large! Max 2MB');
-            return;
-          }
-          
-          const reader = new FileReader();
-          reader.onload = function(event) {
-            const preview = document.getElementById('avatar-preview');
-            if (preview) {
-              preview.innerHTML = '<img src="' + event.target.result + '" class="w-full h-full object-cover" />';
-              selectedAvatarData = event.target.result;
-            }
-          };
-          reader.readAsDataURL(file);
-        }
-      });
-    }
-
-    function selectEmoji(emoji) {
-      const preview = document.getElementById('avatar-preview');
-      if (preview) {
-        preview.innerHTML = '<span class="text-7xl">' + emoji + '</span>';
-        selectedAvatarData = 'emoji:' + emoji;
-      }
-    }
-
-    async function saveAvatar() {
-      if (!selectedAvatarData) {
-        alert('❌ Please select an avatar first');
-        return;
-      }
-      
-      try {
-        const response = await fetch('/api/profile/update-avatar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ avatar: selectedAvatarData })
-        });
-        
-        if (response.ok) {
-          alert('✅ Avatar updated!');
-          window.location.reload();
-        } else {
-          alert('❌ Failed to update avatar');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('❌ An error occurred');
-      }
-    }
-
-    // Edit Profile Form
-    const editForm = document.getElementById('edit-form');
-    if (editForm) {
-      editForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(editForm);
-        const data = Object.fromEntries(formData.entries());
-        
-        try {
-          const response = await fetch('/api/profile/update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-          });
-          
-          if (response.ok) {
-            alert('✅ Profile updated!');
-            window.location.reload();
-          } else {
-            alert('❌ Failed to update profile');
-          }
-        } catch (error) {
-          console.error('Error:', error);
-          alert('❌ An error occurred');
-        }
-      });
-    }
-
-    // Add Weight Form
-    const weightForm = document.getElementById('weight-form');
-    if (weightForm) {
-      weightForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '⏳ Adding...';
-        submitBtn.disabled = true;
-        
-        const formData = new FormData(weightForm);
-        const data = Object.fromEntries(formData.entries());
-        
-        try {
-          const response = await fetch('/api/profile/add-weight', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-          });
-          
-          if (response.ok) {
-            alert('✅ Weight added!');
-            window.location.reload();
-          } else {
-            const error = await response.json();
-            alert('❌ Failed: ' + (error.error || 'Unknown error'));
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-          }
-        } catch (error) {
-          console.error('Error:', error);
-          alert('❌ An error occurred');
-          submitBtn.innerHTML = originalText;
-          submitBtn.disabled = false;
-        }
-      });
-    }
-
-    // Make functions global
-    window.selectEmoji = selectEmoji;
-    window.saveAvatar = saveAvatar;
-  </script>
-
-  <!-- Shimmer Animation -->
-  <style>
-    @keyframes shimmer {
-      0% { transform: translateX(-100%); }
-      100% { transform: translateX(100%); }
-    }
-    
-    .shimmer-animation {
-      animation: shimmer 2s infinite;
-    }
-  </style>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
-
-<script is:inline define:vars={{ chartDataJSON, xpChartJSON, completionChartJSON }}>
-  // ننتظر حتى يتم تحميل الصفحة والمكتبة بالكامل
+  // Charts
   window.addEventListener('load', function() {
-    if (typeof Chart === 'undefined') {
-      console.error('Chart.js failed to load!');
-      return;
-    }
+    if (typeof Chart==='undefined') return;
+    const isDark = html.getAttribute('data-theme')==='dark';
+    const tc = isDark?'#eaeaea':'#374151', gc = isDark?'rgba(255,255,255,.1)':'rgba(0,0,0,.05)';
 
-    // --- إعدادات عامة للرسوم البيانية ---
-    const commonOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: false, grid: { display: false } },
-        x: { grid: { display: false } }
+    const wCtx = document.getElementById('weightChart');
+    if (wCtx) {
+      const d = JSON.parse(chartData);
+      if (d.length > 1) {
+        const ws=d.map(x=>x.weight), mn=Math.min(...ws), mx=Math.max(...ws), rng=mx-mn;
+        new Chart(wCtx, { type:'line', data:{ labels:d.map(x=>x.date), datasets:[{ data:ws, borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.1)', fill:true, tension:.4, borderWidth:3, pointRadius:6 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:ctx=>ctx.parsed.y.toFixed(1)+' '+weightChartLabel } } }, scales:{ y:{ min:Math.floor(mn-rng*.2), max:Math.ceil(mx+rng*.2), grid:{color:gc}, ticks:{color:tc,callback:v=>v+' '+weightChartLabel} }, x:{grid:{display:false},ticks:{color:tc}} } } });
       }
-    };
-
-    // --- 1. رسم بياني للوزن ---
-    const weightCtx = document.getElementById('weightChart');
-    if (weightCtx) {
-      const data = JSON.parse(chartDataJSON);
-      new Chart(weightCtx, {
-        type: 'line',
-        data: {
-          labels: data.map(d => d.date),
-          datasets: [{
-            data: data.map(d => d.weight),
-            borderColor: '#10b981',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            fill: true,
-            tension: 0.4,
-            borderWidth: 3
-          }]
-        },
-        options: commonOptions
-      });
     }
-
-    // --- 2. رسم بياني للـ XP ---
     const xpCtx = document.getElementById('xpChart');
     if (xpCtx) {
-      const data = JSON.parse(xpChartJSON);
-      new Chart(xpCtx, {
-        type: 'line',
-        data: {
-          labels: data.map(d => d.day),
-          datasets: [{
-            data: data.map(d => d.xp),
-            borderColor: '#f59e0b',
-            backgroundColor: 'rgba(245, 158, 11, 0.1)',
-            fill: true,
-            tension: 0.4,
-            borderWidth: 3
-          }]
-        },
-        options: commonOptions
-      });
+      const d = JSON.parse(xpData);
+      if (d.length>0) new Chart(xpCtx, { type:'line', data:{ labels:d.map(x=>'Day '+x.day), datasets:[{ data:d.map(x=>x.xp), borderColor:'#eab308', backgroundColor:'rgba(234,179,8,.1)', fill:true, tension:.4, borderWidth:3 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true,grid:{color:gc},ticks:{color:tc}}, x:{grid:{display:false},ticks:{color:tc}} } } });
     }
-
-    // --- 3. رسم بياني لمعدل الإكمال ---
-    const completionCtx = document.getElementById('completionChart');
-    if (completionCtx) {
-      const data = JSON.parse(completionChartJSON);
-      new Chart(completionCtx, {
-        type: 'bar',
-        data: {
-          labels: data.map(d => d.day),
-          datasets: [{
-            data: data.map(d => d.percentage),
-            backgroundColor: '#3b82f6',
-            borderRadius: 8
-          }]
-        },
-        options: {
-          ...commonOptions,
-          scales: { y: { beginAtZero: true, max: 100 } }
-        }
-      });
+    const cCtx = document.getElementById('completionChart');
+    if (cCtx) {
+      const d = JSON.parse(completionData);
+      if (d.length>0) new Chart(cCtx, { type:'bar', data:{ labels:d.map(x=>'D'+x.day), datasets:[{ data:d.map(x=>x.percentage), backgroundColor:d.map(x=>x.percentage===100?'#10b981':x.percentage>=75?'#3b82f6':x.percentage>=50?'#f59e0b':'#ef4444'), borderRadius:8 }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{min:0,max:100,grid:{color:gc},ticks:{color:tc,callback:v=>v+'%'}}, x:{grid:{display:false},ticks:{color:tc,font:{size:10}}} } } });
     }
   });
+
+  console.log('✅ Profile v4 — Units:', currentUnits);
 </script>
-
-</BaseLayout>
-
+</body>
+</html>

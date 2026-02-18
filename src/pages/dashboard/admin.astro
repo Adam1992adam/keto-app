@@ -1,0 +1,261 @@
+---
+import { supabase, getProfile, getPlan, formatWeight, formatHeight } from '../../lib/supabase';
+
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+if (!accessToken) return Astro.redirect('/login');
+
+const { data: { user } } = await supabase.auth.getUser(accessToken);
+if (!user) return Astro.redirect('/login');
+
+const profile = await getProfile(user.id);
+
+// Layer 1: Check if user is admin in database
+if (!profile?.is_admin) return Astro.redirect('/dashboard');
+
+// Layer 2: Check admin session
+const adminSession = Astro.cookies.get('admin-session')?.value;
+if (adminSession !== 'verified') {
+  return Astro.redirect('/admin-login');
+}
+
+// Fetch data
+const { data: allUsers } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+const { data: allJourneys } = await supabase.from('user_journey').select('*');
+const journeyMap = new Map(allJourneys?.map(j => [j.user_id, j]) || []);
+
+// Stats
+const totalUsers = allUsers?.length || 0;
+const activeSubscribers = allUsers?.filter(u => u.subscription_status === 'active').length || 0;
+const expiredSubscribers = allUsers?.filter(u => u.subscription_status === 'expired').length || 0;
+const allDays = allJourneys?.map(j => j.current_day || 1) || [];
+const avgDay = allDays.length > 0 ? Math.round(allDays.reduce((a,b) => a+b, 0) / allDays.length) : 0;
+const completed30 = allJourneys?.filter(j => (j.current_day || 0) >= 30).length || 0;
+
+// Monthly Signups
+const monthlySignups = [];
+for (let i = 5; i >= 0; i--) {
+  const date = new Date();
+  date.setMonth(date.getMonth() - i);
+  const month = date.toLocaleString('en-US', { month: 'short' });
+  const count = allUsers?.filter(u => {
+    const created = new Date(u.created_at);
+    return created.getMonth() === date.getMonth() && created.getFullYear() === date.getFullYear();
+  }).length || 0;
+  monthlySignups.push({ month, count });
+}
+
+// Day Distribution
+const dayDistribution = [];
+for (let day = 1; day <= 30; day++) {
+  const count = allJourneys?.filter(j => (j.current_day || 0) === day).length || 0;
+  dayDistribution.push({ day, count });
+}
+
+// Plan Counts
+const planCounts = {
+  basic_30: allUsers?.filter(u => u.subscription_tier === 'basic_30' && u.subscription_status === 'active').length || 0,
+  pro_6: allUsers?.filter(u => u.subscription_tier === 'pro_6' && u.subscription_status === 'active').length || 0,
+  elite_12: allUsers?.filter(u => u.subscription_tier === 'elite_12' && u.subscription_status === 'active').length || 0,
+  none: allUsers?.filter(u => !u.subscription_status || u.subscription_status === 'none').length || 0,
+};
+
+// Users Data
+const usersData = allUsers?.map(u => {
+  const journey = journeyMap.get(u.id);
+  const plan = getPlan(u.subscription_tier);
+  return {
+    ...u,
+    journey,
+    plan,
+    displayWeight: u.weight_kg ? formatWeight(u.weight_kg, u.preferred_units || 'imperial') : '—',
+    displayHeight: u.height_cm ? formatHeight(u.height_cm, u.preferred_units || 'imperial') : '—',
+  };
+}) || [];
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin – Keto Journey</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root{--bg-primary:#fff;--bg-secondary:#f9fafb;--bg-card:#fff;--text-primary:#111827;--text-secondary:#6b7280;--border-color:#e5e7eb;--accent-primary:#10b981;--shadow-md:0 4px 6px rgba(0,0,0,.1);--shadow-lg:0 10px 15px rgba(0,0,0,.1);--shadow-xl:0 20px 25px rgba(0,0,0,.15);}
+    [data-theme="dark"]{--bg-primary:#1a1a2e;--bg-secondary:#16213e;--bg-card:#0f3460;--text-primary:#eaeaea;--text-secondary:#a0aec0;--border-color:#2d3748;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-secondary);color:var(--text-primary);}
+    .container{max-width:1600px;margin:0 auto;padding:0 1.5rem;}
+    nav{background:var(--bg-primary);border-bottom:1px solid var(--border-color);padding:1rem 0;position:sticky;top:0;z-index:50;box-shadow:var(--shadow-md);}
+    nav a{color:var(--text-secondary);text-decoration:none;padding:.5rem 1rem;border-radius:.75rem;font-weight:500;transition:all .3s;}
+    nav a:hover,nav a.active{color:var(--accent-primary);}
+    .theme-toggle{position:relative;width:60px;height:30px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:9999px;cursor:pointer;}
+    .theme-toggle-slider{position:absolute;top:3px;left:3px;width:24px;height:24px;background:white;border-radius:50%;transition:all .3s;display:flex;align-items:center;justify-content:center;font-size:.75rem;}
+    [data-theme="dark"] .theme-toggle{background:linear-gradient(135deg,#2d3561,#1a1f3a);}
+    [data-theme="dark"] .theme-toggle-slider{transform:translateX(30px);background:#1a1a2e;color:#fbbf24;}
+    .hero{background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:2rem;padding:3rem;margin:2rem 0;color:white;position:relative;overflow:hidden;}
+    .hero::before{content:'';position:absolute;top:-50%;right:-50%;width:200%;height:200%;background:radial-gradient(circle,rgba(255,255,255,.1) 0%,transparent 70%);animation:rotate 20s linear infinite;}
+    @keyframes rotate{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+    .hero h1{font-size:3rem;font-weight:900;position:relative;z-index:1;}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.5rem;margin:2rem 0;}
+    .stat-card{background:var(--bg-card);border-radius:1.5rem;padding:2rem;border:2px solid var(--border-color);box-shadow:var(--shadow-lg);transition:all .3s;}
+    .stat-card:hover{transform:translateY(-5px);}
+    .stat-icon{width:4rem;height:4rem;background:linear-gradient(135deg,var(--accent-primary),#34d399);border-radius:1.25rem;display:flex;align-items:center;justify-content:center;font-size:2rem;margin-bottom:1rem;}
+    .stat-label{font-size:.875rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;margin-bottom:.5rem;}
+    .stat-value{font-size:2.5rem;font-weight:900;background:linear-gradient(135deg,var(--accent-primary),#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .card{background:var(--bg-card);border-radius:1.5rem;padding:2rem;border:1px solid var(--border-color);box-shadow:var(--shadow-lg);margin-bottom:2rem;}
+    .card h2{font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;background:linear-gradient(135deg,var(--accent-primary),#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    table{width:100%;border-collapse:collapse;}
+    th{padding:1rem;text-align:left;font-weight:800;font-size:.875rem;border-bottom:2px solid var(--border-color);text-transform:uppercase;}
+    td{padding:1rem;border-bottom:1px solid var(--border-color);font-size:.9375rem;}
+    tr:hover{background:rgba(16,185,129,.03);}
+    .badge{display:inline-flex;align-items:center;gap:.375rem;padding:.375rem .875rem;border-radius:9999px;font-size:.8125rem;font-weight:700;}
+    .badge-active{background:rgba(16,185,129,.15);color:#059669;border:2px solid #10b981;}
+    .badge-expired{background:rgba(239,68,68,.15);color:#dc2626;border:2px solid #ef4444;}
+    .badge-none{background:rgba(107,114,128,.15);color:var(--text-secondary);border:2px solid var(--border-color);}
+    .progress-bar{width:100%;height:.75rem;background:var(--border-color);border-radius:9999px;overflow:hidden;}
+    .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent-primary),#34d399);border-radius:9999px;}
+    .search-box{width:100%;padding:1rem 1.5rem;border:2px solid var(--border-color);border-radius:1rem;background:var(--bg-secondary);color:var(--text-primary);font-size:1rem;margin-bottom:1.5rem;}
+    .search-box:focus{outline:none;border-color:var(--accent-primary);}
+    .logout-btn{padding:.625rem 1.5rem;background:rgba(239,68,68,.1);color:#dc2626;border:2px solid #ef4444;border-radius:.75rem;font-weight:700;cursor:pointer;transition:all .3s;}
+    .logout-btn:hover{background:#ef4444;color:white;}
+    .flex{display:flex;align-items:center;}
+    .flex-between{display:flex;justify-content:space-between;align-items:center;}
+    .gap-2{gap:1rem;}
+    @media(max-width:768px){.stats-grid{grid-template-columns:1fr;}.hero h1{font-size:2rem;}}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <div class="flex-between">
+      <div class="flex gap-2">
+        <span style="font-size:2.5rem;">🔐</span>
+        <div>
+          <h1 style="font-size:1.375rem;font-weight:800;background:linear-gradient(135deg,#ef4444,#dc2626);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Admin</h1>
+          <p style="font-size:.8125rem;color:var(--text-secondary);font-weight:600;">Control Panel</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <a href="/dashboard/">Dashboard</a>
+        <a href="/dashboard/profile">Profile</a>
+        <a href="/dashboard/admin" class="active">Admin</a>
+        <button onclick="adminLogout()" class="logout-btn">🚪 Logout</button>
+        <div class="flex gap-2" style="padding-left:1rem;border-left:1px solid var(--border-color);">
+          <div class="theme-toggle" id="themeToggle"><div class="theme-toggle-slider"><span id="themeIcon">☀️</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container" style="padding:2rem 1.5rem 4rem;">
+
+  <div class="hero">
+    <h1>👨‍💼 Admin Control Panel</h1>
+    <p style="font-size:1.125rem;opacity:.95;position:relative;z-index:1;margin-top:.5rem;">Monitor all users, subscriptions, and progress</p>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-label">Total Users</div><div class="stat-value">{totalUsers}</div></div>
+    <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-label">Active</div><div class="stat-value">{activeSubscribers}</div></div>
+    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-label">Avg Day</div><div class="stat-value">{avgDay}</div></div>
+    <div class="stat-card"><div class="stat-icon">🏆</div><div class="stat-label">Completed</div><div class="stat-value">{completed30}</div></div>
+    <div class="stat-card"><div class="stat-icon">❌</div><div class="stat-label">Expired</div><div class="stat-value">{expiredSubscribers}</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:2rem;margin:2rem 0;">
+    <div class="card"><h2>📊 Plans</h2><div style="position:relative;height:300px;"><canvas id="planChart"></canvas></div></div>
+    <div class="card"><h2>📈 Signups</h2><div style="position:relative;height:300px;"><canvas id="signupChart"></canvas></div></div>
+    <div class="card"><h2>📊 Days</h2><div style="position:relative;height:300px;"><canvas id="dayChart"></canvas></div></div>
+  </div>
+
+  <div class="card">
+    <h2>👥 All Users ({totalUsers})</h2>
+    <input type="text" id="searchInput" class="search-box" placeholder="🔍 Search..."/>
+    <div style="overflow-x:auto;">
+      <table id="usersTable">
+        <thead><tr><th>Name</th><th>Email</th><th>Plan</th><th>Status</th><th>Day</th><th>Progress</th><th>XP</th><th>Weight</th><th>Height</th><th>Joined</th></tr></thead>
+        <tbody>
+          {usersData.map(u => {
+            const progress = u.journey ? Math.round(((u.journey.current_day || 1) / u.plan.durationDays) * 100) : 0;
+            return (
+              <tr>
+                <td style="font-weight:700;">{u.full_name}</td>
+                <td style="color:var(--text-secondary);">{u.email}</td>
+                <td><span style="font-size:1.25rem;">{u.plan.emoji}</span> <span style="font-weight:600;">{u.plan.name}</span></td>
+                <td>
+                  {u.subscription_status === 'active' ? <span class="badge badge-active">✅ Active</span>
+                  : u.subscription_status === 'expired' ? <span class="badge badge-expired">❌ Expired</span>
+                  : <span class="badge badge-none">⚪ None</span>}
+                </td>
+                <td style="font-weight:700;font-size:1.125rem;">{u.journey?.current_day || 1}</td>
+                <td style="min-width:120px;">
+                  <div class="progress-bar"><div class="progress-fill" style={`width:${progress}%`}></div></div>
+                  <div style="font-size:.75rem;color:var(--text-secondary);margin-top:.25rem;">{progress}%</div>
+                </td>
+                <td style="font-weight:700;">{u.journey?.total_xp || 0}</td>
+                <td>{u.displayWeight}</td>
+                <td>{u.displayHeight}</td>
+                <td style="color:var(--text-secondary);font-size:.875rem;">{new Date(u.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script is:inline define:vars={{planCounts:JSON.stringify(planCounts),monthlySignups:JSON.stringify(monthlySignups),dayDistribution:JSON.stringify(dayDistribution)}}>
+  const html=document.documentElement;
+  const themeIcon=document.getElementById('themeIcon');
+  const saved=localStorage.getItem('theme')||'light';
+  html.setAttribute('data-theme',saved);
+  if(themeIcon)themeIcon.textContent=saved==='dark'?'🌙':'☀️';
+  document.getElementById('themeToggle')?.addEventListener('click',function(){
+    const next=html.getAttribute('data-theme')==='dark'?'light':'dark';
+    html.setAttribute('data-theme',next);
+    if(themeIcon)themeIcon.textContent=next==='dark'?'🌙':'☀️';
+    localStorage.setItem('theme',next);
+  });
+
+  // Admin Logout
+  function adminLogout() {
+    if (confirm('🚪 Logout from admin panel?')) {
+      document.cookie = 'admin-session=; path=/; max-age=0';
+      window.location.href = '/admin-login';
+    }
+  }
+  window.adminLogout = adminLogout;
+
+  const searchInput=document.getElementById('searchInput');
+  const table=document.getElementById('usersTable');
+  if(searchInput&&table){
+    searchInput.addEventListener('input',function(){
+      const q=this.value.toLowerCase();
+      const rows=table.querySelectorAll('tbody tr');
+      rows.forEach(row=>{row.style.display=row.textContent.toLowerCase().includes(q)?'':'none';});
+    });
+  }
+
+  window.addEventListener('load',function(){
+    if(typeof Chart==='undefined')return;
+    const isDark=html.getAttribute('data-theme')==='dark';
+    const tc=isDark?'#eaeaea':'#374151';
+    const gc=isDark?'rgba(255,255,255,.1)':'rgba(0,0,0,.05)';
+
+    const planData=JSON.parse(planCounts);
+    new Chart(document.getElementById('planChart'),{type:'doughnut',data:{labels:['🥉 Basic','🥈 Pro','🥇 Elite','⚪ None'],datasets:[{data:[planData.basic_30,planData.pro_6,planData.elite_12,planData.none],backgroundColor:['#6366f1','#10b981','#f59e0b','#6b7280']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:tc,font:{size:12,weight:'bold'}}}}}});
+
+    const signupData=JSON.parse(monthlySignups);
+    new Chart(document.getElementById('signupChart'),{type:'line',data:{labels:signupData.map(d=>d.month),datasets:[{label:'Signups',data:signupData.map(d=>d.count),borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.1)',fill:true,tension:.4,borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:gc},ticks:{color:tc}},x:{grid:{display:false},ticks:{color:tc}}}}});
+
+    const dayData=JSON.parse(dayDistribution);
+    new Chart(document.getElementById('dayChart'),{type:'bar',data:{labels:dayData.map(d=>'D'+d.day),datasets:[{data:dayData.map(d=>d.count),backgroundColor:'#10b981',borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:gc},ticks:{color:tc}},x:{grid:{display:false},ticks:{color:tc,font:{size:9}}}}}});
+  });
+</script>
+</body>
+</html>

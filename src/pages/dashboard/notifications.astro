@@ -1,0 +1,1236 @@
+---
+import { supabase, getProfile, isSubscriptionActive, getUserJourney, getDailyTasks } from '../../lib/supabase';
+
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+if (!accessToken) return Astro.redirect('/login');
+
+const { data: { user } } = await supabase.auth.getUser(accessToken);
+if (!user) return Astro.redirect('/login');
+
+const profile = await getProfile(user.id);
+if (!profile || !isSubscriptionActive(profile)) {
+  return Astro.redirect('/dashboard/upgrade');
+}
+
+const journey = await getUserJourney(user.id);
+const currentDay = journey?.current_day || 1;
+
+const dailyTasks = await getDailyTasks(user.id, currentDay);
+const incompleteTasks = dailyTasks?.filter(t => t.task_type !== 'reflection' && t.task_type !== 'weight' && !t.completed) || [];
+
+// Get or create notification preferences
+const { data: existingPrefs } = await supabase
+  .from('notification_preferences')
+  .select('*')
+  .eq('user_id', user.id)
+  .single();
+
+const preferences = existingPrefs || {
+  breakfast_enabled: true,
+  breakfast_time: '08:00',
+  lunch_enabled: true,
+  lunch_time: '13:00',
+  dinner_enabled: true,
+  dinner_time: '19:00',
+  snack_enabled: true,
+  snack_time: '16:00',
+  water_enabled: true,
+  water_interval: 120,
+  water_start_time: '08:00',
+  water_end_time: '22:00',
+  weight_enabled: true,
+  weight_day: 0,
+  weight_time: '07:00',
+  streak_enabled: true,
+  streak_time: '21:00'
+};
+
+const weekDays = [
+  { value: 0, label: 'Sunday' },
+  { value: 1, label: 'Monday' },
+  { value: 2, label: 'Tuesday' },
+  { value: 3, label: 'Wednesday' },
+  { value: 4, label: 'Thursday' },
+  { value: 5, label: 'Friday' },
+  { value: 6, label: 'Saturday' }
+];
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notifications - Keto Journey</title>
+  
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f9fafb;
+      --bg-card: #ffffff;
+      --text-primary: #111827;
+      --text-secondary: #6b7280;
+      --border-color: #e5e7eb;
+      --accent-primary: #10b981;
+      --accent-secondary: #34d399;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+      --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+      --shadow-xl: 0 20px 25px rgba(0,0,0,0.15);
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #16213e;
+      --bg-card: #0f3460;
+      --text-primary: #eaeaea;
+      --text-secondary: #a0aec0;
+      --border-color: #2d3748;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+      --shadow-lg: 0 10px 15px rgba(0,0,0,0.5);
+      --shadow-xl: 0 20px 25px rgba(0,0,0,0.6);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      transition: all 0.3s ease;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    /* Navigation */
+    nav {
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 0;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: var(--shadow-md);
+      backdrop-filter: blur(10px);
+    }
+
+    nav .flex {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    nav a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.75rem;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    nav a:hover, nav a.active {
+      color: var(--accent-primary);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.1));
+      transform: translateY(-2px);
+    }
+
+    /* Dark Mode Toggle */
+    .theme-toggle {
+      position: relative;
+      width: 60px;
+      height: 30px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 9999px;
+      cursor: pointer;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), var(--shadow-md);
+      transition: all 0.3s ease;
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.05);
+    }
+
+    .theme-toggle-slider {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 24px;
+      height: 24px;
+      background: white;
+      border-radius: 50%;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+    }
+
+    [data-theme="dark"] .theme-toggle {
+      background: linear-gradient(135deg, #2d3561 0%, #1a1f3a 100%);
+    }
+
+    [data-theme="dark"] .theme-toggle-slider {
+      transform: translateX(30px);
+      background: #1a1a2e;
+      color: #fbbf24;
+    }
+
+    /* Notification Bell */
+    .notification-bell {
+      position: relative;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      border: none;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow-md);
+    }
+
+    .notification-bell:hover {
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+
+    /* Notification Dropdown */
+    .notification-dropdown {
+      position: absolute;
+      top: calc(100% + 0.5rem);
+      right: 0;
+      width: 380px;
+      max-height: 500px;
+      background: var(--bg-card);
+      border-radius: 1.5rem;
+      box-shadow: var(--shadow-xl);
+      border: 1px solid var(--border-color);
+      display: none;
+      overflow: hidden;
+      animation: slideDown 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+
+    .notification-dropdown.active {
+      display: block;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .notification-item {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .notification-item:hover {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.05), transparent);
+      transform: translateX(4px);
+    }
+
+    .notification-icon {
+      width: 3rem;
+      height: 3rem;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      border-radius: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #10b981, #059669, #047857);
+      border-radius: 2rem;
+      padding: 3rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-xl);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+      animation: rotate 20s linear infinite;
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 10;
+      color: white;
+      text-align: center;
+    }
+
+    /* Card 3D */
+    .card-3d {
+      background: var(--bg-card);
+      border-radius: 1.5rem;
+      padding: 2rem;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-color);
+      transition: all 0.3s ease;
+      margin-bottom: 1.5rem;
+    }
+
+    .card-3d:hover {
+      box-shadow: var(--shadow-xl);
+      transform: translateY(-4px);
+    }
+
+    /* Notification Setting Card */
+    .notification-card {
+      background: var(--bg-card);
+      border-radius: 1.5rem;
+      padding: 1.75rem;
+      box-shadow: var(--shadow-md);
+      border: 2px solid var(--border-color);
+      margin-bottom: 1.5rem;
+      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .notification-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 5px;
+      height: 100%;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      transform: scaleY(0);
+      transition: transform 0.3s ease;
+    }
+
+    .notification-card:hover {
+      border-color: var(--accent-primary);
+      transform: translateX(8px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .notification-card:hover::before {
+      transform: scaleY(1);
+    }
+
+    .notification-card.disabled {
+      opacity: 0.5;
+    }
+
+    /* Toggle Switch 3D */
+    .toggle-switch {
+      position: relative;
+      width: 60px;
+      height: 30px;
+      background: var(--border-color);
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .toggle-switch.active {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    }
+
+    .toggle-slider {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 24px;
+      height: 24px;
+      background: white;
+      border-radius: 50%;
+      transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .toggle-switch.active .toggle-slider {
+      transform: translateX(30px);
+    }
+
+    /* Input 3D */
+    .input-3d {
+      width: 100%;
+      padding: 0.875rem 1.25rem;
+      border: 2px solid var(--border-color);
+      border-radius: 1rem;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 1rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .input-3d:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+      background: var(--bg-card);
+      transform: scale(1.02);
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+    }
+
+    .input-3d:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Button 3D */
+    .btn-3d {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 2rem;
+      border-radius: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      box-shadow: var(--shadow-md);
+      font-size: 1rem;
+    }
+
+    .btn-primary-3d {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      color: white;
+    }
+
+    .btn-primary-3d:hover {
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .btn-secondary-3d {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 2px solid var(--border-color);
+    }
+
+    .btn-secondary-3d:hover {
+      border-color: var(--accent-primary);
+      transform: translateY(-2px);
+    }
+
+    /* Info Box */
+    .info-box {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.1));
+      border-left: 4px solid #3b82f6;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    /* Success Message */
+    .success-toast {
+      position: fixed;
+      top: 5rem;
+      right: 1.5rem;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      color: white;
+      padding: 1.25rem 2rem;
+      border-radius: 1rem;
+      box-shadow: var(--shadow-xl);
+      z-index: 9999;
+      display: none;
+      animation: slideInRight 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(100px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    /* Utilities */
+    .flex { display: flex; align-items: center; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+    .gap-1 { gap: 0.5rem; }
+    .gap-2 { gap: 1rem; }
+    .gap-3 { gap: 1.5rem; }
+
+    @media (max-width: 768px) {
+      .notification-dropdown {
+        width: calc(100vw - 2rem);
+        right: -1rem;
+      }
+
+      .hero {
+        padding: 2rem;
+      }
+
+      .hero-content h1 {
+        font-size: 2rem;
+      }
+
+      .notification-card {
+        padding: 1.25rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav>
+    <div class="container">
+      <div class="flex-between">
+        <div class="flex gap-2">
+          <span style="font-size: 2.5rem;">🥑</span>
+          <div>
+            <h1 style="font-size: 1.375rem; font-weight: 800; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Keto Journey</h1>
+            <p style="font-size: 0.8125rem; color: var(--text-secondary); font-weight: 600;">30-Day Transformation</p>
+          </div>
+        </div>
+        
+        <div class="flex gap-3">
+          <a href="/dashboard">Dashboard</a>
+          <a href="/dashboard/shopping-list">Shopping</a>
+          <a href="/dashboard/recipes">Recipes</a>
+          <a href="/dashboard/profile">Profile</a>
+          <a href="/dashboard/notifications">🔔 Reminders</a>
+          
+          <div class="flex gap-2" style="padding-left: 1rem; border-left: 1px solid var(--border-color); position: relative;">
+            <!-- Dark Mode Toggle -->
+            <div class="theme-toggle" id="themeToggle">
+              <div class="theme-toggle-slider">
+                <span id="themeIcon">☀️</span>
+              </div>
+            </div>
+
+            <!-- Notification Bell -->
+            {incompleteTasks.length > 0 && (
+              <div style="position: relative;">
+                <button class="notification-bell" id="notif-bell">
+                  <span style="color: white;">🔔</span>
+                  <span class="notification-badge">{incompleteTasks.length}</span>
+                </button>
+                
+                <div class="notification-dropdown" id="notificationDropdown">
+                  <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.1));">
+                    <h3 style="font-size: 1.125rem; font-weight: 800; color: var(--accent-primary); display: flex; align-items: center; gap: 0.75rem;">
+                      <span style="font-size: 1.5rem;">🔔</span>
+                      <span>{incompleteTasks.length} Pending Task{incompleteTasks.length !== 1 ? 's' : ''}</span>
+                    </h3>
+                  </div>
+                  <div style="max-height: 400px; overflow-y: auto;">
+                    {incompleteTasks.map(task => (
+                      <div class="notification-item">
+                        <div class="notification-icon">
+                          {task.task_type === 'breakfast' && '🍳'}
+                          {task.task_type === 'lunch' && '🥗'}
+                          {task.task_type === 'dinner' && '🍽️'}
+                          {task.task_type === 'snack' && '🍎'}
+                          {task.task_type === 'water' && '💧'}
+                        </div>
+                        <div style="flex: 1;">
+                          <div style="font-weight: 700; font-size: 0.9375rem; color: var(--text-primary); margin-bottom: 0.25rem;">{task.task_title}</div>
+                          <div style="font-size: 0.8125rem; color: var(--text-secondary); font-weight: 600;">+{task.xp_earned} XP • Day {currentDay}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style="padding: 1.25rem; border-top: 1px solid var(--border-color); text-align: center;">
+                    <a href="/dashboard" class="btn-primary-3d" style="width: 100%; justify-content: center; text-decoration: none;">
+                      View All Tasks →
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <!-- Profile Avatar -->
+            <a href="/dashboard/profile" style="width: 2.5rem; height: 2.5rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; text-decoration: none; box-shadow: var(--shadow-md); transition: all 0.3s ease; font-size: 1.125rem;">
+              {profile.full_name.charAt(0).toUpperCase()}
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container" style="padding-top: 2rem; padding-bottom: 4rem;">
+    
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-content">
+        <h1 style="font-size: 3.5rem; font-weight: 900; margin-bottom: 1rem; text-shadow: 0 4px 8px rgba(0,0,0,0.3);">🔔 Smart Reminders</h1>
+        <p style="font-size: 1.25rem; opacity: 0.95;">Stay on track with personalized notifications for your keto journey</p>
+      </div>
+    </div>
+
+    <!-- Info Box -->
+    <div class="info-box">
+      <div class="flex gap-3" style="align-items: flex-start;">
+        <span style="font-size: 2.5rem;">💡</span>
+        <div>
+          <h3 style="font-weight: 700; font-size: 1.125rem; margin-bottom: 0.5rem; color: #3b82f6;">Enable Browser Notifications</h3>
+          <p style="font-size: 0.9375rem; color: var(--text-secondary); line-height: 1.6;">
+            Make sure to allow notifications in your browser settings. We'll send you timely reminders to help you stay consistent with your goals.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Settings Form -->
+    <form id="notification-form">
+      
+      <!-- Meals Section -->
+      <div class="card-3d">
+        <h2 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 0.75rem;">
+          <span style="font-size: 2.5rem;">🍽️</span>
+          <span>Meal Reminders</span>
+        </h2>
+
+        <!-- Breakfast -->
+        <div class="notification-card" id="breakfast-card">
+          <div class="flex-between" style="margin-bottom: 1rem;">
+            <div class="flex gap-3">
+              <span style="font-size: 2.5rem;">🍳</span>
+              <div>
+                <h3 style="font-weight: 700; font-size: 1.125rem; margin-bottom: 0.25rem;">Breakfast</h3>
+                <p style="font-size: 0.875rem; color: var(--text-secondary);">Daily reminder for your morning meal</p>
+              </div>
+            </div>
+            <div class="toggle-switch" data-toggle="breakfast">
+              <div class="toggle-slider"></div>
+            </div>
+          </div>
+          <input 
+            type="time" 
+            name="breakfast_time" 
+            value={preferences.breakfast_time}
+            class="input-3d"
+            id="breakfast-time"
+          />
+        </div>
+
+        <!-- Lunch -->
+        <div class="notification-card" id="lunch-card">
+          <div class="flex-between" style="margin-bottom: 1rem;">
+            <div class="flex gap-3">
+              <span style="font-size: 2.5rem;">🥗</span>
+              <div>
+                <h3 style="font-weight: 700; font-size: 1.125rem; margin-bottom: 0.25rem;">Lunch</h3>
+                <p style="font-size: 0.875rem; color: var(--text-secondary);">Daily reminder for your midday meal</p>
+              </div>
+            </div>
+            <div class="toggle-switch" data-toggle="lunch">
+              <div class="toggle-slider"></div>
+            </div>
+          </div>
+          <input 
+            type="time" 
+            name="lunch_time" 
+            value={preferences.lunch_time}
+            class="input-3d"
+            id="lunch-time"
+          />
+        </div>
+
+        <!-- Dinner -->
+        <div class="notification-card" id="dinner-card">
+          <div class="flex-between" style="margin-bottom: 1rem;">
+            <div class="flex gap-3">
+              <span style="font-size: 2.5rem;">🍽️</span>
+              <div>
+                <h3 style="font-weight: 700; font-size: 1.125rem; margin-bottom: 0.25rem;">Dinner</h3>
+                <p style="font-size: 0.875rem; color: var(--text-secondary);">Daily reminder for your evening meal</p>
+              </div>
+            </div>
+            <div class="toggle-switch" data-toggle="dinner">
+              <div class="toggle-slider"></div>
+            </div>
+          </div>
+          <input 
+            type="time" 
+            name="dinner_time" 
+            value={preferences.dinner_time}
+            class="input-3d"
+            id="dinner-time"
+          />
+        </div>
+
+        <!-- Snack -->
+        <div class="notification-card" id="snack-card">
+          <div class="flex-between" style="margin-bottom: 1rem;">
+            <div class="flex gap-3">
+              <span style="font-size: 2.5rem;">🍎</span>
+              <div>
+                <h3 style="font-weight: 700; font-size: 1.125rem; margin-bottom: 0.25rem;">Snack</h3>
+                <p style="font-size: 0.875rem; color: var(--text-secondary);">Daily reminder for your snack time</p>
+              </div>
+            </div>
+            <div class="toggle-switch" data-toggle="snack">
+              <div class="toggle-slider"></div>
+            </div>
+          </div>
+          <input 
+            type="time" 
+            name="snack_time" 
+            value={preferences.snack_time}
+            class="input-3d"
+            id="snack-time"
+          />
+        </div>
+      </div>
+
+      <!-- Water Section -->
+      <div class="card-3d">
+        <h2 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 0.75rem;">
+          <span style="font-size: 2.5rem;">💧</span>
+          <span>Water Reminders</span>
+        </h2>
+
+        <div class="notification-card" id="water-card">
+          <div class="flex-between" style="margin-bottom: 1rem;">
+            <div class="flex gap-3">
+              <span style="font-size: 2.5rem;">💧</span>
+              <div>
+                <h3 style="font-weight: 700; font-size: 1.125rem; margin-bottom: 0.25rem;">Water Intake</h3>
+                <p style="font-size: 0.875rem; color: var(--text-secondary);">Remind me to drink water every</p>
+              </div>
+            </div>
+            <div class="toggle-switch" data-toggle="water">
+              <div class="toggle-slider"></div>
+            </div>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div>
+              <label style="display: block; font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">Interval (minutes)</label>
+              <select name="water_interval" class="input-3d" id="water-interval">
+                <option value="60" selected={preferences.water_interval === 60}>Every hour</option>
+                <option value="90" selected={preferences.water_interval === 90}>Every 1.5 hours</option>
+                <option value="120" selected={preferences.water_interval === 120}>Every 2 hours</option>
+                <option value="180" selected={preferences.water_interval === 180}>Every 3 hours</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">Start Time</label>
+              <input 
+                type="time" 
+                name="water_start_time" 
+                value={preferences.water_start_time}
+                class="input-3d"
+                id="water-start"
+              />
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">End Time</label>
+              <input 
+                type="time" 
+                name="water_end_time" 
+                value={preferences.water_end_time}
+                class="input-3d"
+                id="water-end"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weight & Streak Section -->
+      <div class="card-3d">
+        <h2 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 0.75rem;">
+          <span style="font-size: 2.5rem;">⚡</span>
+          <span>Other Reminders</span>
+        </h2>
+
+        <!-- Weight Log (Weekly) -->
+        <div class="notification-card" id="weight-card">
+          <div class="flex-between" style="margin-bottom: 1rem;">
+            <div class="flex gap-3">
+              <span style="font-size: 2.5rem;">⚖️</span>
+              <div>
+                <h3 style="font-weight: 700; font-size: 1.125rem; margin-bottom: 0.25rem;">Weight Log</h3>
+                <p style="font-size: 0.875rem; color: var(--text-secondary);">Weekly reminder to track your progress</p>
+              </div>
+            </div>
+            <div class="toggle-switch" data-toggle="weight">
+              <div class="toggle-slider"></div>
+            </div>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div>
+              <label style="display: block; font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">Day of Week</label>
+              <select name="weight_day" class="input-3d" id="weight-day">
+                {weekDays.map(day => (
+                  <option value={day.value} selected={preferences.weight_day === day.value}>
+                    {day.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem;">Time</label>
+              <input 
+                type="time" 
+                name="weight_time" 
+                value={preferences.weight_time}
+                class="input-3d"
+                id="weight-time"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Streak Reminder -->
+        <div class="notification-card" id="streak-card">
+          <div class="flex-between" style="margin-bottom: 1rem;">
+            <div class="flex gap-3">
+              <span style="font-size: 2.5rem;">🔥</span>
+              <div>
+                <h3 style="font-weight: 700; font-size: 1.125rem; margin-bottom: 0.25rem;">Streak Reminder</h3>
+                <p style="font-size: 0.875rem; color: var(--text-secondary);">Daily reminder to maintain your streak</p>
+              </div>
+            </div>
+            <div class="toggle-switch" data-toggle="streak">
+              <div class="toggle-slider"></div>
+            </div>
+          </div>
+          <input 
+            type="time" 
+            name="streak_time" 
+            value={preferences.streak_time}
+            class="input-3d"
+            id="streak-time"
+          />
+        </div>
+      </div>
+
+      <!-- Save Button -->
+      <div class="flex gap-2" style="justify-content: center; flex-wrap: wrap;">
+        <button type="submit" class="btn-primary-3d">
+          <span style="font-size: 1.25rem;">💾</span>
+          <span>Save Notification Settings</span>
+        </button>
+        
+        <button type="button" id="test-notification" class="btn-secondary-3d">
+          <span style="font-size: 1.25rem;">🧪</span>
+          <span>Test Notification</span>
+        </button>
+      </div>
+    </form>
+
+  </div>
+
+  <!-- Success Toast -->
+  <div class="success-toast" id="success-toast">
+    <div class="flex gap-3">
+      <span style="font-size: 2rem;">✅</span>
+      <div>
+        <p style="font-weight: 700; font-size: 1.125rem;">Settings Saved!</p>
+        <p style="font-size: 0.875rem; opacity: 0.9;">Your notification preferences have been updated</p>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline define:vars={{ preferences }}>
+    // Dark Mode Toggle
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const html = document.documentElement;
+
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    html.setAttribute('data-theme', savedTheme);
+    themeIcon.textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+
+    if (themeToggle) {
+      themeToggle.addEventListener('click', function() {
+        const currentTheme = html.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        html.setAttribute('data-theme', newTheme);
+        themeIcon.textContent = newTheme === 'dark' ? '🌙' : '☀️';
+        localStorage.setItem('theme', newTheme);
+      });
+    }
+
+    // Notification Toggle
+    const notifBell = document.getElementById('notif-bell');
+    const notifDropdown = document.getElementById('notificationDropdown');
+    
+    if (notifBell && notifDropdown) {
+      notifBell.addEventListener('click', function(e) {
+        e.stopPropagation();
+        notifDropdown.classList.toggle('active');
+      });
+
+      document.addEventListener('click', function(e) {
+        if (!notifDropdown.contains(e.target) && !notifBell.contains(e.target)) {
+          notifDropdown.classList.remove('active');
+        }
+      });
+    }
+
+    // Toggle Switches State
+    const toggleStates = {
+      breakfast: preferences.breakfast_enabled,
+      lunch: preferences.lunch_enabled,
+      dinner: preferences.dinner_enabled,
+      snack: preferences.snack_enabled,
+      water: preferences.water_enabled,
+      weight: preferences.weight_enabled,
+      streak: preferences.streak_enabled
+    };
+
+    // Initialize toggles
+    Object.keys(toggleStates).forEach(key => {
+      const toggle = document.querySelector(`[data-toggle="${key}"]`);
+      const card = document.getElementById(`${key}-card`);
+      const input = document.getElementById(`${key}-time`);
+      
+      if (toggle) {
+        if (toggleStates[key]) {
+          toggle.classList.add('active');
+        } else {
+          card?.classList.add('disabled');
+          if (input) input.disabled = true;
+        }
+        
+        toggle.addEventListener('click', function() {
+          toggleStates[key] = !toggleStates[key];
+          
+          if (toggleStates[key]) {
+            this.classList.add('active');
+            card?.classList.remove('disabled');
+            if (input) input.disabled = false;
+          } else {
+            this.classList.remove('active');
+            card?.classList.add('disabled');
+            if (input) input.disabled = true;
+          }
+        });
+      }
+    });
+
+    // Water special handling
+    const waterToggle = document.querySelector('[data-toggle="water"]');
+    const waterInterval = document.getElementById('water-interval');
+    const waterStart = document.getElementById('water-start');
+    const waterEnd = document.getElementById('water-end');
+
+    if (waterToggle) {
+      const updateWaterInputs = () => {
+        const isEnabled = toggleStates.water;
+        if (waterInterval) waterInterval.disabled = !isEnabled;
+        if (waterStart) waterStart.disabled = !isEnabled;
+        if (waterEnd) waterEnd.disabled = !isEnabled;
+      };
+      
+      updateWaterInputs();
+      waterToggle.addEventListener('click', updateWaterInputs);
+    }
+
+    // Weight special handling
+    const weightToggle = document.querySelector('[data-toggle="weight"]');
+    const weightDay = document.getElementById('weight-day');
+    const weightTime = document.getElementById('weight-time');
+
+    if (weightToggle) {
+      const updateWeightInputs = () => {
+        const isEnabled = toggleStates.weight;
+        if (weightDay) weightDay.disabled = !isEnabled;
+        if (weightTime) weightTime.disabled = !isEnabled;
+      };
+      
+      updateWeightInputs();
+      weightToggle.addEventListener('click', updateWeightInputs);
+    }
+
+    // Register Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      console.log('✅ Service Worker registered:', reg.scope);
+    } catch (error) {
+      console.error('❌ Service Worker failed:', error);
+    }
+  });
+}
+
+// ✅ تتبع التنبيهات المجدولة
+let scheduledTimers = [];
+
+function clearAllTimers() {
+  scheduledTimers.forEach(id => {
+    clearTimeout(id);
+    clearInterval(id);
+  });
+  scheduledTimers = [];
+}
+
+function scheduleNotifications(prefs) {
+  // ✅ امسح القديمة أولاً
+  clearAllTimers();
+
+  if (Notification.permission !== 'granted') return;
+
+  const now = new Date();
+
+  const scheduleDaily = (timeStr, title, body, enabled) => {
+    if (!enabled || !timeStr) return;
+
+    // ✅ تحقق إذا كان مجدولاً مسبقاً
+    const storageKey = `scheduled_${title}`;
+    const alreadyScheduled = localStorage.getItem(storageKey);
+    if (alreadyScheduled) return;
+
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const target = new Date();
+    target.setHours(hours, minutes, 0, 0);
+
+    if (target <= now) {
+      target.setDate(target.getDate() + 1);
+    }
+
+    const delay = target.getTime() - now.getTime();
+
+    // ✅ علّم كمجدول
+    localStorage.setItem(storageKey, target.toISOString());
+
+    const timerId = setTimeout(() => {
+      new Notification(title, {
+        body,
+        icon: '/favicon.ico',
+        badge: '/favicon.ico',
+        tag: title, // ✅ tag يمنع التكرار في نفس الوقت
+        renotify: false
+      });
+      
+      // ✅ امسح العلامة لإعادة الجدولة غداً
+      localStorage.removeItem(storageKey);
+      
+      // جدّل مرة واحدة للغد فقط
+      scheduleDaily(timeStr, title, body, enabled);
+    }, delay);
+
+    scheduledTimers.push(timerId);
+    console.log(`⏰ Scheduled ONCE: ${title} in ${Math.round(delay / 60000)} mins`);
+  };
+
+  // جدّل الوجبات
+  scheduleDaily(prefs.breakfast_time, '🍳 Breakfast Time!', 'Time for your keto breakfast!', prefs.breakfast_enabled);
+  scheduleDaily(prefs.lunch_time, '🥗 Lunch Time!', 'Don\'t forget your keto lunch!', prefs.lunch_enabled);
+  scheduleDaily(prefs.dinner_time, '🍽️ Dinner Time!', 'Time for your keto dinner!', prefs.dinner_enabled);
+  scheduleDaily(prefs.snack_time, '🍎 Snack Time!', 'Time for your healthy keto snack!', prefs.snack_enabled);
+  scheduleDaily(prefs.streak_time, '🔥 Keep Your Streak!', 'Complete today\'s tasks!', prefs.streak_enabled);
+
+  // ✅ الماء - مرة واحدة كل فترة بدون تكرار
+  if (prefs.water_enabled && prefs.water_interval) {
+    const waterKey = 'water_interval_scheduled';
+    if (!localStorage.getItem(waterKey)) {
+      localStorage.setItem(waterKey, 'true');
+      
+      const timerId = setInterval(() => {
+        const currentHour = new Date().getHours();
+        const [startH] = (prefs.water_start_time || '08:00').split(':').map(Number);
+        const [endH] = (prefs.water_end_time || '22:00').split(':').map(Number);
+
+        if (currentHour >= startH && currentHour < endH) {
+          new Notification('💧 Drink Water!', {
+            body: 'Stay hydrated! Drink a glass of water.',
+            icon: '/favicon.ico',
+            tag: 'water-reminder', // ✅ tag ثابت = لا تكرار
+            renotify: true
+          });
+        }
+      }, prefs.water_interval * 60 * 1000);
+
+      scheduledTimers.push(timerId);
+    }
+  }
+
+  // ✅ الوزن الأسبوعي
+  if (prefs.weight_enabled) {
+    const weightKey = 'weight_weekly_scheduled';
+    if (!localStorage.getItem(weightKey)) {
+      const now = new Date();
+      const targetDay = prefs.weight_day ?? 0;
+      const [hours, minutes] = (prefs.weight_time || '07:00').split(':').map(Number);
+
+      const target = new Date();
+      target.setHours(hours, minutes, 0, 0);
+
+      let daysUntil = targetDay - now.getDay();
+      if (daysUntil < 0) daysUntil += 7;
+      if (daysUntil === 0 && target <= now) daysUntil = 7;
+      target.setDate(target.getDate() + daysUntil);
+
+      const delay = target.getTime() - now.getTime();
+      
+      localStorage.setItem(weightKey, target.toISOString());
+
+      const timerId = setTimeout(() => {
+        new Notification('⚖️ Weekly Weigh-In!', {
+          body: 'Time to log your weight and track progress!',
+          icon: '/favicon.ico',
+          tag: 'weight-reminder'
+        });
+        localStorage.removeItem(weightKey);
+      }, delay);
+
+      scheduledTimers.push(timerId);
+    }
+  }
+}
+
+// Form Submission
+const form = document.getElementById('notification-form');
+if (form) {
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<span>⏳</span><span>Saving...</span>';
+    submitBtn.disabled = true;
+
+    const formData = new FormData(form);
+    const data = {
+      breakfast_enabled: toggleStates.breakfast,
+      breakfast_time: formData.get('breakfast_time'),
+      lunch_enabled: toggleStates.lunch,
+      lunch_time: formData.get('lunch_time'),
+      dinner_enabled: toggleStates.dinner,
+      dinner_time: formData.get('dinner_time'),
+      snack_enabled: toggleStates.snack,
+      snack_time: formData.get('snack_time'),
+      water_enabled: toggleStates.water,
+      water_interval: parseInt(formData.get('water_interval')),
+      water_start_time: formData.get('water_start_time'),
+      water_end_time: formData.get('water_end_time'),
+      weight_enabled: toggleStates.weight,
+      weight_day: parseInt(formData.get('weight_day')),
+      weight_time: formData.get('weight_time'),
+      streak_enabled: toggleStates.streak,
+      streak_time: formData.get('streak_time')
+    };
+
+    try {
+      // 1. Save to Database
+      const res = await fetch('/api/notifications/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (!res.ok) throw new Error('Failed to save');
+
+      // 2. Save to localStorage
+      localStorage.setItem('notification_preferences', JSON.stringify(data));
+      
+      // ✅ 3. امسح علامات الجدولة القديمة
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('scheduled_') || key === 'water_interval_scheduled' || key === 'weight_weekly_scheduled') {
+          localStorage.removeItem(key);
+        }
+      });
+
+      // 4. Request permission & schedule
+      if (Notification.permission !== 'granted') {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          scheduleNotifications(data);
+        }
+      } else {
+        scheduleNotifications(data);
+      }
+
+      // 5. Show success toast
+      const toast = document.getElementById('success-toast');
+      if (toast) {
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 3000);
+      }
+
+    } catch (error) {
+      console.error('Error:', error);
+      alert('❌ Failed to save settings. Please try again.');
+    } finally {
+      submitBtn.innerHTML = originalText;
+      submitBtn.disabled = false;
+    }
+  });
+}
+
+// ✅ تحميل مرة واحدة فقط عند فتح الصفحة
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('notification_preferences');
+  if (saved && Notification.permission === 'granted') {
+    try {
+      const prefs = JSON.parse(saved);
+      scheduleNotifications(prefs);
+    } catch (e) {
+      console.error('Error loading preferences:', e);
+    }
+  }
+});
+
+console.log('✅ Notifications page loaded!');
+
+  </script>
+</body>
+</html>

@@ -84,17 +84,12 @@ if (gender === 'male') {
   bmr = 10 * weight + 6.25 * height - 5 * age - 161;
 }
 
-const activityMultipliers = {
-  sedentary: 1.2,
-  light: 1.375,
-  moderate: 1.55,
-  active: 1.725,
-  very_active: 1.9
+const activityMultipliers: Record<string, number> = {
+  sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9
 };
 
 const tdee = Math.round(bmr * (activityMultipliers[profile.activity_level || 'moderate'] || 1.55));
 const targetCalories = profile.goal === 'lose_weight' ? tdee - 500 : tdee;
-
 const targetFat = Math.round((targetCalories * 0.70) / 9);
 const targetProtein = Math.round((targetCalories * 0.25) / 4);
 const targetCarbs = Math.round((targetCalories * 0.05) / 4);
@@ -103,6 +98,105 @@ const caloriesPercent = targetCalories > 0 ? Math.round((actualCalories / target
 const proteinPercent = targetProtein > 0 ? Math.round((actualProtein / targetProtein) * 100) : 0;
 const fatPercent = targetFat > 0 ? Math.round((actualFat / targetFat) * 100) : 0;
 const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 100) : 0;
+
+// ============================================
+// KETO FLU TIPS DATA
+// ============================================
+const ketoFluTips: Record<number, any> = {
+  1: {
+    icon: '🚀', day: 'Day 1', title: "Your Body is Starting to Change!",
+    whatsHappening: "Your body is burning through its last glucose stores. You'll lose water weight fast — this is REAL progress starting now!",
+    tip: "Hydration is critical today. Your kidneys are flushing electrolytes rapidly with the water.",
+    suggestion: "🧂 Add a pinch of sea salt to your water + drink 3-4L today",
+    action: "Drink a full glass of water right now! 💧",
+    gradient: "linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)",
+    severity: "info", progress: 10
+  },
+  2: {
+    icon: '⚡', day: 'Day 2', title: "Headaches? Your Body is Adapting!",
+    whatsHappening: "Your brain is running low on glucose and signaling distress. Headaches and mild fatigue are completely normal — your body is switching fuel sources!",
+    tip: "Electrolytes are your best weapon. Salt, potassium, magnesium — don't skip these today.",
+    suggestion: "🧂 Salt every meal + sip on coconut water or broth",
+    action: "Add salt to your next meal right now! 🧂",
+    gradient: "linear-gradient(135deg, #f59e0b 0%, #f97316 100%)",
+    severity: "warning", progress: 20
+  },
+  3: {
+    icon: '😤', day: 'Day 3', title: "The Hardest Day — But You WILL Win!",
+    whatsHappening: "Peak keto flu! Maximum fatigue, brain fog, and sugar cravings hit today. Your body is DEMANDING glucose. This is the final battle — most people quit here. NOT you!",
+    tip: "Eat MORE fat immediately. Avocado, olive oil, butter — don't restrict. Fat is your new fuel source.",
+    suggestion: "🥑 Avocado + olive oil + macadamia nuts = instant energy",
+    action: "Eat a spoon of peanut butter or avocado RIGHT NOW! 🥑",
+    gradient: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+    severity: "danger", progress: 30
+  },
+  4: {
+    icon: '💪', day: 'Day 4', title: "Muscle Cramps? Fix It in Minutes!",
+    whatsHappening: "Your muscles are losing magnesium and potassium faster than normal. This causes cramps and weakness — but it's 100% fixable with the right minerals!",
+    tip: "Focus on the 3 electrolytes: Sodium (salt), Potassium (leafy greens), Magnesium (nuts/supplements).",
+    suggestion: "💊 Magnesium glycinate 300mg tonight + eat spinach today",
+    action: "Eat a handful of almonds or add spinach to your meal! 🥬",
+    gradient: "linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)",
+    severity: "warning", progress: 40
+  },
+  5: {
+    icon: '🧠', day: 'Day 5', title: "Brain Fog is Temporary — Clarity is Coming!",
+    whatsHappening: "Your brain is SWITCHING fuel sources from glucose to ketones. This fog means the transition is actively happening. It will lift soon and be replaced by incredible mental clarity!",
+    tip: "Your brain needs fat to make this switch. Don't skimp on healthy fats today.",
+    suggestion: "🐟 Fatty fish or Omega-3 supplement — brain fuel during transition",
+    action: "Take a 10-minute walk to boost mental energy! 🚶",
+    gradient: "linear-gradient(135deg, #06b6d4 0%, #0284c7 100%)",
+    severity: "warning", progress: 50
+  },
+  6: {
+    icon: '😴', day: 'Day 6', title: "Can't Sleep? Here's the Fix!",
+    whatsHappening: "Low magnesium directly disrupts deep sleep during keto adaptation. Your cortisol is also adjusting to the new fuel system. This is temporary and fixable tonight!",
+    tip: "Magnesium before bed is a game changer for sleep quality during keto. It relaxes muscles and calms the nervous system.",
+    suggestion: "🌙 Magnesium glycinate 400mg + chamomile tea 1 hour before bed",
+    action: "Prepare your magnesium supplement for tonight! 💊",
+    gradient: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+    severity: "info", progress: 60
+  },
+  7: {
+    icon: '🎉', day: 'Day 7', title: "ONE FULL WEEK — You're Crushing It!",
+    whatsHappening: "Your body is beginning to produce ketones! Most people feel a noticeable energy shift today. The worst phase is now BEHIND you. You've done what most people can't!",
+    tip: "You've crossed the hardest threshold. Your metabolism is permanently shifting into fat-burning mode.",
+    suggestion: "⚖️ Weigh yourself today — you'll be amazed at the progress!",
+    action: "Log your weight and celebrate this milestone! 🏆",
+    gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+    severity: "success", progress: 70
+  },
+  8: {
+    icon: '🔥', day: 'Day 8', title: "Sugar Cravings? Your Secret Weapon is FAT!",
+    whatsHappening: "Your body is making one final attempt to get glucose before fully committing to ketones. These cravings are actually a sign you're very close to full ketosis!",
+    tip: "When cravings hit — eat fat immediately. It stops sugar cravings within minutes by giving your body its new fuel.",
+    suggestion: "🧀 Cheese + dark chocolate 90% + peanut butter = craving killer",
+    action: "Prepare a keto emergency snack for craving attacks! 🎯",
+    gradient: "linear-gradient(135deg, #f59e0b 0%, #10b981 100%)",
+    severity: "info", progress: 80
+  },
+  9: {
+    icon: '✨', day: 'Day 9', title: "Feel That Clean Energy? That's Ketosis!",
+    whatsHappening: "You're in ketosis or extremely close! Your energy is becoming clean and steady with no crashes or spikes. This is what keto feels like when it's working — pure fat-burning energy!",
+    tip: "Your body is now a fat-burning machine. Every single day from here gets easier and more powerful.",
+    suggestion: "🏃 Try light exercise today — you'll feel surprisingly amazing!",
+    action: "Notice how different and cleaner your energy feels today! ✨",
+    gradient: "linear-gradient(135deg, #10b981 0%, #3b82f6 100%)",
+    severity: "success", progress: 90
+  },
+  10: {
+    icon: '👑', day: 'Day 10', title: "You BEAT Keto Flu — You're a Champion!",
+    whatsHappening: "You've completed the HARDEST phase of your entire 30-day journey! 80% of people quit during these 10 days. You pushed through every headache, craving, and moment of doubt. You're unstoppable!",
+    tip: "From here, fat adaptation deepens every week. Your energy, mental clarity, and fat loss will only accelerate from this point forward.",
+    suggestion: "📸 Take a progress photo right now — you've truly earned it!",
+    action: "Share your victory — you beat what most people can't! 👑",
+    gradient: "linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)",
+    severity: "success", progress: 100
+  }
+};
+
+const currentTip = ketoFluTips[viewDay];
+const showKetoFluTip = viewDay >= 1 && viewDay <= 10 && currentTip;
 ---
 
 <!DOCTYPE html>
@@ -111,7 +205,6 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Keto Journey</title>
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   
   <style>
@@ -137,19 +230,13 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
       --text-primary: #eaeaea;
       --text-secondary: #a0aec0;
       --border-color: #2d3748;
-      --accent-primary: #10b981;
-      --accent-secondary: #34d399;
       --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
       --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
       --shadow-lg: 0 10px 15px rgba(0,0,0,0.5);
       --shadow-xl: 0 20px 25px rgba(0,0,0,0.6);
     }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -158,13 +245,8 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
       transition: all 0.3s ease;
     }
 
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 1.5rem;
-    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }
 
-    /* Navigation 3D */
     nav {
       background: var(--bg-primary);
       border-bottom: 1px solid var(--border-color);
@@ -176,12 +258,6 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
       backdrop-filter: blur(10px);
     }
 
-    nav .flex {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
     nav a {
       color: var(--text-secondary);
       text-decoration: none;
@@ -189,858 +265,450 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
       border-radius: 0.75rem;
       font-weight: 500;
       transition: all 0.3s ease;
-      position: relative;
     }
 
     nav a:hover, nav a.active {
       color: var(--accent-primary);
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.1));
+      background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(52,211,153,0.1));
       transform: translateY(-2px);
-      box-shadow: var(--shadow-sm);
     }
 
-    /* Dark Mode Toggle 3D */
     .theme-toggle {
-      position: relative;
-      width: 60px;
-      height: 30px;
+      position: relative; width: 60px; height: 30px;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 9999px;
-      cursor: pointer;
+      border-radius: 9999px; cursor: pointer;
       box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), var(--shadow-md);
       transition: all 0.3s ease;
     }
 
-    .theme-toggle:hover {
-      transform: scale(1.05);
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), var(--shadow-lg);
-    }
-
     .theme-toggle-slider {
-      position: absolute;
-      top: 3px;
-      left: 3px;
-      width: 24px;
-      height: 24px;
-      background: white;
-      border-radius: 50%;
-      transition: all 0.3s ease;
+      position: absolute; top: 3px; left: 3px;
+      width: 24px; height: 24px; background: white;
+      border-radius: 50%; transition: all 0.3s ease;
       box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.75rem;
+      display: flex; align-items: center; justify-content: center; font-size: 0.75rem;
     }
 
-    [data-theme="dark"] .theme-toggle {
-      background: linear-gradient(135deg, #2d3561 0%, #1a1f3a 100%);
-    }
+    [data-theme="dark"] .theme-toggle { background: linear-gradient(135deg, #2d3561 0%, #1a1f3a 100%); }
+    [data-theme="dark"] .theme-toggle-slider { transform: translateX(30px); background: #1a1a2e; color: #fbbf24; }
 
-    [data-theme="dark"] .theme-toggle-slider {
-      transform: translateX(30px);
-      background: #1a1a2e;
-      color: #fbbf24;
-    }
-
-    /* Notification Bell 3D */
     .notification-bell {
       position: relative;
       background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      border: none;
-      width: 2.5rem;
-      height: 2.5rem;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: var(--shadow-md);
+      border: none; width: 2.5rem; height: 2.5rem; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.3s ease; box-shadow: var(--shadow-md);
     }
 
-    .notification-bell:hover {
-      transform: translateY(-4px) scale(1.05);
-      box-shadow: var(--shadow-xl);
-    }
+    .notification-bell:hover { transform: translateY(-4px) scale(1.05); box-shadow: var(--shadow-xl); }
 
     .notification-badge {
-      position: absolute;
-      top: -4px;
-      right: -4px;
+      position: absolute; top: -4px; right: -4px;
       background: linear-gradient(135deg, #ef4444, #dc2626);
-      color: white;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      font-size: 0.75rem;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      color: white; width: 20px; height: 20px; border-radius: 50%;
+      font-size: 0.75rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
       animation: pulse 2s infinite;
-      box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
     }
 
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.15); }
-    }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
 
-    /* Notification Dropdown 3D */
     .notification-dropdown {
-      position: absolute;
-      top: calc(100% + 0.5rem);
-      right: 0;
-      width: 380px;
-      max-height: 500px;
-      background: var(--bg-card);
-      border-radius: 1.5rem;
-      box-shadow: var(--shadow-xl);
-      border: 1px solid var(--border-color);
-      display: none;
-      overflow: hidden;
-      animation: slideDown 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      position: absolute; top: calc(100% + 0.5rem); right: 0;
+      width: 380px; max-height: 500px;
+      background: var(--bg-card); border-radius: 1.5rem;
+      box-shadow: var(--shadow-xl); border: 1px solid var(--border-color);
+      display: none; overflow: hidden;
     }
 
-    .notification-dropdown.active {
-      display: block;
-    }
-
-    @keyframes slideDown {
-      from {
-        opacity: 0;
-        transform: translateY(-20px) scale(0.95);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
-    }
-
-    .notification-header {
-      padding: 1.5rem;
-      border-bottom: 1px solid var(--border-color);
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.1));
-    }
+    .notification-dropdown.active { display: block; animation: slideDown 0.4s cubic-bezier(0.68,-0.55,0.265,1.55); }
 
     .notification-item {
-      padding: 1rem 1.5rem;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      gap: 1rem;
-      align-items: center;
-      transition: all 0.3s ease;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .notification-item::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 4px;
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      transform: scaleY(0);
-      transition: transform 0.3s ease;
+      padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color);
+      display: flex; gap: 1rem; align-items: center;
+      transition: all 0.3s ease; cursor: pointer;
     }
 
     .notification-item:hover {
-      background: linear-gradient(90deg, rgba(16, 185, 129, 0.05), transparent);
+      background: linear-gradient(90deg, rgba(16,185,129,0.05), transparent);
       transform: translateX(4px);
     }
 
-    .notification-item:hover::before {
-      transform: scaleY(1);
-    }
-
     .notification-icon {
-      width: 3rem;
-      height: 3rem;
+      width: 3rem; height: 3rem;
       background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      border-radius: 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      flex-shrink: 0;
-      box-shadow: var(--shadow-md);
+      border-radius: 1rem; display: flex; align-items: center;
+      justify-content: center; font-size: 1.5rem; flex-shrink: 0; box-shadow: var(--shadow-md);
     }
 
-    /* Header 3D */
-    .header {
-      padding: 2rem 0;
-      position: relative;
-    }
+    .header { padding: 2rem 0; }
 
     .header h1 {
-      font-size: 3rem;
-      font-weight: 800;
-      margin-bottom: 0.5rem;
+      font-size: 3rem; font-weight: 800; margin-bottom: 0.5rem;
       background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary), #3b82f6);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      text-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
 
-    /* Progress Bar 3D */
     .progress {
-      width: 100%;
-      height: 1rem;
-      background: var(--border-color);
-      border-radius: 9999px;
-      overflow: hidden;
-      margin-top: 1rem;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-      position: relative;
+      width: 100%; height: 1rem; background: var(--border-color);
+      border-radius: 9999px; overflow: hidden; margin-top: 1rem;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); position: relative;
     }
 
     .progress-fill {
       height: 100%;
       background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary), #3b82f6);
-      border-radius: 9999px;
-      transition: width 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-      position: relative;
-      overflow: hidden;
+      border-radius: 9999px; transition: width 0.6s cubic-bezier(0.68,-0.55,0.265,1.55);
+      position: relative; overflow: hidden;
     }
 
     .progress-fill::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      bottom: 0;
-      right: 0;
+      content: ''; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
       background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
       animation: shimmer 2s infinite;
     }
 
-    @keyframes shimmer {
-      0% { transform: translateX(-100%); }
-      100% { transform: translateX(100%); }
-    }
+    @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
-    /* Grid */
-    .grid {
-      display: grid;
-      gap: 1.5rem;
-      margin-bottom: 2rem;
-    }
+    .grid { display: grid; gap: 1.5rem; margin-bottom: 2rem; }
+    .grid-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
 
-    .grid-4 {
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    }
-
-    .grid-2 {
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    }
-
-    /* Stat Card 3D */
     .stat-card {
-      background: var(--bg-card);
-      border-radius: 1.5rem;
-      padding: 2rem;
-      border: 1px solid var(--border-color);
-      box-shadow: var(--shadow-lg);
-      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-      position: relative;
-      overflow: hidden;
+      background: var(--bg-card); border-radius: 1.5rem; padding: 2rem;
+      border: 1px solid var(--border-color); box-shadow: var(--shadow-lg);
+      transition: all 0.4s cubic-bezier(0.68,-0.55,0.265,1.55);
+      position: relative; overflow: hidden;
     }
 
     .stat-card::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%);
+      content: ''; position: absolute; top: -50%; right: -50%;
+      width: 200%; height: 200%;
+      background: radial-gradient(circle, rgba(16,185,129,0.05) 0%, transparent 70%);
       animation: rotate 15s linear infinite;
     }
 
-    @keyframes rotate {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
+    .stat-card:hover { transform: translateY(-10px) rotateX(5deg) scale(1.02); box-shadow: var(--shadow-xl); border-color: var(--accent-primary); }
 
-    .stat-card:hover {
-      transform: translateY(-10px) rotateX(5deg) scale(1.02);
-      box-shadow: var(--shadow-xl);
-      border-color: var(--accent-primary);
-    }
+    @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
     .stat-icon {
-      width: 4rem;
-      height: 4rem;
+      width: 4rem; height: 4rem;
       background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      border-radius: 1.25rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      margin-bottom: 1.5rem;
-      box-shadow: var(--shadow-md);
-      position: relative;
-      z-index: 1;
+      border-radius: 1.25rem; display: flex; align-items: center;
+      justify-content: center; font-size: 2rem; margin-bottom: 1.5rem;
+      box-shadow: var(--shadow-md); position: relative; z-index: 1;
     }
 
-    .stat-label {
-      font-size: 0.875rem;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      margin-bottom: 0.75rem;
-      position: relative;
-      z-index: 1;
-    }
+    .stat-label { font-size: 0.875rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 0.75rem; position: relative; z-index: 1; }
 
     .stat-value {
-      font-size: 2.5rem;
-      font-weight: 800;
+      font-size: 2.5rem; font-weight: 800;
       background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      position: relative;
-      z-index: 1;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      position: relative; z-index: 1;
     }
 
-    /* Card 3D */
     .card {
-      background: var(--bg-card);
-      border-radius: 1.5rem;
-      padding: 2rem;
-      box-shadow: var(--shadow-lg);
-      border: 1px solid var(--border-color);
-      transition: all 0.3s ease;
+      background: var(--bg-card); border-radius: 1.5rem; padding: 2rem;
+      box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); transition: all 0.3s ease;
     }
 
-    .card:hover {
-      box-shadow: var(--shadow-xl);
-      transform: translateY(-4px);
-    }
+    .card:hover { box-shadow: var(--shadow-xl); transform: translateY(-4px); }
 
-    /* Button 3D */
     .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.875rem 1.75rem;
-      border-radius: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-      border: none;
-      text-decoration: none;
-      transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-      position: relative;
-      overflow: hidden;
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.875rem 1.75rem; border-radius: 1rem; font-weight: 700;
+      cursor: pointer; border: none; text-decoration: none;
+      transition: all 0.3s cubic-bezier(0.68,-0.55,0.265,1.55);
+      position: relative; overflow: hidden;
     }
 
-    .btn::before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.3);
-      transform: translate(-50%, -50%);
-      transition: width 0.6s, height 0.6s;
-    }
+    .btn-primary { background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color: white; box-shadow: var(--shadow-md); }
+    .btn-primary:hover { transform: translateY(-4px) scale(1.05); box-shadow: var(--shadow-xl); }
+    .btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 2px solid var(--border-color); }
+    .btn-secondary:hover { border-color: var(--accent-primary); transform: translateY(-2px); }
+    .btn-sm { padding: 0.5rem 1.25rem; font-size: 0.875rem; }
 
-    .btn:hover::before {
-      width: 300px;
-      height: 300px;
-    }
+    .badge { display: inline-flex; padding: 0.375rem 1rem; border-radius: 9999px; font-size: 0.8125rem; font-weight: 700; }
+    .badge-primary { background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(52,211,153,0.15)); color: var(--accent-primary); border: 2px solid var(--accent-primary); }
+    .badge-warning { background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(251,191,36,0.15)); color: #f59e0b; border: 2px solid #f59e0b; }
 
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      color: white;
-      box-shadow: var(--shadow-md);
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-4px) scale(1.05);
-      box-shadow: var(--shadow-xl);
-    }
-
-    .btn-secondary {
-      background: var(--bg-card);
-      color: var(--text-primary);
-      border: 2px solid var(--border-color);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .btn-secondary:hover {
-      border-color: var(--accent-primary);
-      transform: translateY(-2px);
-    }
-
-    .btn-sm {
-      padding: 0.5rem 1.25rem;
-      font-size: 0.875rem;
-    }
-
-    /* Badge 3D */
-    .badge {
-      display: inline-flex;
-      padding: 0.375rem 1rem;
-      border-radius: 9999px;
-      font-size: 0.8125rem;
-      font-weight: 700;
-      box-shadow: var(--shadow-sm);
-    }
-
-    .badge-primary {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(52, 211, 153, 0.15));
-      color: var(--accent-primary);
-      border: 2px solid var(--accent-primary);
-    }
-
-    .badge-warning {
-      background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(251, 191, 36, 0.15));
-      color: #f59e0b;
-      border: 2px solid #f59e0b;
-    }
-
-    /* Tabs 3D */
-    .tabs {
-      border-bottom: 2px solid var(--border-color);
-      margin-bottom: 2rem;
-      display: flex;
-      gap: 1rem;
-      overflow-x: auto;
-    }
+    .tabs { border-bottom: 2px solid var(--border-color); margin-bottom: 2rem; display: flex; gap: 1rem; overflow-x: auto; }
 
     .tab-btn {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 1rem 1.5rem;
-      background: none;
-      border: none;
-      border-bottom: 3px solid transparent;
-      color: var(--text-secondary);
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      white-space: nowrap;
-      position: relative;
+      display: flex; align-items: center; gap: 0.5rem; padding: 1rem 1.5rem;
+      background: none; border: none; border-bottom: 3px solid transparent;
+      color: var(--text-secondary); font-weight: 700; cursor: pointer;
+      transition: all 0.3s ease; white-space: nowrap; position: relative;
     }
 
     .tab-btn::before {
-      content: '';
-      position: absolute;
-      bottom: -2px;
-      left: 0;
-      right: 0;
-      height: 3px;
+      content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px;
       background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
-      transform: scaleX(0);
-      transition: transform 0.3s ease;
+      transform: scaleX(0); transition: transform 0.3s ease;
     }
 
-    .tab-btn:hover {
-      color: var(--accent-primary);
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(52, 211, 153, 0.05));
-      border-radius: 1rem 1rem 0 0;
-    }
+    .tab-btn:hover { color: var(--accent-primary); background: linear-gradient(135deg, rgba(16,185,129,0.05), rgba(52,211,153,0.05)); border-radius: 1rem 1rem 0 0; }
+    .tab-btn.active { color: var(--accent-primary); }
+    .tab-btn.active::before { transform: scaleX(1); }
+    .tab-content { display: none; animation: fadeIn 0.5s ease; }
+    .tab-content.active { display: block; }
 
-    .tab-btn.active {
-      color: var(--accent-primary);
-    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-    .tab-btn.active::before {
-      transform: scaleX(1);
-    }
-
-    .tab-content {
-      display: none;
-      animation: fadeIn 0.5s ease;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Task Item 3D */
     .task-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1.25rem;
-      background: var(--bg-card);
-      border: 2px solid var(--border-color);
-      border-radius: 1.25rem;
-      margin-bottom: 1rem;
-      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-      box-shadow: var(--shadow-sm);
-      position: relative;
-      overflow: hidden;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.25rem; background: var(--bg-card); border: 2px solid var(--border-color);
+      border-radius: 1.25rem; margin-bottom: 1rem;
+      transition: all 0.4s cubic-bezier(0.68,-0.55,0.265,1.55);
+      box-shadow: var(--shadow-sm); position: relative; overflow: hidden;
     }
 
     .task-item::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 5px;
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
       background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      transform: scaleY(0);
-      transition: transform 0.3s ease;
+      transform: scaleY(0); transition: transform 0.3s ease;
     }
 
-    .task-item:hover {
-      box-shadow: var(--shadow-lg);
-      transform: translateX(8px) scale(1.02);
-      border-color: var(--accent-primary);
-    }
-
-    .task-item:hover::before {
-      transform: scaleY(1);
-    }
+    .task-item:hover { box-shadow: var(--shadow-lg); transform: translateX(8px) scale(1.02); border-color: var(--accent-primary); }
+    .task-item:hover::before { transform: scaleY(1); }
 
     .task-icon {
-      width: 3rem;
-      height: 3rem;
-      border-radius: 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.1));
-      box-shadow: var(--shadow-sm);
+      width: 3rem; height: 3rem; border-radius: 1rem;
+      display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+      background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(52,211,153,0.1));
     }
 
-    .task-icon.completed {
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      color: white;
-    }
+    .task-icon.completed { background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color: white; }
 
-    /* Water Grid 3D */
-    .water-grid {
-      display: grid;
-      grid-template-columns: repeat(8, 1fr);
-      gap: 0.75rem;
-      margin-top: 1.5rem;
-    }
+    .water-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.75rem; margin-top: 1.5rem; }
 
     .water-glass {
-      aspect-ratio: 1;
-      border-radius: 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.75rem;
-      background: var(--bg-card);
+      aspect-ratio: 1; border-radius: 1rem; display: flex; align-items: center;
+      justify-content: center; font-size: 1.75rem; background: var(--bg-card);
       border: 3px solid var(--border-color);
-      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-      cursor: pointer;
-      box-shadow: var(--shadow-sm);
+      transition: all 0.4s cubic-bezier(0.68,-0.55,0.265,1.55); cursor: pointer;
     }
 
-    .water-glass:hover {
-      transform: scale(1.1) rotate(5deg);
-    }
+    .water-glass:hover { transform: scale(1.1) rotate(5deg); }
+    .water-glass.filled { background: linear-gradient(135deg, #06b6d4, #0ea5e9); border-color: #06b6d4; transform: scale(1.15); box-shadow: 0 0 20px rgba(6,182,212,0.5); }
 
-    .water-glass.filled {
-      background: linear-gradient(135deg, #06b6d4, #0ea5e9);
-      border-color: #06b6d4;
-      transform: scale(1.15);
-      box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
-    }
-
-    /* Calendar 3D */
-    .calendar {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 0.75rem;
-    }
+    .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.75rem; }
 
     .calendar-day {
-      aspect-ratio: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 1.25rem;
-      font-weight: 700;
-      font-size: 1.125rem;
-      text-decoration: none;
-      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-      background: var(--bg-card);
-      color: var(--text-secondary);
-      border: 2px solid var(--border-color);
-      box-shadow: var(--shadow-sm);
-      position: relative;
+      aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+      border-radius: 1.25rem; font-weight: 700; font-size: 1.125rem;
+      text-decoration: none; transition: all 0.4s cubic-bezier(0.68,-0.55,0.265,1.55);
+      background: var(--bg-card); color: var(--text-secondary); border: 2px solid var(--border-color);
     }
 
-    .calendar-day.completed {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(52, 211, 153, 0.2));
-      color: var(--accent-primary);
-      border-color: var(--accent-primary);
-    }
+    .calendar-day.completed { background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(52,211,153,0.2)); color: var(--accent-primary); border-color: var(--accent-primary); }
+    .calendar-day.current { background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color: white; transform: scale(1.2); box-shadow: 0 8px 20px rgba(16,185,129,0.4); z-index: 10; }
+    .calendar-day:hover { transform: scale(1.15) translateY(-4px); box-shadow: var(--shadow-lg); }
 
-    .calendar-day.current {
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      color: white;
-      transform: scale(1.2);
-      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
-      z-index: 10;
-    }
-
-    .calendar-day:hover {
-      transform: scale(1.15) translateY(-4px);
-      box-shadow: var(--shadow-lg);
-    }
-
-    /* 3D Macros Cards */
-    .macros-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 2rem;
-      margin-bottom: 2rem;
-    }
+    .macros-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2rem; margin-bottom: 2rem; }
 
     .macro-card-3d {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 2rem;
-      padding: 2.5rem;
-      position: relative;
-      overflow: hidden;
-      transform-style: preserve-3d;
-      perspective: 1000px;
-      transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      border-radius: 2rem; padding: 2.5rem; position: relative; overflow: hidden;
+      transition: all 0.5s cubic-bezier(0.68,-0.55,0.265,1.55);
       box-shadow: 0 20px 40px rgba(0,0,0,0.3);
     }
 
-    .macro-card-3d:hover {
-      transform: translateY(-15px) rotateX(10deg) scale(1.05);
-      box-shadow: 0 30px 60px rgba(0,0,0,0.4);
-    }
-
-    .macro-card-3d.calories {
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    }
-
-    .macro-card-3d.protein {
-      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    }
-
-    .macro-card-3d.fat {
-      background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-    }
-
-    .macro-card-3d.carbs {
-      background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-    }
+    .macro-card-3d:hover { transform: translateY(-15px) rotateX(10deg) scale(1.05); box-shadow: 0 30px 60px rgba(0,0,0,0.4); }
+    .macro-card-3d.calories { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .macro-card-3d.protein { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .macro-card-3d.fat { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); }
+    .macro-card-3d.carbs { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
 
     .macro-card-3d::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -50%;
-      width: 200%;
-      height: 200%;
+      content: ''; position: absolute; top: -50%; right: -50%; width: 200%; height: 200%;
       background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
       animation: rotate 12s linear infinite;
     }
 
-    .macro-label {
-      font-size: 0.9375rem;
-      color: rgba(255,255,255,0.95);
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 0.75rem;
-      position: relative;
-      z-index: 1;
-    }
+    .macro-label { font-size: 0.9375rem; color: rgba(255,255,255,0.95); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; position: relative; z-index: 1; }
+    .macro-value { font-size: 3.5rem; font-weight: 900; color: white; position: relative; z-index: 1; margin-bottom: 0.75rem; text-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+    .macro-target { font-size: 1.0625rem; color: rgba(255,255,255,0.85); position: relative; z-index: 1; font-weight: 600; }
 
-    .macro-value {
-      font-size: 3.5rem;
-      font-weight: 900;
-      color: white;
-      position: relative;
-      z-index: 1;
-      margin-bottom: 0.75rem;
-      text-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    }
+    .macro-progress { width: 100%; height: 10px; background: rgba(255,255,255,0.25); border-radius: 9999px; overflow: hidden; margin-top: 1.25rem; position: relative; z-index: 1; }
+    .macro-progress-fill { height: 100%; background: white; border-radius: 9999px; transition: width 1.2s cubic-bezier(0.68,-0.55,0.265,1.55); box-shadow: 0 0 15px rgba(255,255,255,0.6); }
+    .macro-percent { font-size: 1.5rem; font-weight: 900; color: white; position: absolute; top: 1.5rem; right: 2rem; z-index: 1; background: rgba(0,0,0,0.25); padding: 0.375rem 1rem; border-radius: 9999px; }
 
-    .macro-target {
-      font-size: 1.0625rem;
-      color: rgba(255,255,255,0.85);
-      position: relative;
-      z-index: 1;
-      font-weight: 600;
-    }
-
-    .macro-progress {
-      width: 100%;
-      height: 10px;
-      background: rgba(255,255,255,0.25);
-      border-radius: 9999px;
-      overflow: hidden;
-      margin-top: 1.25rem;
-      position: relative;
-      z-index: 1;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
-    }
-
-    .macro-progress-fill {
-      height: 100%;
-      background: white;
-      border-radius: 9999px;
-      transition: width 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-      box-shadow: 0 0 15px rgba(255,255,255,0.6);
-      position: relative;
-    }
-
-    .macro-progress-fill::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      bottom: 0;
-      right: 0;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
-      animation: shimmer 2s infinite;
-    }
-
-    .macro-percent {
-      font-size: 1.5rem;
-      font-weight: 900;
-      color: white;
-      position: absolute;
-      top: 1.5rem;
-      right: 2rem;
-      z-index: 1;
-      background: rgba(0,0,0,0.25);
-      padding: 0.375rem 1rem;
-      border-radius: 9999px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    }
-
-    /* Manual Entry Form 3D */
     .manual-entry-form {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 2rem;
-      padding: 2.5rem;
-      margin-top: 2rem;
-      color: white;
-      box-shadow: var(--shadow-xl);
-      position: relative;
-      overflow: hidden;
+      border-radius: 2rem; padding: 2.5rem; margin-top: 2rem; color: white;
+      box-shadow: var(--shadow-xl); position: relative; overflow: hidden;
     }
 
     .manual-entry-form::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -50%;
-      width: 200%;
-      height: 200%;
+      content: ''; position: absolute; top: -50%; right: -50%; width: 200%; height: 200%;
       background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
       animation: rotate 20s linear infinite;
     }
 
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 1.25rem;
-      margin-top: 1.5rem;
-      position: relative;
-      z-index: 1;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.625rem;
-    }
-
-    .form-group label {
-      font-size: 0.9375rem;
-      font-weight: 700;
-      color: rgba(255,255,255,0.95);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1.25rem; margin-top: 1.5rem; position: relative; z-index: 1; }
+    .form-group { display: flex; flex-direction: column; gap: 0.625rem; }
+    .form-group label { font-size: 0.9375rem; font-weight: 700; color: rgba(255,255,255,0.95); text-transform: uppercase; letter-spacing: 0.05em; }
 
     .form-group input {
-      padding: 0.875rem;
-      border-radius: 0.75rem;
-      border: 2px solid rgba(255,255,255,0.3);
+      padding: 0.875rem; border-radius: 0.75rem; border: 2px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.15); color: white; font-size: 1.0625rem;
+      font-weight: 700; backdrop-filter: blur(10px); transition: all 0.3s ease;
+    }
+
+    .form-group input:focus { outline: none; border-color: white; background: rgba(255,255,255,0.25); transform: scale(1.02); }
+
+    /* ============================================
+       KETO FLU BANNER STYLES
+       ============================================ */
+    .keto-flu-banner {
+      border-radius: 2rem;
+      padding: 2.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+      position: relative;
+      overflow: hidden;
+      animation: ketoFluSlideIn 0.6s cubic-bezier(0.68,-0.55,0.265,1.55);
+    }
+
+    @keyframes ketoFluSlideIn {
+      from { opacity: 0; transform: translateY(-30px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes ketoFluSlideOut {
+      from { opacity: 1; transform: translateY(0) scale(1); max-height: 600px; }
+      to { opacity: 0; transform: translateY(-20px) scale(0.97); max-height: 0; padding: 0; margin: 0; }
+    }
+
+    .keto-flu-banner::before {
+      content: ''; position: absolute; top: -50%; right: -50%;
+      width: 200%; height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+      animation: rotate 15s linear infinite; pointer-events: none;
+    }
+
+    .keto-flu-content { position: relative; z-index: 10; color: white; }
+
+    .keto-flu-header {
+      display: flex; align-items: center; gap: 1.5rem;
+      margin-bottom: 1.75rem; flex-wrap: wrap;
+    }
+
+    .keto-flu-icon-wrap {
+      width: 5rem; height: 5rem; flex-shrink: 0;
+      background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);
+      border-radius: 1.5rem; display: flex; align-items: center;
+      justify-content: center; font-size: 3rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+
+    .keto-flu-badges { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.625rem; flex-wrap: wrap; }
+
+    .keto-flu-badge {
+      background: rgba(255,255,255,0.25); backdrop-filter: blur(10px);
+      padding: 0.375rem 1.25rem; border-radius: 9999px;
+      font-size: 0.9375rem; font-weight: 800; letter-spacing: 0.03em;
+    }
+
+    .keto-flu-badge-sm {
       background: rgba(255,255,255,0.15);
-      color: white;
-      font-size: 1.0625rem;
-      font-weight: 700;
-      backdrop-filter: blur(10px);
-      transition: all 0.3s ease;
+      padding: 0.375rem 1rem; border-radius: 9999px;
+      font-size: 0.875rem; font-weight: 600;
     }
 
-    .form-group input::placeholder {
-      color: rgba(255,255,255,0.5);
+    .keto-flu-title { font-size: 2rem; font-weight: 900; text-shadow: 0 2px 8px rgba(0,0,0,0.3); line-height: 1.2; }
+
+    .keto-flu-cards {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem; margin-bottom: 1.75rem;
     }
 
-    .form-group input:focus {
-      outline: none;
-      border-color: white;
-      background: rgba(255,255,255,0.25);
-      transform: scale(1.02);
-      box-shadow: 0 0 20px rgba(255,255,255,0.3);
+    .keto-flu-card {
+      backdrop-filter: blur(10px); border-radius: 1.25rem; padding: 1.5rem;
+      border: 1px solid rgba(255,255,255,0.2);
     }
 
-    /* Utilities */
-    .flex {
-      display: flex;
-      align-items: center;
+    .keto-flu-card-dark { background: rgba(0,0,0,0.2); }
+    .keto-flu-card-light { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); }
+    .keto-flu-card-accent { background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.35); }
+
+    .keto-flu-card-label {
+      font-size: 0.8125rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.1em; opacity: 0.85; margin-bottom: 0.75rem;
+      display: flex; align-items: center; gap: 0.5rem;
     }
 
-    .flex-between {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .keto-flu-card-text { font-size: 1.0625rem; line-height: 1.65; font-weight: 600; opacity: 0.95; }
+    .keto-flu-card-suggestion { font-size: 1.125rem; line-height: 1.6; font-weight: 700; }
+
+    .keto-flu-progress-wrap { margin-bottom: 1.75rem; }
+
+    .keto-flu-progress-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;
     }
 
-    .gap-1 { gap: 0.5rem; }
-    .gap-2 { gap: 1rem; }
-    .gap-3 { gap: 1.5rem; }
+    .keto-flu-progress-bar {
+      width: 100%; height: 14px; background: rgba(0,0,0,0.25);
+      border-radius: 9999px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    }
 
-    .mb-2 { margin-bottom: 1rem; }
-    .mb-4 { margin-bottom: 2rem; }
+    .keto-flu-progress-fill {
+      height: 100%; background: rgba(255,255,255,0.85); border-radius: 9999px;
+      position: relative; overflow: hidden; transition: width 1.5s cubic-bezier(0.68,-0.55,0.265,1.55);
+    }
+
+    .keto-flu-progress-fill::after {
+      content: ''; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+      animation: shimmer 2s infinite;
+    }
+
+    .keto-flu-progress-labels { display: flex; justify-content: space-between; margin-top: 0.5rem; opacity: 0.7; font-size: 0.8125rem; font-weight: 700; }
+
+    .keto-flu-footer { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+
+    .keto-flu-action-btn {
+      background: white; color: #111827; padding: 1rem 2rem;
+      border-radius: 1rem; border: none; font-weight: 800; font-size: 1.0625rem;
+      cursor: pointer; display: flex; align-items: center; gap: 0.75rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      transition: all 0.3s cubic-bezier(0.68,-0.55,0.265,1.55);
+    }
+
+    .keto-flu-action-btn:hover { transform: translateY(-4px) scale(1.05); box-shadow: 0 15px 30px rgba(0,0,0,0.3); }
+
+    .keto-flu-close {
+      position: absolute; top: 1.25rem; right: 1.25rem;
+      background: rgba(255,255,255,0.2); border: none;
+      width: 2.5rem; height: 2.5rem; border-radius: 50%;
+      color: white; font-size: 1.375rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.3s ease; backdrop-filter: blur(10px); z-index: 20;
+    }
+
+    .keto-flu-close:hover { background: rgba(255,255,255,0.35); transform: scale(1.1) rotate(90deg); }
+
+    /* ============================================ */
+
+    .flex { display: flex; align-items: center; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+    .gap-1 { gap: 0.5rem; } .gap-2 { gap: 1rem; } .gap-3 { gap: 1.5rem; }
+    .mb-2 { margin-bottom: 1rem; } .mb-4 { margin-bottom: 2rem; }
+
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
     @media (max-width: 768px) {
-      .grid-4, .grid-2 {
-        grid-template-columns: 1fr;
-      }
-      
-      .calendar {
-        grid-template-columns: repeat(5, 1fr);
-      }
-
-      .macros-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .notification-dropdown {
-        width: calc(100vw - 2rem);
-        right: -1rem;
-      }
-
-      .header h1 {
-        font-size: 2rem;
-      }
+      .grid-4, .grid-2 { grid-template-columns: 1fr; }
+      .calendar { grid-template-columns: repeat(5, 1fr); }
+      .macros-grid { grid-template-columns: 1fr; }
+      .notification-dropdown { width: calc(100vw - 2rem); right: -1rem; }
+      .header h1 { font-size: 2rem; }
+      .keto-flu-banner { padding: 1.75rem; }
+      .keto-flu-title { font-size: 1.5rem; }
+      .keto-flu-cards { grid-template-columns: 1fr; }
+      .water-grid { grid-template-columns: repeat(4, 1fr); }
     }
   </style>
 </head>
@@ -1058,29 +726,25 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
         </div>
         
         <div class="flex gap-3">
-          <a href="/dashboard/index-v3" class="active">Dashboard</a>
+          <a href="/dashboard" class="active">Dashboard</a>
           <a href="/dashboard/shopping-list">Shopping</a>
+          <a href="/dashboard/recipes">Recipes</a>
           <a href="/dashboard/profile">Profile</a>
-          
+          <a href="/dashboard/notifications">🔔 Reminders</a>
+
           <div class="flex gap-2" style="padding-left: 1rem; border-left: 1px solid var(--border-color); position: relative;">
-            <!-- Dark Mode Toggle -->
             <div class="theme-toggle" id="themeToggle">
-              <div class="theme-toggle-slider">
-                <span id="themeIcon">☀️</span>
-              </div>
+              <div class="theme-toggle-slider"><span id="themeIcon">☀️</span></div>
             </div>
 
-            <!-- Notification Bell -->
             {incompleteTasks.length > 0 && (
               <div style="position: relative;">
                 <button class="notification-bell" id="notif-bell">
                   <span style="color: white;">🔔</span>
                   <span class="notification-badge">{incompleteTasks.length}</span>
                 </button>
-                
-                <!-- Notification Dropdown -->
                 <div class="notification-dropdown" id="notificationDropdown">
-                  <div class="notification-header">
+                  <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(52,211,153,0.1));">
                     <h3 style="font-size: 1.125rem; font-weight: 800; color: var(--accent-primary); display: flex; align-items: center; gap: 0.75rem;">
                       <span style="font-size: 1.5rem;">🔔</span>
                       <span>{incompleteTasks.length} Pending Task{incompleteTasks.length !== 1 ? 's' : ''}</span>
@@ -1104,15 +768,12 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
                     ))}
                   </div>
                   <div style="padding: 1.25rem; border-top: 1px solid var(--border-color); text-align: center;">
-                    <button id="view-all-tasks" class="btn btn-primary btn-sm" style="width: 100%; justify-content: center;">
-                      View All Tasks →
-                    </button>
+                    <button id="view-all-tasks" class="btn btn-primary btn-sm" style="width: 100%; justify-content: center;">View All Tasks →</button>
                   </div>
                 </div>
               </div>
             )}
             
-            <!-- Profile Avatar -->
             <a href="/dashboard/profile" style="width: 2.5rem; height: 2.5rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; text-decoration: none; box-shadow: var(--shadow-md); transition: all 0.3s ease; font-size: 1.125rem;">
               {profile.full_name.charAt(0).toUpperCase()}
             </a>
@@ -1122,25 +783,21 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
     </div>
   </nav>
 
-  <!-- Main Content -->
   <div class="container">
     <!-- Header -->
     <div class="header">
       <div class="flex-between mb-2">
         <div>
           <h1>Day {viewDay} of 30</h1>
-          <p style="color: var(--text-secondary); font-size: 1.125rem; font-weight: 600;">{viewDay === currentDay ? `Keep going! You're ${Math.round((currentDay/30)*100)}% complete` : `Viewing Day ${viewDay}`}</p>
+          <p style="color: var(--text-secondary); font-size: 1.125rem; font-weight: 600;">
+            {viewDay === currentDay ? `Keep going! You're ${Math.round((currentDay/30)*100)}% complete` : `Viewing Day ${viewDay}`}
+          </p>
         </div>
         <div class="flex gap-1">
-          <a href={viewDay > 1 ? `/dashboard/index-v3?day=${viewDay - 1}` : '#'} class="btn btn-secondary btn-sm" style={viewDay <= 1 ? 'pointer-events: none; opacity: 0.5;' : ''}>
-            ← Prev
-          </a>
-          <a href={viewDay < 30 ? `/dashboard/index-v3?day=${viewDay + 1}` : '#'} class="btn btn-secondary btn-sm" style={viewDay >= 30 ? 'pointer-events: none; opacity: 0.5;' : ''}>
-            Next →
-          </a>
+          <a href={viewDay > 1 ? `/dashboard/?day=${viewDay - 1}` : '#'} class="btn btn-secondary btn-sm" style={viewDay <= 1 ? 'pointer-events: none; opacity: 0.5;' : ''}>← Prev</a>
+          <a href={viewDay < 30 ? `/dashboard/?day=${viewDay + 1}` : '#'} class="btn btn-secondary btn-sm" style={viewDay >= 30 ? 'pointer-events: none; opacity: 0.5;' : ''}>Next →</a>
         </div>
       </div>
-      
       <div class="progress">
         <div class="progress-fill" style={`width: ${(currentDay / 30) * 100}%`}></div>
       </div>
@@ -1154,7 +811,6 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
         <div class="stat-value">{currentDay}</div>
         <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.5rem; font-weight: 600;">of 30 days</p>
       </div>
-
       <div class="stat-card">
         <div class="stat-icon">✅</div>
         <div class="stat-label">Tasks Done</div>
@@ -1163,14 +819,12 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
           <div class="progress-fill" style={`width: ${progressPercentage}%`}></div>
         </div>
       </div>
-
       <div class="stat-card">
         <div class="stat-icon">⚡</div>
         <div class="stat-label">Total XP</div>
         <div class="stat-value">{journey.total_xp}</div>
         <div class="badge badge-primary" style="margin-top: 0.75rem;">Level {journey.level}</div>
       </div>
-
       <div class="stat-card">
         <div class="stat-icon">🔥</div>
         <div class="stat-label">Streak</div>
@@ -1179,14 +833,97 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
       </div>
     </div>
 
+    <!-- ============================================
+         KETO FLU BANNER (Days 1-10 only)
+         ============================================ -->
+    {showKetoFluTip && (
+      <div 
+        class="keto-flu-banner" 
+        id="keto-flu-banner"
+        style={`background: ${currentTip.gradient};`}
+      >
+        <!-- Close Button -->
+        <button class="keto-flu-close" id="keto-flu-close" title="Dismiss">×</button>
+
+        <div class="keto-flu-content">
+          <!-- Header Row -->
+          <div class="keto-flu-header">
+            <div class="keto-flu-icon-wrap">{currentTip.icon}</div>
+            <div style="flex: 1;">
+              <div class="keto-flu-badges">
+                <span class="keto-flu-badge">{currentTip.day} of 10</span>
+                <span class="keto-flu-badge-sm">🛡️ Keto Flu Guide</span>
+                {currentTip.severity === 'danger' && <span class="keto-flu-badge-sm" style="background: rgba(255,255,255,0.3);">⚠️ Hardest Day</span>}
+                {currentTip.severity === 'success' && <span class="keto-flu-badge-sm" style="background: rgba(255,255,255,0.3);">🎉 Victory!</span>}
+              </div>
+              <h3 class="keto-flu-title">{currentTip.title}</h3>
+            </div>
+          </div>
+
+          <!-- Info Cards -->
+          <div class="keto-flu-cards">
+            <!-- What's Happening -->
+            <div class="keto-flu-card keto-flu-card-dark">
+              <div class="keto-flu-card-label">
+                <span>🔬</span><span>What's Happening in Your Body</span>
+              </div>
+              <p class="keto-flu-card-text">{currentTip.whatsHappening}</p>
+            </div>
+
+            <!-- Pro Tip -->
+            <div class="keto-flu-card keto-flu-card-light">
+              <div class="keto-flu-card-label">
+                <span>💡</span><span>Pro Tip for Today</span>
+              </div>
+              <p class="keto-flu-card-text">{currentTip.tip}</p>
+            </div>
+
+            <!-- Today's Recommendation -->
+            <div class="keto-flu-card keto-flu-card-accent">
+              <div class="keto-flu-card-label">
+                <span>🛒</span><span>Today's Recommendation</span>
+              </div>
+              <p class="keto-flu-card-suggestion">{currentTip.suggestion}</p>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="keto-flu-progress-wrap">
+            <div class="keto-flu-progress-header">
+              <span style="font-size: 0.9375rem; font-weight: 700; opacity: 0.9;">Keto Flu Progress</span>
+              <span style="font-size: 1.125rem; font-weight: 900;">{currentTip.progress}% Complete</span>
+            </div>
+            <div class="keto-flu-progress-bar">
+              <div class="keto-flu-progress-fill" style={`width: ${currentTip.progress}%`}></div>
+            </div>
+            <div class="keto-flu-progress-labels">
+              <span>Day 1 — Start</span>
+              <span>Day 5 — Halfway</span>
+              <span>Day 10 — 👑 Victory</span>
+            </div>
+          </div>
+
+          <!-- Action Button -->
+          <div class="keto-flu-footer">
+            <button class="keto-flu-action-btn">
+              <span style="font-size: 1.5rem;">⚡</span>
+              <span>{currentTip.action}</span>
+            </button>
+            <span style="opacity: 0.85; font-size: 0.9375rem; font-weight: 600;">
+              🏆 {10 - viewDay > 0 ? `${10 - viewDay} days left until you beat keto flu!` : `You beat keto flu! You're amazing! 🎉`}
+            </span>
+          </div>
+        </div>
+      </div>
+    )}
+    <!-- ============================================ -->
+
     <!-- Tabs -->
     <div class="tabs">
       <button class="tab-btn active" data-tab="tasks">
         <span style="font-size: 1.25rem;">✅</span>
         <span>Tasks</span>
-        {incompleteTasks.length > 0 && (
-          <span class="badge badge-warning">{incompleteTasks.length}</span>
-        )}
+        {incompleteTasks.length > 0 && <span class="badge badge-warning">{incompleteTasks.length}</span>}
       </button>
       <button class="tab-btn" data-tab="meals">
         <span style="font-size: 1.25rem;">🍽️</span>
@@ -1228,9 +965,8 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
           </div>
         ))}
 
-        {/* Water Tracker */}
         {waterIntake && (
-          <div style="margin-top: 2rem; padding: 2rem; background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(14, 165, 233, 0.1)); border-radius: 1.5rem; border: 2px solid #06b6d4; box-shadow: var(--shadow-lg);">
+          <div style="margin-top: 2rem; padding: 2rem; background: linear-gradient(135deg, rgba(6,182,212,0.1), rgba(14,165,233,0.1)); border-radius: 1.5rem; border: 2px solid #06b6d4; box-shadow: var(--shadow-lg);">
             <div class="flex-between mb-2">
               <div>
                 <h4 style="font-weight: 800; font-size: 1.25rem; color: var(--text-primary);">💧 Water Intake</h4>
@@ -1246,15 +982,9 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
                 </div>
               )}
             </div>
-            
             <div class="water-grid">
               {Array.from({ length: waterIntake.target_glasses }, (_, i) => (
-                <div 
-                  data-glass-index={i}
-                  class={`water-glass ${i < waterIntake.glasses_count ? 'filled' : ''}`}
-                >
-                  💧
-                </div>
+                <div data-glass-index={i} class={`water-glass ${i < waterIntake.glasses_count ? 'filled' : ''}`}>💧</div>
               ))}
             </div>
           </div>
@@ -1268,7 +998,6 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
         <h3 style="font-size: 1.5rem; font-weight: 800; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Today's Meals</h3>
         <a href="/dashboard/shopping-list" class="btn btn-primary">🛒 Shopping List</a>
       </div>
-
       <div class="grid grid-2">
         {todayMeals.map((meal) => (
           <div class="card" style="padding: 0; overflow: hidden;">
@@ -1277,10 +1006,7 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
                 <img src={meal.recipe.image_url} alt={meal.recipe.title} style="width: 100%; height: 250px; object-fit: cover;" />
                 <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 1.5rem; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);">
                   <span style="color: white; font-weight: 800; font-size: 1.125rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
-                    {meal.meal_type === 'breakfast' && '☀️'} 
-                    {meal.meal_type === 'lunch' && '🌞'} 
-                    {meal.meal_type === 'dinner' && '🌙'} 
-                    {meal.meal_type === 'snack' && '🍎'}
+                    {meal.meal_type === 'breakfast' && '☀️'}{meal.meal_type === 'lunch' && '🌞'}{meal.meal_type === 'dinner' && '🌙'}{meal.meal_type === 'snack' && '🍎'}
                     {' '}{meal.meal_type.charAt(0).toUpperCase() + meal.meal_type.slice(1)}
                   </span>
                 </div>
@@ -1288,9 +1014,7 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
             )}
             <div style="padding: 2rem;">
               <h4 style="font-weight: 800; font-size: 1.25rem; margin-bottom: 1.5rem; color: var(--text-primary);">{meal.recipe?.title}</h4>
-              <a href={`/dashboard/recipe/${meal.recipe?.id}`} class="btn btn-primary" style="width: 100%; justify-content: center;">
-                View Recipe →
-              </a>
+              <a href={`/dashboard/recipe/${meal.recipe?.id}`} class="btn btn-primary" style="width: 100%; justify-content: center;">View Recipe →</a>
             </div>
           </div>
         ))}
@@ -1300,13 +1024,10 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
     <!-- Nutrition Tab -->
     <div id="tab-nutrition" class="tab-content">
       <h3 style="font-size: 2rem; font-weight: 900; margin-bottom: 2rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary), #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-        <span style="font-size: 2.5rem;">📊</span>
-        Smart Macros Tracker
+        <span style="font-size: 2.5rem;">📊</span> Smart Macros Tracker
       </h3>
 
-      <!-- 3D Macro Cards -->
       <div class="macros-grid">
-        <!-- Calories -->
         <div class="macro-card-3d calories">
           <div class="macro-percent">{caloriesPercent}%</div>
           <div class="macro-label">Calories</div>
@@ -1316,8 +1037,6 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
             <div class="macro-progress-fill" data-progress="calories" style={`width: ${Math.min(caloriesPercent, 100)}%`}></div>
           </div>
         </div>
-
-        <!-- Protein -->
         <div class="macro-card-3d protein">
           <div class="macro-percent">{proteinPercent}%</div>
           <div class="macro-label">Protein</div>
@@ -1327,8 +1046,6 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
             <div class="macro-progress-fill" data-progress="protein" style={`width: ${Math.min(proteinPercent, 100)}%`}></div>
           </div>
         </div>
-
-        <!-- Fat -->
         <div class="macro-card-3d fat">
           <div class="macro-percent">{fatPercent}%</div>
           <div class="macro-label">Fat</div>
@@ -1338,8 +1055,6 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
             <div class="macro-progress-fill" data-progress="fat" style={`width: ${Math.min(fatPercent, 100)}%`}></div>
           </div>
         </div>
-
-        <!-- Carbs -->
         <div class="macro-card-3d carbs">
           <div class="macro-percent">{carbsPercent}%</div>
           <div class="macro-label">Net Carbs</div>
@@ -1351,63 +1066,35 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
         </div>
       </div>
 
-      <!-- Charts Section -->
       {actualCalories > 0 && (
         <div class="grid grid-2 mb-4">
-          <!-- Pie Chart -->
           <div class="card">
             <h4 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-              <span style="font-size: 1.75rem;">🥧</span>
-              <span>Calorie Distribution</span>
+              <span style="font-size: 1.75rem;">🥧</span><span>Calorie Distribution</span>
             </h4>
-            <div style="position: relative; height: 320px;">
-              <canvas id="macrosPieChart"></canvas>
-            </div>
+            <div style="position: relative; height: 320px;"><canvas id="macrosPieChart"></canvas></div>
           </div>
-
-          <!-- Bar Chart -->
           <div class="card">
             <h4 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-              <span style="font-size: 1.75rem;">📊</span>
-              <span>Target vs Actual</span>
+              <span style="font-size: 1.75rem;">📊</span><span>Target vs Actual</span>
             </h4>
-            <div style="position: relative; height: 320px;">
-              <canvas id="macrosBarChart"></canvas>
-            </div>
+            <div style="position: relative; height: 320px;"><canvas id="macrosBarChart"></canvas></div>
           </div>
         </div>
       )}
 
-      <!-- Manual Entry Form -->
       <div class="manual-entry-form">
-        <h4 style="font-size: 1.375rem; font-weight: 900; margin-bottom: 1rem; position: relative; z-index: 1;">
-          ➕ Add Custom Food
-        </h4>
-        <p style="font-size: 1.0625rem; opacity: 0.95; margin-bottom: 1.5rem; position: relative; z-index: 1; font-weight: 600;">
-          Track additional meals or snacks that aren't in your plan
-        </p>
+        <h4 style="font-size: 1.375rem; font-weight: 900; margin-bottom: 1rem; position: relative; z-index: 1;">➕ Add Custom Food</h4>
+        <p style="font-size: 1.0625rem; opacity: 0.95; margin-bottom: 1.5rem; position: relative; z-index: 1; font-weight: 600;">Track additional meals or snacks that aren't in your plan</p>
         <form id="manual-macro-form">
           <div class="form-grid">
-            <div class="form-group">
-              <label>Calories</label>
-              <input type="number" id="manual-calories" placeholder="0" min="0" required />
-            </div>
-            <div class="form-group">
-              <label>Protein (g)</label>
-              <input type="number" id="manual-protein" placeholder="0" min="0" step="0.1" required />
-            </div>
-            <div class="form-group">
-              <label>Fat (g)</label>
-              <input type="number" id="manual-fat" placeholder="0" min="0" step="0.1" required />
-            </div>
-            <div class="form-group">
-              <label>Net Carbs (g)</label>
-              <input type="number" id="manual-carbs" placeholder="0" min="0" step="0.1" required />
-            </div>
+            <div class="form-group"><label>Calories</label><input type="number" id="manual-calories" placeholder="0" min="0" required /></div>
+            <div class="form-group"><label>Protein (g)</label><input type="number" id="manual-protein" placeholder="0" min="0" step="0.1" required /></div>
+            <div class="form-group"><label>Fat (g)</label><input type="number" id="manual-fat" placeholder="0" min="0" step="0.1" required /></div>
+            <div class="form-group"><label>Net Carbs (g)</label><input type="number" id="manual-carbs" placeholder="0" min="0" step="0.1" required /></div>
           </div>
           <button type="submit" class="btn btn-primary" style="margin-top: 1.5rem; width: 100%; justify-content: center; background: white; color: #667eea; font-size: 1.0625rem; position: relative; z-index: 1;">
-            <span style="font-size: 1.25rem;">✨</span>
-            <span>Add to Today's Macros</span>
+            <span style="font-size: 1.25rem;">✨</span><span>Add to Today's Macros</span>
           </button>
         </form>
       </div>
@@ -1417,15 +1104,9 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
     <div id="tab-calendar" class="tab-content">
       <div class="card">
         <h3 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 2rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">30-Day Journey</h3>
-        
         <div class="calendar">
           {Array.from({ length: 30 }, (_, i) => i + 1).map((day) => (
-            <a 
-              href={`/dashboard/index-v3?day=${day}`}
-              class={`calendar-day ${day < currentDay ? 'completed' : ''} ${day === currentDay ? 'current' : ''}`}
-            >
-              {day}
-            </a>
+            <a href={`/dashboard?day=${day}`} class={`calendar-day ${day < currentDay ? 'completed' : ''} ${day === currentDay ? 'current' : ''}`}>{day}</a>
           ))}
         </div>
       </div>
@@ -1439,16 +1120,13 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
     const themeIcon = document.getElementById('themeIcon');
     const html = document.documentElement;
 
-    // Load saved theme
     const savedTheme = localStorage.getItem('theme') || 'light';
     html.setAttribute('data-theme', savedTheme);
     themeIcon.textContent = savedTheme === 'dark' ? '🌙' : '☀️';
 
     if (themeToggle) {
       themeToggle.addEventListener('click', function() {
-        const currentTheme = html.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        
+        const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         html.setAttribute('data-theme', newTheme);
         themeIcon.textContent = newTheme === 'dark' ? '🌙' : '☀️';
         localStorage.setItem('theme', newTheme);
@@ -1464,13 +1142,11 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
         e.stopPropagation();
         notifDropdown.classList.toggle('active');
       });
-
       document.addEventListener('click', function(e) {
         if (!notifDropdown.contains(e.target) && !notifBell.contains(e.target)) {
           notifDropdown.classList.remove('active');
         }
       });
-
       const viewAllBtn = document.getElementById('view-all-tasks');
       if (viewAllBtn) {
         viewAllBtn.addEventListener('click', function() {
@@ -1478,7 +1154,6 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
           switchTab('tasks');
         });
       }
-
       document.querySelectorAll('.notification-item').forEach(item => {
         item.addEventListener('click', function() {
           notifDropdown.classList.remove('active');
@@ -1489,33 +1164,46 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
 
     // Tab Switching
     function switchTab(tabName) {
-      document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
-      });
-      
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-      });
-      
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       const targetTab = document.getElementById('tab-' + tabName);
-      if (targetTab) {
-        targetTab.classList.add('active');
-      }
-      
+      if (targetTab) targetTab.classList.add('active');
       const targetBtn = document.querySelector(`[data-tab="${tabName}"]`);
-      if (targetBtn) {
-        targetBtn.classList.add('active');
-      }
+      if (targetBtn) targetBtn.classList.add('active');
     }
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', function() {
         const tabName = this.getAttribute('data-tab');
-        if (tabName) {
-          switchTab(tabName);
-        }
+        if (tabName) switchTab(tabName);
       });
     });
+
+    // ============================================
+    // KETO FLU BANNER
+    // ============================================
+    const ketoFluBanner = document.getElementById('keto-flu-banner');
+    const ketoFluClose = document.getElementById('keto-flu-close');
+
+    if (ketoFluBanner && ketoFluClose) {
+      // Check if dismissed today
+      const today = new Date().toDateString();
+      const dismissedKey = 'keto_flu_dismissed_' + window.location.search;
+      const dismissedDate = localStorage.getItem(dismissedKey);
+
+      if (dismissedDate === today) {
+        ketoFluBanner.style.display = 'none';
+      }
+
+      ketoFluClose.addEventListener('click', function() {
+        ketoFluBanner.style.animation = 'ketoFluSlideOut 0.4s ease forwards';
+        localStorage.setItem(dismissedKey, today);
+        setTimeout(() => {
+          ketoFluBanner.style.display = 'none';
+        }, 400);
+      });
+    }
+    // ============================================
 
     // Water Tracker
     let currentWater = parseInt(document.getElementById('water-count')?.textContent || '0');
@@ -1523,9 +1211,7 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
     document.querySelectorAll('[data-water-action]').forEach(btn => {
       btn.addEventListener('click', async function() {
         const action = this.getAttribute('data-water-action');
-        const change = action === 'plus' ? 1 : -1;
-        
-        const newCount = Math.max(0, Math.min(8, currentWater + change));
+        const newCount = Math.max(0, Math.min(8, currentWater + (action === 'plus' ? 1 : -1)));
         if (newCount === currentWater) return;
 
         try {
@@ -1534,25 +1220,15 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ glasses: newCount })
           });
-
           if (res.ok) {
             currentWater = newCount;
             const waterCountEl = document.getElementById('water-count');
-            if (waterCountEl) {
-              waterCountEl.textContent = newCount;
-            }
-            
+            if (waterCountEl) waterCountEl.textContent = newCount;
             document.querySelectorAll('[data-glass-index]').forEach((glass, i) => {
-              if (i < newCount) {
-                glass.classList.add('filled');
-              } else {
-                glass.classList.remove('filled');
-              }
+              glass.classList.toggle('filled', i < newCount);
             });
           }
-        } catch (error) {
-          console.error('Error:', error);
-        }
+        } catch (error) { console.error('Error:', error); }
       });
     });
 
@@ -1566,16 +1242,10 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
     if (macroForm) {
       macroForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        
-        const calories = parseFloat(document.getElementById('manual-calories').value) || 0;
-        const protein = parseFloat(document.getElementById('manual-protein').value) || 0;
-        const fat = parseFloat(document.getElementById('manual-fat').value) || 0;
-        const carbs = parseFloat(document.getElementById('manual-carbs').value) || 0;
-        
-        manualCalories += calories;
-        manualProtein += protein;
-        manualFat += fat;
-        manualCarbs += carbs;
+        manualCalories += parseFloat(document.getElementById('manual-calories').value) || 0;
+        manualProtein += parseFloat(document.getElementById('manual-protein').value) || 0;
+        manualFat += parseFloat(document.getElementById('manual-fat').value) || 0;
+        manualCarbs += parseFloat(document.getElementById('manual-carbs').value) || 0;
         
         updateMacroDisplay('calories', manualCalories, targetCalories);
         updateMacroDisplay('protein', manualProtein, targetProtein);
@@ -1589,109 +1259,48 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
 
     function updateMacroDisplay(type, actual, target) {
       const percent = Math.round((actual / target) * 100);
-      
       const valueEl = document.querySelector(`[data-macro-type="${type}"]`);
-      if (valueEl) {
-        if (type === 'calories') {
-          valueEl.textContent = Math.round(actual);
-        } else {
-          valueEl.textContent = Math.round(actual) + 'g';
-        }
-      }
-      
+      if (valueEl) valueEl.textContent = type === 'calories' ? Math.round(actual) : Math.round(actual) + 'g';
       const card = valueEl?.closest('.macro-card-3d');
       if (card) {
         const percentEl = card.querySelector('.macro-percent');
-        if (percentEl) {
-          percentEl.textContent = percent + '%';
-        }
-        
+        if (percentEl) percentEl.textContent = percent + '%';
         const progressEl = card.querySelector('[data-progress]');
-        if (progressEl) {
-          progressEl.style.width = Math.min(percent, 100) + '%';
-        }
+        if (progressEl) progressEl.style.width = Math.min(percent, 100) + '%';
       }
     }
 
     function showToast(message) {
       const toast = document.createElement('div');
-      toast.style.cssText = `
-        position: fixed;
-        top: 5rem;
-        right: 1.5rem;
-        background: linear-gradient(135deg, #10b981, #34d399);
-        color: white;
-        padding: 1.25rem 2rem;
-        border-radius: 1rem;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        z-index: 9999;
-        font-weight: 700;
-        font-size: 1.0625rem;
-        animation: slideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-      `;
+      toast.style.cssText = 'position:fixed;top:5rem;right:1.5rem;background:linear-gradient(135deg,#10b981,#34d399);color:white;padding:1.25rem 2rem;border-radius:1rem;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:9999;font-weight:700;font-size:1.0625rem;';
       toast.textContent = message;
       document.body.appendChild(toast);
-      
-      setTimeout(() => {
-        toast.style.animation = 'slideOut 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
-        setTimeout(() => toast.remove(), 400);
-      }, 3000);
+      setTimeout(() => toast.remove(), 3000);
     }
 
     // Charts
     if (actualCalories > 0) {
       window.addEventListener('load', function() {
         if (typeof Chart === 'undefined') return;
-
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         const textColor = isDark ? '#eaeaea' : '#374151';
         const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
 
-        // Pie Chart
         const pieCtx = document.getElementById('macrosPieChart');
         if (pieCtx) {
           new Chart(pieCtx, {
             type: 'doughnut',
             data: {
               labels: ['Protein', 'Fat', 'Net Carbs'],
-              datasets: [{
-                data: [
-                  manualProtein * 4,
-                  manualFat * 9,
-                  manualCarbs * 4
-                ],
-                backgroundColor: ['#4facfe', '#fcb69f', '#fed6e3'],
-                borderWidth: 0
-              }]
+              datasets: [{ data: [manualProtein * 4, manualFat * 9, manualCarbs * 4], backgroundColor: ['#4facfe', '#fcb69f', '#fed6e3'], borderWidth: 0 }]
             },
             options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: {
-                  position: 'bottom',
-                  labels: { 
-                    padding: 20, 
-                    font: { size: 14, weight: 'bold' },
-                    color: textColor
-                  }
-                },
-                tooltip: {
-                  callbacks: {
-                    label: function(context) {
-                      const value = context.parsed;
-                      const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                      const percentage = Math.round((value / total) * 100);
-                      return context.label + ': ' + value + ' cal (' + percentage + '%)';
-                    }
-                  }
-                }
-              }
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { position: 'bottom', labels: { padding: 20, font: { size: 14, weight: 'bold' }, color: textColor } } }
             }
           });
         }
 
-        // Bar Chart
         const barCtx = document.getElementById('macrosBarChart');
         if (barCtx) {
           new Chart(barCtx, {
@@ -1699,47 +1308,16 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
             data: {
               labels: ['Protein (g)', 'Fat (g)', 'Net Carbs (g)'],
               datasets: [
-                {
-                  label: 'Target',
-                  data: [targetProtein, targetFat, targetCarbs],
-                  backgroundColor: 'rgba(156, 163, 175, 0.5)',
-                  borderColor: '#9ca3af',
-                  borderWidth: 2,
-                  borderRadius: 8
-                },
-                {
-                  label: 'Actual',
-                  data: [manualProtein, manualFat, manualCarbs],
-                  backgroundColor: ['rgba(79, 172, 254, 0.7)', 'rgba(252, 182, 159, 0.7)', 'rgba(254, 214, 227, 0.7)'],
-                  borderColor: ['#4facfe', '#fcb69f', '#fed6e3'],
-                  borderWidth: 2,
-                  borderRadius: 8
-                }
+                { label: 'Target', data: [targetProtein, targetFat, targetCarbs], backgroundColor: 'rgba(156,163,175,0.5)', borderColor: '#9ca3af', borderWidth: 2, borderRadius: 8 },
+                { label: 'Actual', data: [manualProtein, manualFat, manualCarbs], backgroundColor: ['rgba(79,172,254,0.7)', 'rgba(252,182,159,0.7)', 'rgba(254,214,227,0.7)'], borderColor: ['#4facfe', '#fcb69f', '#fed6e3'], borderWidth: 2, borderRadius: 8 }
               ]
             },
             options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: { 
-                  position: 'top', 
-                  labels: { 
-                    padding: 15, 
-                    font: { size: 14, weight: 'bold' },
-                    color: textColor
-                  } 
-                }
-              },
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { position: 'top', labels: { padding: 15, font: { size: 14, weight: 'bold' }, color: textColor } } },
               scales: {
-                y: { 
-                  beginAtZero: true, 
-                  grid: { color: gridColor },
-                  ticks: { color: textColor, font: { weight: '600' } }
-                },
-                x: { 
-                  grid: { display: false },
-                  ticks: { color: textColor, font: { weight: '600' } }
-                }
+                y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+                x: { grid: { display: false }, ticks: { color: textColor } }
               }
             }
           });
@@ -1747,7 +1325,7 @@ const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 
       });
     }
 
-    console.log('✅ All scripts loaded successfully!');
+    console.log('✅ Dashboard loaded successfully!');
   </script>
 </body>
 </html>

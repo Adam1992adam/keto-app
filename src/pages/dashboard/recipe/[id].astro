@@ -1,5 +1,4 @@
 ---
-import BaseLayout from '../../../layouts/BaseLayout.astro';
 import { supabase, getProfile, getUserJourney, getDailyTasks } from '../../../lib/supabase';
 
 const { id } = Astro.params;
@@ -14,6 +13,10 @@ const profile = await getProfile(user.id);
 const journey = await getUserJourney(user.id);
 
 if (!profile || !journey) return Astro.redirect('/login');
+
+const currentDay = journey?.current_day || 1;
+const dailyTasks = await getDailyTasks(user.id, currentDay);
+const incompleteTasks = dailyTasks?.filter(t => t.task_type !== 'reflection' && t.task_type !== 'weight' && !t.completed) || [];
 
 // Get recipe
 const { data: recipe } = await supabase
@@ -32,8 +35,6 @@ const { data: mealPlan } = await supabase
   .eq('day_number', journey.current_day)
   .single();
 
-// Get daily tasks to check completion status
-const dailyTasks = await getDailyTasks(user.id, journey.current_day);
 const task = mealPlan ? dailyTasks.find(t => t.task_type === mealPlan.meal_type) : null;
 const isCompleted = task?.completed || false;
 const canComplete = mealPlan && !isCompleted;
@@ -44,284 +45,889 @@ const instructions = recipe.instructions || [];
 const tips = recipe.tips || [];
 const tags = recipe.tags || [];
 
-// Difficulty badge colors
-const difficultyColors = {
-  easy: 'emerald',
-  medium: 'blue',
-  hard: 'orange'
+// Category info
+const categories = {
+  breakfast: { name: 'Breakfast', icon: '🍳', color: '#f59e0b' },
+  lunch: { name: 'Lunch', icon: '🥗', color: '#10b981' },
+  dinner: { name: 'Dinner', icon: '🍽️', color: '#3b82f6' },
+  snack: { name: 'Snacks', icon: '🍎', color: '#8b5cf6' },
+  other: { name: 'Other', icon: '🥑', color: '#6b7280' }
 };
 
-const difficultyColor = difficultyColors[recipe.difficulty] || 'gray';
+const categoryInfo = categories[recipe.category] || categories.other;
 ---
 
-<BaseLayout title={`${recipe.title} - Keto Journey`}>
-  <div class="min-h-screen pb-12">
-    
-    <!-- Navigation -->
-    <nav class="nav-premium">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-16">
-          <a href="/dashboard" class="flex items-center gap-3">
-            <span class="text-4xl">🥑</span>
-            <span class="text-xl font-bold text-gradient-emerald">Keto Journey</span>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{recipe.title} - Keto Journey</title>
+  
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f9fafb;
+      --bg-card: #ffffff;
+      --text-primary: #111827;
+      --text-secondary: #6b7280;
+      --border-color: #e5e7eb;
+      --accent-primary: #10b981;
+      --accent-secondary: #34d399;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+      --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+      --shadow-xl: 0 20px 25px rgba(0,0,0,0.15);
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #16213e;
+      --bg-card: #0f3460;
+      --text-primary: #eaeaea;
+      --text-secondary: #a0aec0;
+      --border-color: #2d3748;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+      --shadow-lg: 0 10px 15px rgba(0,0,0,0.5);
+      --shadow-xl: 0 20px 25px rgba(0,0,0,0.6);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      transition: all 0.3s ease;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    /* Navigation 3D */
+    nav {
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 0;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: var(--shadow-md);
+      backdrop-filter: blur(10px);
+    }
+
+    nav .flex {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    nav a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.75rem;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    nav a:hover {
+      color: var(--accent-primary);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.1));
+      transform: translateY(-2px);
+    }
+
+    /* Dark Mode Toggle */
+    .theme-toggle {
+      position: relative;
+      width: 60px;
+      height: 30px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 9999px;
+      cursor: pointer;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), var(--shadow-md);
+      transition: all 0.3s ease;
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.05);
+    }
+
+    .theme-toggle-slider {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 24px;
+      height: 24px;
+      background: white;
+      border-radius: 50%;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+    }
+
+    [data-theme="dark"] .theme-toggle {
+      background: linear-gradient(135deg, #2d3561 0%, #1a1f3a 100%);
+    }
+
+    [data-theme="dark"] .theme-toggle-slider {
+      transform: translateX(30px);
+      background: #1a1a2e;
+      color: #fbbf24;
+    }
+
+    /* Notification Bell */
+    .notification-bell {
+      position: relative;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      border: none;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow-md);
+    }
+
+    .notification-bell:hover {
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+
+    /* Notification Dropdown */
+    .notification-dropdown {
+      position: absolute;
+      top: calc(100% + 0.5rem);
+      right: 0;
+      width: 380px;
+      max-height: 500px;
+      background: var(--bg-card);
+      border-radius: 1.5rem;
+      box-shadow: var(--shadow-xl);
+      border: 1px solid var(--border-color);
+      display: none;
+      overflow: hidden;
+      animation: slideDown 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+
+    .notification-dropdown.active {
+      display: block;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .notification-item {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .notification-item:hover {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.05), transparent);
+      transform: translateX(4px);
+    }
+
+    .notification-icon {
+      width: 3rem;
+      height: 3rem;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      border-radius: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Hero Image */
+    .hero-image {
+      position: relative;
+      height: 500px;
+      border-radius: 2rem;
+      overflow: hidden;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-xl);
+    }
+
+    .hero-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.3), transparent);
+    }
+
+    .hero-content {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 3rem;
+      color: white;
+    }
+
+    .hero-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(10px);
+      border-radius: 9999px;
+      font-weight: 700;
+      font-size: 0.9375rem;
+      box-shadow: var(--shadow-md);
+    }
+
+    .hero-title {
+      font-size: 3.5rem;
+      font-weight: 900;
+      margin-bottom: 1rem;
+      text-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    }
+
+    .hero-description {
+      font-size: 1.25rem;
+      opacity: 0.95;
+      max-width: 800px;
+      line-height: 1.6;
+    }
+
+    /* Card 3D */
+    .card-3d {
+      background: var(--bg-card);
+      border-radius: 1.5rem;
+      padding: 2rem;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-color);
+      transition: all 0.3s ease;
+      margin-bottom: 2rem;
+    }
+
+    .card-3d:hover {
+      box-shadow: var(--shadow-xl);
+      transform: translateY(-4px);
+    }
+
+    .card-title {
+      font-size: 1.75rem;
+      font-weight: 800;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    /* Macros Grid */
+    .macros-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1rem;
+    }
+
+    .macro-card {
+      text-align: center;
+      padding: 1.5rem;
+      border-radius: 1.25rem;
+      border: 2px solid;
+      transition: all 0.3s ease;
+    }
+
+    .macro-card:hover {
+      transform: translateY(-4px) scale(1.05);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .macro-value {
+      font-size: 2.5rem;
+      font-weight: 900;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+
+    .macro-label {
+      font-size: 0.875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Ingredient Item */
+    .ingredient-item {
+      display: flex;
+      align-items: start;
+      gap: 1rem;
+      padding: 1.25rem;
+      background: var(--bg-secondary);
+      border-radius: 1rem;
+      border: 1px solid var(--border-color);
+      transition: all 0.3s ease;
+      margin-bottom: 1rem;
+    }
+
+    .ingredient-item:hover {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(52, 211, 153, 0.05));
+      transform: translateX(8px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .ingredient-number {
+      width: 2.5rem;
+      height: 2.5rem;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 800;
+      font-size: 1rem;
+      flex-shrink: 0;
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Instruction Step */
+    .instruction-step {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .step-number {
+      width: 3rem;
+      height: 3rem;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      border-radius: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 900;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .step-text {
+      font-size: 1.125rem;
+      line-height: 1.7;
+      color: var(--text-primary);
+    }
+
+    /* Button 3D */
+    .btn-3d {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 1rem 2rem;
+      border-radius: 1rem;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .btn-3d::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .btn-3d:hover::before {
+      width: 300px;
+      height: 300px;
+    }
+
+    .btn-primary-3d {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      color: white;
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-primary-3d:hover {
+      transform: translateY(-4px) scale(1.02);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .btn-secondary-3d {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 2px solid var(--border-color);
+    }
+
+    .btn-secondary-3d:hover {
+      border-color: var(--accent-primary);
+      transform: translateY(-2px);
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: sticky;
+      top: 6rem;
+    }
+
+    .info-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+      border-radius: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    /* Grid */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 2rem;
+    }
+
+    /* Utilities */
+    .flex { display: flex; align-items: center; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+    .gap-1 { gap: 0.5rem; }
+    .gap-2 { gap: 1rem; }
+    .gap-3 { gap: 1.5rem; }
+
+    @media (max-width: 1024px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: relative;
+        top: 0;
+      }
+
+      .hero-title {
+        font-size: 2.5rem;
+      }
+
+      .notification-dropdown {
+        width: calc(100vw - 2rem);
+        right: -1rem;
+      }
+    }
+
+    @media print {
+      nav, .sidebar, .btn-3d {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav>
+    <div class="container">
+      <div class="flex-between">
+        <div class="flex gap-2">
+          <span style="font-size: 2.5rem;">🥑</span>
+          <div>
+            <h1 style="font-size: 1.375rem; font-weight: 800; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Keto Journey</h1>
+            <p style="font-size: 0.8125rem; color: var(--text-secondary); font-weight: 600;">30-Day Transformation</p>
+          </div>
+        </div>
+        
+        <div class="flex gap-3">
+          <a href="/dashboard">
+            <svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+            Back to Dashboard
           </a>
           
-          <div class="flex items-center gap-4">
-            <a href="/dashboard" class="btn-ghost">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-              </svg>
-              Back to Dashboard
+          <div class="flex gap-2" style="padding-left: 1rem; border-left: 1px solid var(--border-color); position: relative;">
+            <!-- Dark Mode Toggle -->
+            <div class="theme-toggle" id="themeToggle">
+              <div class="theme-toggle-slider">
+                <span id="themeIcon">☀️</span>
+              </div>
+            </div>
+
+            <!-- Notification Bell -->
+            {incompleteTasks.length > 0 && (
+              <div style="position: relative;">
+                <button class="notification-bell" id="notif-bell">
+                  <span style="color: white;">🔔</span>
+                  <span class="notification-badge">{incompleteTasks.length}</span>
+                </button>
+                
+                <div class="notification-dropdown" id="notificationDropdown">
+                  <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.1));">
+                    <h3 style="font-size: 1.125rem; font-weight: 800; color: var(--accent-primary); display: flex; align-items: center; gap: 0.75rem;">
+                      <span style="font-size: 1.5rem;">🔔</span>
+                      <span>{incompleteTasks.length} Pending Task{incompleteTasks.length !== 1 ? 's' : ''}</span>
+                    </h3>
+                  </div>
+                  <div style="max-height: 400px; overflow-y: auto;">
+                    {incompleteTasks.map(task => (
+                      <div class="notification-item">
+                        <div class="notification-icon">
+                          {task.task_type === 'breakfast' && '🍳'}
+                          {task.task_type === 'lunch' && '🥗'}
+                          {task.task_type === 'dinner' && '🍽️'}
+                          {task.task_type === 'snack' && '🍎'}
+                          {task.task_type === 'water' && '💧'}
+                        </div>
+                        <div style="flex: 1;">
+                          <div style="font-weight: 700; font-size: 0.9375rem; color: var(--text-primary); margin-bottom: 0.25rem;">{task.task_title}</div>
+                          <div style="font-size: 0.8125rem; color: var(--text-secondary); font-weight: 600;">+{task.xp_earned} XP • Day {currentDay}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style="padding: 1.25rem; border-top: 1px solid var(--border-color); text-align: center;">
+                    <a href="/dashboard" style="display: inline-block; padding: 0.875rem 1.75rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color: white; border-radius: 1rem; font-weight: 700; text-decoration: none; transition: all 0.3s; box-shadow: var(--shadow-md);">
+                      View All Tasks →
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <!-- Profile Avatar -->
+            <a href="/dashboard/profile" style="width: 2.5rem; height: 2.5rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; text-decoration: none; box-shadow: var(--shadow-md); transition: all 0.3s ease; font-size: 1.125rem;">
+              {profile.full_name.charAt(0).toUpperCase()}
             </a>
           </div>
         </div>
       </div>
-    </nav>
+    </div>
+  </nav>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Main Content -->
+  <div class="container" style="padding-top: 2rem; padding-bottom: 4rem;">
+    
+    <!-- Hero Image -->
+    {recipe.image_url && (
+      <div class="hero-image">
+        <img src={recipe.image_url} alt={recipe.title} />
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+          <div class="hero-badges">
+            <span class="hero-badge" style={`color: ${categoryInfo.color}; border: 2px solid ${categoryInfo.color};`}>
+              <span style="font-size: 1.25rem;">{categoryInfo.icon}</span>
+              <span>{categoryInfo.name}</span>
+            </span>
+            <span class="hero-badge" style="color: #3b82f6; border: 2px solid #3b82f6;">
+              <span>⏱️</span>
+              <span>{recipe.prep_time + recipe.cook_time} mins</span>
+            </span>
+            <span class="hero-badge" style="color: #8b5cf6; border: 2px solid #8b5cf6;">
+              <span>🍽️</span>
+              <span>{recipe.servings} serving{recipe.servings > 1 ? 's' : ''}</span>
+            </span>
+            {isCompleted && (
+              <span class="hero-badge" style="color: #10b981; border: 2px solid #10b981; background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(52, 211, 153, 0.9));">
+                <span>✓</span>
+                <span>Completed</span>
+              </span>
+            )}
+          </div>
+          <h1 class="hero-title">{recipe.title}</h1>
+          <p class="hero-description">{recipe.description}</p>
+        </div>
+      </div>
+    )}
+
+    <!-- Content Grid -->
+    <div class="grid-2">
       
-      <!-- Recipe Header with Image -->
-      <div class="mb-8 animate-slide-up-fade">
-        {recipe.image_url && (
-          <div class="relative h-96 rounded-3xl overflow-hidden shadow-2xl mb-8">
-            <img 
-              src={recipe.image_url} 
-              alt={recipe.title}
-              class="w-full h-full object-cover"
-            />
-            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
-            
-            <div class="absolute inset-x-0 bottom-0 p-8">
-              <div class="flex flex-wrap items-center gap-3 mb-4">
-                <span class={`badge badge-${difficultyColor} text-base px-4 py-2 backdrop-blur-sm bg-white/90`}>
-                  {recipe.difficulty.charAt(0).toUpperCase() + recipe.difficulty.slice(1)}
-                </span>
-                <span class="badge bg-white/90 text-gray-700 text-base px-4 py-2 backdrop-blur-sm">
-                  ⏱️ {recipe.prep_time + recipe.cook_time} mins total
-                </span>
-                <span class="badge bg-white/90 text-gray-700 text-base px-4 py-2 backdrop-blur-sm">
-                  🍽️ {recipe.servings} serving{recipe.servings > 1 ? 's' : ''}
-                </span>
-                {isCompleted && (
-                  <span class="badge-gradient text-base px-4 py-2 backdrop-blur-sm animate-pulse-ring">
-                    ✓ Completed
-                  </span>
-                )}
+      <!-- Main Content -->
+      <div>
+        
+        <!-- Macros -->
+        <div class="card-3d">
+          <h2 class="card-title">
+            <span style="font-size: 2rem;">📊</span>
+            <span>Nutrition Facts</span>
+          </h2>
+          <div class="macros-grid">
+            <div class="macro-card" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1)); border-color: #ef4444; color: #dc2626;">
+              <span class="macro-value">{recipe.calories}</span>
+              <span class="macro-label">Calories</span>
+            </div>
+            <div class="macro-card" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.1)); border-color: #3b82f6; color: #2563eb;">
+              <span class="macro-value">{recipe.protein}g</span>
+              <span class="macro-label">Protein</span>
+            </div>
+            <div class="macro-card" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1)); border-color: #f59e0b; color: #d97706;">
+              <span class="macro-value">{recipe.fat}g</span>
+              <span class="macro-label">Fat</span>
+            </div>
+            <div class="macro-card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1)); border-color: #10b981; color: #059669;">
+              <span class="macro-value">{recipe.net_carbs}g</span>
+              <span class="macro-label">Carbs</span>
+            </div>
+            <div class="macro-card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(124, 58, 237, 0.1)); border-color: #8b5cf6; color: #7c3aed;">
+              <span class="macro-value">{recipe.fiber}g</span>
+              <span class="macro-label">Fiber</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ingredients -->
+        <div class="card-3d">
+          <h2 class="card-title">
+            <span style="font-size: 2rem;">🛒</span>
+            <span>Ingredients</span>
+          </h2>
+          <div>
+            {ingredients.map((ingredient, index) => (
+              <div class="ingredient-item">
+                <div class="ingredient-number">{index + 1}</div>
+                <div style="flex: 1;">
+                  <p style="font-size: 1.125rem; font-weight: 700; color: var(--text-primary);">
+                    {ingredient.amount} {ingredient.unit} {ingredient.item}
+                  </p>
+                </div>
               </div>
-              <h1 class="text-5xl font-bold text-white mb-3">{recipe.title}</h1>
-              <p class="text-xl text-white/90 max-w-3xl">{recipe.description}</p>
+            ))}
+          </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="card-3d">
+          <h2 class="card-title">
+            <span style="font-size: 2rem;">👨‍🍳</span>
+            <span>Instructions</span>
+          </h2>
+          <div>
+            {instructions.map((instruction, index) => (
+              <div class="instruction-step">
+                <div class="step-number">{index + 1}</div>
+                <div class="step-text">{instruction}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <!-- Tips -->
+        {tips.length > 0 && (
+          <div class="card-3d" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.05), rgba(217, 119, 6, 0.05)); border-color: #f59e0b;">
+            <h2 class="card-title">
+              <span style="font-size: 2rem;">💡</span>
+              <span>Pro Tips</span>
+            </h2>
+            <div>
+              {tips.map((tip, index) => (
+                <div style="display: flex; align-items: start; gap: 1rem; margin-bottom: 1rem;">
+                  <span style="font-size: 1.75rem;">✨</span>
+                  <p style="font-size: 1.0625rem; line-height: 1.7; color: var(--text-primary);">{tip}</p>
+                </div>
+              ))}
             </div>
           </div>
         )}
       </div>
 
-      <div class="grid lg:grid-cols-3 gap-8">
-        
-        <!-- Main Content -->
-        <div class="lg:col-span-2 space-y-8">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="card-3d">
           
-          <!-- Macros Overview -->
-          <div class="card-premium p-8 animate-scale-in">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <span class="text-3xl">📊</span>
-              Nutrition Facts
-            </h2>
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
-              <div class="text-center p-6 bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl border-2 border-red-200 shadow-sm">
-                <p class="text-4xl font-bold text-red-600 mb-2">{recipe.calories}</p>
-                <p class="text-sm font-bold text-red-600 uppercase tracking-wide">Calories</p>
+          <!-- Time Info -->
+          <div style="margin-bottom: 2rem;">
+            <h3 style="font-size: 0.875rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;">Time Required</h3>
+            <div>
+              <div class="info-row" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.1)); border: 1px solid #3b82f6;">
+                <span style="font-weight: 600; color: var(--text-primary);">Prep Time</span>
+                <span style="font-weight: 800; color: #2563eb;">{recipe.prep_time} min</span>
               </div>
-              <div class="text-center p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl border-2 border-blue-200 shadow-sm">
-                <p class="text-4xl font-bold text-blue-600 mb-2">{recipe.protein}g</p>
-                <p class="text-sm font-bold text-blue-600 uppercase tracking-wide">Protein</p>
+              <div class="info-row" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1)); border: 1px solid #f59e0b;">
+                <span style="font-weight: 600; color: var(--text-primary);">Cook Time</span>
+                <span style="font-weight: 800; color: #d97706;">{recipe.cook_time} min</span>
               </div>
-              <div class="text-center p-6 bg-gradient-to-br from-yellow-50 to-amber-50 rounded-2xl border-2 border-yellow-200 shadow-sm">
-                <p class="text-4xl font-bold text-yellow-600 mb-2">{recipe.fat}g</p>
-                <p class="text-sm font-bold text-yellow-600 uppercase tracking-wide">Fat</p>
-              </div>
-              <div class="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border-2 border-green-200 shadow-sm">
-                <p class="text-4xl font-bold text-green-600 mb-2">{recipe.net_carbs}g</p>
-                <p class="text-sm font-bold text-green-600 uppercase tracking-wide">Net Carbs</p>
-              </div>
-              <div class="text-center p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border-2 border-purple-200 shadow-sm">
-                <p class="text-4xl font-bold text-purple-600 mb-2">{recipe.fiber}g</p>
-                <p class="text-sm font-bold text-purple-600 uppercase tracking-wide">Fiber</p>
+              <div class="info-row" style="background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color: white;">
+                <span style="font-weight: 700;">Total Time</span>
+                <span style="font-weight: 900; font-size: 1.25rem;">{recipe.prep_time + recipe.cook_time} min</span>
               </div>
             </div>
           </div>
 
-          <!-- Ingredients -->
-          <div class="card-premium p-8 animate-slide-up-fade">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <span class="text-3xl">🛒</span>
-              Ingredients
-            </h2>
-            <div class="space-y-3">
-              {ingredients.map((ingredient, index) => (
-                <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-xl hover:bg-emerald-50 transition-all group animate-slide-up-fade" style={`animation-delay: ${index * 0.05}s`}>
-                  <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md group-hover:scale-110 transition-transform">
-                    {index + 1}
-                  </div>
-                  <div class="flex-1">
-                    <p class="text-lg font-semibold text-gray-900">
-                      {ingredient.amount} {ingredient.unit} {ingredient.item}
-                    </p>
-                  </div>
-                </div>
-              ))}
+          <!-- Details -->
+          <div style="margin-bottom: 2rem; padding-top: 2rem; border-top: 1px solid var(--border-color);">
+            <h3 style="font-size: 0.875rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;">Details</h3>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+              <span style="color: var(--text-secondary); font-weight: 600;">Difficulty</span>
+              <span style="padding: 0.375rem 1rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(52, 211, 153, 0.15)); color: var(--accent-primary); border-radius: 9999px; font-weight: 700; font-size: 0.875rem; text-transform: capitalize;">
+                {recipe.difficulty}
+              </span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-secondary); font-weight: 600;">Servings</span>
+              <span style="font-weight: 800; color: var(--text-primary);">{recipe.servings}</span>
             </div>
           </div>
 
-          <!-- Instructions -->
-          <div class="card-premium p-8 animate-slide-up-fade">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <span class="text-3xl">👨‍🍳</span>
-              Instructions
-            </h2>
-            <div class="space-y-6">
-              {instructions.map((instruction, index) => (
-                <div class="flex gap-6 animate-slide-up-fade" style={`animation-delay: ${index * 0.1}s`}>
-                  <div class="flex-shrink-0">
-                    <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                      {index + 1}
-                    </div>
-                  </div>
-                  <div class="flex-1">
-                    <p class="text-lg text-gray-700 leading-relaxed">{instruction}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <!-- Tips -->
-          {tips.length > 0 && (
-            <div class="card-premium p-8 bg-gradient-to-br from-amber-50 to-yellow-50 border-amber-200 animate-scale-in">
-              <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <span class="text-3xl">💡</span>
-                Pro Tips
-              </h2>
-              <div class="space-y-4">
-                {tips.map((tip, index) => (
-                  <div class="flex items-start gap-4 animate-fade-in" style={`animation-delay: ${index * 0.1}s`}>
-                    <span class="text-2xl">✨</span>
-                    <p class="text-lg text-gray-700 leading-relaxed">{tip}</p>
-                  </div>
+          <!-- Tags -->
+          {tags.length > 0 && (
+            <div style="margin-bottom: 2rem; padding-top: 2rem; border-top: 1px solid var(--border-color);">
+              <h3 style="font-size: 0.875rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem;">Tags</h3>
+              <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                {tags.map(tag => (
+                  <span style="padding: 0.5rem 1rem; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 9999px; font-size: 0.875rem; font-weight: 600; text-transform: capitalize;">
+                    {tag}
+                  </span>
                 ))}
               </div>
             </div>
           )}
 
-        </div>
-
-        <!-- Sidebar -->
-        <div class="space-y-6">
-          
-          <!-- Quick Info Card -->
-          <div class="card-premium p-6 sticky top-24 space-y-6">
-            
-            <!-- Time Info -->
-            <div>
-              <h3 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">Time Required</h3>
-              <div class="space-y-3">
-                <div class="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
-                  <span class="text-gray-700 font-medium">Prep Time</span>
-                  <span class="font-bold text-blue-600">{recipe.prep_time} min</span>
-                </div>
-                <div class="flex items-center justify-between p-3 bg-orange-50 rounded-xl">
-                  <span class="text-gray-700 font-medium">Cook Time</span>
-                  <span class="font-bold text-orange-600">{recipe.cook_time} min</span>
-                </div>
-                <div class="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-500 to-green-600 rounded-xl text-white shadow-lg">
-                  <span class="font-bold">Total Time</span>
-                  <span class="font-bold text-xl">{recipe.prep_time + recipe.cook_time} min</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="border-t border-gray-100 pt-6">
-              <h3 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">Details</h3>
-              <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                  <span class="text-gray-600">Difficulty</span>
-                  <span class={`badge badge-${difficultyColor} capitalize`}>
-                    {recipe.difficulty}
-                  </span>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span class="text-gray-600">Servings</span>
-                  <span class="font-bold text-gray-900">{recipe.servings}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Tags -->
-            {tags.length > 0 && (
-              <div class="border-t border-gray-100 pt-6">
-                <h3 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">Tags</h3>
-                <div class="flex flex-wrap gap-2">
-                  {tags.map(tag => (
-                    <span class="badge-blue text-sm capitalize">{tag}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <!-- Action Button -->
+          <!-- Action Buttons -->
+          <div style="padding-top: 2rem; border-top: 1px solid var(--border-color);">
             {canComplete && (
-              <form action="/api/tasks/complete" method="POST" class="border-t border-gray-100 pt-6" id="complete-form">
+              <form id="complete-form" style="margin-bottom: 1rem;">
                 <input type="hidden" name="taskType" value={mealPlan.meal_type} />
-                <button 
-                  type="submit"
-                  class="btn-primary w-full btn-lg shadow-2xl"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button type="submit" class="btn-3d btn-primary-3d">
+                  <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                   </svg>
-                  Mark as Completed
+                  <span style="position: relative; z-index: 1;">Mark as Completed</span>
                 </button>
               </form>
             )}
 
             {isCompleted && (
-              <div class="border-t border-gray-100 pt-6">
-                <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-2xl p-6 text-center">
-                  <div class="text-5xl mb-3 animate-bounce">✅</div>
-                  <p class="font-bold text-green-700 text-lg">Already Completed!</p>
-                  <p class="text-sm text-green-600 mt-2">You earned +{task?.xp_earned || 25} XP</p>
-                </div>
+              <div style="padding: 2rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.1)); border: 2px solid var(--accent-primary); border-radius: 1.5rem; text-align: center; margin-bottom: 1rem;">
+                <div style="font-size: 4rem; margin-bottom: 0.75rem;">✅</div>
+                <p style="font-weight: 800; color: var(--accent-primary); font-size: 1.25rem; margin-bottom: 0.5rem;">Completed!</p>
+                <p style="font-size: 0.9375rem; color: var(--text-secondary);">You earned +{task?.xp_earned || 25} XP</p>
               </div>
             )}
 
-            <!-- Quick Actions -->
-            <div class="border-t border-gray-100 pt-6 space-y-3">
-              <a href="/dashboard" class="btn-secondary w-full">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                </svg>
-                Back to Dashboard
-              </a>
-              <button 
-                onclick="window.print()" 
-                class="btn-ghost w-full"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
-                </svg>
-                Print Recipe
-              </button>
-            </div>
+            <a href="/dashboard" class="btn-3d btn-secondary-3d" style="margin-bottom: 0.75rem;">
+              <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+              </svg>
+              <span style="position: relative; z-index: 1;">Back to Dashboard</span>
+            </a>
 
+            <button onclick="window.print()" class="btn-3d btn-secondary-3d">
+              <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+              </svg>
+              <span style="position: relative; z-index: 1;">Print Recipe</span>
+            </button>
           </div>
-
         </div>
-
       </div>
-
-    </main>
+    </div>
   </div>
 
-  <script>
+  <script is:inline>
+    // Dark Mode Toggle
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const html = document.documentElement;
+
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    html.setAttribute('data-theme', savedTheme);
+    themeIcon.textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+
+    if (themeToggle) {
+      themeToggle.addEventListener('click', function() {
+        const currentTheme = html.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        html.setAttribute('data-theme', newTheme);
+        themeIcon.textContent = newTheme === 'dark' ? '🌙' : '☀️';
+        localStorage.setItem('theme', newTheme);
+      });
+    }
+
+    // Notification Toggle
+    const notifBell = document.getElementById('notif-bell');
+    const notifDropdown = document.getElementById('notificationDropdown');
+    
+    if (notifBell && notifDropdown) {
+      notifBell.addEventListener('click', function(e) {
+        e.stopPropagation();
+        notifDropdown.classList.toggle('active');
+      });
+
+      document.addEventListener('click', function(e) {
+        if (!notifDropdown.contains(e.target) && !notifBell.contains(e.target)) {
+          notifDropdown.classList.remove('active');
+        }
+      });
+    }
+
+    // Complete Form
     const form = document.getElementById('complete-form');
     if (form) {
       form.addEventListener('submit', async (e) => {
@@ -338,16 +944,29 @@ const difficultyColor = difficultyColors[recipe.difficulty] || 'gray';
           });
 
           if (res.ok) {
-            // Show success notification
             const notification = document.createElement('div');
-            notification.className = 'fixed top-4 right-4 card-premium p-6 shadow-2xl z-50 animate-slide-up-fade max-w-sm';
+            notification.style.cssText = `
+              position: fixed;
+              top: 5rem;
+              right: 1.5rem;
+              background: linear-gradient(135deg, #10b981, #34d399);
+              color: white;
+              padding: 1.5rem 2rem;
+              border-radius: 1.5rem;
+              box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+              z-index: 9999;
+              font-weight: 700;
+              font-size: 1.125rem;
+              display: flex;
+              align-items: center;
+              gap: 1rem;
+              animation: slideDown 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            `;
             notification.innerHTML = `
-              <div class="flex items-center gap-4">
-                <span class="text-5xl">🎉</span>
-                <div>
-                  <p class="font-bold text-gray-900 text-lg">Task Completed!</p>
-                  <p class="text-sm text-gray-600">You earned XP points</p>
-                </div>
+              <span style="font-size: 2.5rem;">🎉</span>
+              <div>
+                <p style="font-weight: 900; margin-bottom: 0.25rem;">Task Completed!</p>
+                <p style="font-size: 0.9375rem; opacity: 0.95;">You earned XP points</p>
               </div>
             `;
             document.body.appendChild(notification);
@@ -362,13 +981,8 @@ const difficultyColor = difficultyColors[recipe.difficulty] || 'gray';
         }
       });
     }
-  </script>
 
-  <style>
-    @media print {
-      nav, .sidebar, button {
-        display: none !important;
-      }
-    }
-  </style>
-</BaseLayout>
+    console.log('✅ Recipe page loaded successfully!');
+  </script>
+</body>
+</html>

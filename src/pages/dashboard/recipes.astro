@@ -1,0 +1,260 @@
+---
+import { supabase, getProfile, isSubscriptionActive, getUserJourney, getDailyTasks, getPlan, getBooksForTier } from '../../lib/supabase';
+
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+if (!accessToken) return Astro.redirect('/login');
+
+const { data: { user } } = await supabase.auth.getUser(accessToken);
+if (!user) return Astro.redirect('/login');
+
+const profile = await getProfile(user.id);
+if (!profile || !isSubscriptionActive(profile)) return Astro.redirect('/dashboard/upgrade');
+
+const journey = await getUserJourney(user.id);
+const currentDay = journey?.current_day || 1;
+const dailyTasks = await getDailyTasks(user.id, currentDay);
+const incompleteTasks = dailyTasks?.filter(
+  t => t.task_type !== 'reflection' && t.task_type !== 'weight' && !t.completed
+) || [];
+
+// Plan & Books
+const plan = getPlan(profile.subscription_tier);
+const availableBooks = getBooksForTier(profile.subscription_tier);
+
+// All 87 recipes (example - you should have this in your database)
+const allRecipes = [
+  { id: 1, title: 'Keto Avocado Eggs', category: 'Breakfast', time: '10 min', difficulty: 'Easy', image: '🥑' },
+  { id: 2, title: 'Bacon & Eggs', category: 'Breakfast', time: '15 min', difficulty: 'Easy', image: '🥓' },
+  // ... Add all 87 recipes here
+];
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Recipes & Books – Keto Journey</title>
+  <style>
+    :root{--bg-primary:#fff;--bg-secondary:#f9fafb;--bg-card:#fff;--text-primary:#111827;--text-secondary:#6b7280;--border-color:#e5e7eb;--accent-primary:#10b981;--accent-secondary:#34d399;--shadow-sm:0 1px 3px rgba(0,0,0,.1);--shadow-md:0 4px 6px rgba(0,0,0,.1);--shadow-lg:0 10px 15px rgba(0,0,0,.1);--shadow-xl:0 20px 25px rgba(0,0,0,.15);}
+    [data-theme="dark"]{--bg-primary:#1a1a2e;--bg-secondary:#16213e;--bg-card:#0f3460;--text-primary:#eaeaea;--text-secondary:#a0aec0;--border-color:#2d3748;--shadow-sm:0 1px 3px rgba(0,0,0,.3);--shadow-md:0 4px 6px rgba(0,0,0,.4);--shadow-lg:0 10px 15px rgba(0,0,0,.5);--shadow-xl:0 20px 25px rgba(0,0,0,.6);}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-secondary);color:var(--text-primary);transition:all .3s ease;}
+    .container{max-width:1400px;margin:0 auto;padding:0 1.5rem;}
+    nav{background:var(--bg-primary);border-bottom:1px solid var(--border-color);padding:1rem 0;position:sticky;top:0;z-index:50;box-shadow:var(--shadow-md);}
+    nav a{color:var(--text-secondary);text-decoration:none;padding:.5rem 1rem;border-radius:.75rem;font-weight:500;transition:all .3s ease;}
+    nav a:hover,nav a.active{color:var(--accent-primary);background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(52,211,153,.1));transform:translateY(-2px);}
+    .theme-toggle{position:relative;width:60px;height:30px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:9999px;cursor:pointer;box-shadow:inset 0 2px 4px rgba(0,0,0,.2),var(--shadow-md);transition:all .3s;}
+    .theme-toggle-slider{position:absolute;top:3px;left:3px;width:24px;height:24px;background:white;border-radius:50%;transition:all .3s;box-shadow:0 2px 4px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:.75rem;}
+    [data-theme="dark"] .theme-toggle{background:linear-gradient(135deg,#2d3561,#1a1f3a);}
+    [data-theme="dark"] .theme-toggle-slider{transform:translateX(30px);background:#1a1a2e;color:#fbbf24;}
+    
+    /* Tabs */
+    .tabs{display:flex;gap:1rem;border-bottom:2px solid var(--border-color);margin-bottom:2rem;overflow-x:auto;}
+    .tab{padding:1rem 1.5rem;font-weight:700;font-size:1rem;cursor:pointer;border:none;background:transparent;color:var(--text-secondary);border-bottom:3px solid transparent;transition:all .3s;white-space:nowrap;}
+    .tab:hover{color:var(--accent-primary);}
+    .tab.active{color:var(--accent-primary);border-bottom-color:var(--accent-primary);}
+    .tab-content{display:none;}
+    .tab-content.active{display:block;}
+
+    /* Books Grid */
+    .books-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.5rem;}
+    .book-card{background:var(--bg-card);border-radius:1.5rem;padding:2rem;border:1px solid var(--border-color);box-shadow:var(--shadow-lg);transition:all .4s cubic-bezier(.68,-.55,.265,1.55);position:relative;overflow:hidden;text-align:center;}
+    .book-card::before{content:'';position:absolute;top:-50%;right:-50%;width:200%;height:200%;background:radial-gradient(circle,rgba(16,185,129,.05) 0%,transparent 70%);animation:rotate 15s linear infinite;}
+    @keyframes rotate{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+    .book-card:hover{transform:translateY(-10px) scale(1.02);box-shadow:var(--shadow-xl);border-color:var(--accent-primary);}
+    .book-icon{width:5rem;height:5rem;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));border-radius:1.25rem;display:flex;align-items:center;justify-content:center;font-size:3rem;margin:0 auto 1.5rem;box-shadow:var(--shadow-md);position:relative;z-index:1;}
+    .book-title{font-size:1.25rem;font-weight:800;color:var(--text-primary);margin-bottom:.5rem;position:relative;z-index:1;}
+    .book-desc{font-size:.875rem;color:var(--text-secondary);margin-bottom:1rem;line-height:1.5;position:relative;z-index:1;}
+    .book-pages{display:inline-flex;align-items:center;gap:.5rem;padding:.375rem 1rem;background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(52,211,153,.15));border-radius:9999px;font-size:.8125rem;font-weight:700;color:var(--accent-primary);border:2px solid var(--accent-primary);margin-bottom:1.5rem;position:relative;z-index:1;}
+    .btn-download{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.875rem 1.75rem;border-radius:1rem;font-weight:700;cursor:pointer;border:none;text-decoration:none;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));color:white;box-shadow:var(--shadow-md);transition:all .3s cubic-bezier(.68,-.55,.265,1.55);position:relative;z-index:1;width:100%;}
+    .btn-download:hover{transform:translateY(-2px) scale(1.05);box-shadow:var(--shadow-xl);}
+    
+    .header-banner{background:linear-gradient(135deg,#10b981,#059669);border-radius:2rem;padding:2.5rem;margin-bottom:2rem;box-shadow:var(--shadow-xl);position:relative;overflow:hidden;text-align:center;color:white;}
+    .header-banner::before{content:'';position:absolute;top:-50%;right:-50%;width:200%;height:200%;background:radial-gradient(circle,rgba(255,255,255,.1) 0%,transparent 70%);animation:rotate 20s linear infinite;}
+    .header-banner h1{font-size:2.5rem;font-weight:900;margin-bottom:.75rem;position:relative;z-index:1;text-shadow:0 4px 8px rgba(0,0,0,.3);}
+    .header-banner p{font-size:1.125rem;opacity:.95;position:relative;z-index:1;}
+    .plan-badge{display:inline-flex;align-items:center;gap:.5rem;padding:.625rem 1.25rem;background:rgba(255,255,255,.25);backdrop-filter:blur(10px);border-radius:9999px;font-weight:800;margin-top:1rem;position:relative;z-index:1;}
+
+    .flex{display:flex;align-items:center;}
+    .flex-between{display:flex;justify-content:space-between;align-items:center;}
+    .gap-2{gap:1rem;}
+    @media(max-width:768px){.books-grid{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <div class="flex-between">
+      <div class="flex gap-2">
+        <span style="font-size:2.5rem;">🥑</span>
+        <div>
+          <h1 style="font-size:1.375rem;font-weight:800;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Keto Journey</h1>
+          <p style="font-size:.8125rem;color:var(--text-secondary);font-weight:600;">{plan.name} Plan</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <a href="/dashboard/">Dashboard</a>
+        <a href="/dashboard/shopping-list">Shopping</a>
+        <a href="/dashboard/recipes" class="active">Recipes</a>
+        <a href="/dashboard/profile">Profile</a>
+        <a href="/dashboard/notifications">🔔 Reminders</a>
+        <div class="flex gap-2" style="padding-left:1rem;border-left:1px solid var(--border-color);">
+          <div class="theme-toggle" id="themeToggle"><div class="theme-toggle-slider"><span id="themeIcon">☀️</span></div></div>
+          <a href="/dashboard/profile" style="width:2.5rem;height:2.5rem;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;text-decoration:none;font-size:1.125rem;">
+            {profile.full_name.charAt(0).toUpperCase()}
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container" style="padding-top:2rem;padding-bottom:4rem;">
+
+  <!-- Header -->
+  <div class="header-banner">
+    <h1>🎁 Your Free Keto Library</h1>
+    <p>Based on your plan — {availableBooks.length} Books Available</p>
+    <span class="plan-badge">
+      <span style="font-size:1.5rem;">{plan.emoji}</span>
+      <span>{plan.name} Plan</span>
+    </span>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-tab="books">📚 Free Books ({availableBooks.length})</button>
+    <button class="tab" data-tab="recipes">🍽️ Recipes (87)</button>
+  </div>
+
+  <!-- Books Tab -->
+  <div class="tab-content active" id="books">
+    <div class="books-grid">
+      {availableBooks.map(book => (
+        <div class="book-card">
+          <div class="book-icon">{book.emoji}</div>
+          <h3 class="book-title">{book.title}</h3>
+          <p class="book-desc">{book.description}</p>
+          <span class="book-pages">📄 {book.pages} Pages</span>
+          <button class="btn-download" onclick="downloadBook('{book.id}', '{book.title}')">
+            <span>⬇️</span>
+            <span>Download PDF</span>
+          </button>
+        </div>
+      ))}
+    </div>
+
+    <!-- Plan Upgrade CTA (if Basic) -->
+    {profile.subscription_tier === 'basic_30' && (
+      <div style="margin-top:3rem;padding:2.5rem;background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(139,92,246,.1));border-radius:2rem;border:2px solid #6366f1;text-align:center;">
+        <h2 style="font-size:2rem;font-weight:900;background:linear-gradient(135deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:1rem;">
+          🔓 Want More Books?
+        </h2>
+        <p style="font-size:1.125rem;color:var(--text-secondary);margin-bottom:2rem;">
+          Upgrade to <strong>Pro</strong> (8 books) or <strong>Elite</strong> (12 books) to unlock the full library!
+        </p>
+        <a href="/dashboard/upgrade" style="display:inline-flex;align-items:center;gap:.75rem;padding:1rem 2.5rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border-radius:1.25rem;font-weight:800;text-decoration:none;box-shadow:var(--shadow-lg);transition:all .3s;font-size:1.125rem;">
+          <span>⭐</span>
+          <span>Upgrade Now</span>
+        </a>
+      </div>
+    )}
+  </div>
+
+  <!-- Recipes Tab -->
+  <div class="tab-content" id="recipes">
+    <div style="text-align:center;padding:4rem 2rem;">
+      <span style="font-size:5rem;display:block;margin-bottom:1.5rem;">🍽️</span>
+      <h2 style="font-size:2rem;font-weight:800;margin-bottom:1rem;">87 Keto Recipes</h2>
+      <p style="font-size:1.125rem;color:var(--text-secondary);margin-bottom:2rem;">
+        All your delicious keto recipes will appear here soon!
+      </p>
+      <p style="color:var(--text-secondary);">
+        In the meantime, check out your <strong>Free Books</strong> above 📚
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<script is:inline>
+  // Dark Mode
+  const html = document.documentElement;
+  const themeIcon = document.getElementById('themeIcon');
+  const saved = localStorage.getItem('theme') || 'light';
+  html.setAttribute('data-theme', saved);
+  if (themeIcon) themeIcon.textContent = saved==='dark'?'🌙':'☀️';
+  document.getElementById('themeToggle')?.addEventListener('click', function() {
+    const next = html.getAttribute('data-theme')==='dark'?'light':'dark';
+    html.setAttribute('data-theme', next);
+    if (themeIcon) themeIcon.textContent = next==='dark'?'🌙':'☀️';
+    localStorage.setItem('theme', next);
+  });
+
+  // Tabs
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      const target = this.getAttribute('data-tab');
+      
+      // Update tabs
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+      
+      // Update content
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById(target).classList.add('active');
+    });
+  });
+
+  // Download Book (Coming Soon)
+  function downloadBook(bookId, bookTitle) {
+    // Show elegant notification
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      padding: 2rem 3rem;
+      border-radius: 1.5rem;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+      z-index: 9999;
+      text-align: center;
+      animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+    `;
+    
+    notification.innerHTML = `
+      <div style="font-size: 4rem; margin-bottom: 1rem;">📚</div>
+      <h3 style="font-size: 1.5rem; font-weight: 900; margin-bottom: 0.75rem;">Coming Soon!</h3>
+      <p style="font-size: 1rem; opacity: 0.95; margin-bottom: 1.5rem;">"${bookTitle}" will be available for download very soon.</p>
+      <button onclick="this.parentElement.remove()" style="background: rgba(255,255,255,0.2); border: none; padding: 0.75rem 2rem; border-radius: 0.75rem; color: white; font-weight: 700; cursor: pointer; font-size: 1rem;">
+        Got it! ✓
+      </button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 4 seconds
+    setTimeout(() => notification.remove(), 4000);
+  }
+  
+  window.downloadBook = downloadBook;
+
+  // Pop-in animation
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes popIn {
+      from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+  `;
+  document.head.appendChild(style);
+
+  console.log('✅ Recipes & Books loaded!');
+</script>
+</body>
+</html>
