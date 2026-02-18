@@ -1,20 +1,25 @@
 import type { APIRoute } from 'astro';
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, cookies, locals }) => {
   try {
     const { password } = await request.json();
 
-    // Get admin password from environment
-    const ADMIN_PASSWORD = import.meta.env.ADMIN_PASSWORD || 'admin123';
+    // 1. جلب كلمة المرور من بيئة تشغيل كلوفلار (Cloudflare Runtime)
+    // @ts-ignore
+    const runtimeEnv = locals.runtime?.env;
+    
+    // يحاول الجلب من كلوفلار أولاً، وإذا فشل (في الجهاز المحلي مثلاً) يستخدم import.meta.env
+    const ADMIN_PASSWORD = runtimeEnv?.ADMIN_PASSWORD || import.meta.env.ADMIN_PASSWORD || 'admin123';
 
-    // Verify password
+    // 2. التحقق من كلمة المرور
     if (password === ADMIN_PASSWORD) {
-      // Set admin session cookie (expires in 24 hours)
+      // تعيين الكوكي (Expires in 24 hours)
       cookies.set('admin-session', 'verified', {
         path: '/',
-        maxAge: 60 * 60 * 24, // 24 hours
+        maxAge: 60 * 60 * 24, // 24 ساعة
         httpOnly: true,
-        secure: import.meta.env.PROD,
+        // تأكد أن الكوكي آمن في بيئة الإنتاج
+        secure: true, 
         sameSite: 'lax'
       });
 
