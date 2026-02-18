@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 
 export const GET: APIRoute = async ({ request, locals }) => {
 try {
-// 1. جلب المتغيرات من نظام كلوفلار Runtime
 // @ts-ignore
 const env = locals.runtime?.env;
 
