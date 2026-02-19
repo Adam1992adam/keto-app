@@ -1,18 +1,13 @@
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
 
 /**
  * Cron Job API Endpoint - Expire Subscriptions
  * 
- * Security: Uses Bearer token authentication
- * Schedule: Should be called daily at midnight
- * 
- * Usage:
- * - External Cron Service (cron-job.org): Call this endpoint with Authorization header
- * - Manual Test: GET https://your-site.pages.dev/api/cron/expire-subscriptions
+ * IMPORTANT: Works with Cloudflare Pages Environment Variables
+ * Uses runtime.env instead of import.meta.env for Cloudflare compatibility
  */
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
   
   try {
@@ -20,15 +15,27 @@ export const GET: APIRoute = async ({ request }) => {
     // 1️⃣ SECURITY CHECK
     // ============================================
     const authHeader = request.headers.get('authorization');
-    const CRON_SECRET = import.meta.env.CRON_SECRET;
     
-    // Check if CRON_SECRET is configured
+    // Get CRON_SECRET from Cloudflare Pages runtime
+    // @ts-ignore - Cloudflare Pages runtime
+    const runtime = locals?.runtime || {};
+    // @ts-ignore
+    const env = runtime?.env || {};
+    
+    const CRON_SECRET = env.CRON_SECRET || import.meta.env.CRON_SECRET;
+    
     if (!CRON_SECRET) {
-      console.error('❌ CRON_SECRET not configured in environment variables');
+      console.error('❌ CRON_SECRET not found in environment');
+      console.log('Available env keys:', Object.keys(env));
+      
       return new Response(JSON.stringify({ 
         success: false,
         error: 'CRON_SECRET not configured',
-        hint: 'Add CRON_SECRET in Cloudflare Pages Settings > Environment variables'
+        debug: {
+          hasRuntime: !!runtime,
+          hasEnv: !!env,
+          envKeys: Object.keys(env)
+        }
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
@@ -38,11 +45,12 @@ export const GET: APIRoute = async ({ request }) => {
     // Verify authorization header
     const expectedAuth = `Bearer ${CRON_SECRET}`;
     if (authHeader !== expectedAuth) {
-      console.error('❌ Unauthorized cron request. Auth header:', authHeader ? 'present but invalid' : 'missing');
+      console.error('❌ Unauthorized. Expected:', expectedAuth.substring(0, 20) + '...');
+      console.error('❌ Received:', authHeader ? authHeader.substring(0, 20) + '...' : 'none');
+      
       return new Response(JSON.stringify({ 
         success: false,
-        error: 'Unauthorized',
-        hint: 'Include header: Authorization: Bearer YOUR_CRON_SECRET'
+        error: 'Unauthorized'
       }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }
@@ -52,23 +60,32 @@ export const GET: APIRoute = async ({ request }) => {
     console.log('✅ Authorization verified');
 
     // ============================================
-    // 2️⃣ DATABASE CHECK
+    // 2️⃣ GET SUPABASE CREDENTIALS
     // ============================================
-    if (!supabase) {
-      console.error('❌ Supabase client not initialized');
+    const SUPABASE_URL = env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+    const SUPABASE_KEY = env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      console.error('❌ Supabase credentials missing');
       return new Response(JSON.stringify({ 
         success: false,
-        error: 'Database client not initialized'
+        error: 'Database configuration error'
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    console.log('✅ Database client ready');
+    console.log('✅ Supabase credentials found');
 
     // ============================================
-    // 3️⃣ FIND EXPIRED SUBSCRIPTIONS
+    // 3️⃣ IMPORT SUPABASE CLIENT
+    // ============================================
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // ============================================
+    // 4️⃣ FIND EXPIRED SUBSCRIPTIONS
     // ============================================
     const now = new Date().toISOString();
     console.log(`🔍 Checking for expired subscriptions at ${now}`);
@@ -94,7 +111,7 @@ export const GET: APIRoute = async ({ request }) => {
     console.log(`📊 Found ${expiredUsers?.length || 0} expired subscription(s)`);
 
     // ============================================
-    // 4️⃣ NO EXPIRED SUBSCRIPTIONS
+    // 5️⃣ NO EXPIRED SUBSCRIPTIONS
     // ============================================
     if (!expiredUsers || expiredUsers.length === 0) {
       const executionTime = Date.now() - startTime;
@@ -113,7 +130,7 @@ export const GET: APIRoute = async ({ request }) => {
     }
 
     // ============================================
-    // 5️⃣ UPDATE EXPIRED SUBSCRIPTIONS
+    // 6️⃣ UPDATE EXPIRED SUBSCRIPTIONS
     // ============================================
     const userIds = expiredUsers.map(u => u.id);
     
@@ -131,8 +148,7 @@ export const GET: APIRoute = async ({ request }) => {
       return new Response(JSON.stringify({ 
         success: false,
         error: 'Database update failed',
-        details: updateError.message,
-        affected_users: expiredUsers.length
+        details: updateError.message
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
@@ -140,13 +156,13 @@ export const GET: APIRoute = async ({ request }) => {
     }
 
     // ============================================
-    // 6️⃣ SUCCESS RESPONSE
+    // 7️⃣ SUCCESS
     // ============================================
     const executionTime = Date.now() - startTime;
     
     console.log(`✅ Successfully expired ${expiredUsers.length} subscription(s):`);
-    expiredUsers.forEach((u, index) => {
-      console.log(`   ${index + 1}. ${u.email} - ${u.subscription_tier} (expired: ${u.subscription_end_date})`);
+    expiredUsers.forEach((u, i) => {
+      console.log(`   ${i + 1}. ${u.email} - ${u.subscription_tier}`);
     });
     console.log(`⏱️  Execution time: ${executionTime}ms`);
 
@@ -166,15 +182,14 @@ export const GET: APIRoute = async ({ request }) => {
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-store, no-cache, must-revalidate'
+        'Cache-Control': 'no-store'
       }
     });
 
   } catch (error) {
     const executionTime = Date.now() - startTime;
     
-    console.error('❌ Cron job crashed:', error);
-    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('❌ Fatal error:', error);
     
     return new Response(JSON.stringify({ 
       success: false,
