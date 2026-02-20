@@ -1,24 +1,50 @@
 import type { APIRoute } from 'astro';
 
 /**
- * Payhip Webhook Endpoint
- * 
- * Called by Payhip when a sale is completed
- * Automatically updates user subscription in database
- * 
- * Webhook URL: https://keto-app.pages.dev/api/payhip/webhook
- * Event: sale.completed
+ * DEBUG VERSION - Payhip Webhook
+ * This version logs EVERYTHING to help debug variant matching
  */
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    console.log('🔔 Payhip webhook received');
+    console.log('🔔 ========== PAYHIP WEBHOOK RECEIVED ==========');
 
-    // Get data from Payhip
+    // Get raw body
     const payload = await request.json();
-    console.log('📦 Payload:', JSON.stringify(payload, null, 2));
+    
+    // LOG EVERYTHING
+    console.log('📦 FULL PAYLOAD:');
+    console.log(JSON.stringify(payload, null, 2));
+    
+    console.log('🔍 EXTRACTED FIELDS:');
+    console.log('  sale_id:', payload.sale_id);
+    console.log('  product_id:', payload.product_id);
+    console.log('  product_name:', payload.product_name);
+    console.log('  buyer_email:', payload.buyer_email);
+    console.log('  amount:', payload.amount);
+    console.log('  currency:', payload.currency);
+    console.log('  variant_name:', payload.variant_name);
+    console.log('  variant_id:', payload.variant_id);
+    
+    // Check all possible variant fields
+    console.log('🔍 CHECKING ALL POSSIBLE VARIANT FIELDS:');
+    const possibleVariantFields = [
+      'variant_name',
+      'variant',
+      'variant_title',
+      'option_name',
+      'option',
+      'product_variant',
+      'plan_name',
+      'plan'
+    ];
+    
+    possibleVariantFields.forEach(field => {
+      if (payload[field]) {
+        console.log(`  ✅ ${field}: "${payload[field]}"`);
+      }
+    });
 
-    // Extract sale details
     const {
       sale_id,
       product_id,
@@ -26,28 +52,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
       buyer_email,
       amount,
       currency,
-      // Payhip sends variant info in different formats
       variant_name,
       variant_id,
     } = payload;
 
-    // Validate required fields
     if (!buyer_email || !product_id) {
       console.error('❌ Missing required fields');
       return new Response(JSON.stringify({
         success: false,
-        error: 'Missing required fields'
+        error: 'Missing required fields',
+        received: { buyer_email, product_id }
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    console.log(`✅ Sale ID: ${sale_id}`);
-    console.log(`📧 Buyer: ${buyer_email}`);
-    console.log(`💰 Amount: ${currency} ${amount}`);
-    console.log(`📦 Product: ${product_name || product_id}`);
-    console.log(`🏷️  Variant: ${variant_name || 'N/A'}`);
 
     // Get Supabase credentials
     // @ts-ignore
@@ -68,44 +87,78 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Create Supabase client
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Determine subscription tier based on variant name or amount
+    // IMPROVED TIER DETECTION
     let subscription_tier = 'basic_30';
     let duration_days = 30;
-
-    // Match by variant name (most reliable)
+    
+    console.log('🎯 STARTING TIER DETECTION...');
+    
+    const price = parseFloat(amount) || 0;
+    console.log(`  💰 Amount: $${price}`);
+    
+    // PRIMARY: Match by variant_name
     if (variant_name) {
-      const variantLower = variant_name.toLowerCase();
-      if (variantLower.includes('basic') || variantLower.includes('30')) {
-        subscription_tier = 'basic_30';
-        duration_days = 30;
-      } else if (variantLower.includes('pro') || variantLower.includes('6')) {
-        subscription_tier = 'pro_6';
-        duration_days = 180;
-      } else if (variantLower.includes('elite') || variantLower.includes('12')) {
+      const variantLower = variant_name.toLowerCase().trim();
+      console.log(`  🏷️  Variant name (lowercase): "${variantLower}"`);
+      
+      // Elite (check first - most expensive)
+      if (variantLower.includes('elite')) {
         subscription_tier = 'elite_12';
         duration_days = 365;
+        console.log('  ✅ MATCHED: Elite (by variant name "elite")');
+      }
+      // Pro
+      else if (variantLower.includes('pro')) {
+        subscription_tier = 'pro_6';
+        duration_days = 180;
+        console.log('  ✅ MATCHED: Pro (by variant name "pro")');
+      }
+      // Basic
+      else if (variantLower.includes('basic')) {
+        subscription_tier = 'basic_30';
+        duration_days = 30;
+        console.log('  ✅ MATCHED: Basic (by variant name "basic")');
+      }
+      // No match - try by price
+      else {
+        console.log('  ⚠️ Variant name did not match known plans, trying by price...');
+        if (price >= 8) {
+          subscription_tier = 'elite_12';
+          duration_days = 365;
+          console.log(`  ✅ MATCHED: Elite (by price $${price} >= $8)`);
+        } else if (price >= 3) {
+          subscription_tier = 'pro_6';
+          duration_days = 180;
+          console.log(`  ✅ MATCHED: Pro (by price $${price} >= $3)`);
+        } else {
+          subscription_tier = 'basic_30';
+          duration_days = 30;
+          console.log(`  ✅ MATCHED: Basic (by price $${price} < $3)`);
+        }
       }
     } 
-    // Fallback: match by amount
+    // FALLBACK: Match by price only
     else {
-      const price = parseFloat(amount);
-      if (price <= 5) {
-        subscription_tier = 'basic_30';
-        duration_days = 30;
-      } else if (price <= 50) {
-        subscription_tier = 'pro_6';
-        duration_days = 180;
-      } else {
+      console.log('  ⚠️ NO variant_name provided, using price only');
+      if (price >= 8) {
         subscription_tier = 'elite_12';
         duration_days = 365;
+        console.log(`  ✅ MATCHED: Elite (by price $${price} >= $8)`);
+      } else if (price >= 3) {
+        subscription_tier = 'pro_6';
+        duration_days = 180;
+        console.log(`  ✅ MATCHED: Pro (by price $${price} >= $3)`);
+      } else {
+        subscription_tier = 'basic_30';
+        duration_days = 30;
+        console.log(`  ✅ MATCHED: Basic (by price $${price} < $3)`);
       }
     }
 
-    console.log(`🎯 Determined tier: ${subscription_tier} (${duration_days} days)`);
+    console.log(`🎯 FINAL DECISION: ${subscription_tier} (${duration_days} days)`);
 
     // Calculate dates
     const start_date = new Date().toISOString();
@@ -116,7 +169,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.log(`📅 Start: ${start_date}`);
     console.log(`📅 End: ${end_date_iso}`);
 
-    // Find user by email
+    // Find user
     const { data: user, error: findError } = await supabase
       .from('profiles')
       .select('id, email, full_name')
@@ -124,18 +177,39 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .single();
 
     if (findError || !user) {
-      console.error('❌ User not found:', buyer_email);
+      console.log('⚠️ User not found, saving to pending_activations');
+      
+      const { error: pendingError } = await supabase
+        .from('pending_activations')
+        .insert({
+          email: buyer_email,
+          subscription_tier,
+          subscription_start_date: start_date,
+          subscription_end_date: end_date_iso,
+          payhip_sale_id: sale_id,
+          payhip_data: payload,
+          created_at: new Date().toISOString()
+        });
+
+      if (pendingError) {
+        console.error('❌ Pending activation error:', pendingError);
+      } else {
+        console.log('✅ Saved to pending_activations');
+      }
+      
       return new Response(JSON.stringify({
-        success: false,
-        error: 'User not found',
-        details: 'Please make sure the user has signed up first'
+        success: true,
+        status: 'pending',
+        message: 'Purchase recorded. User needs to sign up.',
+        tier: subscription_tier,
+        email: buyer_email
       }), {
-        status: 404,
+        status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    console.log(`✅ Found user: ${user.full_name} (${user.id})`);
+    console.log(`✅ Found user: ${user.email}`);
 
     // Update subscription
     const { error: updateError } = await supabase
@@ -154,7 +228,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.error('❌ Update failed:', updateError);
       return new Response(JSON.stringify({
         success: false,
-        error: 'Database update failed',
+        error: 'Update failed',
         details: updateError.message
       }), {
         status: 500,
@@ -162,36 +236,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    console.log(`✅ Subscription updated successfully!`);
-    console.log(`   User: ${user.email}`);
+    console.log('✅ ========== SUBSCRIPTION UPDATED SUCCESSFULLY ==========');
+    console.log(`   Email: ${user.email}`);
     console.log(`   Tier: ${subscription_tier}`);
     console.log(`   Until: ${end_date_iso}`);
 
-    // Success response
     return new Response(JSON.stringify({
       success: true,
       message: 'Subscription activated',
-      user: {
-        email: user.email,
-        name: user.full_name
-      },
-      subscription: {
-        tier: subscription_tier,
-        start_date,
-        end_date: end_date_iso,
-        duration_days
-      }
+      user: { email: user.email, name: user.full_name },
+      subscription: { tier: subscription_tier, start_date, end_date: end_date_iso }
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('❌ Webhook error:', error);
+    console.error('❌ WEBHOOK ERROR:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -199,11 +263,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 
-// GET for testing
 export const GET: APIRoute = async () => {
   return new Response(JSON.stringify({
-    message: 'Payhip webhook endpoint is working',
-    hint: 'This endpoint should be called by Payhip via POST request'
+    message: 'Payhip webhook (DEBUG VERSION)',
+    status: 'ready'
   }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' }
