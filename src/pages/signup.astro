@@ -1,100 +1,237 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+import { supabase } from '../lib/supabase';
 
-const error = Astro.url.searchParams.get('error');
-const plan = Astro.url.searchParams.get('plan');
-const email = Astro.url.searchParams.get('email');
+// Get email from URL
+const emailParam = Astro.url.searchParams.get('email');
+
+if (!emailParam) {
+  return Astro.redirect('/');
+}
+
+const allowedEmail = emailParam.toLowerCase().trim();
 ---
 
-<BaseLayout title="Sign Up - Keto App">
-  <div class="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
-    <div class="max-w-md w-full">
-      <div class="text-center mb-8">
-        <h1 class="text-4xl font-bold text-primary-600 mb-2">🥑 Keto App</h1>
-        <p class="text-gray-600">Start your transformation today</p>
-      </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Complete Registration – Keto Journey</title>
+  <style>
+    :root{--bg:#fff;--text:#111;--accent:#10b981;--border:#e5e7eb;}
+    [data-theme="dark"]{--bg:#1a1a2e;--text:#eaeaea;--border:#2d3748;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;}
+    .card{background:var(--bg);border-radius:2rem;padding:3rem;max-width:500px;width:100%;box-shadow:0 25px 50px rgba(0,0,0,0.3);}
+    .icon{font-size:4rem;text-align:center;margin-bottom:1.5rem;}
+    h1{font-size:2rem;font-weight:900;text-align:center;margin-bottom:.5rem;background:linear-gradient(135deg,var(--accent),#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    p{text-align:center;color:#6b7280;margin-bottom:2rem;}
+    .plan-badge{text-align:center;padding:1rem;background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(52,211,153,.1));border-radius:1rem;border:2px solid var(--accent);margin-bottom:2rem;display:none;}
+    .plan-badge.show{display:block;}
+    .plan-badge strong{color:var(--accent);font-size:1.125rem;}
+    .form-group{margin-bottom:1.5rem;}
+    label{display:block;font-weight:600;margin-bottom:.5rem;color:var(--text);}
+    input{width:100%;padding:1rem;border:2px solid var(--border);border-radius:1rem;font-size:1rem;transition:all .3s;}
+    input:focus{outline:none;border-color:var(--accent);}
+    input[readonly]{background:#f9fafb;cursor:not-allowed;}
+    button{width:100%;padding:1.25rem;background:linear-gradient(135deg,var(--accent),#34d399);color:white;border:none;border-radius:1rem;font-weight:800;font-size:1.125rem;cursor:pointer;transition:all .3s;}
+    button:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 25px rgba(16,185,129,0.3);}
+    button:disabled{opacity:.5;cursor:not-allowed;}
+    .error{color:#ef4444;font-size:.875rem;margin-top:.5rem;display:none;}
+    .error.show{display:block;}
+    .success{background:#10b981;color:white;padding:1rem;border-radius:1rem;text-align:center;margin-bottom:1.5rem;display:none;}
+    .success.show{display:block;}
+    .loading{display:none;text-align:center;padding:2rem;}
+    .loading.show{display:block;}
+    .loader{border:4px solid #f3f3f3;border-top:4px solid var(--accent);border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:0 auto 1rem;}
+    @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+  </style>
+</head>
+<body>
 
-      <div class="bg-white rounded-xl shadow-lg p-8">
-        <h2 class="text-2xl font-bold text-gray-900 mb-6">Create Account</h2>
+<div class="card">
+  <div class="icon">🎉</div>
+  <h1>Complete Your Registration</h1>
+  <p>Verifying your purchase...</p>
 
-        {error && (
-          <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-            {error === 'exists' && 'Email already registered'}
-            {error === 'weak' && 'Password must be at least 6 characters'}
-            {error === 'auth' && 'Error creating account. Please try again.'}
-          </div>
-        )}
-
-        {plan && (
-          <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4">
-            ✅ Payment successful! Complete your account setup.
-          </div>
-        )}
-
-        <form action="/api/auth/signup" method="POST" class="space-y-4">
-          <input type="hidden" name="plan" value={plan || 'basic_30'} />
-          
-          <div>
-            <label for="fullName" class="block text-sm font-medium text-gray-700 mb-2">
-              Full Name
-            </label>
-            <input
-              type="text"
-              id="fullName"
-              name="fullName"
-              required
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="John Doe"
-            />
-          </div>
-
-          <div>
-            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              required
-              value={email || ''}
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="your@email.com"
-            />
-          </div>
-
-          <div>
-            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              required
-              minlength="6"
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="••••••••"
-            />
-          </div>
-
-          <button
-            type="submit"
-            class="w-full bg-primary-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-primary-700 transition"
-          >
-            Create Account
-          </button>
-        </form>
-
-        <div class="mt-6 text-center">
-          <p class="text-gray-600">
-            Already have an account?
-            <a href="/login" class="text-primary-600 font-semibold hover:underline">
-              Login
-            </a>
-          </p>
-        </div>
-      </div>
-    </div>
+  <div class="loading show" id="verifying">
+    <div class="loader"></div>
+    <p>Checking your purchase in Payhip...</p>
   </div>
-</BaseLayout>
+
+  <div class="plan-badge" id="planBadge">
+    <div style="font-size:.875rem;color:#6b7280;margin-bottom:.25rem;">Your Plan:</div>
+    <strong id="planName">Loading...</strong>
+  </div>
+
+  <div class="success" id="success">
+    <strong>✓ Account created!</strong><br/>
+    Redirecting to dashboard...
+  </div>
+
+  <div class="error" id="noPurchaseError" style="display:none;text-align:center;padding:2rem;">
+    <h2 style="color:#ef4444;margin-bottom:1rem;">⚠️ No Purchase Found</h2>
+    <p style="color:#6b7280;">We couldn't find a purchase for this email address.</p>
+    <p style="color:#6b7280;margin-top:1rem;">Please make sure you used the same email when purchasing.</p>
+    <a href="https://payhip.com/b/OEQk9" style="display:inline-block;margin-top:1rem;padding:1rem 2rem;background:var(--accent);color:white;text-decoration:none;border-radius:1rem;font-weight:800;">Purchase Now</a>
+  </div>
+
+  <form id="signupForm" style="display:none;">
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" id="email" value={allowedEmail} readonly/>
+    </div>
+
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" id="fullName" placeholder="Enter your full name" required/>
+      <div class="error" id="nameError">Please enter your name</div>
+    </div>
+
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="Choose a strong password" required/>
+      <div class="error" id="passwordError">Password must be at least 6 characters</div>
+    </div>
+
+    <div class="form-group">
+      <label>Confirm Password</label>
+      <input type="password" id="confirmPassword" placeholder="Confirm your password" required/>
+      <div class="error" id="confirmError">Passwords don't match</div>
+    </div>
+
+    <button type="submit" id="submitBtn">
+      Create My Account 🚀
+    </button>
+
+    <div class="error" id="formError" style="margin-top:1rem;text-align:center;"></div>
+  </form>
+</div>
+
+<script is:inline define:vars={{allowedEmail}}>
+  let purchaseData = null;
+  
+  // Verify purchase on page load
+  window.addEventListener('DOMContentLoaded', async () => {
+    try {
+      const response = await fetch('/api/payhip/verify-purchase', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ email: allowedEmail })
+      });
+      
+      const result = await response.json();
+      
+      document.getElementById('verifying').classList.remove('show');
+      
+      if (!result.success || !result.canSignup) {
+        document.getElementById('noPurchaseError').style.display = 'block';
+        return;
+      }
+      
+      // Purchase found!
+      purchaseData = result.purchase;
+      
+      // Show plan info
+      const planNames = {
+        'basic_30': 'Basic - 30 Days',
+        'pro_6': 'Pro - 6 Months',
+        'elite_12': 'Elite - 12 Months'
+      };
+      
+      document.getElementById('planName').textContent = planNames[purchaseData.tier] || purchaseData.tier;
+      document.getElementById('planBadge').classList.add('show');
+      
+      // Show form
+      document.getElementById('signupForm').style.display = 'block';
+      
+    } catch (error) {
+      console.error('Verification error:', error);
+      document.getElementById('verifying').classList.remove('show');
+      document.getElementById('noPurchaseError').style.display = 'block';
+    }
+  });
+  
+  // Handle signup
+  document.getElementById('signupForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    if (!purchaseData) {
+      alert('Purchase verification failed');
+      return;
+    }
+    
+    // Clear errors
+    document.querySelectorAll('.error').forEach(el => el.classList.remove('show'));
+    
+    const fullName = document.getElementById('fullName').value.trim();
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    // Validation
+    let hasError = false;
+    
+    if (!fullName) {
+      document.getElementById('nameError').classList.add('show');
+      hasError = true;
+    }
+    
+    if (password.length < 6) {
+      document.getElementById('passwordError').classList.add('show');
+      hasError = true;
+    }
+    
+    if (password !== confirmPassword) {
+      document.getElementById('confirmError').classList.add('show');
+      hasError = true;
+    }
+    
+    if (hasError) return;
+    
+    // Disable button
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creating account...';
+    
+    try {
+      // Call signup API
+      const response = await fetch('/api/auth/signup-payhip', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          email: allowedEmail,
+          password,
+          fullName,
+          tier: purchaseData.tier,
+          startDate: purchaseData.start_date,
+          endDate: purchaseData.end_date,
+          saleId: purchaseData.sale_id
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Signup failed');
+      }
+      
+      // Show success
+      document.getElementById('success').classList.add('show');
+      document.getElementById('signupForm').style.display = 'none';
+      
+      // Redirect
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 2000);
+      
+    } catch (error) {
+      document.getElementById('formError').textContent = error.message;
+      document.getElementById('formError').classList.add('show');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Create My Account 🚀';
+    }
+  });
+</script>
+
+</body>
+</html>

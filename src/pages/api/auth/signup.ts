@@ -1,116 +1,85 @@
-// src/pages/api/auth/signup.ts
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
 
-export const POST: APIRoute = async ({ request, cookies, redirect }) => {
-  const formData = await request.formData();
-  const email = formData.get('email')?.toString();
-  const password = formData.get('password')?.toString();
-  const fullName = formData.get('fullName')?.toString();
-  const plan = formData.get('plan')?.toString() || 'basic_30';
-
-  if (!email || !password || !fullName) {
-    return redirect('/signup?error=auth');
-  }
-
-  if (password.length < 6) {
-    return redirect('/signup?error=weak');
-  }
-
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        full_name: fullName,
-      },
-      emailRedirectTo: undefined,
-    },
-  });
-
-  if (error) {
-    console.error('Signup error:', error);
-    if (error.message.includes('already registered')) {
-      return redirect('/signup?error=exists');
-    }
-    return redirect('/signup?error=auth');
-  }
-
-  if (!data.user) {
-    return redirect('/signup?error=auth');
-  }
-
-  const endDate = new Date();
-  switch (plan) {
-    case 'advanced_6m':
-      endDate.setDate(endDate.getDate() + 180);
-      break;
-    case 'pro_12m':
-      endDate.setDate(endDate.getDate() + 365);
-      break;
-    default:
-      endDate.setDate(endDate.getDate() + 30);
-  }
-
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    // 1. Create profile
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: data.user.id,
+    const { email, password, fullName, tier, startDate, endDate, saleId } = await request.json();
+    
+    if (!email || !password || !fullName || !tier) {
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400 });
+    }
+    
+    console.log('🆕 Creating account via Payhip API verification');
+    console.log('   Email:', email);
+    console.log('   Tier:', tier);
+    
+    // Get Supabase
+    // @ts-ignore
+    const runtime = locals?.runtime || {};
+    // @ts-ignore
+    const env = runtime?.env || {};
+    const SUPABASE_URL = env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+    const SUPABASE_KEY = env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
+    }
+    
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // Create auth account
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
-      full_name: fullName,
-      subscription_tier: plan,
-      subscription_status: 'active',
-      subscription_start_date: new Date().toISOString(),
-      subscription_end_date: endDate.toISOString(),
+      password,
+      options: {
+        data: {
+          full_name: fullName
+        }
+      }
     });
-
-    if (profileError) {
-      console.error('Profile creation error:', profileError);
+    
+    if (authError) {
+      console.error('❌ Auth error:', authError);
+      return new Response(JSON.stringify({ error: authError.message }), { status: 400 });
     }
-
-    // 🆕 2. Create journey
-    const { error: journeyError } = await supabase.from('user_journey').insert({
-      user_id: data.user.id,
-      start_date: new Date().toISOString().split('T')[0],
-      current_day: 1,
-      status: 'active',
-      total_xp: 0,
-      level: 1,
-    });
-
-    if (journeyError) {
-      console.error('Journey creation error:', journeyError);
+    
+    if (!authData.user) {
+      return new Response(JSON.stringify({ error: 'Failed to create account' }), { status: 500 });
     }
-
-    // 🆕 3. Initialize Day 1 tasks
-    await supabase.rpc('initialize_daily_tasks', {
-      user_id_param: data.user.id,
-      day_number_param: 1
-    });
-
-  } catch (err) {
-    console.error('Setup failed:', err);
+    
+    console.log('✅ Auth account created:', authData.user.id);
+    
+    // Update profile with subscription
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        full_name: fullName,
+        subscription_tier: tier,
+        subscription_status: 'active',
+        subscription_start_date: startDate,
+        subscription_end_date: endDate,
+        payhip_sale_id: saleId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', authData.user.id);
+    
+    if (updateError) {
+      console.error('❌ Profile update error:', updateError);
+    } else {
+      console.log('✅ Profile updated with subscription');
+    }
+    
+    console.log('✅✅✅ Account creation complete!');
+    
+    return new Response(JSON.stringify({
+      success: true,
+      message: 'Account created successfully'
+    }), { status: 200 });
+    
+  } catch (error) {
+    console.error('❌ Signup error:', error);
+    return new Response(JSON.stringify({
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }), { status: 500 });
   }
-
-  if (data.session) {
-    cookies.set('sb-access-token', data.session.access_token, {
-      path: '/',
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
-    });
-
-    cookies.set('sb-refresh-token', data.session.refresh_token, {
-      path: '/',
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30,
-    });
-
-    return redirect('/dashboard?welcome=true');
-  }
-
-  return redirect('/login?message=Account created! Please check your email to confirm.');
 };
