@@ -1,39 +1,50 @@
 import type { APIRoute } from 'astro';
 
+// هذا السطر ضروري جداً لإخبار Astro و Cloudflare أن هذا الرابط ديناميكي (Server-side)
+// لمنع ظهور خطأ 404 عند رفع المشروع
+export const prerender = false;
+
 /**
  * Payhip Purchase Verification API
- * Checks if user has purchased using Payhip API
- * Called when user tries to signup
+ * وظيفتها التحقق من إيميل العميل عبر واجهة برمجة تطبيقات Payhip
  */
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const { email } = await request.json();
+    // 1. استلام البيانات والتأكد من أنها JSON
+    const body = await request.json().catch(() => null);
     
-    if (!email) {
-      return new Response(JSON.stringify({ error: 'Email required' }), { status: 400 });
+    if (!body || !body.email) {
+      return new Response(JSON.stringify({ error: 'Email required' }), { 
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
-    
+
+    const email = body.email.toLowerCase();
     console.log('🔍 Checking Payhip purchases for:', email);
     
-    // Get Payhip API Key
+    // 2. جلب مفتاح API من إعدادات Cloudflare (البيئة الحية) أو من .env (التطوير المحلي)
     // @ts-ignore
     const runtime = locals?.runtime || {};
-    // @ts-ignore
     const env = runtime?.env || {};
+    
+    // يحاول الجلب من إعدادات Cloudflare Pages أولاً، ثم من ملف .env المحلي ثانياً
     const PAYHIP_API_KEY = env.PAYHIP_API_KEY || import.meta.env.PAYHIP_API_KEY;
     
     if (!PAYHIP_API_KEY) {
       console.error('❌ PAYHIP_API_KEY not configured');
       return new Response(JSON.stringify({ 
         error: 'Server configuration error',
-        hint: 'Add PAYHIP_API_KEY in Cloudflare Pages Settings'
-      }), { status: 500 });
+        hint: 'Please add PAYHIP_API_KEY in Cloudflare Pages Settings -> Functions -> Variables'
+      }), { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
     
-    // Call Payhip API to get sales
+    // 3. الاتصال بـ Payhip لجلب قائمة المبيعات
     console.log('📡 Calling Payhip API...');
-    
     const response = await fetch('https://payhip.com/api/v1/sales', {
       method: 'GET',
       headers: {
@@ -42,20 +53,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
     
     if (!response.ok) {
-      console.error('❌ Payhip API error:', response.status);
+      const errorText = await response.text();
+      console.error('❌ Payhip API error:', response.status, errorText);
       return new Response(JSON.stringify({ 
-        error: 'Payhip API error',
+        error: 'Payhip API connection failed',
         status: response.status 
-      }), { status: 500 });
+      }), { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
     
     const data = await response.json();
-    console.log('📦 Payhip response:', JSON.stringify(data, null, 2));
     
-    // Find purchases for this email
+    // 4. البحث عن عمليات الشراء المرتبطة بهذا البريد الإلكتروني
     const sales = data.sales || [];
     const userPurchases = sales.filter((sale: any) => 
-      sale.buyer_email?.toLowerCase() === email.toLowerCase()
+      sale.buyer_email?.toLowerCase() === email
     );
     
     console.log(`✅ Found ${userPurchases.length} purchase(s) for ${email}`);
@@ -63,17 +77,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (userPurchases.length === 0) {
       return new Response(JSON.stringify({
         success: false,
-        message: 'No purchase found for this email',
-        canSignup: false
-      }), { status: 200 });
+        canSignup: false,
+        message: 'No purchase found for this email'
+      }), { 
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
     
-    // Get the most recent purchase
+    // 5. تحليل أحدث عملية شراء لتحديد "الرتبة" (Tier) والمدة
     const latestPurchase = userPurchases[0];
-    
-    console.log('📋 Latest purchase:', JSON.stringify(latestPurchase, null, 2));
-    
-    // Determine tier from product/variant
     let tier = 'basic_30';
     let days = 30;
     
@@ -81,36 +94,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const variantName = (latestPurchase.variant_name || '').toLowerCase();
     const amount = parseFloat(latestPurchase.sale_price || 0);
     
-    console.log('🔍 Detection:');
-    console.log('  Product:', productName);
-    console.log('  Variant:', variantName);
-    console.log('  Amount:', amount);
-    
-    // Detect tier
-    if (variantName.includes('elite') || productName.includes('elite')) {
+    // منطق تحديد النوع بناءً على اسم المنتج أو المتغير أو السعر
+    if (variantName.includes('elite') || productName.includes('elite') || amount >= 8) {
       tier = 'elite_12';
       days = 365;
-    } else if (variantName.includes('pro') || productName.includes('pro')) {
-      tier = 'pro_6';
-      days = 180;
-    } else if (variantName.includes('basic') || productName.includes('basic')) {
-      tier = 'basic_30';
-      days = 30;
-    } else if (amount >= 8) {
-      tier = 'elite_12';
-      days = 365;
-    } else if (amount >= 3) {
+    } else if (variantName.includes('pro') || productName.includes('pro') || amount >= 3) {
       tier = 'pro_6';
       days = 180;
     }
     
-    console.log(`🎯 Determined: ${tier} (${days} days)`);
-    
-    // Calculate dates
+    // 6. حساب التواريخ
     const start = new Date().toISOString();
     const end = new Date();
     end.setDate(end.getDate() + days);
     
+    // 7. إرسال النتيجة النهائية بنجاح
     return new Response(JSON.stringify({
       success: true,
       canSignup: true,
@@ -122,15 +120,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
         end_date: end.toISOString(),
         sale_id: latestPurchase.sale_id,
         product_name: latestPurchase.product_name,
-        variant_name: latestPurchase.variant_name,
-        amount: latestPurchase.sale_price
+        variant_name: latestPurchase.variant_name
       }
-    }), { status: 200 });
+    }), { 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
     
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('❌ Crash Error:', error);
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }), { status: 500 });
+      error: error instanceof Error ? error.message : 'Internal Server Error'
+    }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 };
