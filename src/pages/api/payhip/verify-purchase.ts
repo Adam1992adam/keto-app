@@ -1,28 +1,14 @@
 import type { APIRoute } from 'astro';
 
 // ═══════════════════════════════════════
-// PAYHIP VERIFY PURCHASE v4
+// VERIFY PURCHASE v5
+// يتحقق من pending_activations في Supabase
+// بدل Payhip API (غير متاح للمبيعات)
 // ═══════════════════════════════════════
-
-function determineTier(sale: any): { tier: string; days: number } {
-  const variant = (sale.variant_name || '').toLowerCase().trim();
-  const product  = (sale.product_name  || '').toLowerCase().trim();
-  const amount   = parseFloat(sale.sale_price || '0');
-
-  if (variant.includes('elite'))  return { tier: 'elite_12', days: 365 };
-  if (variant.includes('pro'))    return { tier: 'pro_6',    days: 180 };
-  if (variant.includes('basic'))  return { tier: 'basic_30', days: 30  };
-  if (product.includes('elite'))  return { tier: 'elite_12', days: 365 };
-  if (product.includes('pro'))    return { tier: 'pro_6',    days: 180 };
-  if (product.includes('basic'))  return { tier: 'basic_30', days: 30  };
-  if (amount >= 150) return { tier: 'elite_12', days: 365 };
-  if (amount >= 50)  return { tier: 'pro_6',    days: 180 };
-  return { tier: 'basic_30', days: 30 };
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const body = await request.json();
+    const body  = await request.json();
     const email = (body.email || '').trim().toLowerCase();
 
     if (!email) {
@@ -34,110 +20,86 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // @ts-ignore
     const env = locals?.runtime?.env || {};
-    const PAYHIP_API_KEY =
-      env.PAYHIP_API_KEY ||
-      import.meta.env.PAYHIP_API_KEY;
+    const SUPABASE_URL = env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+    const SUPABASE_KEY = env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!PAYHIP_API_KEY) {
-      console.error('PAYHIP_API_KEY not found');
-      return new Response(JSON.stringify({ error: 'API Key not configured' }), {
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      return new Response(JSON.stringify({ error: 'Server config error' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('Calling Payhip API...');
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const payhipRes = await fetch('https://payhip.com/api/v1/sales', {
-      method: 'GET',
-      headers: {
-        'payhip-api-key': PAYHIP_API_KEY,
-        'Accept': 'application/json',
-      },
-    });
+    // ── 1. تحقق أن المستخدم غير مسجل مسبقاً ─
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id, email, subscription_tier')
+      .eq('email', email)
+      .single();
 
-    // تحقق أن الـ response هو JSON وليس HTML
-    const contentType = payhipRes.headers.get('content-type') || '';
-    if (!contentType.includes('application/json')) {
-      const rawText = await payhipRes.text();
-      console.error('Payhip non-JSON response:', payhipRes.status, rawText.substring(0, 300));
-      
-      let hint = 'Payhip API error';
-      if (payhipRes.status === 401) hint = 'Invalid API Key — check PAYHIP_API_KEY';
-      if (payhipRes.status === 403) hint = 'API Key has no permission';
-      if (payhipRes.status === 404) hint = 'Payhip API endpoint not found';
-
-      return new Response(JSON.stringify({
-        error: hint,
-        http_status: payhipRes.status,
-      }), {
-        status: 502,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    if (!payhipRes.ok) {
-      const errData = await payhipRes.json();
-      return new Response(JSON.stringify({
-        error: 'Payhip API error',
-        status: payhipRes.status,
-        details: errData,
-      }), {
-        status: 502,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    const data  = await payhipRes.json();
-    console.log('Payhip response keys:', Object.keys(data));
-
-    const sales = (data.data || data.sales || []) as any[];
-    console.log('Total sales from Payhip:', sales.length);
-
-    const userSales = sales.filter(
-      (s: any) => (s.buyer_email || '').toLowerCase() === email
-    );
-
-    console.log(`Sales for ${email}:`, userSales.length);
-
-    if (userSales.length === 0) {
+    if (existingProfile) {
       return new Response(JSON.stringify({
         success: false,
         canSignup: false,
-        message: 'No purchase found for this email',
+        reason: 'already_registered',
+        message: 'This email is already registered. Please login instead.',
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const sale = userSales[0];
-    console.log('Sale found:', {
-      variant: sale.variant_name,
-      product: sale.product_name,
-      amount:  sale.sale_price,
-    });
+    // ── 2. ابحث في pending_activations ────────
+    const { data: pending } = await supabase
+      .from('pending_activations')
+      .select('*')
+      .eq('email', email)
+      .eq('activated', false)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
 
-    const { tier, days } = determineTier(sale);
-    console.log('Tier:', tier, '| Days:', days);
+    if (!pending) {
+      return new Response(JSON.stringify({
+        success: false,
+        canSignup: false,
+        reason: 'no_purchase',
+        message: 'No purchase found for this email.',
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ── 3. شراء موجود ✅ ──────────────────────
+    const tierDays: Record<string, number> = {
+      basic_30:  30,
+      pro_6:    180,
+      elite_12: 365,
+    };
+
+    const tier = pending.subscription_tier || 'basic_30';
+    const days = tierDays[tier] || 30;
 
     const startDate = new Date();
     const endDate   = new Date();
     endDate.setDate(endDate.getDate() + days);
 
+    console.log(`✅ Purchase verified: ${email} → ${tier}`);
+
     return new Response(JSON.stringify({
       success: true,
       canSignup: true,
       purchase: {
-        email:        sale.buyer_email,
+        email,
         tier,
         days,
-        start_date:   startDate.toISOString(),
-        end_date:     endDate.toISOString(),
-        sale_id:      sale.sale_id,
-        product_name: sale.product_name,
-        variant_name: sale.variant_name,
-        amount:       sale.sale_price,
+        start_date:  startDate.toISOString(),
+        end_date:    endDate.toISOString(),
+        sale_id:     pending.payhip_sale_id || '',
       },
     }), {
       status: 200,
@@ -155,10 +117,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async () => {
   return new Response(JSON.stringify({
-    message: 'Payhip Verify Purchase API v4',
-    usage: 'POST {"email":"buyer@example.com"}',
+    message: 'Verify Purchase API v5',
+    usage:   'POST {"email":"buyer@example.com"}',
   }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' },
