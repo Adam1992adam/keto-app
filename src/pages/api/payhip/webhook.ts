@@ -1,208 +1,210 @@
 import type { APIRoute } from 'astro';
 
-/**
- * FINAL WEBHOOK - Uses variant_id mapping
- * Payhip doesn't send variant_name, only variant_id!
- */
+// ═══════════════════════════════════════
+// PAYHIP WEBHOOK v3 — البنية الصحيحة
+// payload من Payhip:
+// {
+//   "id": "ZGjVj5x4GN",
+//   "email": "buyer@example.com",
+//   "price": 9999,              ← بالسنتات
+//   "currency": "USD",
+//   "items": [{
+//     "product_id": "OEQk9",
+//     "product_name": "keto ebook",
+//     "has_variant": true,
+//     "variant_name": "pro plan",  ← هذا ما نحتاجه
+//   }]
+// }
+// ═══════════════════════════════════════
 
-// CRITICAL: Map Payhip variant IDs to subscription tiers
-// Get these IDs from Payhip product page or webhook logs
-const VARIANT_MAP: Record<string, { tier: string; days: number }> = {
-  // Replace with YOUR actual variant IDs from Payhip
-  // Example format:
-  // 'variant_123abc': { tier: 'basic_30', days: 30 },
-  // 'variant_456def': { tier: 'pro_6', days: 180 },
-  // 'variant_789ghi': { tier: 'elite_12', days: 365 },
-};
+function determineTier(price: number, variantName: string, productName: string): { tier: string; days: number } {
+  const variant = (variantName || '').toLowerCase().trim();
+  const product  = (productName  || '').toLowerCase().trim();
+
+  // 1️⃣ من اسم الـ variant (الأدق)
+  if (variant.includes('elite'))  return { tier: 'elite_12', days: 365 };
+  if (variant.includes('pro'))    return { tier: 'pro_6',    days: 180 };
+  if (variant.includes('basic'))  return { tier: 'basic_30', days: 30  };
+
+  // 2️⃣ من اسم المنتج
+  if (product.includes('elite'))  return { tier: 'elite_12', days: 365 };
+  if (product.includes('pro'))    return { tier: 'pro_6',    days: 180 };
+  if (product.includes('basic'))  return { tier: 'basic_30', days: 30  };
+
+  // 3️⃣ من السعر بالسنتات
+  // elite = $199.99 → 19999 | pro = $99.99 → 9999 | basic = $29.99 → 2999
+  if (price >= 15000) return { tier: 'elite_12', days: 365 };
+  if (price >= 5000)  return { tier: 'pro_6',    days: 180 };
+
+  return { tier: 'basic_30', days: 30 };
+}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const payload = await request.json();
-    
-    console.log('═══════════════════════════════════════════');
-    console.log('🔔 PAYHIP WEBHOOK');
-    console.log('═══════════════════════════════════════════');
-    console.log('📦 Full Payload:', JSON.stringify(payload, null, 2));
-    
-    const { sale_id, buyer_email, amount, variant_name, variant_id, product_id } = payload;
-    
-    console.log('📧 Email:', buyer_email);
-    console.log('💰 Amount:', amount);
-    console.log('🏷️  Variant Name:', variant_name);
-    console.log('🆔 Variant ID:', variant_id);
-    console.log('📦 Product ID:', product_id);
-    
-    if (!buyer_email) {
-      console.error('❌ No email');
-      return new Response(JSON.stringify({ error: 'No email' }), { status: 400 });
+    // قراءة الـ body — يدعم JSON و form-encoded
+    let payload: any = {};
+    const contentType = request.headers.get('content-type') || '';
+
+    if (contentType.includes('application/json')) {
+      payload = await request.json();
+    } else if (contentType.includes('application/x-www-form-urlencoded')) {
+      const text = await request.text();
+      const params = new URLSearchParams(text);
+      payload = Object.fromEntries(params.entries());
+      // items تأتي كـ JSON string في form-encoded
+      if (payload.items && typeof payload.items === 'string') {
+        try { payload.items = JSON.parse(payload.items); } catch {}
+      }
+    } else {
+      // محاولة JSON كـ fallback
+      const text = await request.text();
+      try { payload = JSON.parse(text); } catch {
+        payload = Object.fromEntries(new URLSearchParams(text).entries());
+      }
     }
-    
-    // Get Supabase
+
+    console.log('🔔 PAYHIP WEBHOOK RECEIVED');
+    console.log('📦 Payload:', JSON.stringify(payload, null, 2));
+
+    // ── استخراج البيانات ────────────────────
+    // Payhip يرسل "email" وليس "buyer_email"
+    const buyerEmail = (payload.email || payload.buyer_email || '').trim().toLowerCase();
+    const saleId     = payload.id || payload.sale_id || '';
+    const price      = parseInt(payload.price || '0', 10); // بالسنتات
+
+    // المنتج في items[0]
+    const items       = Array.isArray(payload.items) ? payload.items : [];
+    const firstItem   = items[0] || {};
+    const variantName = firstItem.variant_name || payload.variant_name || '';
+    const productName = firstItem.product_name || payload.product_name || '';
+
+    console.log('📧 Email:', buyerEmail);
+    console.log('💰 Price (cents):', price);
+    console.log('🏷️  Variant:', variantName);
+    console.log('📦 Product:', productName);
+
+    if (!buyerEmail) {
+      console.error('❌ No email in payload');
+      return new Response(JSON.stringify({ error: 'No email' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ── Supabase ────────────────────────────
     // @ts-ignore
-    const runtime = locals?.runtime || {};
-    // @ts-ignore
-    const env = runtime?.env || {};
+    const env = locals?.runtime?.env || {};
     const SUPABASE_URL = env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
     const SUPABASE_KEY = env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-    
+
     if (!SUPABASE_URL || !SUPABASE_KEY) {
       console.error('❌ No Supabase config');
-      return new Response(JSON.stringify({ error: 'No DB' }), { status: 500 });
+      return new Response(JSON.stringify({ error: 'Server config error' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
-    
+
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-    
-    // Determine tier
-    let tier = 'basic_30';
-    let days = 30;
-    
-    console.log('🔍 Determining tier...');
-    
-    // METHOD 1: Use variant_id mapping (most reliable)
-    if (variant_id && VARIANT_MAP[variant_id]) {
-      const mapped = VARIANT_MAP[variant_id];
-      tier = mapped.tier;
-      days = mapped.days;
-      console.log(`✅ Matched by variant_id: ${variant_id} → ${tier}`);
-    }
-    // METHOD 2: Use variant_name if available
-    else if (variant_name) {
-      const v = variant_name.toLowerCase().trim();
-      console.log(`🔍 Checking variant_name: "${v}"`);
-      
-      if (v.includes('elite')) {
-        tier = 'elite_12';
-        days = 365;
-        console.log('✅ Matched: Elite (by name)');
-      } else if (v.includes('pro')) {
-        tier = 'pro_6';
-        days = 180;
-        console.log('✅ Matched: Pro (by name)');
-      } else if (v.includes('basic')) {
-        tier = 'basic_30';
-        days = 30;
-        console.log('✅ Matched: Basic (by name)');
-      } else {
-        console.log('⚠️ No name match, using price fallback');
-        const price = parseFloat(amount) || 0;
-        if (price >= 8) {
-          tier = 'elite_12';
-          days = 365;
-        } else if (price >= 3) {
-          tier = 'pro_6';
-          days = 180;
-        }
-        console.log(`✅ Matched by price: $${price} → ${tier}`);
-      }
-    }
-    // METHOD 3: Fallback to price (not reliable with coupons!)
-    else {
-      console.log('⚠️ No variant info, using price (unreliable with coupons!)');
-      const price = parseFloat(amount) || 0;
-      if (price >= 8) {
-        tier = 'elite_12';
-        days = 365;
-      } else if (price >= 3) {
-        tier = 'pro_6';
-        days = 180;
-      }
-      console.log(`⚠️ Price-based: $${price} → ${tier}`);
-      
-      // IMPORTANT: Log variant_id for mapping
-      if (variant_id) {
-        console.log('⚠️⚠️⚠️ IMPORTANT: Add this to VARIANT_MAP:');
-        console.log(`  '${variant_id}': { tier: '${tier}', days: ${days} },`);
-      }
-    }
-    
-    console.log(`🎯 FINAL: ${tier} (${days} days)`);
-    
-    // Calculate dates
-    const start = new Date().toISOString();
-    const end = new Date();
-    end.setDate(end.getDate() + days);
-    const endISO = end.toISOString();
-    
-    // Clean email
-    const cleanEmail = buyer_email.trim().toLowerCase();
-    
-    // Find user
+
+    // ── تحديد الخطة ────────────────────────
+    const { tier, days } = determineTier(price, variantName, productName);
+    console.log(`🎯 Tier: ${tier} | Days: ${days}`);
+
+    const startDate = new Date().toISOString();
+    const endDate   = new Date();
+    endDate.setDate(endDate.getDate() + days);
+    const endISO = endDate.toISOString();
+
+    // ── البحث عن المستخدم ───────────────────
     const { data: users } = await supabase
       .from('profiles')
-      .select('id, email, full_name')
-      .eq('email', cleanEmail);
-    
+      .select('id, email')
+      .eq('email', buyerEmail);
+
     const user = users && users.length > 0 ? users[0] : null;
-    
+
     if (!user) {
-      console.log('⚠️ User not found, saving to pending');
-      
-      await supabase.from('pending_activations').insert({
-        email: cleanEmail,
-        subscription_tier: tier,
-        subscription_start_date: start,
-        subscription_end_date: endISO,
-        payhip_sale_id: sale_id,
-        payhip_data: payload,
-        created_at: new Date().toISOString()
-      });
-      
-      console.log('✅ Saved to pending');
-      console.log('═══════════════════════════════════════════');
-      
+      // المستخدم لم يسجل بعد — نحفظ في pending
+      console.log('⏳ User not found — saving to pending_activations');
+
+      await supabase.from('pending_activations').upsert({
+        email:                   buyerEmail,
+        subscription_tier:       tier,
+        subscription_start_date: startDate,
+        subscription_end_date:   endISO,
+        payhip_sale_id:          saleId,
+        payhip_data:             payload,
+        activated:               false,
+        created_at:              new Date().toISOString(),
+      }, { onConflict: 'email' });
+
+      console.log('✅ Saved to pending_activations');
       return new Response(JSON.stringify({
         success: true,
-        status: 'pending',
+        status:  'pending',
         tier,
-        email: cleanEmail
-      }), { status: 200 });
+        email:   buyerEmail,
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
-    
-    console.log(`✅ User found: ${user.email}`);
-    
-    // Update subscription
+
+    // ── المستخدم موجود — تحديث مباشر ────────
+    console.log(`✅ User found: ${user.email} — updating subscription`);
+
     const { error: updateError } = await supabase
       .from('profiles')
       .update({
-        subscription_tier: tier,
-        subscription_status: 'active',
-        subscription_start_date: start,
-        subscription_end_date: endISO,
-        payhip_sale_id: sale_id,
-        updated_at: new Date().toISOString()
+        subscription_tier:       tier,
+        subscription_status:     'active',
+        subscription_start_date: startDate,
+        subscription_end_date:   endISO,
+        payhip_sale_id:          saleId,
+        updated_at:              new Date().toISOString(),
       })
       .eq('id', user.id);
-    
+
     if (updateError) {
-      console.error('❌ Update failed:', updateError);
-      return new Response(JSON.stringify({ error: 'Update failed' }), { status: 500 });
+      console.error('❌ Update error:', updateError.message);
+      return new Response(JSON.stringify({ error: 'DB update failed' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
-    
-    console.log('✅✅✅ SUCCESS ✅✅✅');
-    console.log(`   User: ${user.email}`);
-    console.log(`   Tier: ${tier}`);
-    console.log('═══════════════════════════════════════════');
-    
+
+    console.log(`✅ Subscription updated: ${buyerEmail} → ${tier}`);
+
     return new Response(JSON.stringify({
       success: true,
       message: 'Subscription activated',
-      user: { email: user.email },
-      subscription: { tier, start_date: start, end_date: endISO }
-    }), { status: 200 });
-    
-  } catch (error) {
-    console.error('❌ ERROR:', error);
+      email:   buyerEmail,
+      tier,
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+  } catch (err) {
+    console.error('❌ Webhook error:', err);
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Unknown'
-    }), { status: 500 });
+      error: err instanceof Error ? err.message : 'Unknown error',
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 };
 
 export const GET: APIRoute = async () => {
   return new Response(JSON.stringify({
-    message: 'Payhip webhook endpoint',
-    status: 'ready',
-    note: 'Check logs to get variant_id values for VARIANT_MAP'
-  }), { status: 200 });
+    message:  'Payhip webhook endpoint v3',
+    status:   'ready',
+    endpoint: 'POST /api/payhip/webhook',
+  }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
 };
