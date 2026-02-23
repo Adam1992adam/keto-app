@@ -1,14 +1,7 @@
 ---
-import { supabase } from '../lib/supabase';
-
-// Get email from URL
+// signup.astro — يقبل email من URL أو يطلبه من المستخدم
 const emailParam = Astro.url.searchParams.get('email');
-
-if (!emailParam) {
-  return Astro.redirect('/');
-}
-
-const allowedEmail = emailParam.toLowerCase().trim();
+const allowedEmail = emailParam ? emailParam.toLowerCase().trim() : '';
 ---
 
 <!DOCTYPE html>
@@ -19,13 +12,12 @@ const allowedEmail = emailParam.toLowerCase().trim();
   <title>Complete Registration – Keto Journey</title>
   <style>
     :root{--bg:#fff;--text:#111;--accent:#10b981;--border:#e5e7eb;}
-    [data-theme="dark"]{--bg:#1a1a2e;--text:#eaeaea;--border:#2d3748;}
     *{margin:0;padding:0;box-sizing:border-box;}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;}
     .card{background:var(--bg);border-radius:2rem;padding:3rem;max-width:500px;width:100%;box-shadow:0 25px 50px rgba(0,0,0,0.3);}
     .icon{font-size:4rem;text-align:center;margin-bottom:1.5rem;}
     h1{font-size:2rem;font-weight:900;text-align:center;margin-bottom:.5rem;background:linear-gradient(135deg,var(--accent),#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-    p{text-align:center;color:#6b7280;margin-bottom:2rem;}
+    .subtitle{text-align:center;color:#6b7280;margin-bottom:2rem;}
     .plan-badge{text-align:center;padding:1rem;background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(52,211,153,.1));border-radius:1rem;border:2px solid var(--accent);margin-bottom:2rem;display:none;}
     .plan-badge.show{display:block;}
     .plan-badge strong{color:var(--accent);font-size:1.125rem;}
@@ -37,201 +29,225 @@ const allowedEmail = emailParam.toLowerCase().trim();
     button{width:100%;padding:1.25rem;background:linear-gradient(135deg,var(--accent),#34d399);color:white;border:none;border-radius:1rem;font-weight:800;font-size:1.125rem;cursor:pointer;transition:all .3s;}
     button:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 25px rgba(16,185,129,0.3);}
     button:disabled{opacity:.5;cursor:not-allowed;}
-    .error{color:#ef4444;font-size:.875rem;margin-top:.5rem;display:none;}
-    .error.show{display:block;}
+    .error-msg{color:#ef4444;font-size:.875rem;margin-top:.5rem;display:none;}
+    .error-msg.show{display:block;}
     .success{background:#10b981;color:white;padding:1rem;border-radius:1rem;text-align:center;margin-bottom:1.5rem;display:none;}
     .success.show{display:block;}
-    .loading{display:none;text-align:center;padding:2rem;}
+    .loading{text-align:center;padding:1rem;display:none;}
     .loading.show{display:block;}
     .loader{border:4px solid #f3f3f3;border-top:4px solid var(--accent);border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin:0 auto 1rem;}
     @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+    .no-purchase{text-align:center;padding:1rem;display:none;}
+    .no-purchase.show{display:block;}
+    .no-purchase h2{color:#ef4444;margin-bottom:1rem;}
+    .no-purchase p{color:#6b7280;margin-bottom:.5rem;}
+    .btn-outline{display:inline-block;margin-top:1rem;padding:1rem 2rem;background:var(--accent);color:white;text-decoration:none;border-radius:1rem;font-weight:800;}
   </style>
 </head>
 <body>
-
 <div class="card">
   <div class="icon">🎉</div>
-  <h1>Complete Your Registration</h1>
-  <p>Verifying your purchase...</p>
+  <h1>Complete Registration</h1>
+  <p class="subtitle" id="subtitle">Enter your purchase email to get started</p>
 
-  <div class="loading show" id="verifying">
-    <div class="loader"></div>
-    <p>Checking your purchase in Payhip...</p>
+  <!-- ── Step 1: إدخال الإيميل (إذا لم يأتِ من URL) ── -->
+  <div id="emailStep">
+    <div class="form-group">
+      <label>Purchase Email</label>
+      <input type="email" id="emailInput" placeholder="Enter the email you used to purchase"/>
+      <div class="error-msg" id="emailError">Please enter a valid email</div>
+    </div>
+    <button id="verifyBtn" onclick="startVerification()">Verify Purchase 🔍</button>
   </div>
 
+  <!-- ── Loading ── -->
+  <div class="loading" id="loadingDiv">
+    <div class="loader"></div>
+    <p>Checking your purchase...</p>
+  </div>
+
+  <!-- ── No Purchase ── -->
+  <div class="no-purchase" id="noPurchaseDiv">
+    <h2>⚠️ No Purchase Found</h2>
+    <p>We couldn't find a purchase for this email.</p>
+    <p>Please make sure you used the same email when purchasing.</p>
+    <a href="https://payhip.com/b/OEQk9" class="btn-outline">Purchase Now</a>
+    <br/><br/>
+    <button onclick="resetForm()" style="background:#6b7280;">Try Another Email</button>
+  </div>
+
+  <!-- ── Plan Badge ── -->
   <div class="plan-badge" id="planBadge">
     <div style="font-size:.875rem;color:#6b7280;margin-bottom:.25rem;">Your Plan:</div>
     <strong id="planName">Loading...</strong>
   </div>
 
-  <div class="success" id="success">
-    <strong>✓ Account created!</strong><br/>
-    Redirecting to dashboard...
+  <!-- ── Success ── -->
+  <div class="success" id="successDiv">
+    <strong>✓ Account created!</strong><br/>Redirecting to dashboard...
   </div>
 
-  <div class="error" id="noPurchaseError" style="display:none;text-align:center;padding:2rem;">
-    <h2 style="color:#ef4444;margin-bottom:1rem;">⚠️ No Purchase Found</h2>
-    <p style="color:#6b7280;">We couldn't find a purchase for this email address.</p>
-    <p style="color:#6b7280;margin-top:1rem;">Please make sure you used the same email when purchasing.</p>
-    <a href="https://payhip.com/b/OEQk9" style="display:inline-block;margin-top:1rem;padding:1rem 2rem;background:var(--accent);color:white;text-decoration:none;border-radius:1rem;font-weight:800;">Purchase Now</a>
-  </div>
-
-  <form id="signupForm" style="display:none;">
+  <!-- ── Signup Form ── -->
+  <form id="signupForm" style="display:none;" onsubmit="handleSignup(event)">
     <div class="form-group">
       <label>Email Address</label>
-      <input type="email" id="email" value={allowedEmail} readonly/>
+      <input type="email" id="emailDisplay" readonly/>
     </div>
-
     <div class="form-group">
       <label>Full Name</label>
       <input type="text" id="fullName" placeholder="Enter your full name" required/>
-      <div class="error" id="nameError">Please enter your name</div>
+      <div class="error-msg" id="nameError">Please enter your name</div>
     </div>
-
     <div class="form-group">
       <label>Password</label>
       <input type="password" id="password" placeholder="Choose a strong password" required/>
-      <div class="error" id="passwordError">Password must be at least 6 characters</div>
+      <div class="error-msg" id="passwordError">Password must be at least 6 characters</div>
     </div>
-
     <div class="form-group">
       <label>Confirm Password</label>
       <input type="password" id="confirmPassword" placeholder="Confirm your password" required/>
-      <div class="error" id="confirmError">Passwords don't match</div>
+      <div class="error-msg" id="confirmError">Passwords don't match</div>
     </div>
-
-    <button type="submit" id="submitBtn">
-      Create My Account 🚀
-    </button>
-
-    <div class="error" id="formError" style="margin-top:1rem;text-align:center;"></div>
+    <button type="submit" id="submitBtn">Create My Account 🚀</button>
+    <div class="error-msg" id="formError" style="margin-top:1rem;text-align:center;"></div>
   </form>
 </div>
 
 <script is:inline define:vars={{allowedEmail}}>
   let purchaseData = null;
-  
-  // Verify purchase on page load
-  window.addEventListener('DOMContentLoaded', async () => {
+  let verifiedEmail = '';
+
+  // إذا جاء الإيميل من URL — نبدأ التحقق تلقائياً
+  window.addEventListener('DOMContentLoaded', () => {
+    if (allowedEmail) {
+      document.getElementById('emailInput').value = allowedEmail;
+      startVerification();
+    }
+  });
+
+  async function startVerification() {
+    const emailInput = document.getElementById('emailInput');
+    const email = emailInput.value.trim().toLowerCase();
+
+    if (!email || !email.includes('@')) {
+      document.getElementById('emailError').classList.add('show');
+      return;
+    }
+
+    document.getElementById('emailError').classList.remove('show');
+    document.getElementById('emailStep').style.display = 'none';
+    document.getElementById('loadingDiv').classList.add('show');
+    document.getElementById('noPurchaseDiv').classList.remove('show');
+    document.getElementById('planBadge').classList.remove('show');
+    document.getElementById('signupForm').style.display = 'none';
+
     try {
       const response = await fetch('/api/payhip/verify-purchase', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ email: allowedEmail })
+        body: JSON.stringify({ email })
       });
-      
+
       const result = await response.json();
-      
-      document.getElementById('verifying').classList.remove('show');
-      
-      if (!result.success || !result.canSignup) {
-        document.getElementById('noPurchaseError').style.display = 'block';
+      document.getElementById('loadingDiv').classList.remove('show');
+
+      if (result.reason === 'already_registered') {
+        document.getElementById('subtitle').textContent = 'This email is already registered.';
+        document.getElementById('noPurchaseDiv').innerHTML = `
+          <h2 style="color:#f59e0b;">⚠️ Already Registered</h2>
+          <p>This email already has an account.</p>
+          <a href="/login" class="btn-outline">Login Instead</a>
+        `;
+        document.getElementById('noPurchaseDiv').classList.add('show');
         return;
       }
-      
-      // Purchase found!
+
+      if (!result.success || !result.canSignup) {
+        document.getElementById('noPurchaseDiv').classList.add('show');
+        return;
+      }
+
+      // ✅ شراء موجود
       purchaseData = result.purchase;
-      
-      // Show plan info
+      verifiedEmail = email;
+
       const planNames = {
-        'basic_30': 'Basic - 30 Days',
-        'pro_6': 'Pro - 6 Months',
-        'elite_12': 'Elite - 12 Months'
+        'basic_30': '🥑 Basic — 30 Days ($29.99)',
+        'pro_6':    '⚡ Pro — 6 Months ($99.99)',
+        'elite_12': '👑 Elite — 12 Months ($199.99)'
       };
-      
+
       document.getElementById('planName').textContent = planNames[purchaseData.tier] || purchaseData.tier;
       document.getElementById('planBadge').classList.add('show');
-      
-      // Show form
+      document.getElementById('emailDisplay').value = email;
+      document.getElementById('subtitle').textContent = 'Complete your account details below';
       document.getElementById('signupForm').style.display = 'block';
-      
-    } catch (error) {
-      console.error('Verification error:', error);
-      document.getElementById('verifying').classList.remove('show');
-      document.getElementById('noPurchaseError').style.display = 'block';
+
+    } catch (err) {
+      document.getElementById('loadingDiv').classList.remove('show');
+      document.getElementById('noPurchaseDiv').classList.add('show');
     }
-  });
-  
-  // Handle signup
-  document.getElementById('signupForm')?.addEventListener('submit', async (e) => {
+  }
+
+  function resetForm() {
+    document.getElementById('noPurchaseDiv').classList.remove('show');
+    document.getElementById('emailStep').style.display = 'block';
+    document.getElementById('emailInput').value = '';
+  }
+
+  async function handleSignup(e) {
     e.preventDefault();
-    
-    if (!purchaseData) {
-      alert('Purchase verification failed');
-      return;
-    }
-    
+    if (!purchaseData) return;
+
     // Clear errors
-    document.querySelectorAll('.error').forEach(el => el.classList.remove('show'));
-    
-    const fullName = document.getElementById('fullName').value.trim();
-    const password = document.getElementById('password').value;
+    document.querySelectorAll('.error-msg').forEach(el => el.classList.remove('show'));
+
+    const fullName        = document.getElementById('fullName').value.trim();
+    const password        = document.getElementById('password').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
-    
-    // Validation
+
     let hasError = false;
-    
-    if (!fullName) {
-      document.getElementById('nameError').classList.add('show');
-      hasError = true;
-    }
-    
-    if (password.length < 6) {
-      document.getElementById('passwordError').classList.add('show');
-      hasError = true;
-    }
-    
-    if (password !== confirmPassword) {
-      document.getElementById('confirmError').classList.add('show');
-      hasError = true;
-    }
-    
+    if (!fullName) { document.getElementById('nameError').classList.add('show'); hasError = true; }
+    if (password.length < 6) { document.getElementById('passwordError').classList.add('show'); hasError = true; }
+    if (password !== confirmPassword) { document.getElementById('confirmError').classList.add('show'); hasError = true; }
     if (hasError) return;
-    
-    // Disable button
+
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Creating account...';
-    
+
     try {
-      // Call signup API
       const response = await fetch('/api/auth/signup-payhip', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-          email: allowedEmail,
+          email:     verifiedEmail,
           password,
           fullName,
-          tier: purchaseData.tier,
+          tier:      purchaseData.tier,
           startDate: purchaseData.start_date,
-          endDate: purchaseData.end_date,
-          saleId: purchaseData.sale_id
+          endDate:   purchaseData.end_date,
+          saleId:    purchaseData.sale_id
         })
       });
-      
+
       const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Signup failed');
-      }
-      
-      // Show success
-      document.getElementById('success').classList.add('show');
+
+      if (!response.ok) throw new Error(result.error || 'Signup failed');
+
+      document.getElementById('successDiv').classList.add('show');
       document.getElementById('signupForm').style.display = 'none';
-      
-      // Redirect
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 2000);
-      
-    } catch (error) {
-      document.getElementById('formError').textContent = error.message;
+      document.getElementById('planBadge').classList.remove('show');
+
+      setTimeout(() => { window.location.href = '/dashboard'; }, 2000);
+
+    } catch (err) {
+      document.getElementById('formError').textContent = err.message;
       document.getElementById('formError').classList.add('show');
       submitBtn.disabled = false;
       submitBtn.textContent = 'Create My Account 🚀';
     }
-  });
+  }
 </script>
-
 </body>
 </html>
