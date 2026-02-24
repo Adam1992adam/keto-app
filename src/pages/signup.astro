@@ -57,7 +57,7 @@ const allowedEmail = emailParam ? emailParam.toLowerCase().trim() : '';
       <input type="email" id="emailInput" placeholder="Enter the email you used to purchase"/>
       <div class="error-msg" id="emailError">Please enter a valid email</div>
     </div>
-    <button id="verifyBtn" onclick="startVerification()">Verify Purchase 🔍</button>
+    <button id="verifyBtn">Verify Purchase 🔍</button>
   </div>
 
   <!-- ── Loading ── -->
@@ -88,7 +88,7 @@ const allowedEmail = emailParam ? emailParam.toLowerCase().trim() : '';
   </div>
 
   <!-- ── Signup Form ── -->
-  <form id="signupForm" style="display:none;" onsubmit="handleSignup(event)">
+  <form id="signupForm" style="display:none;">
     <div class="form-group">
       <label>Email Address</label>
       <input type="email" id="emailDisplay" readonly/>
@@ -117,8 +117,9 @@ const allowedEmail = emailParam ? emailParam.toLowerCase().trim() : '';
   let purchaseData = null;
   let verifiedEmail = '';
 
-  // إذا جاء الإيميل من URL — نبدأ التحقق تلقائياً
   window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('verifyBtn').addEventListener('click', startVerification);
+    document.getElementById('signupForm').addEventListener('submit', handleSignup);
     if (allowedEmail) {
       document.getElementById('emailInput').value = allowedEmail;
       startVerification();
