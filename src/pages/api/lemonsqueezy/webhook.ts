@@ -106,7 +106,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { tier, days } = determineTier(variantName, price);
     console.log(`🎯 Tier: ${tier} | Days: ${days}`);
 
-    // ── 6. Supabase ──
+    // ── 6. نوع المنتج: جديد أم ترقية؟ ──
+    const productName = (orderData.first_order_item?.product_name || '').toLowerCase();
+    const isUpgrade = productName.includes('upgrade');
+    console.log(`📦 Product: "${productName}" → ${isUpgrade ? 'UPGRADE' : 'NEW USER'}`);
+
+    // ── 7. Supabase ──
     const SUPABASE_URL = env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
     const SUPABASE_KEY = env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
@@ -125,33 +130,49 @@ export const POST: APIRoute = async ({ request, locals }) => {
     endDate.setDate(endDate.getDate() + days);
     const endISO = endDate.toISOString();
 
-    // ── 7. هل المستخدم مسجل مسبقاً؟ ──
-    const { data: users } = await supabase
-      .from('profiles')
-      .select('id, email')
-      .eq('email', buyerEmail);
+    // ══════════════════════════════════════
+    // مسار الترقية — يحدّث profiles مباشرة
+    // ══════════════════════════════════════
+    if (isUpgrade) {
+      const { data: users, error: searchErr } = await supabase
+        .from('profiles')
+        .select('id, email, subscription_tier')
+        .ilike('email', buyerEmail);
 
-    const user = users && users.length > 0 ? users[0] : null;
+      console.log('🔍 Upgrade search:', users?.length ? `Found: ${users[0].email} (${users[0].subscription_tier})` : 'Not found');
 
-    if (user) {
-      // تحديث مباشر
-      await supabase.from('profiles').update({
-        subscription_tier:       tier,
-        subscription_status:     'active',
-        subscription_start_date: startDate,
-        subscription_end_date:   endISO,
-        payhip_sale_id:          saleId,
-        updated_at:              new Date().toISOString(),
-      }).eq('id', user.id);
+      if (searchErr) console.error('Search error:', searchErr.message);
 
-      console.log(`✅ Profile updated: ${buyerEmail} → ${tier}`);
-      return new Response(JSON.stringify({ success: true, status: 'updated', tier, email: buyerEmail }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      if (users && users.length > 0) {
+        const { error: updateErr } = await supabase.from('profiles').update({
+          subscription_tier:       tier,
+          subscription_status:     'active',
+          subscription_start_date: startDate,
+          subscription_end_date:   endISO,
+          payhip_sale_id:          saleId,
+          updated_at:              new Date().toISOString(),
+        }).eq('id', users[0].id);
+
+        if (updateErr) {
+          console.error('❌ Upgrade update error:', updateErr.message);
+          return new Response(JSON.stringify({ error: updateErr.message }), {
+            status: 500, headers: { 'Content-Type': 'application/json' },
+          });
+        }
+
+        console.log(`✅ UPGRADED: ${buyerEmail} → ${tier}`);
+        return new Response(JSON.stringify({ success: true, status: 'upgraded', tier, email: buyerEmail }), {
+          status: 200, headers: { 'Content-Type': 'application/json' },
+        });
+      } else {
+        // المستخدم دفع للترقية لكن ليس لديه حساب — نحفظه كـ pending
+        console.log('⚠️ Upgrade but no profile found — saving to pending');
+      }
     }
 
-    // ── 8. حفظ في pending_activations ──
+    // ══════════════════════════════════════
+    // مسار المستخدم الجديد — pending_activations
+    // ══════════════════════════════════════
     const { error: upsertError } = await supabase.from('pending_activations').upsert({
       email:                   buyerEmail,
       subscription_tier:       tier,
@@ -166,15 +187,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (upsertError) {
       console.error('❌ Upsert error:', upsertError.message);
       return new Response(JSON.stringify({ error: upsertError.message }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
+        status: 500, headers: { 'Content-Type': 'application/json' },
       });
     }
 
     console.log(`✅ Saved to pending_activations: ${buyerEmail} → ${tier}`);
     return new Response(JSON.stringify({ success: true, status: 'pending', tier, email: buyerEmail }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      status: 200, headers: { 'Content-Type': 'application/json' },
     });
 
   } catch (err) {
