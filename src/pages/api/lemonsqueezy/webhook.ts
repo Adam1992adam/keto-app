@@ -1,11 +1,23 @@
 import type { APIRoute } from 'astro';
-import crypto from 'crypto';
+
 
 // ═══════════════════════════════════════
-// LEMON SQUEEZY WEBHOOK
-// Event: order_created
-// Payload docs: https://docs.lemonsqueezy.com/api/webhooks
+// LEMON SQUEEZY WEBHOOK - Cloudflare compatible
 // ═══════════════════════════════════════
+
+async function verifySignature(secret: string, body: string, signature: string): Promise<boolean> {
+  try {
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw', encoder.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false, ['sign']
+    );
+    const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
+    const digest = Array.from(new Uint8Array(sig)).map((b: number) => b.toString(16).padStart(2,'0')).join('');
+    return digest === signature;
+  } catch { return false; }
+}
 
 function determineTier(variantName: string, price: number): { tier: string; days: number } {
   const name = (variantName || '').toLowerCase().trim();
@@ -32,11 +44,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const secret = env.LEMONSQUEEZY_SECRET || import.meta.env.LEMONSQUEEZY_SECRET || '';
 
     if (secret) {
-      const hmac = crypto.createHmac('sha256', secret);
-      hmac.update(rawBody);
-      const digest = hmac.digest('hex');
-
-      if (digest !== signature) {
+      const valid = await verifySignature(secret, rawBody, signature);
+      if (!valid) {
         console.error('❌ Invalid signature');
         return new Response(JSON.stringify({ error: 'Invalid signature' }), {
           status: 401,
