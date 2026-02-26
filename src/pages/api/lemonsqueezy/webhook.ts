@@ -1,0 +1,191 @@
+import type { APIRoute } from 'astro';
+import crypto from 'crypto';
+
+// ═══════════════════════════════════════
+// LEMON SQUEEZY WEBHOOK
+// Event: order_created
+// Payload docs: https://docs.lemonsqueezy.com/api/webhooks
+// ═══════════════════════════════════════
+
+function determineTier(variantName: string, price: number): { tier: string; days: number } {
+  const name = (variantName || '').toLowerCase().trim();
+
+  if (name.includes('elite'))  return { tier: 'elite_12', days: 365 };
+  if (name.includes('pro'))    return { tier: 'pro_6',    days: 180 };
+  if (name.includes('basic') || name.includes('basec')) return { tier: 'basic_30', days: 30 };
+
+  // fallback بالسعر (بالسنتات)
+  if (price >= 15000) return { tier: 'elite_12', days: 365 };
+  if (price >= 5000)  return { tier: 'pro_6',    days: 180 };
+  return { tier: 'basic_30', days: 30 };
+}
+
+export const POST: APIRoute = async ({ request, locals }) => {
+  try {
+    // ── 1. قراءة الـ body كـ text للتحقق من الـ signature ──
+    const rawBody = await request.text();
+    const signature = request.headers.get('x-signature') || '';
+
+    // ── 2. التحقق من الـ signature ──
+    // @ts-ignore
+    const env = locals?.runtime?.env || {};
+    const secret = env.LEMONSQUEEZY_SECRET || import.meta.env.LEMONSQUEEZY_SECRET || '';
+
+    if (secret) {
+      const hmac = crypto.createHmac('sha256', secret);
+      hmac.update(rawBody);
+      const digest = hmac.digest('hex');
+
+      if (digest !== signature) {
+        console.error('❌ Invalid signature');
+        return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // ── 3. Parse payload ──
+    const payload = JSON.parse(rawBody);
+    const eventName = payload.meta?.event_name;
+
+    console.log('🍋 LEMONSQUEEZY WEBHOOK:', eventName);
+    console.log('📦 Payload:', JSON.stringify(payload, null, 2));
+
+    // نتعامل فقط مع order_created
+    if (eventName !== 'order_created') {
+      return new Response(JSON.stringify({ received: true, skipped: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ── 4. استخراج البيانات ──
+    const orderData    = payload.data?.attributes || {};
+    const buyerEmail   = (orderData.user_email || '').trim().toLowerCase();
+    const saleId       = payload.data?.id || '';
+    const price        = orderData.total || 0; // بالسنتات
+    const status       = orderData.status; // 'paid' | 'refunded' etc
+
+    // الـ variant اسمه في first_order_item
+    const firstItem    = orderData.first_order_item || {};
+    const variantName  = firstItem.variant_name || firstItem.product_name || '';
+    const variantId    = String(firstItem.variant_id || '');
+
+    console.log('📧 Email:', buyerEmail);
+    console.log('💰 Total (cents):', price);
+    console.log('🏷️  Variant:', variantName, '| ID:', variantId);
+    console.log('📊 Status:', status);
+
+    if (!buyerEmail) {
+      console.error('❌ No email in payload');
+      return new Response(JSON.stringify({ error: 'No email' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (status !== 'paid') {
+      console.log('⚠️ Order not paid, skipping. Status:', status);
+      return new Response(JSON.stringify({ received: true, skipped: true, reason: 'not_paid' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ── 5. تحديد الخطة ──
+    const { tier, days } = determineTier(variantName, price);
+    console.log(`🎯 Tier: ${tier} | Days: ${days}`);
+
+    // ── 6. Supabase ──
+    const SUPABASE_URL = env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+    const SUPABASE_KEY = env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      return new Response(JSON.stringify({ error: 'Server config error' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const startDate = new Date().toISOString();
+    const endDate   = new Date();
+    endDate.setDate(endDate.getDate() + days);
+    const endISO = endDate.toISOString();
+
+    // ── 7. هل المستخدم مسجل مسبقاً؟ ──
+    const { data: users } = await supabase
+      .from('profiles')
+      .select('id, email')
+      .eq('email', buyerEmail);
+
+    const user = users && users.length > 0 ? users[0] : null;
+
+    if (user) {
+      // تحديث مباشر
+      await supabase.from('profiles').update({
+        subscription_tier:       tier,
+        subscription_status:     'active',
+        subscription_start_date: startDate,
+        subscription_end_date:   endISO,
+        payhip_sale_id:          saleId,
+        updated_at:              new Date().toISOString(),
+      }).eq('id', user.id);
+
+      console.log(`✅ Profile updated: ${buyerEmail} → ${tier}`);
+      return new Response(JSON.stringify({ success: true, status: 'updated', tier, email: buyerEmail }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ── 8. حفظ في pending_activations ──
+    const { error: upsertError } = await supabase.from('pending_activations').upsert({
+      email:                   buyerEmail,
+      subscription_tier:       tier,
+      subscription_start_date: startDate,
+      subscription_end_date:   endISO,
+      payhip_sale_id:          saleId,
+      payhip_data:             payload,
+      activated:               false,
+      created_at:              new Date().toISOString(),
+    }, { onConflict: 'email' });
+
+    if (upsertError) {
+      console.error('❌ Upsert error:', upsertError.message);
+      return new Response(JSON.stringify({ error: upsertError.message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log(`✅ Saved to pending_activations: ${buyerEmail} → ${tier}`);
+    return new Response(JSON.stringify({ success: true, status: 'pending', tier, email: buyerEmail }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+  } catch (err) {
+    console.error('❌ LemonSqueezy webhook error:', err);
+    return new Response(JSON.stringify({
+      error: err instanceof Error ? err.message : 'Unknown error',
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+};
+
+export const GET: APIRoute = async () => {
+  return new Response(JSON.stringify({
+    message: 'LemonSqueezy webhook endpoint',
+    status:  'ready',
+    event:   'order_created',
+  }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+};
