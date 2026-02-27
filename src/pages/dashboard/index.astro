@@ -10,24 +10,15 @@ if (authError || !user) return Astro.redirect('/login');
 const profile = await getProfile(user.id);
 if (!profile) return Astro.redirect('/login');
 
-// ═══════════════════════════════════════════════════
-// أضف هذا الكود في index.astro بعد سطر getProfile
-// ═══════════════════════════════════════════════════
-
-// التحقق من انتهاء الاشتراك
-const isExpired = 
+// ── التحقق من انتهاء الاشتراك ──
+const isExpired =
   profile?.subscription_status === 'expired' ||
   (profile?.subscription_end_date && new Date(profile.subscription_end_date) < new Date());
 
 if (isExpired && profile?.subscription_status !== 'active') {
-  // حدّث الـ status في DB إذا لم يحدّثه الـ cron بعد
-  await supabase.from('profiles')
-    .update({ subscription_status: 'expired' })
-    .eq('id', user.id);
-  
+  await supabase.from('profiles').update({ subscription_status: 'expired' }).eq('id', user.id);
   return Astro.redirect('/dashboard/expired');
 }
-// ═══════════════════════════════════════════════════
 
 const hasAccess = isSubscriptionActive(profile);
 if (!hasAccess) return Astro.redirect('/dashboard/upgrade');
@@ -45,7 +36,7 @@ if (!journey) return Astro.redirect('/login?error=journey_reload_failed');
 const dayParam = Astro.url.searchParams.get('day');
 const viewDay = dayParam ? Math.min(Math.max(parseInt(dayParam), 1), 30) : journey.current_day;
 const currentDay = journey.current_day;
-const planType = 'basic_30';
+const planType = profile.subscription_tier === 'pro_6' ? 'pro_6' : profile.subscription_tier === 'elite_12' ? 'elite_12' : 'basic_30';
 
 const dailyTasks = await getDailyTasks(user.id, viewDay);
 const waterIntake = await getWaterIntake(user.id, viewDay);
@@ -59,7 +50,7 @@ const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTa
 const { data: mealPlans } = await supabase
   .from('meal_plans')
   .select('*, recipe:recipes(*)')
-  .eq('plan_type', planType)
+  .eq('plan_type', 'basic_30')
   .eq('day_number', viewDay)
   .order('order_index');
 
@@ -74,1277 +65,1393 @@ const { data: completedMealTasks } = await supabase
   .eq('completed', true)
   .in('task_type', ['breakfast', 'lunch', 'dinner', 'snack']);
 
-let actualCalories = 0;
-let actualProtein = 0;
-let actualFat = 0;
-let actualCarbs = 0;
-
+let actualCalories = 0, actualProtein = 0, actualFat = 0, actualCarbs = 0;
 if (completedMealTasks) {
   completedMealTasks.forEach(task => {
     const meal = todayMeals.find(m => m.meal_type === task.task_type);
     if (meal?.recipe) {
       actualCalories += meal.recipe.calories || 0;
-      actualProtein += meal.recipe.protein || 0;
-      actualFat += meal.recipe.fat || 0;
-      actualCarbs += meal.recipe.net_carbs || 0;
+      actualProtein  += meal.recipe.protein   || 0;
+      actualFat      += meal.recipe.fat        || 0;
+      actualCarbs    += meal.recipe.net_carbs  || 0;
     }
   });
 }
 
-const age = profile.age || 30;
-const weight = profile.weight_kg || 70;
-const height = profile.height_cm || 170;
-const gender = profile.gender || 'male';
-
-let bmr = 0;
-if (gender === 'male') {
-  bmr = 10 * weight + 6.25 * height - 5 * age + 5;
-} else {
-  bmr = 10 * weight + 6.25 * height - 5 * age - 161;
-}
-
-const activityMultipliers: Record<string, number> = {
-  sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9
-};
-
-const tdee = Math.round(bmr * (activityMultipliers[profile.activity_level || 'moderate'] || 1.55));
+const age    = profile.age         || 30;
+const weight = profile.weight_kg   || 70;
+const height = profile.height_cm   || 170;
+const gender = profile.gender      || 'male';
+let bmr = gender === 'male'
+  ? 10 * weight + 6.25 * height - 5 * age + 5
+  : 10 * weight + 6.25 * height - 5 * age - 161;
+const actMult: Record<string,number> = { sedentary:1.2, light:1.375, moderate:1.55, active:1.725, very_active:1.9 };
+const tdee = Math.round(bmr * (actMult[profile.activity_level||'moderate']||1.55));
 const targetCalories = profile.goal === 'lose_weight' ? tdee - 500 : tdee;
-const targetFat = Math.round((targetCalories * 0.70) / 9);
-const targetProtein = Math.round((targetCalories * 0.25) / 4);
-const targetCarbs = Math.round((targetCalories * 0.05) / 4);
-
+const targetFat      = Math.round((targetCalories * 0.70) / 9);
+const targetProtein  = Math.round((targetCalories * 0.25) / 4);
+const targetCarbs    = Math.round((targetCalories * 0.05) / 4);
 const caloriesPercent = targetCalories > 0 ? Math.round((actualCalories / targetCalories) * 100) : 0;
-const proteinPercent = targetProtein > 0 ? Math.round((actualProtein / targetProtein) * 100) : 0;
-const fatPercent = targetFat > 0 ? Math.round((actualFat / targetFat) * 100) : 0;
-const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 100) : 0;
+const proteinPercent  = targetProtein  > 0 ? Math.round((actualProtein  / targetProtein)  * 100) : 0;
+const fatPercent      = targetFat      > 0 ? Math.round((actualFat      / targetFat)      * 100) : 0;
+const carbsPercent    = targetCarbs    > 0 ? Math.round((actualCarbs    / targetCarbs)    * 100) : 0;
 
-// ============================================
-// KETO FLU TIPS DATA
-// ============================================
+// ── Weight history ──
+const { data: weightHistory } = await supabase
+  .from('weight_logs')
+  .select('weight_kg, logged_at')
+  .eq('user_id', user.id)
+  .order('logged_at', { ascending: true })
+  .limit(14);
+
+const isElite = profile.subscription_tier === 'elite_12';
+
+// ── Keto Flu tips ──
 const ketoFluTips: Record<number, any> = {
-  1: {
-    icon: '🚀', day: 'Day 1', title: "Your Body is Starting to Change!",
-    whatsHappening: "Your body is burning through its last glucose stores. You'll lose water weight fast — this is REAL progress starting now!",
-    tip: "Hydration is critical today. Your kidneys are flushing electrolytes rapidly with the water.",
-    suggestion: "🧂 Add a pinch of sea salt to your water + drink 3-4L today",
-    action: "Drink a full glass of water right now! 💧",
-    gradient: "linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)",
-    severity: "info", progress: 10
-  },
-  2: {
-    icon: '⚡', day: 'Day 2', title: "Headaches? Your Body is Adapting!",
-    whatsHappening: "Your brain is running low on glucose and signaling distress. Headaches and mild fatigue are completely normal — your body is switching fuel sources!",
-    tip: "Electrolytes are your best weapon. Salt, potassium, magnesium — don't skip these today.",
-    suggestion: "🧂 Salt every meal + sip on coconut water or broth",
-    action: "Add salt to your next meal right now! 🧂",
-    gradient: "linear-gradient(135deg, #f59e0b 0%, #f97316 100%)",
-    severity: "warning", progress: 20
-  },
-  3: {
-    icon: '😤', day: 'Day 3', title: "The Hardest Day — But You WILL Win!",
-    whatsHappening: "Peak keto flu! Maximum fatigue, brain fog, and sugar cravings hit today. Your body is DEMANDING glucose. This is the final battle — most people quit here. NOT you!",
-    tip: "Eat MORE fat immediately. Avocado, olive oil, butter — don't restrict. Fat is your new fuel source.",
-    suggestion: "🥑 Avocado + olive oil + macadamia nuts = instant energy",
-    action: "Eat a spoon of peanut butter or avocado RIGHT NOW! 🥑",
-    gradient: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
-    severity: "danger", progress: 30
-  },
-  4: {
-    icon: '💪', day: 'Day 4', title: "Muscle Cramps? Fix It in Minutes!",
-    whatsHappening: "Your muscles are losing magnesium and potassium faster than normal. This causes cramps and weakness — but it's 100% fixable with the right minerals!",
-    tip: "Focus on the 3 electrolytes: Sodium (salt), Potassium (leafy greens), Magnesium (nuts/supplements).",
-    suggestion: "💊 Magnesium glycinate 300mg tonight + eat spinach today",
-    action: "Eat a handful of almonds or add spinach to your meal! 🥬",
-    gradient: "linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)",
-    severity: "warning", progress: 40
-  },
-  5: {
-    icon: '🧠', day: 'Day 5', title: "Brain Fog is Temporary — Clarity is Coming!",
-    whatsHappening: "Your brain is SWITCHING fuel sources from glucose to ketones. This fog means the transition is actively happening. It will lift soon and be replaced by incredible mental clarity!",
-    tip: "Your brain needs fat to make this switch. Don't skimp on healthy fats today.",
-    suggestion: "🐟 Fatty fish or Omega-3 supplement — brain fuel during transition",
-    action: "Take a 10-minute walk to boost mental energy! 🚶",
-    gradient: "linear-gradient(135deg, #06b6d4 0%, #0284c7 100%)",
-    severity: "warning", progress: 50
-  },
-  6: {
-    icon: '😴', day: 'Day 6', title: "Can't Sleep? Here's the Fix!",
-    whatsHappening: "Low magnesium directly disrupts deep sleep during keto adaptation. Your cortisol is also adjusting to the new fuel system. This is temporary and fixable tonight!",
-    tip: "Magnesium before bed is a game changer for sleep quality during keto. It relaxes muscles and calms the nervous system.",
-    suggestion: "🌙 Magnesium glycinate 400mg + chamomile tea 1 hour before bed",
-    action: "Prepare your magnesium supplement for tonight! 💊",
-    gradient: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
-    severity: "info", progress: 60
-  },
-  7: {
-    icon: '🎉', day: 'Day 7', title: "ONE FULL WEEK — You're Crushing It!",
-    whatsHappening: "Your body is beginning to produce ketones! Most people feel a noticeable energy shift today. The worst phase is now BEHIND you. You've done what most people can't!",
-    tip: "You've crossed the hardest threshold. Your metabolism is permanently shifting into fat-burning mode.",
-    suggestion: "⚖️ Weigh yourself today — you'll be amazed at the progress!",
-    action: "Log your weight and celebrate this milestone! 🏆",
-    gradient: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-    severity: "success", progress: 70
-  },
-  8: {
-    icon: '🔥', day: 'Day 8', title: "Sugar Cravings? Your Secret Weapon is FAT!",
-    whatsHappening: "Your body is making one final attempt to get glucose before fully committing to ketones. These cravings are actually a sign you're very close to full ketosis!",
-    tip: "When cravings hit — eat fat immediately. It stops sugar cravings within minutes by giving your body its new fuel.",
-    suggestion: "🧀 Cheese + dark chocolate 90% + peanut butter = craving killer",
-    action: "Prepare a keto emergency snack for craving attacks! 🎯",
-    gradient: "linear-gradient(135deg, #f59e0b 0%, #10b981 100%)",
-    severity: "info", progress: 80
-  },
-  9: {
-    icon: '✨', day: 'Day 9', title: "Feel That Clean Energy? That's Ketosis!",
-    whatsHappening: "You're in ketosis or extremely close! Your energy is becoming clean and steady with no crashes or spikes. This is what keto feels like when it's working — pure fat-burning energy!",
-    tip: "Your body is now a fat-burning machine. Every single day from here gets easier and more powerful.",
-    suggestion: "🏃 Try light exercise today — you'll feel surprisingly amazing!",
-    action: "Notice how different and cleaner your energy feels today! ✨",
-    gradient: "linear-gradient(135deg, #10b981 0%, #3b82f6 100%)",
-    severity: "success", progress: 90
-  },
-  10: {
-    icon: '👑', day: 'Day 10', title: "You BEAT Keto Flu — You're a Champion!",
-    whatsHappening: "You've completed the HARDEST phase of your entire 30-day journey! 80% of people quit during these 10 days. You pushed through every headache, craving, and moment of doubt. You're unstoppable!",
-    tip: "From here, fat adaptation deepens every week. Your energy, mental clarity, and fat loss will only accelerate from this point forward.",
-    suggestion: "📸 Take a progress photo right now — you've truly earned it!",
-    action: "Share your victory — you beat what most people can't! 👑",
-    gradient: "linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)",
-    severity: "success", progress: 100
-  }
+  1: { icon:'🚀', day:'Day 1', title:"Your Body is Starting to Change!", whatsHappening:"Your body is burning through its last glucose stores. You'll lose water weight fast — this is REAL progress starting now!", tip:"Hydration is critical today. Your kidneys are flushing electrolytes rapidly with the water.", suggestion:"🧂 Add a pinch of sea salt to your water + drink 3-4L today", action:"Drink a full glass of water right now! 💧", gradient:"linear-gradient(135deg,#3b82f6,#06b6d4)", severity:"info", progress:10 },
+  2: { icon:'⚡', day:'Day 2', title:"Headaches? Your Body is Adapting!", whatsHappening:"Your brain is running low on glucose and signaling distress. Headaches and mild fatigue are completely normal!", tip:"Electrolytes are your best weapon. Salt, potassium, magnesium.", suggestion:"🧂 Salt every meal + sip on coconut water or broth", action:"Add salt to your next meal right now! 🧂", gradient:"linear-gradient(135deg,#f59e0b,#f97316)", severity:"warning", progress:20 },
+  3: { icon:'😤', day:'Day 3', title:"The Hardest Day — But You WILL Win!", whatsHappening:"Peak keto flu! Maximum fatigue, brain fog, and sugar cravings hit today. Most people quit here. NOT you!", tip:"Eat MORE fat immediately. Avocado, olive oil, butter — don't restrict.", suggestion:"🥑 Avocado + olive oil + macadamia nuts = instant energy", action:"Eat a spoon of peanut butter or avocado RIGHT NOW! 🥑", gradient:"linear-gradient(135deg,#ef4444,#dc2626)", severity:"danger", progress:30 },
+  4: { icon:'💪', day:'Day 4', title:"Muscle Cramps? Fix It in Minutes!", whatsHappening:"Your muscles are losing magnesium and potassium faster than normal. 100% fixable!", tip:"Focus on: Sodium (salt), Potassium (leafy greens), Magnesium (nuts).", suggestion:"💊 Magnesium glycinate 300mg tonight + eat spinach today", action:"Eat a handful of almonds or add spinach to your meal! 🥬", gradient:"linear-gradient(135deg,#8b5cf6,#6d28d9)", severity:"warning", progress:40 },
+  5: { icon:'🧠', day:'Day 5', title:"Brain Fog is Temporary — Clarity is Coming!", whatsHappening:"Your brain is SWITCHING fuel sources from glucose to ketones. This fog means the transition is happening!", tip:"Your brain needs fat to make this switch. Don't skimp today.", suggestion:"🐟 Fatty fish or Omega-3 supplement — brain fuel during transition", action:"Take a 10-minute walk to boost mental energy! 🚶", gradient:"linear-gradient(135deg,#06b6d4,#0284c7)", severity:"warning", progress:50 },
+  6: { icon:'😴', day:'Day 6', title:"Can't Sleep? Here's the Fix!", whatsHappening:"Low magnesium directly disrupts deep sleep during keto adaptation. Fixable tonight!", tip:"Magnesium before bed is a game changer for sleep quality during keto.", suggestion:"🌙 Magnesium glycinate 400mg + chamomile tea 1 hour before bed", action:"Prepare your magnesium supplement for tonight! 💊", gradient:"linear-gradient(135deg,#6366f1,#8b5cf6)", severity:"info", progress:60 },
+  7: { icon:'🎉', day:'Day 7', title:"ONE FULL WEEK — You're Crushing It!", whatsHappening:"Your body is beginning to produce ketones! Most people feel a noticeable energy shift today.", tip:"You've crossed the hardest threshold. Your metabolism is shifting into fat-burning mode.", suggestion:"⚖️ Weigh yourself today — you'll be amazed at the progress!", action:"Log your weight and celebrate this milestone! 🏆", gradient:"linear-gradient(135deg,#10b981,#059669)", severity:"success", progress:70 },
+  8: { icon:'🔥', day:'Day 8', title:"Sugar Cravings? Your Secret Weapon is FAT!", whatsHappening:"Your body is making one final attempt to get glucose. These cravings mean you're close to full ketosis!", tip:"When cravings hit — eat fat immediately.", suggestion:"🧀 Cheese + dark chocolate 90% + peanut butter = craving killer", action:"Prepare a keto emergency snack for craving attacks! 🎯", gradient:"linear-gradient(135deg,#f59e0b,#10b981)", severity:"info", progress:80 },
+  9: { icon:'✨', day:'Day 9', title:"Feel That Clean Energy? That's Ketosis!", whatsHappening:"You're in ketosis or extremely close! Clean, steady energy with no crashes.", tip:"Your body is now a fat-burning machine. Every day gets easier.", suggestion:"🏃 Try light exercise today — you'll feel surprisingly amazing!", action:"Notice how different and cleaner your energy feels today! ✨", gradient:"linear-gradient(135deg,#10b981,#3b82f6)", severity:"success", progress:90 },
+  10:{ icon:'👑', day:'Day 10', title:"You BEAT Keto Flu — You're a Champion!", whatsHappening:"You've completed the HARDEST phase! 80% of people quit during these 10 days. You're unstoppable!", tip:"From here, fat adaptation deepens every week.", suggestion:"📸 Take a progress photo right now — you've truly earned it!", action:"Share your victory — you beat what most people can't! 👑", gradient:"linear-gradient(135deg,#f59e0b,#ef4444)", severity:"success", progress:100 },
 };
-
 const currentTip = ketoFluTips[viewDay];
 const showKetoFluTip = viewDay >= 1 && viewDay <= 10 && currentTip;
+
+const userName = profile.full_name?.split(' ')[0] || 'Friend';
+const weightHistoryJson = JSON.stringify(weightHistory || []);
+const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening';
 ---
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - Keto Journey</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — Keto Journey</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  
+
+  <!-- ── THEME INIT — avant tout rendu pour éviter le flash ── -->
+  <script is:inline>
+    (function(){
+      const t = localStorage.getItem('keto-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+
   <style>
+    /* ══════════════════════════════════════
+       DESIGN TOKENS
+    ══════════════════════════════════════ */
     :root {
-      --bg-primary: #ffffff;
-      --bg-secondary: #f9fafb;
-      --bg-card: #ffffff;
-      --text-primary: #111827;
-      --text-secondary: #6b7280;
-      --border-color: #e5e7eb;
-      --accent-primary: #10b981;
-      --accent-secondary: #34d399;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
-      --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
-      --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
-      --shadow-xl: 0 20px 25px rgba(0,0,0,0.15);
+      --bg:       #0c1117;
+      --surface:  #131b24;
+      --card:     #1a2535;
+      --card2:    #1e2d42;
+      --border:   rgba(255,255,255,.07);
+      --border2:  rgba(255,255,255,.12);
+      --text:     #e8edf5;
+      --muted:    #4a5a6e;
+      --soft:     #8a9ab0;
+      --green:    #10b981;
+      --green2:   #34d399;
+      --blue:     #3b82f6;
+      --purple:   #8b5cf6;
+      --gold:     #f59e0b;
+      --red:      #ef4444;
+      --cyan:     #06b6d4;
+      --radius:   20px;
+      --nav-h:    64px;
+    }
+    [data-theme="light"] {
+      --bg:      #f0f4f8;
+      --surface: #ffffff;
+      --card:    #ffffff;
+      --card2:   #f8fafc;
+      --border:  rgba(0,0,0,.07);
+      --border2: rgba(0,0,0,.12);
+      --text:    #0f172a;
+      --muted:   #94a3b8;
+      --soft:    #64748b;
     }
 
-    [data-theme="dark"] {
-      --bg-primary: #1a1a2e;
-      --bg-secondary: #16213e;
-      --bg-card: #0f3460;
-      --text-primary: #eaeaea;
-      --text-secondary: #a0aec0;
-      --border-color: #2d3748;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
-      --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
-      --shadow-lg: 0 10px 15px rgba(0,0,0,0.5);
-      --shadow-xl: 0 20px 25px rgba(0,0,0,0.6);
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
+    *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg-secondary);
-      color: var(--text-primary);
-      transition: all 0.3s ease;
+      font-family:'DM Sans',sans-serif;
+      background:var(--bg); color:var(--text);
+      min-height:100vh; overflow-x:hidden;
+      transition: background .3s, color .3s;
     }
 
-    .container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }
+    /* ── BACKGROUND ── */
+    .bg-mesh {
+      position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden;
+    }
+    .orb {
+      position:absolute; border-radius:50%; filter:blur(100px);
+      animation:orbDrift ease-in-out infinite; opacity:.6;
+    }
+    [data-theme="light"] .orb { opacity:.25; }
+    .o1{width:700px;height:700px;background:rgba(16,185,129,.06);top:-200px;left:-200px;animation-duration:22s;}
+    .o2{width:500px;height:500px;background:rgba(59,130,246,.05);bottom:-100px;right:-100px;animation-duration:28s;animation-delay:-12s;}
+    .o3{width:400px;height:400px;background:rgba(139,92,246,.04);top:40%;left:45%;animation-duration:19s;animation-delay:-7s;}
+    @keyframes orbDrift {
+      0%,100%{transform:translate(0,0) scale(1);}
+      33%{transform:translate(50px,-60px) scale(1.08);}
+      66%{transform:translate(-40px,50px) scale(.94);}
+    }
 
+    /* ── NAV ── */
     nav {
-      background: var(--bg-primary);
-      border-bottom: 1px solid var(--border-color);
-      padding: 1rem 0;
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      box-shadow: var(--shadow-md);
-      backdrop-filter: blur(10px);
+      position:sticky; top:0; z-index:100; height:var(--nav-h);
+      background:rgba(12,17,23,.85); border-bottom:1px solid var(--border);
+      backdrop-filter:blur(20px);
+      display:flex; align-items:center;
+      transition: background .3s;
+    }
+    [data-theme="light"] nav {
+      background:rgba(255,255,255,.88);
+    }
+    .nav-inner {
+      max-width:1280px; margin:0 auto; padding:0 1.5rem;
+      width:100%; display:flex; align-items:center; gap:1.5rem;
+    }
+    .nav-brand {
+      display:flex; align-items:center; gap:.6rem; text-decoration:none;
+      font-family:'Fraunces',serif; font-weight:700; font-size:1.1rem; color:var(--text);
+      flex-shrink:0;
+    }
+    .nav-links {
+      display:flex; align-items:center; gap:.25rem;
+      flex:1; overflow-x:auto;
+    }
+    .nav-links::-webkit-scrollbar { display:none; }
+    .nav-link {
+      display:flex; align-items:center; gap:.4rem;
+      padding:.45rem .9rem; border-radius:10px;
+      font-size:.82rem; font-weight:600; color:var(--soft);
+      text-decoration:none; white-space:nowrap;
+      transition:all .2s;
+    }
+    .nav-link:hover,.nav-link.active {
+      background:rgba(16,185,129,.1); color:var(--green);
+    }
+    .nav-link.active { font-weight:700; }
+    .nav-right { display:flex; align-items:center; gap:.75rem; flex-shrink:0; }
+
+    /* Theme toggle */
+    .theme-btn {
+      width:38px; height:38px; border-radius:10px;
+      background:var(--card); border:1px solid var(--border);
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; font-size:1rem; transition:all .2s;
+    }
+    .theme-btn:hover { border-color:var(--green); }
+
+    /* Notif bell */
+    .notif-wrap { position:relative; }
+    .notif-btn {
+      width:38px; height:38px; border-radius:10px;
+      background:var(--card); border:1px solid var(--border);
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; font-size:1rem; transition:all .2s; position:relative;
+    }
+    .notif-btn:hover { border-color:var(--green); }
+    .notif-badge {
+      position:absolute; top:-5px; right:-5px;
+      background:var(--red); color:#fff;
+      width:18px; height:18px; border-radius:50%;
+      font-size:.65rem; font-weight:800;
+      display:flex; align-items:center; justify-content:center;
+      animation:pulseBadge 2s infinite;
+    }
+    @keyframes pulseBadge { 0%,100%{transform:scale(1);} 50%{transform:scale(1.2);} }
+    .notif-dropdown {
+      position:absolute; top:calc(100% + .5rem); right:0;
+      width:340px; background:var(--card); border:1px solid var(--border);
+      border-radius:var(--radius); overflow:hidden;
+      box-shadow:0 20px 60px rgba(0,0,0,.4);
+      display:none; z-index:200;
+      animation:dropIn .25s ease;
+    }
+    .notif-dropdown.open { display:block; }
+    @keyframes dropIn { from{opacity:0;transform:translateY(-8px);} to{opacity:1;transform:translateY(0);} }
+    .notif-item {
+      display:flex; align-items:center; gap:.875rem;
+      padding:.875rem 1.25rem; border-bottom:1px solid var(--border);
+      cursor:pointer; transition:background .2s;
+    }
+    .notif-item:hover { background:rgba(16,185,129,.06); }
+    .notif-icon {
+      width:38px; height:38px; border-radius:10px; flex-shrink:0;
+      background:linear-gradient(135deg,var(--green),var(--green2));
+      display:flex; align-items:center; justify-content:center; font-size:1.1rem;
     }
 
-    nav a {
-      color: var(--text-secondary);
-      text-decoration: none;
-      padding: 0.5rem 1rem;
-      border-radius: 0.75rem;
-      font-weight: 500;
-      transition: all 0.3s ease;
+    /* Avatar */
+    .nav-avatar {
+      width:38px; height:38px; border-radius:10px;
+      background:linear-gradient(135deg,var(--green),var(--blue));
+      display:flex; align-items:center; justify-content:center;
+      color:#fff; font-weight:800; font-size:.95rem;
+      text-decoration:none; flex-shrink:0; transition:all .2s;
+    }
+    .nav-avatar:hover { transform:scale(1.05); }
+
+    /* ── PAGE ── */
+    .page {
+      position:relative; z-index:1;
+      max-width:1280px; margin:0 auto;
+      padding:2rem 1.5rem 5rem;
     }
 
-    nav a:hover, nav a.active {
-      color: var(--accent-primary);
-      background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(52,211,153,0.1));
-      transform: translateY(-2px);
+    /* ── HEADER ── */
+    .dash-header {
+      display:flex; align-items:flex-start; justify-content:space-between;
+      gap:1.5rem; margin-bottom:2rem; flex-wrap:wrap;
     }
-
-    .theme-toggle {
-      position: relative; width: 60px; height: 30px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 9999px; cursor: pointer;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), var(--shadow-md);
-      transition: all 0.3s ease;
+    .dash-greeting {
+      font-size:.78rem; font-weight:600; color:var(--muted);
+      text-transform:uppercase; letter-spacing:.1em; margin-bottom:.5rem;
     }
-
-    .theme-toggle-slider {
-      position: absolute; top: 3px; left: 3px;
-      width: 24px; height: 24px; background: white;
-      border-radius: 50%; transition: all 0.3s ease;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-      display: flex; align-items: center; justify-content: center; font-size: 0.75rem;
+    .dash-title {
+      font-family:'Fraunces',serif;
+      font-size:clamp(1.8rem,4vw,2.8rem);
+      font-weight:900; line-height:1.15; margin-bottom:.5rem;
     }
-
-    [data-theme="dark"] .theme-toggle { background: linear-gradient(135deg, #2d3561 0%, #1a1f3a 100%); }
-    [data-theme="dark"] .theme-toggle-slider { transform: translateX(30px); background: #1a1a2e; color: #fbbf24; }
-
-    .notification-bell {
-      position: relative;
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      border: none; width: 2.5rem; height: 2.5rem; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; transition: all 0.3s ease; box-shadow: var(--shadow-md);
+    .dash-title .hl {
+      font-style:italic;
+      background:linear-gradient(135deg,var(--green),var(--green2));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
     }
-
-    .notification-bell:hover { transform: translateY(-4px) scale(1.05); box-shadow: var(--shadow-xl); }
-
-    .notification-badge {
-      position: absolute; top: -4px; right: -4px;
-      background: linear-gradient(135deg, #ef4444, #dc2626);
-      color: white; width: 20px; height: 20px; border-radius: 50%;
-      font-size: 0.75rem; font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      animation: pulse 2s infinite;
+    .dash-sub { font-size:.9rem; color:var(--soft); }
+    .dash-nav-btns { display:flex; gap:.5rem; }
+    .btn-nav {
+      padding:.5rem 1rem; border-radius:10px; font-size:.8rem; font-weight:700;
+      background:var(--card); border:1px solid var(--border);
+      color:var(--soft); text-decoration:none; cursor:pointer;
+      transition:all .2s; display:inline-flex; align-items:center; gap:.3rem;
     }
+    .btn-nav:hover:not([disabled]) { border-color:var(--green); color:var(--green); }
+    .btn-nav[disabled],.btn-nav[style*="opacity"] { opacity:.4; pointer-events:none; }
 
-    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
-
-    .notification-dropdown {
-      position: absolute; top: calc(100% + 0.5rem); right: 0;
-      width: 380px; max-height: 500px;
-      background: var(--bg-card); border-radius: 1.5rem;
-      box-shadow: var(--shadow-xl); border: 1px solid var(--border-color);
-      display: none; overflow: hidden;
+    /* Progress bar */
+    .progress-wrap { margin-top:1.25rem; }
+    .progress-info { display:flex; justify-content:space-between; align-items:center; margin-bottom:.5rem; }
+    .progress-label { font-size:.78rem; font-weight:700; color:var(--soft); }
+    .progress-val { font-size:.78rem; font-weight:800; color:var(--green); }
+    .progress-bar {
+      width:100%; height:8px; background:var(--surface);
+      border-radius:99px; overflow:hidden;
     }
-
-    .notification-dropdown.active { display: block; animation: slideDown 0.4s cubic-bezier(0.68,-0.55,0.265,1.55); }
-
-    .notification-item {
-      padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color);
-      display: flex; gap: 1rem; align-items: center;
-      transition: all 0.3s ease; cursor: pointer;
-    }
-
-    .notification-item:hover {
-      background: linear-gradient(90deg, rgba(16,185,129,0.05), transparent);
-      transform: translateX(4px);
-    }
-
-    .notification-icon {
-      width: 3rem; height: 3rem;
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      border-radius: 1rem; display: flex; align-items: center;
-      justify-content: center; font-size: 1.5rem; flex-shrink: 0; box-shadow: var(--shadow-md);
-    }
-
-    .header { padding: 2rem 0; }
-
-    .header h1 {
-      font-size: 3rem; font-weight: 800; margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary), #3b82f6);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    }
-
-    .progress {
-      width: 100%; height: 1rem; background: var(--border-color);
-      border-radius: 9999px; overflow: hidden; margin-top: 1rem;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); position: relative;
-    }
-
     .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary), #3b82f6);
-      border-radius: 9999px; transition: width 0.6s cubic-bezier(0.68,-0.55,0.265,1.55);
-      position: relative; overflow: hidden;
+      height:100%; border-radius:99px;
+      background:linear-gradient(90deg,var(--green),var(--green2),var(--blue));
+      transition:width .8s cubic-bezier(.4,0,.2,1);
+      position:relative; overflow:hidden;
     }
-
     .progress-fill::after {
-      content: ''; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-      animation: shimmer 2s infinite;
+      content:''; position:absolute; inset:0;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);
+      animation:shimmer 2s infinite;
     }
+    @keyframes shimmer { 0%{transform:translateX(-100%);} 100%{transform:translateX(100%);} }
 
-    @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-
-    .grid { display: grid; gap: 1.5rem; margin-bottom: 2rem; }
-    .grid-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-
+    /* ── STAT CARDS ── */
+    .stats-grid {
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+      gap:1rem; margin-bottom:1.5rem;
+    }
     .stat-card {
-      background: var(--bg-card); border-radius: 1.5rem; padding: 2rem;
-      border: 1px solid var(--border-color); box-shadow: var(--shadow-lg);
-      transition: all 0.4s cubic-bezier(0.68,-0.55,0.265,1.55);
-      position: relative; overflow: hidden;
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--radius); padding:1.5rem;
+      position:relative; overflow:hidden;
+      transition:all .3s cubic-bezier(.4,0,.2,1);
+      animation:fadeUp .5s ease both;
     }
-
-    .stat-card::before {
-      content: ''; position: absolute; top: -50%; right: -50%;
-      width: 200%; height: 200%;
-      background: radial-gradient(circle, rgba(16,185,129,0.05) 0%, transparent 70%);
-      animation: rotate 15s linear infinite;
+    .stat-card:nth-child(1){animation-delay:.05s;}
+    .stat-card:nth-child(2){animation-delay:.1s;}
+    .stat-card:nth-child(3){animation-delay:.15s;}
+    .stat-card:nth-child(4){animation-delay:.2s;}
+    .stat-card:hover { transform:translateY(-4px); border-color:var(--border2); }
+    .stat-card .glow {
+      position:absolute; top:-30px; right:-30px;
+      width:120px; height:120px; border-radius:50%;
+      filter:blur(40px); opacity:.2; transition:opacity .3s;
     }
-
-    .stat-card:hover { transform: translateY(-10px) rotateX(5deg) scale(1.02); box-shadow: var(--shadow-xl); border-color: var(--accent-primary); }
-
-    @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
+    .stat-card:hover .glow { opacity:.4; }
     .stat-icon {
-      width: 4rem; height: 4rem;
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      border-radius: 1.25rem; display: flex; align-items: center;
-      justify-content: center; font-size: 2rem; margin-bottom: 1.5rem;
-      box-shadow: var(--shadow-md); position: relative; z-index: 1;
+      width:44px; height:44px; border-radius:12px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.3rem; margin-bottom:1rem; position:relative; z-index:1;
     }
-
-    .stat-label { font-size: 0.875rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 0.75rem; position: relative; z-index: 1; }
-
-    .stat-value {
-      font-size: 2.5rem; font-weight: 800;
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      position: relative; z-index: 1;
+    .stat-label {
+      font-size:.72rem; font-weight:700; color:var(--soft);
+      text-transform:uppercase; letter-spacing:.08em;
+      margin-bottom:.4rem; position:relative; z-index:1;
     }
-
-    .card {
-      background: var(--bg-card); border-radius: 1.5rem; padding: 2rem;
-      box-shadow: var(--shadow-lg); border: 1px solid var(--border-color); transition: all 0.3s ease;
+    .stat-val {
+      font-family:'Fraunces',serif;
+      font-size:2.2rem; font-weight:900; line-height:1;
+      position:relative; z-index:1; margin-bottom:.3rem;
     }
+    .stat-sub { font-size:.78rem; color:var(--soft); position:relative; z-index:1; }
 
-    .card:hover { box-shadow: var(--shadow-xl); transform: translateY(-4px); }
-
-    .btn {
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      padding: 0.875rem 1.75rem; border-radius: 1rem; font-weight: 700;
-      cursor: pointer; border: none; text-decoration: none;
-      transition: all 0.3s cubic-bezier(0.68,-0.55,0.265,1.55);
-      position: relative; overflow: hidden;
+    /* ── KETO FLU BANNER ── */
+    .keto-banner {
+      border-radius:var(--radius); padding:2rem;
+      margin-bottom:1.5rem; position:relative; overflow:hidden;
+      animation:fadeUp .5s .25s ease both;
     }
+    .keto-banner::before {
+      content:''; position:absolute; top:-50%; right:-50%;
+      width:200%; height:200%;
+      background:radial-gradient(circle,rgba(255,255,255,.1) 0%,transparent 70%);
+      animation:spin 18s linear infinite; pointer-events:none;
+    }
+    @keyframes spin { to{transform:rotate(360deg);} }
+    .keto-content { position:relative; z-index:1; color:#fff; }
+    .keto-header {
+      display:flex; align-items:flex-start; gap:1.25rem;
+      margin-bottom:1.5rem; flex-wrap:wrap;
+    }
+    .keto-icon-wrap {
+      width:56px; height:56px; flex-shrink:0;
+      background:rgba(255,255,255,.2); backdrop-filter:blur(10px);
+      border-radius:14px; display:flex; align-items:center;
+      justify-content:center; font-size:1.8rem;
+    }
+    .keto-meta { flex:1; }
+    .keto-badges { display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:.4rem; }
+    .keto-badge {
+      background:rgba(255,255,255,.22); padding:.2rem .7rem;
+      border-radius:99px; font-size:.72rem; font-weight:800;
+    }
+    .keto-title { font-family:'Fraunces',serif; font-size:1.4rem; font-weight:900; line-height:1.2; }
+    .keto-cards {
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:.875rem; margin-bottom:1.5rem;
+    }
+    .keto-card {
+      background:rgba(0,0,0,.18); backdrop-filter:blur(10px);
+      border-radius:12px; padding:1.1rem;
+      border:1px solid rgba(255,255,255,.18);
+    }
+    .keto-card-label {
+      display:flex; align-items:center; gap:.4rem;
+      font-size:.68rem; font-weight:800; text-transform:uppercase;
+      letter-spacing:.08em; opacity:.8; margin-bottom:.5rem;
+    }
+    .keto-card-text { font-size:.875rem; line-height:1.6; font-weight:600; }
+    .keto-prog-bar {
+      width:100%; height:10px; background:rgba(0,0,0,.25);
+      border-radius:99px; overflow:hidden; margin:.75rem 0 .35rem;
+    }
+    .keto-prog-fill {
+      height:100%; background:rgba(255,255,255,.8); border-radius:99px;
+      position:relative; overflow:hidden;
+    }
+    .keto-prog-fill::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent); animation:shimmer 2s infinite; }
+    .keto-prog-labels { display:flex; justify-content:space-between; font-size:.65rem; opacity:.7; font-weight:700; }
+    .keto-action-btn {
+      background:#fff; color:#111; padding:.7rem 1.4rem;
+      border-radius:10px; border:none; font-weight:800; font-size:.875rem;
+      cursor:pointer; display:inline-flex; align-items:center; gap:.5rem;
+      transition:all .25s;
+    }
+    .keto-action-btn:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.25); }
+    .keto-close {
+      position:absolute; top:1rem; right:1rem;
+      background:rgba(255,255,255,.2); border:none;
+      width:32px; height:32px; border-radius:50%;
+      color:#fff; font-size:1.2rem; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      transition:all .25s; z-index:20;
+    }
+    .keto-close:hover { background:rgba(255,255,255,.35); transform:rotate(90deg); }
 
-    .btn-primary { background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color: white; box-shadow: var(--shadow-md); }
-    .btn-primary:hover { transform: translateY(-4px) scale(1.05); box-shadow: var(--shadow-xl); }
-    .btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 2px solid var(--border-color); }
-    .btn-secondary:hover { border-color: var(--accent-primary); transform: translateY(-2px); }
-    .btn-sm { padding: 0.5rem 1.25rem; font-size: 0.875rem; }
-
-    .badge { display: inline-flex; padding: 0.375rem 1rem; border-radius: 9999px; font-size: 0.8125rem; font-weight: 700; }
-    .badge-primary { background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(52,211,153,0.15)); color: var(--accent-primary); border: 2px solid var(--accent-primary); }
-    .badge-warning { background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(251,191,36,0.15)); color: #f59e0b; border: 2px solid #f59e0b; }
-
-    .tabs { border-bottom: 2px solid var(--border-color); margin-bottom: 2rem; display: flex; gap: 1rem; overflow-x: auto; }
-
+    /* ── TABS ── */
+    .tabs-wrap {
+      display:flex; gap:.25rem; margin-bottom:1.5rem;
+      background:var(--surface); border-radius:14px; padding:.3rem;
+      overflow-x:auto; border:1px solid var(--border);
+    }
     .tab-btn {
-      display: flex; align-items: center; gap: 0.5rem; padding: 1rem 1.5rem;
-      background: none; border: none; border-bottom: 3px solid transparent;
-      color: var(--text-secondary); font-weight: 700; cursor: pointer;
-      transition: all 0.3s ease; white-space: nowrap; position: relative;
+      display:flex; align-items:center; gap:.45rem;
+      padding:.6rem 1.1rem; border-radius:10px; border:none;
+      font-size:.82rem; font-weight:700; cursor:pointer;
+      color:var(--soft); background:transparent;
+      transition:all .2s; white-space:nowrap; flex-shrink:0;
     }
-
-    .tab-btn::before {
-      content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px;
-      background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
-      transform: scaleX(0); transition: transform 0.3s ease;
+    .tab-btn:hover { color:var(--text); }
+    .tab-btn.active {
+      background:var(--card); color:var(--green);
+      box-shadow:0 2px 8px rgba(0,0,0,.15);
     }
+    .tab-badge {
+      background:var(--gold); color:#000;
+      padding:.1rem .45rem; border-radius:99px;
+      font-size:.65rem; font-weight:800;
+    }
+    .tab-content { display:none; animation:fadeUp .3s ease; }
+    .tab-content.active { display:block; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
 
-    .tab-btn:hover { color: var(--accent-primary); background: linear-gradient(135deg, rgba(16,185,129,0.05), rgba(52,211,153,0.05)); border-radius: 1rem 1rem 0 0; }
-    .tab-btn.active { color: var(--accent-primary); }
-    .tab-btn.active::before { transform: scaleX(1); }
-    .tab-content { display: none; animation: fadeIn 0.5s ease; }
-    .tab-content.active { display: block; }
+    /* ── CARDS ── */
+    .card {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--radius); padding:1.75rem;
+      transition:all .25s;
+    }
+    .card:hover { border-color:var(--border2); }
+    .card-title {
+      font-family:'Fraunces',serif; font-size:1.25rem; font-weight:700;
+      margin-bottom:1.5rem;
+      background:linear-gradient(135deg,var(--green),var(--green2));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    }
+    .grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem; }
 
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
+    /* ── TASKS ── */
     .task-item {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 1.25rem; background: var(--bg-card); border: 2px solid var(--border-color);
-      border-radius: 1.25rem; margin-bottom: 1rem;
-      transition: all 0.4s cubic-bezier(0.68,-0.55,0.265,1.55);
-      box-shadow: var(--shadow-sm); position: relative; overflow: hidden;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:1rem 1.25rem; background:var(--surface);
+      border:1px solid var(--border); border-radius:14px;
+      margin-bottom:.75rem; transition:all .25s; position:relative; overflow:hidden;
     }
-
     .task-item::before {
-      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      transform: scaleY(0); transition: transform 0.3s ease;
+      content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+      background:linear-gradient(135deg,var(--green),var(--green2));
+      transform:scaleY(0); transition:transform .25s;
+    }
+    .task-item:hover { border-color:rgba(16,185,129,.3); transform:translateX(4px); }
+    .task-item:hover::before { transform:scaleY(1); }
+    .task-left { display:flex; align-items:center; gap:.875rem; }
+    .task-circle {
+      width:36px; height:36px; border-radius:10px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center; font-size:1rem;
+      background:rgba(16,185,129,.1); border:1.5px solid rgba(16,185,129,.25);
+    }
+    .task-circle.done {
+      background:linear-gradient(135deg,var(--green),var(--green2)); border-color:transparent; color:#fff;
+    }
+    .task-name { font-weight:600; font-size:.9rem; }
+    .task-name.done { color:var(--soft); text-decoration:line-through; }
+    .task-time { font-size:.75rem; color:var(--muted); margin-top:.15rem; }
+    .xp-badge {
+      padding:.2rem .6rem; border-radius:99px; font-size:.72rem; font-weight:800;
+      background:rgba(16,185,129,.1); color:var(--green);
+      border:1px solid rgba(16,185,129,.2);
     }
 
-    .task-item:hover { box-shadow: var(--shadow-lg); transform: translateX(8px) scale(1.02); border-color: var(--accent-primary); }
-    .task-item:hover::before { transform: scaleY(1); }
-
-    .task-icon {
-      width: 3rem; height: 3rem; border-radius: 1rem;
-      display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
-      background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(52,211,153,0.1));
+    /* ── WATER ── */
+    .water-section {
+      margin-top:1.25rem; padding:1.5rem;
+      background:rgba(6,182,212,.06); border:1px solid rgba(6,182,212,.2);
+      border-radius:14px;
     }
-
-    .task-icon.completed { background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color: white; }
-
-    .water-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.75rem; margin-top: 1.5rem; }
-
+    .water-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
+    .water-title { font-weight:700; font-size:.95rem; }
+    .water-count { font-family:'Fraunces',serif; font-size:1.75rem; font-weight:900; color:var(--cyan); }
+    .water-btns { display:flex; gap:.4rem; }
+    .water-btn {
+      padding:.35rem .75rem; border-radius:8px; font-size:.8rem; font-weight:700;
+      border:1px solid var(--border); background:var(--card); color:var(--text);
+      cursor:pointer; transition:all .2s;
+    }
+    .water-btn:hover { border-color:var(--cyan); color:var(--cyan); }
+    .water-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:.5rem; }
     .water-glass {
-      aspect-ratio: 1; border-radius: 1rem; display: flex; align-items: center;
-      justify-content: center; font-size: 1.75rem; background: var(--bg-card);
-      border: 3px solid var(--border-color);
-      transition: all 0.4s cubic-bezier(0.68,-0.55,0.265,1.55); cursor: pointer;
+      aspect-ratio:1; border-radius:10px; border:1.5px solid var(--border);
+      background:var(--surface); display:flex; align-items:center; justify-content:center;
+      font-size:1.2rem; cursor:pointer; transition:all .3s;
     }
-
-    .water-glass:hover { transform: scale(1.1) rotate(5deg); }
-    .water-glass.filled { background: linear-gradient(135deg, #06b6d4, #0ea5e9); border-color: #06b6d4; transform: scale(1.15); box-shadow: 0 0 20px rgba(6,182,212,0.5); }
-
-    .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.75rem; }
-
-    .calendar-day {
-      aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-      border-radius: 1.25rem; font-weight: 700; font-size: 1.125rem;
-      text-decoration: none; transition: all 0.4s cubic-bezier(0.68,-0.55,0.265,1.55);
-      background: var(--bg-card); color: var(--text-secondary); border: 2px solid var(--border-color);
+    .water-glass.filled {
+      background:linear-gradient(135deg,var(--cyan),#0ea5e9);
+      border-color:var(--cyan); transform:scale(1.08);
+      box-shadow:0 0 14px rgba(6,182,212,.4);
     }
+    .water-glass:hover { transform:scale(1.12) rotate(5deg); }
 
-    .calendar-day.completed { background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(52,211,153,0.2)); color: var(--accent-primary); border-color: var(--accent-primary); }
-    .calendar-day.current { background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); color: white; transform: scale(1.2); box-shadow: 0 8px 20px rgba(16,185,129,0.4); z-index: 10; }
-    .calendar-day:hover { transform: scale(1.15) translateY(-4px); box-shadow: var(--shadow-lg); }
-
-    .macros-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2rem; margin-bottom: 2rem; }
-
-    .macro-card-3d {
-      border-radius: 2rem; padding: 2.5rem; position: relative; overflow: hidden;
-      transition: all 0.5s cubic-bezier(0.68,-0.55,0.265,1.55);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    /* ── MACROS ── */
+    .macros-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; margin-bottom:1.25rem; }
+    .macro-card {
+      border-radius:16px; padding:1.5rem; position:relative; overflow:hidden;
+      color:#fff; transition:all .3s;
     }
-
-    .macro-card-3d:hover { transform: translateY(-15px) rotateX(10deg) scale(1.05); box-shadow: 0 30px 60px rgba(0,0,0,0.4); }
-    .macro-card-3d.calories { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-    .macro-card-3d.protein { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-    .macro-card-3d.fat { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); }
-    .macro-card-3d.carbs { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
-
-    .macro-card-3d::before {
-      content: ''; position: absolute; top: -50%; right: -50%; width: 200%; height: 200%;
-      background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
-      animation: rotate 12s linear infinite;
+    .macro-card:hover { transform:translateY(-6px); }
+    .macro-card::before {
+      content:''; position:absolute; top:-50%; right:-50%;
+      width:200%; height:200%;
+      background:radial-gradient(circle,rgba(255,255,255,.12) 0%,transparent 70%);
+      animation:spin 14s linear infinite; pointer-events:none;
     }
-
-    .macro-label { font-size: 0.9375rem; color: rgba(255,255,255,0.95); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; position: relative; z-index: 1; }
-    .macro-value { font-size: 3.5rem; font-weight: 900; color: white; position: relative; z-index: 1; margin-bottom: 0.75rem; text-shadow: 0 4px 8px rgba(0,0,0,0.3); }
-    .macro-target { font-size: 1.0625rem; color: rgba(255,255,255,0.85); position: relative; z-index: 1; font-weight: 600; }
-
-    .macro-progress { width: 100%; height: 10px; background: rgba(255,255,255,0.25); border-radius: 9999px; overflow: hidden; margin-top: 1.25rem; position: relative; z-index: 1; }
-    .macro-progress-fill { height: 100%; background: white; border-radius: 9999px; transition: width 1.2s cubic-bezier(0.68,-0.55,0.265,1.55); box-shadow: 0 0 15px rgba(255,255,255,0.6); }
-    .macro-percent { font-size: 1.5rem; font-weight: 900; color: white; position: absolute; top: 1.5rem; right: 2rem; z-index: 1; background: rgba(0,0,0,0.25); padding: 0.375rem 1rem; border-radius: 9999px; }
-
-    .manual-entry-form {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 2rem; padding: 2.5rem; margin-top: 2rem; color: white;
-      box-shadow: var(--shadow-xl); position: relative; overflow: hidden;
+    .macro-card.cal { background:linear-gradient(135deg,#f093fb,#f5576c); }
+    .macro-card.pro { background:linear-gradient(135deg,#4facfe,#00f2fe); }
+    .macro-card.fat { background:linear-gradient(135deg,#ffecd2,#fcb69f); }
+    .macro-card.carb{ background:linear-gradient(135deg,#a8edea,#fed6e3); }
+    .macro-pct {
+      position:absolute; top:1rem; right:1rem;
+      background:rgba(0,0,0,.22); padding:.2rem .6rem; border-radius:99px;
+      font-size:.8rem; font-weight:800; color:#fff; z-index:1;
     }
+    .macro-lbl { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; opacity:.9; margin-bottom:.35rem; position:relative; z-index:1; }
+    .macro-val { font-family:'Fraunces',serif; font-size:2.5rem; font-weight:900; position:relative; z-index:1; text-shadow:0 3px 8px rgba(0,0,0,.3); }
+    .macro-target { font-size:.82rem; opacity:.85; position:relative; z-index:1; margin-bottom:.75rem; }
+    .macro-prog { height:8px; background:rgba(255,255,255,.25); border-radius:99px; overflow:hidden; position:relative; z-index:1; }
+    .macro-prog-fill { height:100%; background:rgba(255,255,255,.85); border-radius:99px; transition:width 1s ease; }
 
-    .manual-entry-form::before {
-      content: ''; position: absolute; top: -50%; right: -50%; width: 200%; height: 200%;
-      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-      animation: rotate 20s linear infinite;
+    /* manual form */
+    .manual-form {
+      background:linear-gradient(135deg,#667eea,#764ba2);
+      border-radius:var(--radius); padding:2rem; color:#fff;
+      position:relative; overflow:hidden; margin-top:1.25rem;
     }
-
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1.25rem; margin-top: 1.5rem; position: relative; z-index: 1; }
-    .form-group { display: flex; flex-direction: column; gap: 0.625rem; }
-    .form-group label { font-size: 0.9375rem; font-weight: 700; color: rgba(255,255,255,0.95); text-transform: uppercase; letter-spacing: 0.05em; }
-
+    .manual-form::before { content:''; position:absolute; top:-50%; right:-50%; width:200%; height:200%; background:radial-gradient(circle,rgba(255,255,255,.08) 0%,transparent 70%); animation:spin 22s linear infinite; pointer-events:none; }
+    .manual-form h4 { font-family:'Fraunces',serif; font-size:1.15rem; font-weight:700; margin-bottom:.4rem; position:relative; z-index:1; }
+    .manual-form p { font-size:.85rem; opacity:.85; margin-bottom:1.25rem; position:relative; z-index:1; }
+    .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:.875rem; position:relative; z-index:1; }
+    .form-group label { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; display:block; margin-bottom:.4rem; }
     .form-group input {
-      padding: 0.875rem; border-radius: 0.75rem; border: 2px solid rgba(255,255,255,0.3);
-      background: rgba(255,255,255,0.15); color: white; font-size: 1.0625rem;
-      font-weight: 700; backdrop-filter: blur(10px); transition: all 0.3s ease;
+      width:100%; padding:.65rem .875rem; border-radius:10px;
+      border:1.5px solid rgba(255,255,255,.3); background:rgba(255,255,255,.12);
+      color:#fff; font-size:.9rem; font-weight:700; outline:none;
+      transition:all .2s;
+    }
+    .form-group input:focus { border-color:#fff; background:rgba(255,255,255,.22); }
+    .btn-submit {
+      margin-top:1.25rem; width:100%; padding:.875rem;
+      border-radius:12px; border:none; background:#fff; color:#667eea;
+      font-weight:800; font-size:.9rem; cursor:pointer;
+      transition:all .25s; position:relative; z-index:1;
+    }
+    .btn-submit:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.2); }
+
+    /* ── WEIGHT CHART ── */
+    .weight-section { margin-top:1.5rem; }
+    .chart-wrap { position:relative; height:200px; margin-top:1rem; }
+
+    /* ── CALENDAR ── */
+    .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:.5rem; }
+    .cal-day {
+      aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+      border-radius:10px; font-weight:700; font-size:.9rem;
+      text-decoration:none; color:var(--soft);
+      background:var(--surface); border:1.5px solid var(--border);
+      transition:all .25s;
+    }
+    .cal-day:hover { transform:scale(1.1) translateY(-2px); border-color:var(--border2); }
+    .cal-day.done { background:rgba(16,185,129,.12); color:var(--green); border-color:rgba(16,185,129,.3); }
+    .cal-day.today {
+      background:linear-gradient(135deg,var(--green),var(--green2));
+      color:#fff; border-color:transparent; transform:scale(1.15);
+      box-shadow:0 6px 18px rgba(16,185,129,.4); z-index:5;
     }
 
-    .form-group input:focus { outline: none; border-color: white; background: rgba(255,255,255,0.25); transform: scale(1.02); }
-
-    /* ============================================
-       KETO FLU BANNER STYLES
-       ============================================ */
-    .keto-flu-banner {
-      border-radius: 2rem;
-      padding: 2.5rem;
-      margin-bottom: 2rem;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
-      position: relative;
-      overflow: hidden;
-      animation: ketoFluSlideIn 0.6s cubic-bezier(0.68,-0.55,0.265,1.55);
+    /* ── MEAL CARDS ── */
+    .meal-card {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--radius); overflow:hidden; transition:all .25s;
     }
-
-    @keyframes ketoFluSlideIn {
-      from { opacity: 0; transform: translateY(-30px) scale(0.97); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
+    .meal-card:hover { border-color:var(--border2); transform:translateY(-3px); }
+    .meal-img { width:100%; height:200px; object-fit:cover; display:block; }
+    .meal-body { padding:1.25rem; }
+    .meal-type { font-size:.72rem; font-weight:700; color:var(--soft); text-transform:uppercase; letter-spacing:.08em; margin-bottom:.4rem; }
+    .meal-name { font-weight:700; font-size:.95rem; margin-bottom:1rem; color:var(--text); }
+    .btn-recipe {
+      display:flex; align-items:center; justify-content:center; gap:.4rem;
+      width:100%; padding:.7rem; border-radius:10px;
+      background:linear-gradient(135deg,var(--green),var(--green2));
+      color:#fff; font-weight:700; font-size:.82rem; text-decoration:none;
+      transition:all .2s;
     }
+    .btn-recipe:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(16,185,129,.35); }
 
-    @keyframes ketoFluSlideOut {
-      from { opacity: 1; transform: translateY(0) scale(1); max-height: 600px; }
-      to { opacity: 0; transform: translateY(-20px) scale(0.97); max-height: 0; padding: 0; margin: 0; }
+    /* ── AI CHATBOT BUTTON (Elite only) ── */
+    .ai-fab {
+      position:fixed; bottom:2rem; right:2rem; z-index:500;
+      width:60px; height:60px; border-radius:50%;
+      background:linear-gradient(135deg,#6366f1,#8b5cf6);
+      border:none; cursor:pointer; box-shadow:0 8px 28px rgba(99,102,241,.5);
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.5rem; transition:all .3s; animation:fabPop .5s 1s ease both;
     }
-
-    .keto-flu-banner::before {
-      content: ''; position: absolute; top: -50%; right: -50%;
-      width: 200%; height: 200%;
-      background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
-      animation: rotate 15s linear infinite; pointer-events: none;
+    .ai-fab:hover { transform:scale(1.1) translateY(-3px); box-shadow:0 14px 36px rgba(99,102,241,.6); }
+    @keyframes fabPop { from{opacity:0;transform:scale(0);} to{opacity:1;transform:scale(1);} }
+    .ai-fab-tooltip {
+      position:absolute; right:72px; top:50%; transform:translateY(-50%);
+      background:var(--card); border:1px solid var(--border);
+      border-radius:10px; padding:.4rem .875rem;
+      font-size:.78rem; font-weight:700; color:var(--text);
+      white-space:nowrap; pointer-events:none;
+      opacity:0; transition:opacity .2s;
     }
+    .ai-fab:hover .ai-fab-tooltip { opacity:1; }
 
-    .keto-flu-content { position: relative; z-index: 10; color: white; }
-
-    .keto-flu-header {
-      display: flex; align-items: center; gap: 1.5rem;
-      margin-bottom: 1.75rem; flex-wrap: wrap;
+    /* AI Chat panel */
+    .ai-panel {
+      position:fixed; bottom:6rem; right:2rem; z-index:499;
+      width:360px; max-height:500px;
+      background:var(--card); border:1px solid var(--border);
+      border-radius:20px; overflow:hidden;
+      box-shadow:0 20px 60px rgba(0,0,0,.4);
+      display:none; flex-direction:column;
+      animation:panelUp .3s ease;
     }
-
-    .keto-flu-icon-wrap {
-      width: 5rem; height: 5rem; flex-shrink: 0;
-      background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);
-      border-radius: 1.5rem; display: flex; align-items: center;
-      justify-content: center; font-size: 3rem;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    .ai-panel.open { display:flex; }
+    @keyframes panelUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+    .ai-panel-header {
+      padding:1rem 1.25rem; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; gap:.75rem;
+      background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.06));
     }
-
-    .keto-flu-badges { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.625rem; flex-wrap: wrap; }
-
-    .keto-flu-badge {
-      background: rgba(255,255,255,0.25); backdrop-filter: blur(10px);
-      padding: 0.375rem 1.25rem; border-radius: 9999px;
-      font-size: 0.9375rem; font-weight: 800; letter-spacing: 0.03em;
+    .ai-avatar {
+      width:36px; height:36px; border-radius:10px;
+      background:linear-gradient(135deg,#6366f1,#8b5cf6);
+      display:flex; align-items:center; justify-content:center; font-size:1rem;
     }
-
-    .keto-flu-badge-sm {
-      background: rgba(255,255,255,0.15);
-      padding: 0.375rem 1rem; border-radius: 9999px;
-      font-size: 0.875rem; font-weight: 600;
+    .ai-panel-title { font-weight:800; font-size:.9rem; }
+    .ai-panel-sub { font-size:.72rem; color:var(--soft); }
+    .ai-close { margin-left:auto; background:none; border:none; color:var(--soft); font-size:1.1rem; cursor:pointer; }
+    .ai-messages {
+      flex:1; overflow-y:auto; padding:1rem; display:flex; flex-direction:column; gap:.75rem;
     }
-
-    .keto-flu-title { font-size: 2rem; font-weight: 900; text-shadow: 0 2px 8px rgba(0,0,0,0.3); line-height: 1.2; }
-
-    .keto-flu-cards {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 1.25rem; margin-bottom: 1.75rem;
+    .ai-msg {
+      max-width:85%; padding:.7rem 1rem; border-radius:14px;
+      font-size:.82rem; line-height:1.55; font-weight:500;
     }
-
-    .keto-flu-card {
-      backdrop-filter: blur(10px); border-radius: 1.25rem; padding: 1.5rem;
-      border: 1px solid rgba(255,255,255,0.2);
+    .ai-msg.bot { background:var(--surface); color:var(--text); align-self:flex-start; border-radius:4px 14px 14px 14px; }
+    .ai-msg.user { background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; align-self:flex-end; border-radius:14px 14px 4px 14px; }
+    .ai-input-wrap {
+      padding:.875rem; border-top:1px solid var(--border);
+      display:flex; gap:.5rem;
     }
-
-    .keto-flu-card-dark { background: rgba(0,0,0,0.2); }
-    .keto-flu-card-light { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); }
-    .keto-flu-card-accent { background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.35); }
-
-    .keto-flu-card-label {
-      font-size: 0.8125rem; font-weight: 800; text-transform: uppercase;
-      letter-spacing: 0.1em; opacity: 0.85; margin-bottom: 0.75rem;
-      display: flex; align-items: center; gap: 0.5rem;
+    .ai-input {
+      flex:1; padding:.6rem .875rem; border-radius:10px;
+      background:var(--surface); border:1px solid var(--border);
+      color:var(--text); font-size:.82rem; outline:none;
+      transition:border-color .2s;
     }
-
-    .keto-flu-card-text { font-size: 1.0625rem; line-height: 1.65; font-weight: 600; opacity: 0.95; }
-    .keto-flu-card-suggestion { font-size: 1.125rem; line-height: 1.6; font-weight: 700; }
-
-    .keto-flu-progress-wrap { margin-bottom: 1.75rem; }
-
-    .keto-flu-progress-header {
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;
+    .ai-input:focus { border-color:#6366f1; }
+    .ai-send {
+      width:36px; height:36px; border-radius:10px; flex-shrink:0;
+      background:linear-gradient(135deg,#6366f1,#8b5cf6);
+      border:none; color:#fff; font-size:1rem; cursor:pointer; transition:all .2s;
     }
-
-    .keto-flu-progress-bar {
-      width: 100%; height: 14px; background: rgba(0,0,0,0.25);
-      border-radius: 9999px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    .ai-send:hover { transform:scale(1.08); }
+    .ai-typing { display:flex; gap:.3rem; align-items:center; padding:.5rem; }
+    .ai-typing span { width:6px; height:6px; border-radius:50%; background:var(--soft); animation:typing 1s infinite; }
+    .ai-typing span:nth-child(2){animation-delay:.15s;}
+    .ai-typing span:nth-child(3){animation-delay:.3s;}
+    @keyframes typing { 0%,60%,100%{transform:translateY(0);} 30%{transform:translateY(-6px);} }
+    .ai-suggestions {
+      display:flex; gap:.4rem; flex-wrap:wrap; padding:.6rem 1rem;
+      border-bottom:1px solid var(--border);
     }
-
-    .keto-flu-progress-fill {
-      height: 100%; background: rgba(255,255,255,0.85); border-radius: 9999px;
-      position: relative; overflow: hidden; transition: width 1.5s cubic-bezier(0.68,-0.55,0.265,1.55);
+    .ai-sug {
+      font-size:.72rem; font-weight:600; color:#818cf8;
+      background:rgba(99,102,241,.1); border:1px solid rgba(99,102,241,.2);
+      border-radius:99px; padding:.2rem .65rem; cursor:pointer; transition:all .2s;
     }
+    .ai-sug:hover { background:rgba(99,102,241,.2); }
 
-    .keto-flu-progress-fill::after {
-      content: ''; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
-      animation: shimmer 2s infinite;
+    /* ── TOAST ── */
+    .toast {
+      position:fixed; top:5rem; right:1.5rem; z-index:9999;
+      background:linear-gradient(135deg,var(--green),var(--green2));
+      color:#fff; padding:.875rem 1.5rem; border-radius:12px;
+      font-weight:700; font-size:.875rem;
+      box-shadow:0 10px 30px rgba(16,185,129,.4);
+      transform:translateY(-20px); opacity:0; pointer-events:none;
+      transition:all .35s cubic-bezier(.4,0,.2,1);
     }
+    .toast.show { transform:translateY(0); opacity:1; }
 
-    .keto-flu-progress-labels { display: flex; justify-content: space-between; margin-top: 0.5rem; opacity: 0.7; font-size: 0.8125rem; font-weight: 700; }
-
-    .keto-flu-footer { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
-
-    .keto-flu-action-btn {
-      background: white; color: #111827; padding: 1rem 2rem;
-      border-radius: 1rem; border: none; font-weight: 800; font-size: 1.0625rem;
-      cursor: pointer; display: flex; align-items: center; gap: 0.75rem;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-      transition: all 0.3s cubic-bezier(0.68,-0.55,0.265,1.55);
+    /* ── RESPONSIVE ── */
+    @media(max-width:768px){
+      .stats-grid{ grid-template-columns:repeat(2,1fr); }
+      .macros-grid{ grid-template-columns:repeat(2,1fr); }
+      .water-grid{ grid-template-columns:repeat(4,1fr); }
+      .cal-grid{ grid-template-columns:repeat(5,1fr); }
+      .ai-panel{ width:calc(100vw - 2rem); right:1rem; }
+      .nav-links .nav-link span.nav-label { display:none; }
     }
-
-    .keto-flu-action-btn:hover { transform: translateY(-4px) scale(1.05); box-shadow: 0 15px 30px rgba(0,0,0,0.3); }
-
-    .keto-flu-close {
-      position: absolute; top: 1.25rem; right: 1.25rem;
-      background: rgba(255,255,255,0.2); border: none;
-      width: 2.5rem; height: 2.5rem; border-radius: 50%;
-      color: white; font-size: 1.375rem; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.3s ease; backdrop-filter: blur(10px); z-index: 20;
-    }
-
-    .keto-flu-close:hover { background: rgba(255,255,255,0.35); transform: scale(1.1) rotate(90deg); }
-
-    /* ============================================ */
-
-    .flex { display: flex; align-items: center; }
-    .flex-between { display: flex; justify-content: space-between; align-items: center; }
-    .gap-1 { gap: 0.5rem; } .gap-2 { gap: 1rem; } .gap-3 { gap: 1.5rem; }
-    .mb-2 { margin-bottom: 1rem; } .mb-4 { margin-bottom: 2rem; }
-
-    @keyframes slideDown { from { opacity: 0; transform: translateY(-20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-
-    @media (max-width: 768px) {
-      .grid-4, .grid-2 { grid-template-columns: 1fr; }
-      .calendar { grid-template-columns: repeat(5, 1fr); }
-      .macros-grid { grid-template-columns: 1fr; }
-      .notification-dropdown { width: calc(100vw - 2rem); right: -1rem; }
-      .header h1 { font-size: 2rem; }
-      .keto-flu-banner { padding: 1.75rem; }
-      .keto-flu-title { font-size: 1.5rem; }
-      .keto-flu-cards { grid-template-columns: 1fr; }
-      .water-grid { grid-template-columns: repeat(4, 1fr); }
+    @media(max-width:480px){
+      .stats-grid{ grid-template-columns:1fr 1fr; }
+      .macros-grid{ grid-template-columns:1fr 1fr; }
     }
   </style>
 </head>
 <body>
-  <!-- Navigation -->
-  <nav>
-    <div class="container">
-      <div class="flex-between">
-        <div class="flex gap-2">
-          <span style="font-size: 2.5rem;">🥑</span>
-          <div>
-            <h1 style="font-size: 1.375rem; font-weight: 800; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Keto Journey</h1>
-            <p style="font-size: 0.8125rem; color: var(--text-secondary); font-weight: 600;">30-Day Transformation</p>
-          </div>
-        </div>
-        
-        <div class="flex gap-3">
-          <a href="/dashboard" class="active">Dashboard</a>
-          <a href="/dashboard/shopping-list">Shopping</a>
-          <a href="/dashboard/recipes">Recipes</a>
-          <a href="/dashboard/profile">Profile</a>
-          <a href="/dashboard/notifications">🔔 Reminders</a>
 
-          <div class="flex gap-2" style="padding-left: 1rem; border-left: 1px solid var(--border-color); position: relative;">
-            <div class="theme-toggle" id="themeToggle">
-              <div class="theme-toggle-slider"><span id="themeIcon">☀️</span></div>
+<!-- BG -->
+<div class="bg-mesh" aria-hidden="true">
+  <div class="orb o1"></div>
+  <div class="orb o2"></div>
+  <div class="orb o3"></div>
+</div>
+
+<!-- ══ NAV ══ -->
+<nav>
+  <div class="nav-inner">
+    <a href="/dashboard" class="nav-brand">🥑 <span>Keto Journey</span></a>
+    <div class="nav-links">
+      <a href="/dashboard"              class="nav-link active">📊 <span class="nav-label">Dashboard</span></a>
+      <a href="/dashboard/shopping-list" class="nav-link">🛒 <span class="nav-label">Shopping</span></a>
+      <a href="/dashboard/recipes"       class="nav-link">🍳 <span class="nav-label">Recipes</span></a>
+      <a href="/dashboard/profile"       class="nav-link">👤 <span class="nav-label">Profile</span></a>
+      <a href="/dashboard/notifications" class="nav-link">🔔 <span class="nav-label">Reminders</span></a>
+      <a href="/dashboard/upgrade"       class="nav-link">⚡ <span class="nav-label">Upgrade</span></a>
+    </div>
+    <div class="nav-right">
+      <!-- Theme -->
+      <button class="theme-btn" id="themeBtn" title="Toggle theme">☀️</button>
+
+      <!-- Notifications -->
+      {incompleteTasks.length > 0 && (
+        <div class="notif-wrap">
+          <button class="notif-btn" id="notifBtn">
+            🔔 <span class="notif-badge">{incompleteTasks.length}</span>
+          </button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);font-weight:800;font-size:.9rem;color:var(--green);">
+              🔔 {incompleteTasks.length} Pending Task{incompleteTasks.length !== 1 ? 's' : ''}
             </div>
-
-            {incompleteTasks.length > 0 && (
-              <div style="position: relative;">
-                <button class="notification-bell" id="notif-bell">
-                  <span style="color: white;">🔔</span>
-                  <span class="notification-badge">{incompleteTasks.length}</span>
-                </button>
-                <div class="notification-dropdown" id="notificationDropdown">
-                  <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(52,211,153,0.1));">
-                    <h3 style="font-size: 1.125rem; font-weight: 800; color: var(--accent-primary); display: flex; align-items: center; gap: 0.75rem;">
-                      <span style="font-size: 1.5rem;">🔔</span>
-                      <span>{incompleteTasks.length} Pending Task{incompleteTasks.length !== 1 ? 's' : ''}</span>
-                    </h3>
+            <div style="max-height:320px;overflow-y:auto;">
+              {incompleteTasks.map(t => (
+                <div class="notif-item" data-task={t.task_type}>
+                  <div class="notif-icon">
+                    {t.task_type==='breakfast'?'🍳':t.task_type==='lunch'?'🥗':t.task_type==='dinner'?'🍽️':t.task_type==='snack'?'🍎':'💧'}
                   </div>
-                  <div style="max-height: 400px; overflow-y: auto;">
-                    {incompleteTasks.map(task => (
-                      <div class="notification-item" data-task-type={task.task_type}>
-                        <div class="notification-icon">
-                          {task.task_type === 'breakfast' && '🍳'}
-                          {task.task_type === 'lunch' && '🥗'}
-                          {task.task_type === 'dinner' && '🍽️'}
-                          {task.task_type === 'snack' && '🍎'}
-                          {task.task_type === 'water' && '💧'}
-                        </div>
-                        <div style="flex: 1;">
-                          <div style="font-weight: 700; font-size: 0.9375rem; color: var(--text-primary); margin-bottom: 0.25rem;">{task.task_title}</div>
-                          <div style="font-size: 0.8125rem; color: var(--text-secondary); font-weight: 600;">+{task.xp_earned} XP • Day {viewDay}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div style="padding: 1.25rem; border-top: 1px solid var(--border-color); text-align: center;">
-                    <button id="view-all-tasks" class="btn btn-primary btn-sm" style="width: 100%; justify-content: center;">View All Tasks →</button>
+                  <div>
+                    <div style="font-weight:700;font-size:.85rem;">{t.task_title}</div>
+                    <div style="font-size:.75rem;color:var(--soft);">+{t.xp_earned} XP</div>
                   </div>
                 </div>
-              </div>
-            )}
-            
-            <a href="/dashboard/profile" style="width: 2.5rem; height: 2.5rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; text-decoration: none; box-shadow: var(--shadow-md); transition: all 0.3s ease; font-size: 1.125rem;">
-              {profile.full_name.charAt(0).toUpperCase()}
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </nav>
-
-  <div class="container">
-    <!-- Header -->
-    <div class="header">
-      <div class="flex-between mb-2">
-        <div>
-          <h1>Day {viewDay} of 30</h1>
-          <p style="color: var(--text-secondary); font-size: 1.125rem; font-weight: 600;">
-            {viewDay === currentDay ? `Keep going! You're ${Math.round((currentDay/30)*100)}% complete` : `Viewing Day ${viewDay}`}
-          </p>
-        </div>
-        <div class="flex gap-1">
-          <a href={viewDay > 1 ? `/dashboard/?day=${viewDay - 1}` : '#'} class="btn btn-secondary btn-sm" style={viewDay <= 1 ? 'pointer-events: none; opacity: 0.5;' : ''}>← Prev</a>
-          <a href={viewDay < 30 ? `/dashboard/?day=${viewDay + 1}` : '#'} class="btn btn-secondary btn-sm" style={viewDay >= 30 ? 'pointer-events: none; opacity: 0.5;' : ''}>Next →</a>
-        </div>
-      </div>
-      <div class="progress">
-        <div class="progress-fill" style={`width: ${(currentDay / 30) * 100}%`}></div>
-      </div>
-    </div>
-
-    <!-- Stats Grid -->
-    <div class="grid grid-4 mb-4">
-      <div class="stat-card">
-        <div class="stat-icon">📅</div>
-        <div class="stat-label">Current Day</div>
-        <div class="stat-value">{currentDay}</div>
-        <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.5rem; font-weight: 600;">of 30 days</p>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">✅</div>
-        <div class="stat-label">Tasks Done</div>
-        <div class="stat-value">{completedTasks}/{totalTasks}</div>
-        <div class="progress" style="margin-top: 1rem; height: 6px;">
-          <div class="progress-fill" style={`width: ${progressPercentage}%`}></div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">⚡</div>
-        <div class="stat-label">Total XP</div>
-        <div class="stat-value">{journey.total_xp}</div>
-        <div class="badge badge-primary" style="margin-top: 0.75rem;">Level {journey.level}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">🔥</div>
-        <div class="stat-label">Streak</div>
-        <div class="stat-value">{journey.streak_days}</div>
-        <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.5rem; font-weight: 600;">days in a row</p>
-      </div>
-    </div>
-
-    <!-- ============================================
-         KETO FLU BANNER (Days 1-10 only)
-         ============================================ -->
-    {showKetoFluTip && (
-      <div 
-        class="keto-flu-banner" 
-        id="keto-flu-banner"
-        style={`background: ${currentTip.gradient};`}
-      >
-        <!-- Close Button -->
-        <button class="keto-flu-close" id="keto-flu-close" title="Dismiss">×</button>
-
-        <div class="keto-flu-content">
-          <!-- Header Row -->
-          <div class="keto-flu-header">
-            <div class="keto-flu-icon-wrap">{currentTip.icon}</div>
-            <div style="flex: 1;">
-              <div class="keto-flu-badges">
-                <span class="keto-flu-badge">{currentTip.day} of 10</span>
-                <span class="keto-flu-badge-sm">🛡️ Keto Flu Guide</span>
-                {currentTip.severity === 'danger' && <span class="keto-flu-badge-sm" style="background: rgba(255,255,255,0.3);">⚠️ Hardest Day</span>}
-                {currentTip.severity === 'success' && <span class="keto-flu-badge-sm" style="background: rgba(255,255,255,0.3);">🎉 Victory!</span>}
-              </div>
-              <h3 class="keto-flu-title">{currentTip.title}</h3>
-            </div>
-          </div>
-
-          <!-- Info Cards -->
-          <div class="keto-flu-cards">
-            <!-- What's Happening -->
-            <div class="keto-flu-card keto-flu-card-dark">
-              <div class="keto-flu-card-label">
-                <span>🔬</span><span>What's Happening in Your Body</span>
-              </div>
-              <p class="keto-flu-card-text">{currentTip.whatsHappening}</p>
-            </div>
-
-            <!-- Pro Tip -->
-            <div class="keto-flu-card keto-flu-card-light">
-              <div class="keto-flu-card-label">
-                <span>💡</span><span>Pro Tip for Today</span>
-              </div>
-              <p class="keto-flu-card-text">{currentTip.tip}</p>
-            </div>
-
-            <!-- Today's Recommendation -->
-            <div class="keto-flu-card keto-flu-card-accent">
-              <div class="keto-flu-card-label">
-                <span>🛒</span><span>Today's Recommendation</span>
-              </div>
-              <p class="keto-flu-card-suggestion">{currentTip.suggestion}</p>
-            </div>
-          </div>
-
-          <!-- Progress Bar -->
-          <div class="keto-flu-progress-wrap">
-            <div class="keto-flu-progress-header">
-              <span style="font-size: 0.9375rem; font-weight: 700; opacity: 0.9;">Keto Flu Progress</span>
-              <span style="font-size: 1.125rem; font-weight: 900;">{currentTip.progress}% Complete</span>
-            </div>
-            <div class="keto-flu-progress-bar">
-              <div class="keto-flu-progress-fill" style={`width: ${currentTip.progress}%`}></div>
-            </div>
-            <div class="keto-flu-progress-labels">
-              <span>Day 1 — Start</span>
-              <span>Day 5 — Halfway</span>
-              <span>Day 10 — 👑 Victory</span>
-            </div>
-          </div>
-
-          <!-- Action Button -->
-          <div class="keto-flu-footer">
-            <button class="keto-flu-action-btn">
-              <span style="font-size: 1.5rem;">⚡</span>
-              <span>{currentTip.action}</span>
-            </button>
-            <span style="opacity: 0.85; font-size: 0.9375rem; font-weight: 600;">
-              🏆 {10 - viewDay > 0 ? `${10 - viewDay} days left until you beat keto flu!` : `You beat keto flu! You're amazing! 🎉`}
-            </span>
-          </div>
-        </div>
-      </div>
-    )}
-    <!-- ============================================ -->
-
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="tasks">
-        <span style="font-size: 1.25rem;">✅</span>
-        <span>Tasks</span>
-        {incompleteTasks.length > 0 && <span class="badge badge-warning">{incompleteTasks.length}</span>}
-      </button>
-      <button class="tab-btn" data-tab="meals">
-        <span style="font-size: 1.25rem;">🍽️</span>
-        <span>Meals</span>
-      </button>
-      <button class="tab-btn" data-tab="nutrition">
-        <span style="font-size: 1.25rem;">📊</span>
-        <span>Nutrition</span>
-      </button>
-      <button class="tab-btn" data-tab="calendar">
-        <span style="font-size: 1.25rem;">📆</span>
-        <span>Calendar</span>
-      </button>
-    </div>
-
-    <!-- Tasks Tab -->
-    <div id="tab-tasks" class="tab-content active">
-      <div class="card">
-        <h3 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 2rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Today's Tasks</h3>
-        
-        {filteredTasks.map((task) => (
-          <div class="task-item">
-            <div class="flex gap-2">
-              <div class={`task-icon ${task.completed ? 'completed' : ''}`}>
-                {task.completed ? '✓' : '○'}
-              </div>
-              <div>
-                <p style={`font-weight: 700; font-size: 1.0625rem; ${task.completed ? 'color: var(--text-secondary); text-decoration: line-through;' : 'color: var(--text-primary);'}`}>
-                  {task.task_title}
-                </p>
-                {task.completed && task.completed_at && (
-                  <p style="font-size: 0.8125rem; color: var(--text-secondary); margin-top: 0.375rem; font-weight: 600;">
-                    ✓ Completed at {new Date(task.completed_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div class="badge badge-primary" style="font-size: 0.9375rem;">+{task.xp_earned} XP</div>
-          </div>
-        ))}
-
-        {waterIntake && (
-          <div style="margin-top: 2rem; padding: 2rem; background: linear-gradient(135deg, rgba(6,182,212,0.1), rgba(14,165,233,0.1)); border-radius: 1.5rem; border: 2px solid #06b6d4; box-shadow: var(--shadow-lg);">
-            <div class="flex-between mb-2">
-              <div>
-                <h4 style="font-weight: 800; font-size: 1.25rem; color: var(--text-primary);">💧 Water Intake</h4>
-                <p style="color: var(--text-secondary); font-size: 1.0625rem; margin-top: 0.5rem; font-weight: 600;">
-                  <span id="water-count" style="font-weight: 900; font-size: 1.75rem; color: #06b6d4;">{waterIntake.glasses_count}</span>
-                  <span> / {waterIntake.target_glasses} glasses</span>
-                </p>
-              </div>
-              {canInteract && (
-                <div class="flex gap-1">
-                  <button class="btn btn-secondary btn-sm" data-water-action="minus">−</button>
-                  <button class="btn btn-primary btn-sm" data-water-action="plus">+</button>
-                </div>
-              )}
-            </div>
-            <div class="water-grid">
-              {Array.from({ length: waterIntake.target_glasses }, (_, i) => (
-                <div data-glass-index={i} class={`water-glass ${i < waterIntake.glasses_count ? 'filled' : ''}`}>💧</div>
               ))}
             </div>
-          </div>
-        )}
-      </div>
-    </div>
-
-    <!-- Meals Tab -->
-    <div id="tab-meals" class="tab-content">
-      <div class="flex-between mb-4">
-        <h3 style="font-size: 1.5rem; font-weight: 800; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Today's Meals</h3>
-        <a href="/dashboard/shopping-list" class="btn btn-primary">🛒 Shopping List</a>
-      </div>
-      <div class="grid grid-2">
-        {todayMeals.map((meal) => (
-          <div class="card" style="padding: 0; overflow: hidden;">
-            {meal.recipe?.image_url && (
-              <div style="position: relative;">
-                <img src={meal.recipe.image_url} alt={meal.recipe.title} style="width: 100%; height: 250px; object-fit: cover;" />
-                <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 1.5rem; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);">
-                  <span style="color: white; font-weight: 800; font-size: 1.125rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
-                    {meal.meal_type === 'breakfast' && '☀️'}{meal.meal_type === 'lunch' && '🌞'}{meal.meal_type === 'dinner' && '🌙'}{meal.meal_type === 'snack' && '🍎'}
-                    {' '}{meal.meal_type.charAt(0).toUpperCase() + meal.meal_type.slice(1)}
-                  </span>
-                </div>
-              </div>
-            )}
-            <div style="padding: 2rem;">
-              <h4 style="font-weight: 800; font-size: 1.25rem; margin-bottom: 1.5rem; color: var(--text-primary);">{meal.recipe?.title}</h4>
-              <a href={`/dashboard/recipe/${meal.recipe?.id}`} class="btn btn-primary" style="width: 100%; justify-content: center;">View Recipe →</a>
+            <div style="padding:.875rem 1.25rem;border-top:1px solid var(--border);">
+              <button id="seeAllTasks" style="width:100%;padding:.6rem;border-radius:10px;background:linear-gradient(135deg,var(--green),var(--green2));border:none;color:#fff;font-weight:700;font-size:.8rem;cursor:pointer;">View All Tasks →</button>
             </div>
-          </div>
-        ))}
-      </div>
-    </div>
-
-    <!-- Nutrition Tab -->
-    <div id="tab-nutrition" class="tab-content">
-      <h3 style="font-size: 2rem; font-weight: 900; margin-bottom: 2rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary), #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-        <span style="font-size: 2.5rem;">📊</span> Smart Macros Tracker
-      </h3>
-
-      <div class="macros-grid">
-        <div class="macro-card-3d calories">
-          <div class="macro-percent">{caloriesPercent}%</div>
-          <div class="macro-label">Calories</div>
-          <div class="macro-value" data-macro-type="calories">{actualCalories}</div>
-          <div class="macro-target">Target: {targetCalories} kcal</div>
-          <div class="macro-progress">
-            <div class="macro-progress-fill" data-progress="calories" style={`width: ${Math.min(caloriesPercent, 100)}%`}></div>
-          </div>
-        </div>
-        <div class="macro-card-3d protein">
-          <div class="macro-percent">{proteinPercent}%</div>
-          <div class="macro-label">Protein</div>
-          <div class="macro-value" data-macro-type="protein">{actualProtein}g</div>
-          <div class="macro-target">Target: {targetProtein}g</div>
-          <div class="macro-progress">
-            <div class="macro-progress-fill" data-progress="protein" style={`width: ${Math.min(proteinPercent, 100)}%`}></div>
-          </div>
-        </div>
-        <div class="macro-card-3d fat">
-          <div class="macro-percent">{fatPercent}%</div>
-          <div class="macro-label">Fat</div>
-          <div class="macro-value" data-macro-type="fat">{actualFat}g</div>
-          <div class="macro-target">Target: {targetFat}g</div>
-          <div class="macro-progress">
-            <div class="macro-progress-fill" data-progress="fat" style={`width: ${Math.min(fatPercent, 100)}%`}></div>
-          </div>
-        </div>
-        <div class="macro-card-3d carbs">
-          <div class="macro-percent">{carbsPercent}%</div>
-          <div class="macro-label">Net Carbs</div>
-          <div class="macro-value" data-macro-type="carbs">{actualCarbs}g</div>
-          <div class="macro-target">Target: {targetCarbs}g</div>
-          <div class="macro-progress">
-            <div class="macro-progress-fill" data-progress="carbs" style={`width: ${Math.min(carbsPercent, 100)}%`}></div>
-          </div>
-        </div>
-      </div>
-
-      {actualCalories > 0 && (
-        <div class="grid grid-2 mb-4">
-          <div class="card">
-            <h4 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-              <span style="font-size: 1.75rem;">🥧</span><span>Calorie Distribution</span>
-            </h4>
-            <div style="position: relative; height: 320px;"><canvas id="macrosPieChart"></canvas></div>
-          </div>
-          <div class="card">
-            <h4 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-              <span style="font-size: 1.75rem;">📊</span><span>Target vs Actual</span>
-            </h4>
-            <div style="position: relative; height: 320px;"><canvas id="macrosBarChart"></canvas></div>
           </div>
         </div>
       )}
 
-      <div class="manual-entry-form">
-        <h4 style="font-size: 1.375rem; font-weight: 900; margin-bottom: 1rem; position: relative; z-index: 1;">➕ Add Custom Food</h4>
-        <p style="font-size: 1.0625rem; opacity: 0.95; margin-bottom: 1.5rem; position: relative; z-index: 1; font-weight: 600;">Track additional meals or snacks that aren't in your plan</p>
-        <form id="manual-macro-form">
-          <div class="form-grid">
-            <div class="form-group"><label>Calories</label><input type="number" id="manual-calories" placeholder="0" min="0" required /></div>
-            <div class="form-group"><label>Protein (g)</label><input type="number" id="manual-protein" placeholder="0" min="0" step="0.1" required /></div>
-            <div class="form-group"><label>Fat (g)</label><input type="number" id="manual-fat" placeholder="0" min="0" step="0.1" required /></div>
-            <div class="form-group"><label>Net Carbs (g)</label><input type="number" id="manual-carbs" placeholder="0" min="0" step="0.1" required /></div>
+      <a href="/dashboard/profile" class="nav-avatar">{profile.full_name.charAt(0).toUpperCase()}</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ══ PAGE ══ -->
+<div class="page">
+
+  <!-- Header -->
+  <div class="dash-header">
+    <div>
+      <div class="dash-greeting">{greeting}, {userName} 👋</div>
+      <h1 class="dash-title">Day <span class="hl">{viewDay}</span> of 30</h1>
+      <p class="dash-sub">
+        {viewDay === currentDay
+          ? `You're ${Math.round((currentDay/30)*100)}% through your transformation`
+          : `Viewing Day ${viewDay} • Currently on Day ${currentDay}`}
+      </p>
+      <div class="progress-wrap">
+        <div class="progress-info">
+          <span class="progress-label">Journey Progress</span>
+          <span class="progress-val">{Math.round((currentDay/30)*100)}%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style={`width:${(currentDay/30)*100}%`}></div>
+        </div>
+      </div>
+    </div>
+    <div class="dash-nav-btns">
+      <a href={viewDay > 1 ? `/dashboard/?day=${viewDay - 1}` : '#'} class="btn-nav" style={viewDay <= 1 ? 'opacity:.4;pointer-events:none;' : ''}>← Prev</a>
+      <a href={viewDay < 30 ? `/dashboard/?day=${viewDay + 1}` : '#'} class="btn-nav" style={viewDay >= 30 ? 'opacity:.4;pointer-events:none;' : ''}>Next →</a>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="glow" style="background:var(--green);"></div>
+      <div class="stat-icon" style="background:rgba(16,185,129,.1);">📅</div>
+      <div class="stat-label">Current Day</div>
+      <div class="stat-val" style="background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">{currentDay}</div>
+      <div class="stat-sub">of 30 days</div>
+    </div>
+    <div class="stat-card">
+      <div class="glow" style="background:var(--blue);"></div>
+      <div class="stat-icon" style="background:rgba(59,130,246,.1);">✅</div>
+      <div class="stat-label">Tasks Done</div>
+      <div class="stat-val" style="background:linear-gradient(135deg,var(--blue),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">{completedTasks}<span style="font-size:1.2rem;opacity:.5;">/{totalTasks}</span></div>
+      <div class="progress-bar" style="margin-top:.6rem;"><div class="progress-fill" style={`width:${progressPercentage}%`}></div></div>
+    </div>
+    <div class="stat-card">
+      <div class="glow" style="background:var(--gold);"></div>
+      <div class="stat-icon" style="background:rgba(245,158,11,.1);">⚡</div>
+      <div class="stat-label">Total XP</div>
+      <div class="stat-val" style="background:linear-gradient(135deg,var(--gold),#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">{journey.total_xp}</div>
+      <div class="stat-sub">Level {journey.level}</div>
+    </div>
+    <div class="stat-card">
+      <div class="glow" style="background:var(--red);"></div>
+      <div class="stat-icon" style="background:rgba(239,68,68,.1);">🔥</div>
+      <div class="stat-label">Streak</div>
+      <div class="stat-val" style="background:linear-gradient(135deg,var(--red),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">{journey.streak_days}</div>
+      <div class="stat-sub">days in a row</div>
+    </div>
+  </div>
+
+  <!-- Keto Flu Banner -->
+  {showKetoFluTip && (
+    <div class="keto-banner" id="keto-banner" style={`background:${currentTip.gradient};`}>
+      <button class="keto-close" id="ketoClose">×</button>
+      <div class="keto-content">
+        <div class="keto-header">
+          <div class="keto-icon-wrap">{currentTip.icon}</div>
+          <div class="keto-meta">
+            <div class="keto-badges">
+              <span class="keto-badge">{currentTip.day} of 10</span>
+              <span class="keto-badge">🛡️ Keto Flu Guide</span>
+              {currentTip.severity === 'danger' && <span class="keto-badge" style="background:rgba(255,255,255,.35);">⚠️ Hardest Day</span>}
+              {currentTip.severity === 'success' && <span class="keto-badge" style="background:rgba(255,255,255,.35);">🎉 Victory!</span>}
+            </div>
+            <div class="keto-title">{currentTip.title}</div>
           </div>
-          <button type="submit" class="btn btn-primary" style="margin-top: 1.5rem; width: 100%; justify-content: center; background: white; color: #667eea; font-size: 1.0625rem; position: relative; z-index: 1;">
-            <span style="font-size: 1.25rem;">✨</span><span>Add to Today's Macros</span>
-          </button>
-        </form>
+        </div>
+        <div class="keto-cards">
+          <div class="keto-card">
+            <div class="keto-card-label"><span>🔬</span> What's Happening</div>
+            <p class="keto-card-text">{currentTip.whatsHappening}</p>
+          </div>
+          <div class="keto-card">
+            <div class="keto-card-label"><span>💡</span> Pro Tip</div>
+            <p class="keto-card-text">{currentTip.tip}</p>
+          </div>
+          <div class="keto-card">
+            <div class="keto-card-label"><span>🛒</span> Today's Recommendation</div>
+            <p class="keto-card-text">{currentTip.suggestion}</p>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:.78rem;font-weight:700;opacity:.85;margin-bottom:.4rem;">
+            <span>Keto Flu Progress</span><span>{currentTip.progress}% Complete</span>
+          </div>
+          <div class="keto-prog-bar">
+            <div class="keto-prog-fill" style={`width:${currentTip.progress}%`}></div>
+          </div>
+          <div class="keto-prog-labels">
+            <span>Day 1</span><span>Day 5 Halfway</span><span>Day 10 👑</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:1.25rem;">
+          <button class="keto-action-btn">⚡ {currentTip.action}</button>
+          <span style="font-size:.82rem;opacity:.85;font-weight:600;">
+            🏆 {10-viewDay>0 ? `${10-viewDay} days left until you beat keto flu!` : `You beat keto flu! 🎉`}
+          </span>
+        </div>
+      </div>
+    </div>
+  )}
+
+  <!-- Tabs -->
+  <div class="tabs-wrap">
+    <button class="tab-btn active" data-tab="tasks">
+      ✅ Tasks
+      {incompleteTasks.length > 0 && <span class="tab-badge">{incompleteTasks.length}</span>}
+    </button>
+    <button class="tab-btn" data-tab="meals">🍽️ Meals</button>
+    <button class="tab-btn" data-tab="nutrition">📊 Nutrition</button>
+    <button class="tab-btn" data-tab="calendar">📆 Calendar</button>
+    <button class="tab-btn" data-tab="progress">📈 Progress</button>
+  </div>
+
+  <!-- TAB: Tasks -->
+  <div id="tab-tasks" class="tab-content active">
+    <div class="card">
+      <div class="card-title">Today's Tasks</div>
+      {filteredTasks.map(task => (
+        <div class="task-item">
+          <div class="task-left">
+            <div class={`task-circle ${task.completed ? 'done' : ''}`}>
+              {task.completed ? '✓' : task.task_type==='breakfast'?'🍳':task.task_type==='lunch'?'🥗':task.task_type==='dinner'?'🍽️':task.task_type==='snack'?'🍎':'💧'}
+            </div>
+            <div>
+              <div class={`task-name ${task.completed ? 'done' : ''}`}>{task.task_title}</div>
+              {task.completed && task.completed_at && (
+                <div class="task-time">✓ Completed at {new Date(task.completed_at).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</div>
+              )}
+            </div>
+          </div>
+          <span class="xp-badge">+{task.xp_earned} XP</span>
+        </div>
+      ))}
+
+      {waterIntake && (
+        <div class="water-section">
+          <div class="water-header">
+            <div>
+              <div class="water-title">💧 Water Intake</div>
+              <div style="font-size:.82rem;color:var(--soft);margin-top:.2rem;">
+                <span class="water-count" id="waterCount">{waterIntake.glasses_count}</span>
+                <span style="color:var(--muted);"> / {waterIntake.target_glasses} glasses</span>
+              </div>
+            </div>
+            {canInteract && (
+              <div class="water-btns">
+                <button class="water-btn" data-w="minus">−</button>
+                <button class="water-btn" data-w="plus">+ Add</button>
+              </div>
+            )}
+          </div>
+          <div class="water-grid">
+            {Array.from({length: waterIntake.target_glasses}, (_, i) => (
+              <div class={`water-glass ${i < waterIntake.glasses_count ? 'filled' : ''}`} data-gi={i}>💧</div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <!-- TAB: Meals -->
+  <div id="tab-meals" class="tab-content">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.75rem;">
+      <span class="card-title" style="margin:0;">Today's Meals</span>
+      <a href="/dashboard/shopping-list" style="display:inline-flex;align-items:center;gap:.4rem;padding:.6rem 1.1rem;border-radius:10px;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;font-weight:700;font-size:.82rem;text-decoration:none;">🛒 Shopping List</a>
+    </div>
+    <div class="grid2">
+      {todayMeals.map(meal => (
+        <div class="meal-card">
+          {meal.recipe?.image_url && (
+            <div style="position:relative;">
+              <img src={meal.recipe.image_url} alt={meal.recipe.title} class="meal-img"/>
+              <div style="position:absolute;bottom:0;left:0;right:0;padding:1rem;background:linear-gradient(to top,rgba(0,0,0,.7),transparent);">
+                <span style="color:#fff;font-weight:700;font-size:.82rem;">
+                  {meal.meal_type==='breakfast'?'☀️ Breakfast':meal.meal_type==='lunch'?'🌞 Lunch':meal.meal_type==='dinner'?'🌙 Dinner':'🍎 Snack'}
+                </span>
+              </div>
+            </div>
+          )}
+          <div class="meal-body">
+            {!meal.recipe?.image_url && <div class="meal-type">{meal.meal_type}</div>}
+            <div class="meal-name">{meal.recipe?.title}</div>
+            <a href={`/dashboard/recipe/${meal.recipe?.id}`} class="btn-recipe">View Recipe →</a>
+          </div>
+        </div>
+      ))}
+      {todayMeals.length === 0 && (
+        <div class="card" style="grid-column:1/-1;text-align:center;color:var(--soft);padding:3rem;">
+          <div style="font-size:3rem;margin-bottom:1rem;">🍽️</div>
+          <p>No meals planned for this day yet.</p>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <!-- TAB: Nutrition -->
+  <div id="tab-nutrition" class="tab-content">
+    <div class="card-title" style="margin-bottom:1.25rem;">📊 Smart Macros Tracker</div>
+    <div class="macros-grid">
+      <div class="macro-card cal">
+        <div class="macro-pct">{caloriesPercent}%</div>
+        <div class="macro-lbl">Calories</div>
+        <div class="macro-val" data-mt="calories">{actualCalories}</div>
+        <div class="macro-target">Target: {targetCalories} kcal</div>
+        <div class="macro-prog"><div class="macro-prog-fill" data-mp="calories" style={`width:${Math.min(caloriesPercent,100)}%`}></div></div>
+      </div>
+      <div class="macro-card pro">
+        <div class="macro-pct">{proteinPercent}%</div>
+        <div class="macro-lbl">Protein</div>
+        <div class="macro-val" data-mt="protein">{actualProtein}g</div>
+        <div class="macro-target">Target: {targetProtein}g</div>
+        <div class="macro-prog"><div class="macro-prog-fill" data-mp="protein" style={`width:${Math.min(proteinPercent,100)}%`}></div></div>
+      </div>
+      <div class="macro-card fat">
+        <div class="macro-pct">{fatPercent}%</div>
+        <div class="macro-lbl">Fat</div>
+        <div class="macro-val" data-mt="fat">{actualFat}g</div>
+        <div class="macro-target">Target: {targetFat}g</div>
+        <div class="macro-prog"><div class="macro-prog-fill" data-mp="fat" style={`width:${Math.min(fatPercent,100)}%`}></div></div>
+      </div>
+      <div class="macro-card carb">
+        <div class="macro-pct">{carbsPercent}%</div>
+        <div class="macro-lbl">Net Carbs</div>
+        <div class="macro-val" data-mt="carbs">{actualCarbs}g</div>
+        <div class="macro-target">Target: {targetCarbs}g</div>
+        <div class="macro-prog"><div class="macro-prog-fill" data-mp="carbs" style={`width:${Math.min(carbsPercent,100)}%`}></div></div>
       </div>
     </div>
 
-    <!-- Calendar Tab -->
-    <div id="tab-calendar" class="tab-content">
+    {actualCalories > 0 && (
+      <div class="grid2" style="margin-bottom:1.25rem;">
+        <div class="card">
+          <div class="card-title">🥧 Calorie Distribution</div>
+          <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">📊 Target vs Actual</div>
+          <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+        </div>
+      </div>
+    )}
+
+    <div class="manual-form">
+      <h4>➕ Add Custom Food</h4>
+      <p>Track additional meals or snacks that aren't in your plan</p>
+      <form id="macroForm">
+        <div class="form-grid">
+          <div class="form-group"><label>Calories</label><input type="number" id="mCal" placeholder="0" min="0"/></div>
+          <div class="form-group"><label>Protein (g)</label><input type="number" id="mPro" placeholder="0" min="0" step=".1"/></div>
+          <div class="form-group"><label>Fat (g)</label><input type="number" id="mFat" placeholder="0" min="0" step=".1"/></div>
+          <div class="form-group"><label>Net Carbs (g)</label><input type="number" id="mCarb" placeholder="0" min="0" step=".1"/></div>
+        </div>
+        <button type="submit" class="btn-submit">✨ Add to Today's Macros</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- TAB: Calendar -->
+  <div id="tab-calendar" class="tab-content">
+    <div class="card">
+      <div class="card-title">📆 30-Day Journey</div>
+      <div class="cal-grid">
+        {Array.from({length:30},(_,i)=>i+1).map(day=>(
+          <a href={`/dashboard?day=${day}`}
+             class={`cal-day ${day < currentDay ? 'done' : ''} ${day === currentDay ? 'today' : ''}`}>
+            {day}
+          </a>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Progress -->
+  <div id="tab-progress" class="tab-content">
+    <div class="grid2">
       <div class="card">
-        <h3 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 2rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">30-Day Journey</h3>
-        <div class="calendar">
-          {Array.from({ length: 30 }, (_, i) => i + 1).map((day) => (
-            <a href={`/dashboard?day=${day}`} class={`calendar-day ${day < currentDay ? 'completed' : ''} ${day === currentDay ? 'current' : ''}`}>{day}</a>
+        <div class="card-title">⚖️ Weight Progress</div>
+        {(weightHistory && weightHistory.length > 1) ? (
+          <div class="chart-wrap" style="height:240px;"><canvas id="weightChart"></canvas></div>
+        ) : (
+          <div style="text-align:center;padding:2rem;color:var(--soft);">
+            <div style="font-size:2.5rem;margin-bottom:.75rem;">⚖️</div>
+            <p>Log your weight in Profile to see your progress chart here!</p>
+          </div>
+        )}
+      </div>
+      <div class="card">
+        <div class="card-title">🏆 Achievements</div>
+        <div style="display:flex;flex-direction:column;gap:.75rem;">
+          {[
+            { icon:'🔥', label:'Streak Warrior', desc:`${journey.streak_days} days streak`, done: journey.streak_days >= 3 },
+            { icon:'⚡', label:'XP Collector', desc:`${journey.total_xp} XP earned`, done: journey.total_xp >= 100 },
+            { icon:'💧', label:'Hydration Hero', desc:'Hit 8 glasses today', done: (waterIntake?.glasses_count||0) >= 8 },
+            { icon:'✅', label:'Task Master', desc:'Complete all tasks today', done: completedTasks === totalTasks && totalTasks > 0 },
+            { icon:'📅', label:'Week Warrior', desc:'Reach Day 7', done: currentDay >= 7 },
+            { icon:'👑', label:'Keto Champion', desc:'Beat keto flu (Day 10)', done: currentDay >= 10 },
+          ].map(a => (
+            <div style={`display:flex;align-items:center;gap:.875rem;padding:.875rem;border-radius:12px;background:${a.done?'rgba(16,185,129,.08)':'var(--surface)'};border:1px solid ${a.done?'rgba(16,185,129,.25)':'var(--border)'};`}>
+              <div style={`width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.25rem;background:${a.done?'rgba(16,185,129,.15)':'rgba(255,255,255,.04)'};filter:${a.done?'none':'grayscale(1) opacity(.4)'}`}>{a.icon}</div>
+              <div style="flex:1;">
+                <div style={`font-weight:700;font-size:.875rem;color:${a.done?'var(--green)':'var(--soft)'}`}>{a.label}</div>
+                <div style="font-size:.75rem;color:var(--muted);">{a.desc}</div>
+              </div>
+              {a.done && <span style="font-size:.7rem;font-weight:800;color:var(--green);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25);padding:.15rem .5rem;border-radius:99px;">✓ Earned</span>}
+            </div>
           ))}
         </div>
       </div>
     </div>
-
   </div>
 
-  <script is:inline define:vars={{ actualCalories, actualProtein, actualFat, actualCarbs, targetCalories, targetProtein, targetFat, targetCarbs }}>
-    // Dark Mode Toggle
-    const themeToggle = document.getElementById('themeToggle');
-    const themeIcon = document.getElementById('themeIcon');
-    const html = document.documentElement;
+</div><!-- /page -->
 
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    html.setAttribute('data-theme', savedTheme);
-    themeIcon.textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+<!-- ── AI FAB (Elite only) ── -->
+{isElite && (
+  <>
+    <button class="ai-fab" id="aiFab">
+      🤖
+      <div class="ai-fab-tooltip">AI Keto Coach</div>
+    </button>
+    <div class="ai-panel" id="aiPanel">
+      <div class="ai-panel-header">
+        <div class="ai-avatar">🤖</div>
+        <div>
+          <div class="ai-panel-title">Keto AI Coach</div>
+          <div class="ai-panel-sub">Powered by Gemini • Elite exclusive</div>
+        </div>
+        <button class="ai-close" id="aiClose">×</button>
+      </div>
+      <div class="ai-suggestions">
+        <button class="ai-sug" data-sug="Suggest a keto recipe for tonight">Tonight's recipe?</button>
+        <button class="ai-sug" data-sug="How am I doing on my keto journey?">My progress?</button>
+        <button class="ai-sug" data-sug="I have a headache, what should I do?">Headache fix?</button>
+        <button class="ai-sug" data-sug="What should I eat to hit my protein target?">Hit protein goal?</button>
+      </div>
+      <div class="ai-messages" id="aiMessages">
+        <div class="ai-msg bot">
+          👋 Hi {userName}! I'm your personal Keto Coach. I know you're on Day {currentDay} with {journey.streak_days} days streak and {journey.total_xp} XP. How can I help you today?
+        </div>
+      </div>
+      <div class="ai-input-wrap">
+        <input class="ai-input" id="aiInput" placeholder="Ask me anything about keto..." />
+        <button class="ai-send" id="aiSend">→</button>
+      </div>
+    </div>
+  </>
+)}
 
-    if (themeToggle) {
-      themeToggle.addEventListener('click', function() {
-        const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        html.setAttribute('data-theme', newTheme);
-        themeIcon.textContent = newTheme === 'dark' ? '🌙' : '☀️';
-        localStorage.setItem('theme', newTheme);
-      });
-    }
+<!-- Toast -->
+<div class="toast" id="toast"></div>
 
-    // Notification Toggle
-    const notifBell = document.getElementById('notif-bell');
-    const notifDropdown = document.getElementById('notificationDropdown');
-    
-    if (notifBell && notifDropdown) {
-      notifBell.addEventListener('click', function(e) {
-        e.stopPropagation();
-        notifDropdown.classList.toggle('active');
-      });
-      document.addEventListener('click', function(e) {
-        if (!notifDropdown.contains(e.target) && !notifBell.contains(e.target)) {
-          notifDropdown.classList.remove('active');
-        }
-      });
-      const viewAllBtn = document.getElementById('view-all-tasks');
-      if (viewAllBtn) {
-        viewAllBtn.addEventListener('click', function() {
-          notifDropdown.classList.remove('active');
-          switchTab('tasks');
-        });
+<script is:inline define:vars={{
+  actualCalories, actualProtein, actualFat, actualCarbs,
+  targetCalories, targetProtein, targetFat, targetCarbs,
+  weightHistoryJson,
+  isElite,
+  currentDay, viewDay,
+  userName,
+  streak: journey.streak_days,
+  totalXp: journey.total_xp,
+  level: journey.level,
+  weight: profile.weight_kg || 70,
+  goal: profile.goal || 'lose_weight',
+  targetWeight: profile.target_weight_kg || 65,
+}}>
+
+// ── THEME ──
+const html   = document.documentElement;
+const themeBtn = document.getElementById('themeBtn');
+function applyTheme(t) {
+  html.setAttribute('data-theme', t);
+  localStorage.setItem('keto-theme', t);
+  if (themeBtn) themeBtn.textContent = t === 'dark' ? '☀️' : '🌙';
+}
+applyTheme(localStorage.getItem('keto-theme') || 'dark');
+themeBtn?.addEventListener('click', () => {
+  applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+});
+
+// ── NOTIFS ──
+const notifBtn = document.getElementById('notifBtn');
+const notifDrop = document.getElementById('notifDropdown');
+notifBtn?.addEventListener('click', e => { e.stopPropagation(); notifDrop?.classList.toggle('open'); });
+document.addEventListener('click', e => { if (!notifDrop?.contains(e.target) && e.target !== notifBtn) notifDrop?.classList.remove('open'); });
+document.getElementById('seeAllTasks')?.addEventListener('click', () => { notifDrop?.classList.remove('open'); switchTab('tasks'); });
+document.querySelectorAll('.notif-item').forEach(n => n.addEventListener('click', () => { notifDrop?.classList.remove('open'); switchTab('tasks'); }));
+
+// ── TABS ──
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name)?.classList.add('active');
+  document.querySelector(`[data-tab="${name}"]`)?.classList.add('active');
+}
+document.querySelectorAll('.tab-btn').forEach(b => {
+  b.addEventListener('click', () => { const t = b.getAttribute('data-tab'); if(t) switchTab(t); });
+});
+
+// ── KETO BANNER ──
+const banner = document.getElementById('keto-banner');
+const ketoClose = document.getElementById('ketoClose');
+if (banner && ketoClose) {
+  const key = 'keto_flu_' + window.location.search;
+  if (localStorage.getItem(key) === new Date().toDateString()) banner.style.display = 'none';
+  ketoClose.addEventListener('click', () => {
+    banner.style.opacity = '0'; banner.style.transform = 'translateY(-10px) scale(.97)';
+    localStorage.setItem(key, new Date().toDateString());
+    setTimeout(() => banner.style.display = 'none', 300);
+  });
+}
+
+// ── WATER ──
+let currentWater = parseInt(document.getElementById('waterCount')?.textContent || '0');
+document.querySelectorAll('[data-w]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const newCount = Math.max(0, Math.min(8, currentWater + (btn.getAttribute('data-w') === 'plus' ? 1 : -1)));
+    if (newCount === currentWater) return;
+    try {
+      const r = await fetch('/api/water/update', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ glasses: newCount }) });
+      if (r.ok) {
+        currentWater = newCount;
+        const el = document.getElementById('waterCount');
+        if (el) el.textContent = newCount;
+        document.querySelectorAll('[data-gi]').forEach((g, i) => g.classList.toggle('filled', i < newCount));
+        showToast(`💧 ${newCount} / 8 glasses logged!`);
       }
-      document.querySelectorAll('.notification-item').forEach(item => {
-        item.addEventListener('click', function() {
-          notifDropdown.classList.remove('active');
-          switchTab('tasks');
-        });
-      });
-    }
+    } catch(e) {}
+  });
+});
 
-    // Tab Switching
-    function switchTab(tabName) {
-      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      const targetTab = document.getElementById('tab-' + tabName);
-      if (targetTab) targetTab.classList.add('active');
-      const targetBtn = document.querySelector(`[data-tab="${tabName}"]`);
-      if (targetBtn) targetBtn.classList.add('active');
-    }
+// ── MANUAL MACROS ──
+let mCal = actualCalories, mPro = actualProtein, mFat = actualFat, mCarb = actualCarbs;
+document.getElementById('macroForm')?.addEventListener('submit', e => {
+  e.preventDefault();
+  mCal  += parseFloat(document.getElementById('mCal')?.value)  || 0;
+  mPro  += parseFloat(document.getElementById('mPro')?.value)  || 0;
+  mFat  += parseFloat(document.getElementById('mFat')?.value)  || 0;
+  mCarb += parseFloat(document.getElementById('mCarb')?.value) || 0;
+  updateMacro('calories', mCal,  targetCalories);
+  updateMacro('protein',  mPro,  targetProtein);
+  updateMacro('fat',      mFat,  targetFat);
+  updateMacro('carbs',    mCarb, targetCarbs);
+  e.target.reset();
+  showToast('✅ Macros added!');
+});
+function updateMacro(type, val, tgt) {
+  const pct = Math.round((val/tgt)*100);
+  const el  = document.querySelector(`[data-mt="${type}"]`);
+  if (el) el.textContent = type==='calories' ? Math.round(val) : Math.round(val)+'g';
+  const card = el?.closest('.macro-card');
+  if (card) {
+    const pEl = card.querySelector('.macro-pct');
+    if (pEl) pEl.textContent = pct+'%';
+    const bar = card.querySelector(`[data-mp="${type}"]`);
+    if (bar) bar.style.width = Math.min(pct,100)+'%';
+  }
+}
 
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const tabName = this.getAttribute('data-tab');
-        if (tabName) switchTab(tabName);
-      });
+// ── CHARTS ──
+window.addEventListener('load', () => {
+  if (typeof Chart === 'undefined') return;
+  const dark  = html.getAttribute('data-theme') === 'dark';
+  const tCol  = dark ? '#e8edf5' : '#0f172a';
+  const gCol  = dark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.05)';
+  Chart.defaults.color = tCol;
+
+  if (actualCalories > 0) {
+    const pie = document.getElementById('pieChart');
+    if (pie) new Chart(pie, {
+      type:'doughnut',
+      data:{ labels:['Protein','Fat','Net Carbs'], datasets:[{ data:[mPro*4,mFat*9,mCarb*4], backgroundColor:['#4facfe','#fcb69f','#fed6e3'], borderWidth:0, hoverOffset:8 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'65%', plugins:{ legend:{ position:'bottom', labels:{ padding:16, font:{size:13,weight:'bold'} } } } }
     });
-
-    // ============================================
-    // KETO FLU BANNER
-    // ============================================
-    const ketoFluBanner = document.getElementById('keto-flu-banner');
-    const ketoFluClose = document.getElementById('keto-flu-close');
-
-    if (ketoFluBanner && ketoFluClose) {
-      // Check if dismissed today
-      const today = new Date().toDateString();
-      const dismissedKey = 'keto_flu_dismissed_' + window.location.search;
-      const dismissedDate = localStorage.getItem(dismissedKey);
-
-      if (dismissedDate === today) {
-        ketoFluBanner.style.display = 'none';
-      }
-
-      ketoFluClose.addEventListener('click', function() {
-        ketoFluBanner.style.animation = 'ketoFluSlideOut 0.4s ease forwards';
-        localStorage.setItem(dismissedKey, today);
-        setTimeout(() => {
-          ketoFluBanner.style.display = 'none';
-        }, 400);
-      });
-    }
-    // ============================================
-
-    // Water Tracker
-    let currentWater = parseInt(document.getElementById('water-count')?.textContent || '0');
-
-    document.querySelectorAll('[data-water-action]').forEach(btn => {
-      btn.addEventListener('click', async function() {
-        const action = this.getAttribute('data-water-action');
-        const newCount = Math.max(0, Math.min(8, currentWater + (action === 'plus' ? 1 : -1)));
-        if (newCount === currentWater) return;
-
-        try {
-          const res = await fetch('/api/water/update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ glasses: newCount })
-          });
-          if (res.ok) {
-            currentWater = newCount;
-            const waterCountEl = document.getElementById('water-count');
-            if (waterCountEl) waterCountEl.textContent = newCount;
-            document.querySelectorAll('[data-glass-index]').forEach((glass, i) => {
-              glass.classList.toggle('filled', i < newCount);
-            });
-          }
-        } catch (error) { console.error('Error:', error); }
-      });
+    const bar = document.getElementById('barChart');
+    if (bar) new Chart(bar, {
+      type:'bar',
+      data:{
+        labels:['Protein (g)','Fat (g)','Carbs (g)'],
+        datasets:[
+          { label:'Target', data:[targetProtein,targetFat,targetCarbs], backgroundColor:'rgba(148,163,184,.25)', borderColor:'rgba(148,163,184,.5)', borderWidth:2, borderRadius:8 },
+          { label:'Actual', data:[mPro,mFat,mCarb], backgroundColor:['rgba(79,172,254,.7)','rgba(252,182,159,.7)','rgba(254,214,227,.7)'], borderColor:['#4facfe','#fcb69f','#fed6e3'], borderWidth:2, borderRadius:8 }
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{beginAtZero:true,grid:{color:gCol}}, x:{grid:{display:false}} }, plugins:{ legend:{ position:'top' } } }
     });
+  }
 
-    // Manual Macros Entry
-    let manualCalories = actualCalories;
-    let manualProtein = actualProtein;
-    let manualFat = actualFat;
-    let manualCarbs = actualCarbs;
+  // Weight chart
+  const wh = JSON.parse(weightHistoryJson || '[]');
+  if (wh.length > 1) {
+    const wc = document.getElementById('weightChart');
+    if (wc) new Chart(wc, {
+      type:'line',
+      data:{
+        labels: wh.map(w => new Date(w.logged_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})),
+        datasets:[{
+          label:'Weight (kg)', data: wh.map(w => w.weight_kg),
+          borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.1)',
+          borderWidth:2.5, pointBackgroundColor:'#10b981', pointRadius:4,
+          tension:.4, fill:true,
+        }]
+      },
+      options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{grid:{color:gCol}}, x:{grid:{display:false}} }, plugins:{ legend:{display:false} } }
+    });
+  }
+});
 
-    const macroForm = document.getElementById('manual-macro-form');
-    if (macroForm) {
-      macroForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        manualCalories += parseFloat(document.getElementById('manual-calories').value) || 0;
-        manualProtein += parseFloat(document.getElementById('manual-protein').value) || 0;
-        manualFat += parseFloat(document.getElementById('manual-fat').value) || 0;
-        manualCarbs += parseFloat(document.getElementById('manual-carbs').value) || 0;
-        
-        updateMacroDisplay('calories', manualCalories, targetCalories);
-        updateMacroDisplay('protein', manualProtein, targetProtein);
-        updateMacroDisplay('fat', manualFat, targetFat);
-        updateMacroDisplay('carbs', manualCarbs, targetCarbs);
-        
-        macroForm.reset();
-        showToast('✅ Macros added successfully!');
+// ── TOAST ──
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'toast show';
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── AI CHATBOT (Elite) ──
+if (isElite) {
+  const fab    = document.getElementById('aiFab');
+  const panel  = document.getElementById('aiPanel');
+  const aiClose = document.getElementById('aiClose');
+  const msgs   = document.getElementById('aiMessages');
+  const input  = document.getElementById('aiInput');
+  const send   = document.getElementById('aiSend');
+
+  fab?.addEventListener('click',  () => panel?.classList.toggle('open'));
+  aiClose?.addEventListener('click', () => panel?.classList.remove('open'));
+
+  document.querySelectorAll('.ai-sug').forEach(s => {
+    s.addEventListener('click', () => { if(input) input.value = s.getAttribute('data-sug') || ''; sendMsg(); });
+  });
+
+  function addMsg(text, role) {
+    const d = document.createElement('div');
+    d.className = 'ai-msg ' + role;
+    d.textContent = text;
+    msgs?.appendChild(d);
+    msgs?.scrollTo({top:9999, behavior:'smooth'});
+    return d;
+  }
+
+  async function sendMsg() {
+    const text = input?.value?.trim();
+    if (!text || !input) return;
+    input.value = '';
+    addMsg(text, 'user');
+
+    const typing = document.createElement('div');
+    typing.className = 'ai-msg bot';
+    typing.innerHTML = '<div class="ai-typing"><span></span><span></span><span></span></div>';
+    msgs?.appendChild(typing);
+    msgs?.scrollTo({top:9999,behavior:'smooth'});
+
+    const systemCtx = `You are a personal keto diet coach. The user's profile:
+- Name: ${userName}
+- Current Day: ${currentDay}/30
+- Streak: ${streak} days
+- Total XP: ${totalXp}
+- Level: ${level}
+- Current Weight: ${weight}kg
+- Goal: ${goal}
+- Target Weight: ${targetWeight}kg
+- Today's calories consumed: ${actualCalories}/${targetCalories} kcal
+- Protein: ${actualProtein}g/${targetProtein}g
+- Fat: ${actualFat}g/${targetFat}g
+- Net Carbs: ${actualCarbs}g/${targetCarbs}g
+
+Keep responses helpful, encouraging, and concise (2-4 sentences). Always stay on topic of keto diet, nutrition, and health.`;
+
+    try {
+      const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=GEMINI_API_KEY', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          contents:[{parts:[{text:`${systemCtx}\n\nUser question: ${text}`}]}],
+          generationConfig:{ maxOutputTokens:300, temperature:.7 }
+        })
       });
+      const data = await res.json();
+      const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || "I'm here to help! Could you rephrase that?";
+      typing.remove();
+      addMsg(reply, 'bot');
+    } catch {
+      typing.remove();
+      addMsg("Sorry, I'm having trouble connecting. Please try again!", 'bot');
     }
+  }
 
-    function updateMacroDisplay(type, actual, target) {
-      const percent = Math.round((actual / target) * 100);
-      const valueEl = document.querySelector(`[data-macro-type="${type}"]`);
-      if (valueEl) valueEl.textContent = type === 'calories' ? Math.round(actual) : Math.round(actual) + 'g';
-      const card = valueEl?.closest('.macro-card-3d');
-      if (card) {
-        const percentEl = card.querySelector('.macro-percent');
-        if (percentEl) percentEl.textContent = percent + '%';
-        const progressEl = card.querySelector('[data-progress]');
-        if (progressEl) progressEl.style.width = Math.min(percent, 100) + '%';
-      }
-    }
-
-    function showToast(message) {
-      const toast = document.createElement('div');
-      toast.style.cssText = 'position:fixed;top:5rem;right:1.5rem;background:linear-gradient(135deg,#10b981,#34d399);color:white;padding:1.25rem 2rem;border-radius:1rem;box-shadow:0 10px 30px rgba(0,0,0,0.3);z-index:9999;font-weight:700;font-size:1.0625rem;';
-      toast.textContent = message;
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 3000);
-    }
-
-    // Charts
-    if (actualCalories > 0) {
-      window.addEventListener('load', function() {
-        if (typeof Chart === 'undefined') return;
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const textColor = isDark ? '#eaeaea' : '#374151';
-        const gridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
-
-        const pieCtx = document.getElementById('macrosPieChart');
-        if (pieCtx) {
-          new Chart(pieCtx, {
-            type: 'doughnut',
-            data: {
-              labels: ['Protein', 'Fat', 'Net Carbs'],
-              datasets: [{ data: [manualProtein * 4, manualFat * 9, manualCarbs * 4], backgroundColor: ['#4facfe', '#fcb69f', '#fed6e3'], borderWidth: 0 }]
-            },
-            options: {
-              responsive: true, maintainAspectRatio: false,
-              plugins: { legend: { position: 'bottom', labels: { padding: 20, font: { size: 14, weight: 'bold' }, color: textColor } } }
-            }
-          });
-        }
-
-        const barCtx = document.getElementById('macrosBarChart');
-        if (barCtx) {
-          new Chart(barCtx, {
-            type: 'bar',
-            data: {
-              labels: ['Protein (g)', 'Fat (g)', 'Net Carbs (g)'],
-              datasets: [
-                { label: 'Target', data: [targetProtein, targetFat, targetCarbs], backgroundColor: 'rgba(156,163,175,0.5)', borderColor: '#9ca3af', borderWidth: 2, borderRadius: 8 },
-                { label: 'Actual', data: [manualProtein, manualFat, manualCarbs], backgroundColor: ['rgba(79,172,254,0.7)', 'rgba(252,182,159,0.7)', 'rgba(254,214,227,0.7)'], borderColor: ['#4facfe', '#fcb69f', '#fed6e3'], borderWidth: 2, borderRadius: 8 }
-              ]
-            },
-            options: {
-              responsive: true, maintainAspectRatio: false,
-              plugins: { legend: { position: 'top', labels: { padding: 15, font: { size: 14, weight: 'bold' }, color: textColor } } },
-              scales: {
-                y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
-                x: { grid: { display: false }, ticks: { color: textColor } }
-              }
-            }
-          });
-        }
-      });
-    }
-
-    console.log('✅ Dashboard loaded successfully!');
-  </script>
+  send?.addEventListener('click', sendMsg);
+  input?.addEventListener('keydown', e => { if(e.key==='Enter') sendMsg(); });
+}
+</script>
 </body>
 </html>
