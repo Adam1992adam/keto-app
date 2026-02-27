@@ -11,17 +11,102 @@ if (!user) return Astro.redirect('/login');
 const profile = await getProfile(user.id);
 if (!profile) return Astro.redirect('/login');
 
-// إذا لا يزال نشطاً → ارجع للـ dashboard
-if (profile.subscription_status === 'active') {
+if (profile.subscription_status === 'active' && profile.subscription_end_date && new Date(profile.subscription_end_date) > new Date()) {
   return Astro.redirect('/dashboard/');
 }
 
-const oldPlan = getPlan(profile.subscription_tier);
+const currentTier = profile.subscription_tier as string;
+const userName = profile.full_name?.split(' ')[0] || 'Friend';
 const endDate = profile.subscription_end_date
-  ? new Date(profile.subscription_end_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  ? new Date(profile.subscription_end_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
   : 'recently';
 
-const LS_UPGRADE_URL = "https://new-keto-plan.lemonsqueezy.com/checkout/buy/b975765f-a640-4cec-b3ef-44112acc9f75";
+const LS_URL = "https://new-keto-plan.lemonsqueezy.com/checkout/buy/b975765f-a640-4cec-b3ef-44112acc9f75";
+
+const allPlans = [
+  {
+    id: 'basic_30',
+    name: 'Basic',
+    emoji: '🥑',
+    price: '29.99',
+    period: '30 days',
+    color: '#10b981',
+    gradient: 'linear-gradient(135deg,#10b981,#34d399)',
+    perks: ['30-day meal plan', '30 keto recipes', '4 eBooks', 'Basic tracking'],
+    popular: false,
+  },
+  {
+    id: 'pro_6',
+    name: 'Pro',
+    emoji: '⚡',
+    price: '99.99',
+    period: '6 months',
+    color: '#6366f1',
+    gradient: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+    perks: ['6-month meal plan', '87+ recipes', '8 eBooks', 'Advanced analytics', 'Priority support'],
+    popular: true,
+  },
+  {
+    id: 'elite_12',
+    name: 'Elite',
+    emoji: '👑',
+    price: '199.99',
+    period: '12 months',
+    color: '#f59e0b',
+    gradient: 'linear-gradient(135deg,#f59e0b,#fbbf24)',
+    perks: ['12-month meal plan', 'Unlimited recipes', '12 eBooks', 'AI Keto Coach', '24/7 support', 'Community access'],
+    popular: false,
+  },
+];
+
+const suggestedPlans = currentTier === 'basic_30'
+  ? allPlans.filter(p => p.id !== 'basic_30')
+  : currentTier === 'pro_6'
+  ? allPlans.filter(p => p.id === 'elite_12')
+  : allPlans;
+
+const tierMeta = {
+  basic_30: {
+    badge: '30 Days ✓',
+    badgeColor: '#10b981',
+    badgeBg: 'rgba(16,185,129,0.1)',
+    icon: '🏅',
+    iconBg: 'rgba(16,185,129,0.1)',
+    title: `You completed your 30-Day Keto Foundation!`,
+    sub: `Your body has adapted to ketosis. Now it's time to go deeper.`,
+    headline: `Your 30 Days Are Up — But Your Journey Isn't, ${userName}`,
+    body: `You took the first step and proved you can do it. Your body is already adapting to keto. Now is the perfect time to lock in your results with a longer plan.`,
+    sectionLabel: '⬆️ Keep the momentum going',
+  },
+  pro_6: {
+    badge: '6 Months ✓',
+    badgeColor: '#818cf8',
+    badgeBg: 'rgba(99,102,241,0.1)',
+    icon: '🥈',
+    iconBg: 'rgba(99,102,241,0.1)',
+    title: `6 months of consistent keto — incredible!`,
+    sub: `You're in the top 5% of people who actually stick with it.`,
+    headline: `6 Months Strong, ${userName} — Ready for the Next Level?`,
+    body: `You've proven you can sustain keto for months. Imagine what a full year with unlimited recipes, an AI Keto Coach, and a community behind you could do.`,
+    sectionLabel: '👑 Unlock the full experience',
+  },
+  elite_12: {
+    badge: '12 Months ✓',
+    badgeColor: '#fbbf24',
+    badgeBg: 'rgba(245,158,11,0.1)',
+    icon: '👑',
+    iconBg: 'rgba(245,158,11,0.1)',
+    title: `A full year of Elite Keto — you're a legend!`,
+    sub: `Your commitment has been extraordinary. Ready for year two?`,
+    headline: `One Year Done, ${userName}. Your Story Continues.`,
+    body: `Your dedication over the past year has been remarkable. Your progress, your recipes, your community — all waiting for you. Let's keep writing this story together.`,
+    sectionLabel: '🔄 Renew your elite access',
+  },
+};
+
+const meta = tierMeta[currentTier as keyof typeof tierMeta] || tierMeta.basic_30;
+const plansJson = JSON.stringify(suggestedPlans);
+const defaultSelected = suggestedPlans.find(p => p.popular)?.id || suggestedPlans[suggestedPlans.length - 1]?.id || '';
 ---
 
 <!DOCTYPE html>
@@ -29,274 +114,339 @@ const LS_UPGRADE_URL = "https://new-keto-plan.lemonsqueezy.com/checkout/buy/b975
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Subscription Expired — Keto Journey</title>
+  <title>Continue Your Journey — Keto Journey</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
   <style>
     :root {
-      --bg: #0a0f1e;
-      --card: #111827;
-      --border: rgba(255,255,255,0.08);
-      --text: #f1f5f9;
-      --muted: #64748b;
-      --green: #10b981;
-      --purple: #6366f1;
+      --bg:#0c1117; --surface:#141b24; --card:#1a2332;
+      --border:rgba(255,255,255,.07); --text:#e8edf5;
+      --muted:#4a5a6e; --soft:#8a9ab0;
     }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg); color: var(--text);
-      min-height: 100vh; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 2rem; position: relative; overflow: hidden;
-    }
-    body::before {
-      content: ''; position: absolute; inset: 0;
-      background:
-        radial-gradient(ellipse 70% 50% at 10% 20%, rgba(99,102,241,0.12) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 40% at 90% 80%, rgba(16,185,129,0.08) 0%, transparent 50%);
-      pointer-events: none;
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html{scroll-behavior:smooth;}
+    body{
+      font-family:'DM Sans',sans-serif;
+      background:var(--bg);color:var(--text);
+      min-height:100vh;overflow-x:hidden;
     }
 
-    /* ── FLOATING PARTICLES ── */
-    .particles { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-    .particle {
-      position: absolute; border-radius: 50%;
-      animation: float linear infinite;
-      opacity: 0.15;
+    /* BG */
+    .bg-mesh{
+      position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;
     }
-    @keyframes float {
-      0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-      10% { opacity: 0.15; }
-      90% { opacity: 0.15; }
-      100% { transform: translateY(-100px) rotate(720deg); opacity: 0; }
+    .orb{
+      position:absolute;border-radius:50%;filter:blur(90px);
+      animation:orbDrift ease-in-out infinite;
     }
-
-    /* ── CARD ── */
-    .card {
-      position: relative; z-index: 1;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 28px;
-      padding: 3rem 2.5rem;
-      max-width: 680px; width: 100%;
-      box-shadow: 0 40px 80px rgba(0,0,0,0.5);
-      text-align: center;
+    .o1{width:600px;height:600px;background:rgba(99,102,241,.07);top:-150px;left:-150px;animation-duration:20s;}
+    .o2{width:500px;height:500px;background:rgba(16,185,129,.05);bottom:-100px;right:-100px;animation-duration:25s;animation-delay:-10s;}
+    .o3{width:350px;height:350px;background:rgba(245,158,11,.04);top:50%;left:50%;animation-duration:17s;animation-delay:-6s;}
+    @keyframes orbDrift{
+      0%,100%{transform:translate(0,0) scale(1);}
+      33%{transform:translate(40px,-50px) scale(1.08);}
+      66%{transform:translate(-30px,40px) scale(.93);}
     }
 
-    /* ── ICON ── */
-    .icon-wrap {
-      width: 96px; height: 96px; margin: 0 auto 1.75rem;
-      background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05));
-      border: 2px solid rgba(239,68,68,0.3);
-      border-radius: 24px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 3rem;
-      animation: pulse 2s ease-in-out infinite;
+    /* LAYOUT */
+    .page{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:2.5rem 1.5rem 5rem;}
+
+    /* NAV */
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:3.5rem;
     }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68,0.3); }
-      50% { transform: scale(1.05); box-shadow: 0 0 0 16px rgba(239,68,68,0); }
+    .logo{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:700;display:flex;align-items:center;gap:.5rem;}
+    .tag-exp{
+      display:flex;align-items:center;gap:.4rem;
+      padding:.3rem .85rem;border-radius:99px;
+      background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);
+      font-size:.72rem;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:.06em;
     }
 
-    .badge-expired {
-      display: inline-flex; align-items: center; gap: .4rem;
-      background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25);
-      border-radius: 99px; padding: .35rem 1rem;
-      font-size: .78rem; font-weight: 700; color: #f87171;
-      margin-bottom: 1.25rem; text-transform: uppercase; letter-spacing: .06em;
+    /* HERO */
+    .hero{margin-bottom:3rem;animation:up .6s ease both;}
+    .hero-meta{font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:1rem;}
+    .hero h1{
+      font-family:'Fraunces',serif;
+      font-size:clamp(1.8rem,5vw,3rem);
+      font-weight:900;line-height:1.18;margin-bottom:1rem;
+    }
+    .hero h1 .hl{
+      font-style:italic;
+      background:linear-gradient(135deg,#10b981,#34d399);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    }
+    .hero p{font-size:1rem;color:var(--soft);line-height:1.75;max-width:560px;}
+
+    /* ACHIEVEMENT */
+    .achiev{
+      display:flex;align-items:center;gap:1.25rem;
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:18px;padding:1.25rem 1.5rem;
+      margin-bottom:3.5rem;
+      animation:up .6s .15s ease both;
+    }
+    .achiev-icon{
+      width:54px;height:54px;border-radius:14px;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;font-size:1.6rem;
+    }
+    .achiev-text h3{font-weight:700;font-size:.95rem;margin-bottom:.2rem;}
+    .achiev-text p{font-size:.82rem;color:var(--soft);}
+    .achiev-badge{
+      margin-left:auto;flex-shrink:0;
+      padding:.3rem .85rem;border-radius:99px;
+      font-size:.72rem;font-weight:700;white-space:nowrap;
     }
 
-    h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 900; margin-bottom: .75rem; }
-    .sub { color: var(--muted); font-size: 1rem; line-height: 1.7; margin-bottom: 2rem; }
-    .end-date {
-      display: inline-flex; align-items: center; gap: .5rem;
-      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-      border-radius: 10px; padding: .5rem 1rem;
-      font-size: .85rem; color: var(--muted); margin-bottom: 2.5rem;
+    /* SECTION LABEL */
+    .slabel{
+      font-size:.7rem;font-weight:700;text-transform:uppercase;
+      letter-spacing:.12em;color:var(--muted);margin-bottom:1.25rem;
     }
 
-    /* ── WHAT YOU LOST ── */
-    .lost-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: .75rem; margin-bottom: 2.5rem;
+    /* PLANS */
+    .plans{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:1rem;margin-bottom:2rem;
     }
-    .lost-item {
-      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
-      border-radius: 14px; padding: 1rem .75rem;
-      font-size: .82rem; color: var(--muted);
+    .pcard{
+      background:var(--card);border:2px solid var(--border);
+      border-radius:22px;padding:1.6rem;cursor:pointer;
+      transition:all .3s ease;position:relative;overflow:hidden;
+      animation:up .6s ease both;
     }
-    .lost-item .lost-icon { font-size: 1.5rem; margin-bottom: .4rem; filter: grayscale(1); opacity: .5; }
-    .lost-item .lost-label { font-weight: 600; }
+    .pcard:nth-child(1){animation-delay:.1s;}
+    .pcard:nth-child(2){animation-delay:.2s;}
+    .pcard:hover{transform:translateY(-5px);border-color:rgba(255,255,255,.15);}
+    .pcard.sel{border-color:var(--pc);}
+    .pglow{
+      position:absolute;top:-50px;right:-50px;
+      width:160px;height:160px;border-radius:50%;
+      filter:blur(60px);opacity:.12;transition:opacity .3s;
+    }
+    .pcard:hover .pglow,.pcard.sel .pglow{opacity:.25;}
+    .pop-tag{
+      position:absolute;top:.9rem;right:.9rem;
+      font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;
+      padding:.2rem .65rem;border-radius:99px;
+    }
+    .pemoji{font-size:2rem;margin-bottom:.9rem;display:block;}
+    .pname{
+      font-family:'Fraunces',serif;
+      font-size:1.4rem;font-weight:700;margin-bottom:.15rem;
+    }
+    .pperiod{font-size:.8rem;color:var(--soft);margin-bottom:1.1rem;}
+    .pprice{
+      font-size:2rem;font-weight:800;line-height:1;margin-bottom:1.4rem;
+    }
+    .pprice small{font-size:.8rem;font-weight:500;color:var(--soft);}
+    .pperks{list-style:none;}
+    .pperks li{
+      display:flex;align-items:center;gap:.55rem;
+      font-size:.82rem;color:var(--soft);
+      padding:.35rem 0;border-bottom:1px solid var(--border);
+    }
+    .pperks li:last-child{border:none;}
+    .pperks li .ck{font-weight:800;flex-shrink:0;}
+    .psel-btn{
+      display:flex;align-items:center;justify-content:center;gap:.4rem;
+      width:100%;padding:.8rem;border-radius:12px;
+      border:2px solid var(--border);background:transparent;
+      color:var(--soft);font-size:.85rem;font-weight:700;
+      cursor:pointer;transition:all .25s;margin-top:1.4rem;
+    }
+    .pcard.sel .psel-btn{color:#fff;border-color:transparent;}
 
-    /* ── DIVIDER ── */
-    .divider {
-      display: flex; align-items: center; gap: 1rem;
-      margin: .5rem 0 2rem; color: var(--muted); font-size: .8rem;
+    /* CTA */
+    .cta{animation:up .6s .35s ease both;}
+    .btn-go{
+      display:flex;align-items:center;justify-content:center;gap:.7rem;
+      width:100%;padding:1.15rem 2rem;border-radius:16px;border:none;
+      font-size:1rem;font-weight:700;cursor:pointer;color:#fff;
+      background:linear-gradient(135deg,#6366f1,#8b5cf6);
+      box-shadow:0 10px 36px rgba(99,102,241,.35);
+      transition:all .3s;margin-bottom:.875rem;
+      position:relative;overflow:hidden;
     }
-    .divider::before, .divider::after {
-      content: ''; flex: 1; height: 1px; background: var(--border);
+    .btn-go::after{
+      content:'';position:absolute;inset:0;
+      background:linear-gradient(135deg,rgba(255,255,255,.12),transparent);
+      opacity:0;transition:opacity .3s;
     }
+    .btn-go:hover{transform:translateY(-3px);box-shadow:0 18px 48px rgba(99,102,241,.45);}
+    .btn-go:hover::after{opacity:1;}
+    .btn-back{
+      display:block;width:100%;padding:.875rem;border-radius:14px;
+      border:1px solid var(--border);background:transparent;
+      color:var(--soft);font-size:.875rem;font-weight:600;
+      cursor:pointer;transition:all .2s;text-decoration:none;text-align:center;
+    }
+    .btn-back:hover{border-color:var(--soft);color:var(--text);}
 
-    /* ── PLANS ── */
-    .plans-row {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 1rem; margin-bottom: 2rem;
+    /* GUARANTEE */
+    .guarantee{
+      display:flex;align-items:center;gap:1rem;
+      margin-top:1.75rem;padding:1.1rem 1.4rem;
+      background:var(--surface);border:1px solid var(--border);border-radius:14px;
     }
-    .plan-btn {
-      border-radius: 16px; padding: 1.25rem 1rem;
-      border: 2px solid var(--border); background: rgba(255,255,255,0.03);
-      color: var(--text); cursor: pointer; transition: all .25s;
-      text-align: center;
-    }
-    .plan-btn:hover { border-color: var(--purple); background: rgba(99,102,241,0.08); transform: translateY(-3px); }
-    .plan-btn.popular { border-color: var(--purple); background: rgba(99,102,241,0.1); }
-    .plan-btn .plan-emoji { font-size: 1.75rem; margin-bottom: .4rem; }
-    .plan-btn .plan-name { font-weight: 800; font-size: .95rem; }
-    .plan-btn .plan-price { font-size: .82rem; color: var(--muted); margin-top: .2rem; }
-    .plan-btn.popular .plan-name { color: #818cf8; }
+    .guarantee-ico{font-size:1.75rem;flex-shrink:0;}
+    .guarantee-txt h4{font-weight:700;font-size:.875rem;margin-bottom:.15rem;}
+    .guarantee-txt p{font-size:.78rem;color:var(--soft);}
 
-    /* ── CTA BUTTON ── */
-    .btn-cta {
-      display: flex; align-items: center; justify-content: center; gap: .75rem;
-      width: 100%; padding: 1.125rem;
-      background: linear-gradient(135deg, var(--purple), #8b5cf6);
-      border: none; border-radius: 16px;
-      color: #fff; font-weight: 800; font-size: 1.05rem;
-      cursor: pointer; transition: all .25s;
-      box-shadow: 0 8px 24px rgba(99,102,241,0.35);
-      margin-bottom: 1rem;
+    @keyframes up{
+      from{opacity:0;transform:translateY(22px);}
+      to{opacity:1;transform:translateY(0);}
     }
-    .btn-cta:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(99,102,241,0.45); }
-
-    .btn-secondary {
-      display: block; width: 100%; padding: .875rem;
-      background: transparent; border: 1px solid var(--border);
-      border-radius: 14px; color: var(--muted);
-      font-size: .875rem; font-weight: 600; cursor: pointer;
-      transition: all .2s; text-decoration: none;
-    }
-    .btn-secondary:hover { border-color: var(--green); color: var(--green); }
-
-    /* ── FOOTER NOTE ── */
-    .guarantee {
-      margin-top: 1.5rem; padding: 1rem;
-      background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.15);
-      border-radius: 12px;
-      font-size: .82rem; color: var(--muted);
-    }
-    .guarantee strong { color: var(--green); }
-
-    @media(max-width: 480px) {
-      .card { padding: 2rem 1.5rem; }
-      .lost-grid { grid-template-columns: repeat(2, 1fr); }
+    @media(max-width:540px){
+      .plans{grid-template-columns:1fr;}
+      .achiev{flex-wrap:wrap;}
+      .achiev-badge{margin-left:0;}
     }
   </style>
 </head>
 <body>
 
-<!-- Particles -->
-<div class="particles" id="particles"></div>
-
-<div class="card">
-  <div class="badge-expired">⏰ Subscription Expired</div>
-  <div class="icon-wrap">🔒</div>
-
-  <h1>Your Access Has Ended</h1>
-  <p class="sub">
-    Your <strong>{oldPlan?.name || 'Keto Journey'}</strong> subscription expired on <strong>{endDate}</strong>.
-    Renew now to get back on track and keep your progress alive!
-  </p>
-
-  <div class="end-date">
-    📅 Expired on {endDate}
-  </div>
-
-  <!-- What you're missing -->
-  <p style="font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem;">
-    What you're missing
-  </p>
-  <div class="lost-grid">
-    <div class="lost-item">
-      <div class="lost-icon">📋</div>
-      <div class="lost-label">Meal Plans</div>
-    </div>
-    <div class="lost-item">
-      <div class="lost-icon">🍳</div>
-      <div class="lost-label">Recipes</div>
-    </div>
-    <div class="lost-item">
-      <div class="lost-icon">📊</div>
-      <div class="lost-label">Tracking</div>
-    </div>
-    <div class="lost-item">
-      <div class="lost-icon">🛒</div>
-      <div class="lost-label">Shopping List</div>
-    </div>
-    {(profile.subscription_tier === 'pro_6' || profile.subscription_tier === 'elite_12') && (
-      <div class="lost-item">
-        <div class="lost-icon">💬</div>
-        <div class="lost-label">AI Coach</div>
-      </div>
-    )}
-  </div>
-
-  <div class="divider">Choose your new plan</div>
-
-  <!-- Plan selector -->
-  <div class="plans-row">
-    <button class="plan-btn" onclick="selectPlan('pro')" id="plan-pro">
-      <div class="plan-emoji">⚡</div>
-      <div class="plan-name">Pro</div>
-      <div class="plan-price">$99.99 / 6mo</div>
-    </button>
-    <button class="plan-btn popular" onclick="selectPlan('elite')" id="plan-elite">
-      <div class="plan-emoji">👑</div>
-      <div class="plan-name">Elite</div>
-      <div class="plan-price">$199.99 / 12mo</div>
-    </button>
-  </div>
-
-  <button class="btn-cta" id="btnRenew">
-    <span>🚀</span>
-    <span>Renew Now & Get Back on Track</span>
-  </button>
-
-  <a href="/login" class="btn-secondary">← Back to Login</a>
-
-  <div class="guarantee">
-    🛡️ <strong>30-day money-back guarantee</strong> — Not satisfied? Full refund, no questions asked.
-  </div>
+<div class="bg-mesh">
+  <div class="orb o1"></div>
+  <div class="orb o2"></div>
+  <div class="orb o3"></div>
 </div>
 
-<script is:inline define:vars={{ LS_UPGRADE_URL }}>
-  // Particles
-  const container = document.getElementById('particles');
-  for (let i = 0; i < 12; i++) {
-    const p = document.createElement('div');
-    p.className = 'particle';
-    const size = Math.random() * 6 + 3;
-    p.style.cssText = `
-      width:${size}px; height:${size}px;
-      left:${Math.random() * 100}%;
-      background:${Math.random() > 0.5 ? '#6366f1' : '#10b981'};
-      animation-duration:${Math.random() * 15 + 10}s;
-      animation-delay:${Math.random() * 10}s;
-    `;
-    container.appendChild(p);
-  }
+<div class="page">
 
-  // Plan selection
-  let selectedPlan = 'elite';
-  function selectPlan(plan) {
-    selectedPlan = plan;
-    document.querySelectorAll('.plan-btn').forEach(b => b.classList.remove('popular'));
-    document.getElementById('plan-' + plan).classList.add('popular');
-  }
-  window.selectPlan = selectPlan;
+  <!-- Top Bar -->
+  <nav class="topbar">
+    <div class="logo">🥑 Keto Journey</div>
+    <div class="tag-exp">⏰ Plan Expired</div>
+  </nav>
 
-  // Renew button
-  document.getElementById('btnRenew').addEventListener('click', () => {
-    window.location.href = LS_UPGRADE_URL;
+  <!-- Hero -->
+  <div class="hero">
+    <p class="hero-meta">Expired on {endDate}</p>
+    <h1>
+      {meta.headline.replace(userName, '___SPLIT___').split('___SPLIT___').map((part: string, i: number) => (
+        i === 0 ? part : null
+      ))}
+      <span class="hl">{userName}</span>
+      {meta.headline.replace(userName, '___SPLIT___').split('___SPLIT___')[1]}
+    </h1>
+    <p>{meta.body}</p>
+  </div>
+
+  <!-- Achievement -->
+  <div class="achiev">
+    <div class="achiev-icon" style={`background:${meta.iconBg};`}>{meta.icon}</div>
+    <div class="achiev-text">
+      <h3>{meta.title}</h3>
+      <p>{meta.sub}</p>
+    </div>
+    <div class="achiev-badge" style={`background:${meta.badgeBg};color:${meta.badgeColor};`}>{meta.badge}</div>
+  </div>
+
+  <!-- Plans -->
+  <p class="slabel">{meta.sectionLabel}</p>
+
+  <div class="plans">
+    {suggestedPlans.map((plan) => (
+      <div
+        class={`pcard ${plan.id === defaultSelected ? 'sel' : ''}`}
+        id={`pc-${plan.id}`}
+        onclick={`pick('${plan.id}')`}
+        style={`--pc:${plan.color};`}
+      >
+        <div class="pglow" style={`background:${plan.color};`}></div>
+
+        {plan.popular && suggestedPlans.length > 1 && (
+          <div class="pop-tag" style="background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.25);">
+            Most Popular
+          </div>
+        )}
+
+        <span class="pemoji">{plan.emoji}</span>
+        <div class="pname" style={`color:${plan.color};`}>{plan.name}</div>
+        <div class="pperiod">{plan.period}</div>
+        <div class="pprice" style={`background:${plan.gradient};-webkit-background-clip:text;-webkit-text-fill-color:transparent;`}>
+          ${plan.price} <small>one-time</small>
+        </div>
+
+        <ul class="pperks">
+          {plan.perks.map((perk: string) => (
+            <li><span class="ck" style={`color:${plan.color};`}>✓</span> {perk}</li>
+          ))}
+        </ul>
+
+        <button
+          class="psel-btn"
+          style={plan.id === defaultSelected ? `background:${plan.gradient};border-color:transparent;` : ''}
+        >
+          {plan.id === defaultSelected ? '✓ Selected' : 'Select'}
+        </button>
+      </div>
+    ))}
+  </div>
+
+  <!-- CTA -->
+  <div class="cta">
+    <button class="btn-go" id="btnGo">
+      <span>🚀</span>
+      <span id="ctaText">{meta.sectionLabel.split(' ').slice(1).join(' ')}</span>
+      <span style="margin-left:auto;opacity:.7;font-size:.85rem;">→</span>
+    </button>
+    <a href="/login" class="btn-back">← Back to login</a>
+
+    <div class="guarantee">
+      <div class="guarantee-ico">🛡️</div>
+      <div class="guarantee-txt">
+        <h4>30-Day Money-Back Guarantee</h4>
+        <p>Not happy? Full refund within 30 days — no questions, no hassle.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script is:inline define:vars={{ LS_URL, plansJson, defaultSelected }}>
+  const plans = JSON.parse(plansJson);
+  let sel = defaultSelected;
+
+  const ctaLabels = {
+    basic_30: 'Continue with Basic — 30 Days',
+    pro_6:    'Unlock Pro — 6 Months',
+    elite_12: 'Go Elite — Full Year',
+  };
+
+  function pick(id) {
+    sel = id;
+    const plan = plans.find(p => p.id === id);
+
+    plans.forEach(p => {
+      const card = document.getElementById('pc-' + p.id);
+      if (!card) return;
+      card.classList.remove('sel');
+      const btn = card.querySelector('.psel-btn');
+      btn.textContent = 'Select';
+      btn.style = '';
+    });
+
+    const card = document.getElementById('pc-' + id);
+    if (card) {
+      card.classList.add('sel');
+      const btn = card.querySelector('.psel-btn');
+      btn.textContent = '✓ Selected';
+      btn.style = `background:${plan.gradient};border-color:transparent;`;
+    }
+
+    document.getElementById('ctaText').textContent = ctaLabels[id] || 'Continue Your Journey';
+  }
+  window.pick = pick;
+
+  document.getElementById('btnGo').addEventListener('click', () => {
+    window.location.href = LS_URL;
   });
+
+  // Init
+  if (sel) pick(sel);
 </script>
 </body>
 </html>
