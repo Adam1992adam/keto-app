@@ -1,0 +1,302 @@
+---
+// src/pages/dashboard/expired.astro
+import { supabase, getProfile, getPlan } from '../../lib/supabase';
+
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+if (!accessToken) return Astro.redirect('/login');
+
+const { data: { user } } = await supabase.auth.getUser(accessToken);
+if (!user) return Astro.redirect('/login');
+
+const profile = await getProfile(user.id);
+if (!profile) return Astro.redirect('/login');
+
+// إذا لا يزال نشطاً → ارجع للـ dashboard
+if (profile.subscription_status === 'active') {
+  return Astro.redirect('/dashboard/');
+}
+
+const oldPlan = getPlan(profile.subscription_tier);
+const endDate = profile.subscription_end_date
+  ? new Date(profile.subscription_end_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  : 'recently';
+
+const LS_UPGRADE_URL = "https://new-keto-plan.lemonsqueezy.com/checkout/buy/b975765f-a640-4cec-b3ef-44112acc9f75";
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Subscription Expired — Keto Journey</title>
+  <style>
+    :root {
+      --bg: #0a0f1e;
+      --card: #111827;
+      --border: rgba(255,255,255,0.08);
+      --text: #f1f5f9;
+      --muted: #64748b;
+      --green: #10b981;
+      --purple: #6366f1;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 2rem; position: relative; overflow: hidden;
+    }
+    body::before {
+      content: ''; position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 10% 20%, rgba(99,102,241,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 90% 80%, rgba(16,185,129,0.08) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    /* ── FLOATING PARTICLES ── */
+    .particles { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+    .particle {
+      position: absolute; border-radius: 50%;
+      animation: float linear infinite;
+      opacity: 0.15;
+    }
+    @keyframes float {
+      0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+      10% { opacity: 0.15; }
+      90% { opacity: 0.15; }
+      100% { transform: translateY(-100px) rotate(720deg); opacity: 0; }
+    }
+
+    /* ── CARD ── */
+    .card {
+      position: relative; z-index: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 3rem 2.5rem;
+      max-width: 680px; width: 100%;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+
+    /* ── ICON ── */
+    .icon-wrap {
+      width: 96px; height: 96px; margin: 0 auto 1.75rem;
+      background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.05));
+      border: 2px solid rgba(239,68,68,0.3);
+      border-radius: 24px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3rem;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68,0.3); }
+      50% { transform: scale(1.05); box-shadow: 0 0 0 16px rgba(239,68,68,0); }
+    }
+
+    .badge-expired {
+      display: inline-flex; align-items: center; gap: .4rem;
+      background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 99px; padding: .35rem 1rem;
+      font-size: .78rem; font-weight: 700; color: #f87171;
+      margin-bottom: 1.25rem; text-transform: uppercase; letter-spacing: .06em;
+    }
+
+    h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 900; margin-bottom: .75rem; }
+    .sub { color: var(--muted); font-size: 1rem; line-height: 1.7; margin-bottom: 2rem; }
+    .end-date {
+      display: inline-flex; align-items: center; gap: .5rem;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      border-radius: 10px; padding: .5rem 1rem;
+      font-size: .85rem; color: var(--muted); margin-bottom: 2.5rem;
+    }
+
+    /* ── WHAT YOU LOST ── */
+    .lost-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: .75rem; margin-bottom: 2.5rem;
+    }
+    .lost-item {
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1rem .75rem;
+      font-size: .82rem; color: var(--muted);
+    }
+    .lost-item .lost-icon { font-size: 1.5rem; margin-bottom: .4rem; filter: grayscale(1); opacity: .5; }
+    .lost-item .lost-label { font-weight: 600; }
+
+    /* ── DIVIDER ── */
+    .divider {
+      display: flex; align-items: center; gap: 1rem;
+      margin: .5rem 0 2rem; color: var(--muted); font-size: .8rem;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* ── PLANS ── */
+    .plans-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem; margin-bottom: 2rem;
+    }
+    .plan-btn {
+      border-radius: 16px; padding: 1.25rem 1rem;
+      border: 2px solid var(--border); background: rgba(255,255,255,0.03);
+      color: var(--text); cursor: pointer; transition: all .25s;
+      text-align: center;
+    }
+    .plan-btn:hover { border-color: var(--purple); background: rgba(99,102,241,0.08); transform: translateY(-3px); }
+    .plan-btn.popular { border-color: var(--purple); background: rgba(99,102,241,0.1); }
+    .plan-btn .plan-emoji { font-size: 1.75rem; margin-bottom: .4rem; }
+    .plan-btn .plan-name { font-weight: 800; font-size: .95rem; }
+    .plan-btn .plan-price { font-size: .82rem; color: var(--muted); margin-top: .2rem; }
+    .plan-btn.popular .plan-name { color: #818cf8; }
+
+    /* ── CTA BUTTON ── */
+    .btn-cta {
+      display: flex; align-items: center; justify-content: center; gap: .75rem;
+      width: 100%; padding: 1.125rem;
+      background: linear-gradient(135deg, var(--purple), #8b5cf6);
+      border: none; border-radius: 16px;
+      color: #fff; font-weight: 800; font-size: 1.05rem;
+      cursor: pointer; transition: all .25s;
+      box-shadow: 0 8px 24px rgba(99,102,241,0.35);
+      margin-bottom: 1rem;
+    }
+    .btn-cta:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(99,102,241,0.45); }
+
+    .btn-secondary {
+      display: block; width: 100%; padding: .875rem;
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 14px; color: var(--muted);
+      font-size: .875rem; font-weight: 600; cursor: pointer;
+      transition: all .2s; text-decoration: none;
+    }
+    .btn-secondary:hover { border-color: var(--green); color: var(--green); }
+
+    /* ── FOOTER NOTE ── */
+    .guarantee {
+      margin-top: 1.5rem; padding: 1rem;
+      background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.15);
+      border-radius: 12px;
+      font-size: .82rem; color: var(--muted);
+    }
+    .guarantee strong { color: var(--green); }
+
+    @media(max-width: 480px) {
+      .card { padding: 2rem 1.5rem; }
+      .lost-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Particles -->
+<div class="particles" id="particles"></div>
+
+<div class="card">
+  <div class="badge-expired">⏰ Subscription Expired</div>
+  <div class="icon-wrap">🔒</div>
+
+  <h1>Your Access Has Ended</h1>
+  <p class="sub">
+    Your <strong>{oldPlan?.name || 'Keto Journey'}</strong> subscription expired on <strong>{endDate}</strong>.
+    Renew now to get back on track and keep your progress alive!
+  </p>
+
+  <div class="end-date">
+    📅 Expired on {endDate}
+  </div>
+
+  <!-- What you're missing -->
+  <p style="font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem;">
+    What you're missing
+  </p>
+  <div class="lost-grid">
+    <div class="lost-item">
+      <div class="lost-icon">📋</div>
+      <div class="lost-label">Meal Plans</div>
+    </div>
+    <div class="lost-item">
+      <div class="lost-icon">🍳</div>
+      <div class="lost-label">Recipes</div>
+    </div>
+    <div class="lost-item">
+      <div class="lost-icon">📊</div>
+      <div class="lost-label">Tracking</div>
+    </div>
+    <div class="lost-item">
+      <div class="lost-icon">🛒</div>
+      <div class="lost-label">Shopping List</div>
+    </div>
+    {(profile.subscription_tier === 'pro_6' || profile.subscription_tier === 'elite_12') && (
+      <div class="lost-item">
+        <div class="lost-icon">💬</div>
+        <div class="lost-label">AI Coach</div>
+      </div>
+    )}
+  </div>
+
+  <div class="divider">Choose your new plan</div>
+
+  <!-- Plan selector -->
+  <div class="plans-row">
+    <button class="plan-btn" onclick="selectPlan('pro')" id="plan-pro">
+      <div class="plan-emoji">⚡</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price">$99.99 / 6mo</div>
+    </button>
+    <button class="plan-btn popular" onclick="selectPlan('elite')" id="plan-elite">
+      <div class="plan-emoji">👑</div>
+      <div class="plan-name">Elite</div>
+      <div class="plan-price">$199.99 / 12mo</div>
+    </button>
+  </div>
+
+  <button class="btn-cta" id="btnRenew">
+    <span>🚀</span>
+    <span>Renew Now & Get Back on Track</span>
+  </button>
+
+  <a href="/login" class="btn-secondary">← Back to Login</a>
+
+  <div class="guarantee">
+    🛡️ <strong>30-day money-back guarantee</strong> — Not satisfied? Full refund, no questions asked.
+  </div>
+</div>
+
+<script is:inline define:vars={{ LS_UPGRADE_URL }}>
+  // Particles
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 12; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * 6 + 3;
+    p.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random() * 100}%;
+      background:${Math.random() > 0.5 ? '#6366f1' : '#10b981'};
+      animation-duration:${Math.random() * 15 + 10}s;
+      animation-delay:${Math.random() * 10}s;
+    `;
+    container.appendChild(p);
+  }
+
+  // Plan selection
+  let selectedPlan = 'elite';
+  function selectPlan(plan) {
+    selectedPlan = plan;
+    document.querySelectorAll('.plan-btn').forEach(b => b.classList.remove('popular'));
+    document.getElementById('plan-' + plan).classList.add('popular');
+  }
+  window.selectPlan = selectPlan;
+
+  // Renew button
+  document.getElementById('btnRenew').addEventListener('click', () => {
+    window.location.href = LS_UPGRADE_URL;
+  });
+</script>
+</body>
+</html>

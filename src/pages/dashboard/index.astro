@@ -10,6 +10,25 @@ if (authError || !user) return Astro.redirect('/login');
 const profile = await getProfile(user.id);
 if (!profile) return Astro.redirect('/login');
 
+// ═══════════════════════════════════════════════════
+// أضف هذا الكود في index.astro بعد سطر getProfile
+// ═══════════════════════════════════════════════════
+
+// التحقق من انتهاء الاشتراك
+const isExpired = 
+  profile?.subscription_status === 'expired' ||
+  (profile?.subscription_end_date && new Date(profile.subscription_end_date) < new Date());
+
+if (isExpired && profile?.subscription_status !== 'active') {
+  // حدّث الـ status في DB إذا لم يحدّثه الـ cron بعد
+  await supabase.from('profiles')
+    .update({ subscription_status: 'expired' })
+    .eq('id', user.id);
+  
+  return Astro.redirect('/dashboard/expired');
+}
+// ═══════════════════════════════════════════════════
+
 const hasAccess = isSubscriptionActive(profile);
 if (!hasAccess) return Astro.redirect('/dashboard/upgrade');
 
