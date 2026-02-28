@@ -21,7 +21,7 @@ const incompleteTasks = dailyTasks?.filter(t => t.task_type !== 'reflection' && 
 const weekParam = Astro.url.searchParams.get('week') || '1';
 const weekNumber = parseInt(weekParam);
 const startDay = (weekNumber - 1) * 7 + 1;
-const endDay = startDay + 6;
+const endDay = Math.min(startDay + 6, 30);
 
 if (weekNumber < 1 || weekNumber > 5) {
   return Astro.redirect('/dashboard/shopping-list?week=1');
@@ -36,7 +36,6 @@ const { data: mealPlans } = await supabase
   .order('day_number');
 
 const ingredientMap = new Map();
-
 mealPlans?.forEach(meal => {
   if (meal.recipe?.ingredients) {
     meal.recipe.ingredients.forEach((ing: any) => {
@@ -44,12 +43,7 @@ mealPlans?.forEach(meal => {
       if (ingredientMap.has(key)) {
         const existing = ingredientMap.get(key);
         const newAmount = parseFloat(existing.amount || 0) + parseFloat(ing.amount || 0);
-        ingredientMap.set(key, {
-          item: ing.item,
-          amount: Math.ceil(newAmount * 10) / 10,
-          unit: existing.unit || ing.unit,
-          count: existing.count + 1
-        });
+        ingredientMap.set(key, { item: ing.item, amount: Math.ceil(newAmount * 10) / 10, unit: existing.unit || ing.unit, count: existing.count + 1 });
       } else {
         ingredientMap.set(key, { ...ing, count: 1 });
       }
@@ -57,53 +51,19 @@ mealPlans?.forEach(meal => {
   }
 });
 
-const shoppingList = Array.from(ingredientMap.values()).sort((a, b) => 
-  a.item.localeCompare(b.item)
-);
+const shoppingList = Array.from(ingredientMap.values()).sort((a, b) => a.item.localeCompare(b.item));
 
 const categories: any = {
-  'Proteins & Meat': {
-    keywords: ['eggs', 'chicken', 'beef', 'pork', 'salmon', 'shrimp', 'tuna', 'bacon', 'sausage', 'ham', 'steak', 'ribeye', 'pepperoni'],
-    icon: '🥩',
-    color: '#ef4444',
-    tip: 'Buy in bulk and freeze portions for savings'
-  },
-  'Dairy & Cheese': {
-    keywords: ['cheese', 'butter', 'cream', 'yogurt', 'feta', 'parmesan', 'mozzarella', 'cheddar', 'ricotta', 'blue cheese'],
-    icon: '🧀',
-    color: '#f59e0b',
-    tip: 'Check expiry dates - buy what you\'ll use this week'
-  },
-  'Fresh Vegetables': {
-    keywords: ['avocado', 'spinach', 'lettuce', 'broccoli', 'asparagus', 'cauliflower', 'zucchini', 'tomato', 'cucumber', 'pepper', 'mushroom', 'onion', 'celery', 'green beans'],
-    icon: '🥬',
-    color: '#10b981',
-    tip: 'Buy fresh and store properly to last the week'
-  },
-  'Nuts & Seeds': {
-    keywords: ['almonds', 'macadamia', 'pine nuts', 'chia', 'peanut'],
-    icon: '🥜',
-    color: '#8b5cf6',
-    tip: 'Buy in bulk and store in airtight containers'
-  },
-  'Pantry Staples': {
-    keywords: ['olive oil', 'coconut', 'almond flour', 'soy sauce', 'mustard', 'mayo', 'vanilla', 'baking powder', 'protein powder', 'cocoa'],
-    icon: '🏺',
-    color: '#6b7280',
-    tip: 'Stock up on these - they last months'
-  },
-  'Herbs & Spices': {
-    keywords: ['salt', 'pepper', 'garlic', 'paprika', 'thyme', 'basil', 'ginger', 'chives', 'dill', 'rosemary', 'cinnamon'],
-    icon: '🌿',
-    color: '#059669',
-    tip: 'Fresh herbs add amazing flavor - grow your own!'
-  }
+  'Proteins & Meat': { keywords: ['eggs', 'chicken', 'beef', 'pork', 'salmon', 'shrimp', 'tuna', 'bacon', 'sausage', 'ham', 'steak', 'ribeye', 'pepperoni'], icon: '🥩', gradient: 'linear-gradient(135deg,#ef4444,#dc2626)', glow: 'rgba(239,68,68,.25)', tip: 'Buy in bulk and freeze portions' },
+  'Dairy & Cheese':  { keywords: ['cheese', 'butter', 'cream', 'yogurt', 'feta', 'parmesan', 'mozzarella', 'cheddar', 'ricotta'], icon: '🧀', gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', glow: 'rgba(245,158,11,.25)', tip: 'Check expiry dates carefully' },
+  'Fresh Vegetables':{ keywords: ['avocado', 'spinach', 'lettuce', 'broccoli', 'asparagus', 'cauliflower', 'zucchini', 'tomato', 'cucumber', 'pepper', 'mushroom', 'onion', 'celery', 'green beans'], icon: '🥬', gradient: 'linear-gradient(135deg,#10b981,#059669)', glow: 'rgba(16,185,129,.25)', tip: 'Buy fresh, store in cool place' },
+  'Nuts & Seeds':    { keywords: ['almonds', 'macadamia', 'pine nuts', 'chia', 'peanut', 'walnut', 'pecan'], icon: '🥜', gradient: 'linear-gradient(135deg,#8b5cf6,#7c3aed)', glow: 'rgba(139,92,246,.25)', tip: 'Store in airtight containers' },
+  'Pantry Staples':  { keywords: ['olive oil', 'coconut', 'almond flour', 'soy sauce', 'mustard', 'mayo', 'vanilla', 'baking powder', 'protein powder', 'cocoa'], icon: '🏺', gradient: 'linear-gradient(135deg,#6b7280,#4b5563)', glow: 'rgba(107,114,128,.25)', tip: 'Stock up — they last months' },
+  'Herbs & Spices':  { keywords: ['salt', 'pepper', 'garlic', 'paprika', 'thyme', 'basil', 'ginger', 'chives', 'dill', 'rosemary', 'cinnamon'], icon: '🌿', gradient: 'linear-gradient(135deg,#06b6d4,#0891b2)', glow: 'rgba(6,182,212,.25)', tip: 'Fresh herbs add amazing flavor' },
 };
 
 const categorizedList: any = {};
-Object.keys(categories).forEach(cat => {
-  categorizedList[cat] = [];
-});
+Object.keys(categories).forEach(cat => { categorizedList[cat] = []; });
 categorizedList['Other'] = [];
 
 shoppingList.forEach(item => {
@@ -115,781 +75,614 @@ shoppingList.forEach(item => {
       break;
     }
   }
-  if (!categorized) {
-    categorizedList['Other'].push(item);
-  }
+  if (!categorized) categorizedList['Other'].push(item);
 });
 
 const totalItems = shoppingList.length;
-const estimatedCost = shoppingList.reduce((sum, item) => {
-  const basePrices: any = {
-    'eggs': 0.3, 'chicken': 3, 'beef': 5, 'cheese': 4, 'butter': 0.5,
-    'avocado': 1.5, 'broccoli': 2, 'almonds': 1
-  };
-  const key = Object.keys(basePrices).find(k => item.item.toLowerCase().includes(k));
-  return sum + (key ? basePrices[key] * item.count : 2);
-}, 0);
+const checkedCategories = Object.entries(categorizedList).filter(([,items]: any) => items.length > 0).length;
+const userName = profile.full_name?.split(' ')[0] || 'Friend';
 ---
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Shopping List - Keto Journey</title>
-  
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Shopping List — Keto Journey</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+
+  <script is:inline>
+    (function(){
+      const t = localStorage.getItem('keto-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+
   <style>
     :root {
-      --bg-primary: #ffffff;
-      --bg-secondary: #f9fafb;
-      --bg-card: #ffffff;
-      --text-primary: #111827;
-      --text-secondary: #6b7280;
-      --border-color: #e5e7eb;
-      --accent-primary: #10b981;
-      --accent-secondary: #34d399;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
-      --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
-      --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
-      --shadow-xl: 0 20px 25px rgba(0,0,0,0.15);
+      --bg:      #0c1117;
+      --surface: #131b24;
+      --card:    #1a2535;
+      --card2:   #1e2d42;
+      --border:  rgba(255,255,255,.07);
+      --border2: rgba(255,255,255,.12);
+      --text:    #e8edf5;
+      --muted:   #4a5a6e;
+      --soft:    #8a9ab0;
+      --green:   #10b981;
+      --green2:  #34d399;
+      --blue:    #3b82f6;
+      --purple:  #8b5cf6;
+      --gold:    #f59e0b;
+      --red:     #ef4444;
+      --cyan:    #06b6d4;
+      --radius:  20px;
+      --nav-h:   64px;
+    }
+    [data-theme="light"] {
+      --bg:      #f0f4f8;
+      --surface: #ffffff;
+      --card:    #ffffff;
+      --card2:   #f8fafc;
+      --border:  rgba(0,0,0,.07);
+      --border2: rgba(0,0,0,.12);
+      --text:    #0f172a;
+      --muted:   #94a3b8;
+      --soft:    #64748b;
     }
 
-    [data-theme="dark"] {
-      --bg-primary: #1a1a2e;
-      --bg-secondary: #16213e;
-      --bg-card: #0f3460;
-      --text-primary: #eaeaea;
-      --text-secondary: #a0aec0;
-      --border-color: #2d3748;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
-      --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
-      --shadow-lg: 0 10px 15px rgba(0,0,0,0.5);
-      --shadow-xl: 0 20px 25px rgba(0,0,0,0.6);
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
+    *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg-secondary);
-      color: var(--text-primary);
-      transition: all 0.3s ease;
+      font-family:'DM Sans',sans-serif;
+      background:var(--bg); color:var(--text);
+      min-height:100vh; overflow-x:hidden;
+      transition:background .3s,color .3s;
     }
 
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 1.5rem;
-    }
+    /* BG */
+    .bg-mesh { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+    .orb { position:absolute; border-radius:50%; filter:blur(100px); animation:orbDrift ease-in-out infinite; opacity:.5; }
+    [data-theme="light"] .orb { opacity:.2; }
+    .o1{width:600px;height:600px;background:rgba(16,185,129,.07);top:-150px;left:-150px;animation-duration:24s;}
+    .o2{width:500px;height:500px;background:rgba(59,130,246,.05);bottom:-100px;right:-100px;animation-duration:30s;animation-delay:-14s;}
+    .o3{width:350px;height:350px;background:rgba(139,92,246,.04);top:50%;left:50%;animation-duration:20s;animation-delay:-8s;}
+    @keyframes orbDrift{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(40px,-50px) scale(1.06);}66%{transform:translate(-30px,40px) scale(.95);}}
 
-    /* Navigation 3D */
+    /* NAV */
     nav {
-      background: var(--bg-primary);
-      border-bottom: 1px solid var(--border-color);
-      padding: 1rem 0;
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      box-shadow: var(--shadow-md);
-      backdrop-filter: blur(10px);
+      position:sticky; top:0; z-index:100; height:var(--nav-h);
+      background:rgba(12,17,23,.85); border-bottom:1px solid var(--border);
+      backdrop-filter:blur(20px); display:flex; align-items:center;
+      transition:background .3s;
     }
+    [data-theme="light"] nav { background:rgba(255,255,255,.88); }
+    .nav-inner { max-width:1280px; margin:0 auto; padding:0 1.5rem; width:100%; display:flex; align-items:center; gap:1.5rem; }
+    .nav-brand { display:flex; align-items:center; gap:.6rem; text-decoration:none; font-family:'Fraunces',serif; font-weight:700; font-size:1.1rem; color:var(--text); flex-shrink:0; }
+    .nav-links { display:flex; align-items:center; gap:.25rem; flex:1; overflow-x:auto; }
+    .nav-links::-webkit-scrollbar{display:none;}
+    .nav-link { display:flex; align-items:center; gap:.4rem; padding:.45rem .9rem; border-radius:10px; font-size:.82rem; font-weight:600; color:var(--soft); text-decoration:none; white-space:nowrap; transition:all .2s; }
+    .nav-link:hover,.nav-link.active { background:rgba(16,185,129,.1); color:var(--green); }
+    .nav-link.active { font-weight:700; }
+    .nav-right { display:flex; align-items:center; gap:.75rem; flex-shrink:0; }
+    .theme-btn { width:38px; height:38px; border-radius:10px; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1rem; transition:all .2s; }
+    .theme-btn:hover { border-color:var(--green); }
+    .notif-wrap { position:relative; }
+    .notif-btn { width:38px; height:38px; border-radius:10px; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1rem; position:relative; transition:all .2s; }
+    .notif-btn:hover { border-color:var(--green); }
+    .notif-badge { position:absolute; top:-5px; right:-5px; background:var(--red); color:#fff; width:18px; height:18px; border-radius:50%; font-size:.65rem; font-weight:800; display:flex; align-items:center; justify-content:center; animation:pulseBadge 2s infinite; }
+    @keyframes pulseBadge{0%,100%{transform:scale(1);}50%{transform:scale(1.2);}}
+    .notif-dropdown { position:absolute; top:calc(100% + .5rem); right:0; width:340px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.4); display:none; z-index:200; }
+    .notif-dropdown.open { display:block; animation:dropIn .25s ease; }
+    @keyframes dropIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+    .notif-item { display:flex; align-items:center; gap:.875rem; padding:.875rem 1.25rem; border-bottom:1px solid var(--border); cursor:pointer; transition:background .2s; }
+    .notif-item:hover { background:rgba(16,185,129,.06); }
+    .nav-avatar { width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,var(--green),var(--blue)); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:.95rem; text-decoration:none; transition:all .2s; }
+    .nav-avatar:hover { transform:scale(1.05); }
 
-    nav .flex {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+    /* PAGE */
+    .page { position:relative; z-index:1; max-width:1280px; margin:0 auto; padding:2rem 1.5rem 5rem; }
 
-    nav a {
-      color: var(--text-secondary);
-      text-decoration: none;
-      padding: 0.5rem 1rem;
-      border-radius: 0.75rem;
-      font-weight: 500;
-      transition: all 0.3s ease;
-    }
-
-    nav a:hover, nav a.active {
-      color: var(--accent-primary);
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.1));
-      transform: translateY(-2px);
-    }
-
-    /* Dark Mode Toggle */
-    .theme-toggle {
-      position: relative;
-      width: 60px;
-      height: 30px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 9999px;
-      cursor: pointer;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), var(--shadow-md);
-      transition: all 0.3s ease;
-    }
-
-    .theme-toggle:hover {
-      transform: scale(1.05);
-    }
-
-    .theme-toggle-slider {
-      position: absolute;
-      top: 3px;
-      left: 3px;
-      width: 24px;
-      height: 24px;
-      background: white;
-      border-radius: 50%;
-      transition: all 0.3s ease;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.75rem;
-    }
-
-    [data-theme="dark"] .theme-toggle {
-      background: linear-gradient(135deg, #2d3561 0%, #1a1f3a 100%);
-    }
-
-    [data-theme="dark"] .theme-toggle-slider {
-      transform: translateX(30px);
-      background: #1a1a2e;
-      color: #fbbf24;
-    }
-
-    /* Notification Bell */
-    .notification-bell {
-      position: relative;
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      border: none;
-      width: 2.5rem;
-      height: 2.5rem;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: var(--shadow-md);
-    }
-
-    .notification-bell:hover {
-      transform: translateY(-4px) scale(1.05);
-      box-shadow: var(--shadow-xl);
-    }
-
-    .notification-badge {
-      position: absolute;
-      top: -4px;
-      right: -4px;
-      background: linear-gradient(135deg, #ef4444, #dc2626);
-      color: white;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      font-size: 0.75rem;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.15); }
-    }
-
-    /* Notification Dropdown */
-    .notification-dropdown {
-      position: absolute;
-      top: calc(100% + 0.5rem);
-      right: 0;
-      width: 380px;
-      max-height: 500px;
-      background: var(--bg-card);
-      border-radius: 1.5rem;
-      box-shadow: var(--shadow-xl);
-      border: 1px solid var(--border-color);
-      display: none;
-      overflow: hidden;
-      animation: slideDown 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    }
-
-    .notification-dropdown.active {
-      display: block;
-    }
-
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-20px) scale(0.95); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    .notification-item {
-      padding: 1rem 1.5rem;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      gap: 1rem;
-      align-items: center;
-      transition: all 0.3s ease;
-      cursor: pointer;
-    }
-
-    .notification-item:hover {
-      background: linear-gradient(90deg, rgba(16, 185, 129, 0.05), transparent);
-      transform: translateX(4px);
-    }
-
-    .notification-icon {
-      width: 3rem;
-      height: 3rem;
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      border-radius: 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.5rem;
-      flex-shrink: 0;
-      box-shadow: var(--shadow-md);
-    }
-
-    /* Hero */
+    /* HERO */
     .hero {
-      background: linear-gradient(135deg, #10b981, #059669, #047857);
-      border-radius: 2rem;
-      padding: 3rem;
-      margin-bottom: 2rem;
-      box-shadow: var(--shadow-xl);
-      position: relative;
-      overflow: hidden;
+      border-radius:var(--radius); padding:2.5rem;
+      background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(59,130,246,.08));
+      border:1px solid rgba(16,185,129,.2);
+      margin-bottom:2rem; position:relative; overflow:hidden;
+      animation:fadeUp .5s ease both;
     }
-
     .hero::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-      animation: rotate 20s linear infinite;
+      content:''; position:absolute; top:-80px; right:-80px;
+      width:300px; height:300px; border-radius:50%;
+      background:radial-gradient(circle,rgba(16,185,129,.15),transparent 70%);
+      animation:heroGlow 6s ease-in-out infinite;
+    }
+    @keyframes heroGlow{0%,100%{transform:scale(1);}50%{transform:scale(1.2);}}
+    .hero-content { position:relative; z-index:1; }
+    .hero-title { font-family:'Fraunces',serif; font-size:clamp(2rem,4vw,3rem); font-weight:900; line-height:1.1; margin-bottom:.5rem; }
+    .hero-title .hl { font-style:italic; background:linear-gradient(135deg,var(--green),var(--green2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .hero-sub { font-size:.95rem; color:var(--soft); margin-bottom:1.5rem; }
+
+    /* WEEK PILLS */
+    .week-nav { display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+    .week-pill {
+      padding:.45rem 1.1rem; border-radius:99px; font-size:.8rem; font-weight:700;
+      background:var(--card); border:1.5px solid var(--border);
+      color:var(--soft); text-decoration:none; transition:all .2s;
+    }
+    .week-pill:hover { border-color:var(--green); color:var(--green); }
+    .week-pill.active {
+      background:linear-gradient(135deg,var(--green),var(--green2));
+      border-color:transparent; color:#fff;
+      box-shadow:0 4px 14px rgba(16,185,129,.4);
     }
 
-    @keyframes rotate {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+    /* STATS ROW */
+    .stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1rem; margin-bottom:2rem; }
+    .stat-pill {
+      background:var(--card); border:1px solid var(--border); border-radius:16px;
+      padding:1.25rem 1.5rem; display:flex; align-items:center; gap:1rem;
+      transition:all .3s; animation:fadeUp .5s ease both;
+    }
+    .stat-pill:nth-child(1){animation-delay:.05s;}
+    .stat-pill:nth-child(2){animation-delay:.1s;}
+    .stat-pill:nth-child(3){animation-delay:.15s;}
+    .stat-pill:hover { transform:translateY(-3px); border-color:var(--border2); }
+    .stat-icon { width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0; }
+    .stat-val { font-family:'Fraunces',serif; font-size:1.75rem; font-weight:900; line-height:1; }
+    .stat-lbl { font-size:.72rem; font-weight:700; color:var(--soft); text-transform:uppercase; letter-spacing:.06em; margin-top:.2rem; }
+
+    /* ACTION BTNS */
+    .action-row { display:flex; gap:.75rem; margin-bottom:2rem; flex-wrap:wrap; }
+    .btn {
+      display:inline-flex; align-items:center; gap:.5rem;
+      padding:.65rem 1.25rem; border-radius:12px; font-size:.82rem; font-weight:700;
+      cursor:pointer; border:none; text-decoration:none; transition:all .25s;
+    }
+    .btn-primary { background:linear-gradient(135deg,var(--green),var(--green2)); color:#fff; box-shadow:0 4px 14px rgba(16,185,129,.35); }
+    .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(16,185,129,.45); }
+    .btn-secondary { background:var(--card); border:1px solid var(--border); color:var(--soft); }
+    .btn-secondary:hover { border-color:var(--green); color:var(--green); }
+
+    /* PROGRESS BAR */
+    .progress-wrap { margin-bottom:2rem; }
+    .progress-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:.5rem; }
+    .progress-label { font-size:.78rem; font-weight:700; color:var(--soft); }
+    .progress-val { font-size:.78rem; font-weight:800; color:var(--green); }
+    .progress-track { height:8px; background:var(--surface); border-radius:99px; overflow:hidden; }
+    .progress-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,var(--green),var(--green2),var(--blue)); transition:width .8s cubic-bezier(.4,0,.2,1); position:relative; overflow:hidden; }
+    .progress-fill::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent); animation:shimmer 2s infinite; }
+    @keyframes shimmer{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+
+    /* CATEGORY SECTION */
+    .cat-section {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--radius); overflow:hidden;
+      margin-bottom:1.25rem; transition:all .25s;
+      animation:fadeUp .4s ease both;
+    }
+    .cat-section:hover { border-color:var(--border2); }
+
+    .cat-header {
+      display:flex; align-items:center; gap:1rem;
+      padding:1.25rem 1.5rem; cursor:pointer;
+      transition:background .2s; user-select:none;
+      border-bottom:1px solid var(--border);
+    }
+    .cat-header:hover { background:rgba(255,255,255,.02); }
+
+    .cat-icon-wrap {
+      width:46px; height:46px; border-radius:13px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.4rem; flex-shrink:0;
+    }
+    .cat-name { font-family:'Fraunces',serif; font-size:1.1rem; font-weight:700; flex:1; }
+    .cat-count {
+      padding:.2rem .65rem; border-radius:99px; font-size:.72rem; font-weight:800;
+      background:rgba(16,185,129,.1); color:var(--green); border:1px solid rgba(16,185,129,.2);
+    }
+    .cat-chevron { color:var(--muted); transition:transform .3s; font-size:.9rem; }
+    .cat-section.collapsed .cat-chevron { transform:rotate(-90deg); }
+    .cat-section.collapsed .cat-body { display:none; }
+
+    .cat-tip {
+      margin:1rem 1.5rem 0; padding:.875rem 1rem;
+      background:rgba(16,185,129,.06); border:1px solid rgba(16,185,129,.15);
+      border-radius:12px; font-size:.8rem; color:var(--soft); font-weight:600;
     }
 
-    .hero-content {
-      position: relative;
-      z-index: 10;
-      color: white;
+    .cat-body { padding:1rem 1.5rem 1.5rem; }
+    .items-grid { display:flex; flex-direction:column; gap:.6rem; margin-top:.75rem; }
+
+    /* ITEM ROW */
+    .item-row {
+      display:flex; align-items:center; gap:.875rem;
+      padding:.875rem 1rem; border-radius:13px;
+      background:var(--surface); border:1.5px solid transparent;
+      transition:all .25s; position:relative; overflow:hidden;
+    }
+    .item-row::before {
+      content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+      border-radius:3px 0 0 3px; transition:opacity .25s; opacity:0;
+    }
+    .item-row:hover { border-color:rgba(16,185,129,.25); transform:translateX(4px); }
+    .item-row:hover::before { opacity:1; background:linear-gradient(to bottom,var(--green),var(--green2)); }
+    .item-row.checked { opacity:.45; }
+    .item-row.checked .item-name { text-decoration:line-through; }
+
+    .item-check {
+      width:22px; height:22px; border-radius:7px; flex-shrink:0;
+      border:2px solid rgba(16,185,129,.4); background:transparent;
+      cursor:pointer; appearance:none; transition:all .25s; position:relative;
+    }
+    .item-check:checked {
+      background:linear-gradient(135deg,var(--green),var(--green2));
+      border-color:transparent;
+    }
+    .item-check:checked::after {
+      content:'✓'; position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      color:#fff; font-size:.75rem; font-weight:900;
+    }
+    .item-check:hover { border-color:var(--green); transform:scale(1.1); }
+
+    .item-info { flex:1; min-width:0; }
+    .item-name { font-weight:700; font-size:.9rem; color:var(--text); }
+    .item-amount { font-size:.78rem; color:var(--soft); font-weight:600; margin-top:.1rem; }
+
+    .item-badge {
+      padding:.15rem .55rem; border-radius:99px; font-size:.68rem; font-weight:800;
+      background:rgba(99,102,241,.1); color:#818cf8; border:1px solid rgba(99,102,241,.2);
+      flex-shrink:0; white-space:nowrap;
     }
 
-    /* Card 3D */
-    .card-3d {
-      background: var(--bg-card);
-      border-radius: 1.5rem;
-      padding: 2rem;
-      box-shadow: var(--shadow-lg);
-      border: 1px solid var(--border-color);
-      transition: all 0.3s ease;
+    /* SUMMARY CARD */
+    .summary-card {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--radius); padding:2rem; margin-top:1.5rem;
+      text-align:center; animation:fadeUp .4s ease both;
     }
-
-    .card-3d:hover {
-      box-shadow: var(--shadow-xl);
-      transform: translateY(-4px);
+    .summary-title { font-family:'Fraunces',serif; font-size:1.4rem; font-weight:700; margin-bottom:1.5rem; background:linear-gradient(135deg,var(--green),var(--green2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1rem; }
+    .summary-item {
+      padding:1.25rem; border-radius:14px; border:1px solid var(--border);
+      background:var(--surface); transition:all .25s;
     }
+    .summary-item:hover { border-color:var(--border2); transform:translateY(-2px); }
+    .summary-num { font-family:'Fraunces',serif; font-size:2rem; font-weight:900; margin-bottom:.3rem; }
+    .summary-lbl { font-size:.72rem; font-weight:700; color:var(--soft); text-transform:uppercase; letter-spacing:.06em; }
+    .summary-footer { font-size:.75rem; color:var(--muted); margin-top:1.5rem; }
 
-    /* Category Card */
-    .category-card {
-      background: var(--bg-card);
-      border-radius: 1.5rem;
-      padding: 2rem;
-      box-shadow: var(--shadow-lg);
-      border: 1px solid var(--border-color);
-      margin-bottom: 2rem;
-      transition: all 0.3s ease;
+    /* EMPTY */
+    .empty-state { text-align:center; padding:4rem 2rem; }
+    .empty-state .empty-icon { font-size:4rem; margin-bottom:1rem; opacity:.5; }
+    .empty-state p { color:var(--soft); font-size:.95rem; }
+
+    /* TOAST */
+    .toast { position:fixed; top:5rem; right:1.5rem; z-index:9999; background:linear-gradient(135deg,var(--green),var(--green2)); color:#fff; padding:.875rem 1.5rem; border-radius:12px; font-weight:700; font-size:.875rem; box-shadow:0 10px 30px rgba(16,185,129,.4); transform:translateY(-20px); opacity:0; pointer-events:none; transition:all .35s cubic-bezier(.4,0,.2,1); }
+    .toast.show { transform:translateY(0); opacity:1; }
+
+    @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+
+    @media(max-width:768px){
+      .stats-row { grid-template-columns:repeat(2,1fr); }
+      .hero-title { font-size:1.8rem; }
     }
-
-    .category-card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-xl);
-    }
-
-    .category-header {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-      padding-bottom: 1rem;
-      border-bottom: 3px solid var(--accent-primary);
-    }
-
-    /* Shopping Item */
-    .shopping-item {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 1rem;
-      background: var(--bg-secondary);
-      border-radius: 1rem;
-      margin-bottom: 0.75rem;
-      transition: all 0.3s ease;
-      border: 2px solid transparent;
-    }
-
-    .shopping-item:hover {
-      border-color: var(--accent-primary);
-      transform: translateX(8px);
-      box-shadow: var(--shadow-md);
-    }
-
-    .shopping-item.checked {
-      opacity: 0.5;
-      text-decoration: line-through;
-    }
-
-    .checkbox-3d {
-      width: 1.5rem;
-      height: 1.5rem;
-      border-radius: 0.5rem;
-      border: 2px solid var(--accent-primary);
-      cursor: pointer;
-      transition: all 0.3s ease;
-      appearance: none;
-      background: var(--bg-card);
-    }
-
-    .checkbox-3d:checked {
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      transform: scale(1.1);
-    }
-
-    .checkbox-3d:checked::after {
-      content: '✓';
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1rem;
-      font-weight: 700;
-    }
-
-    /* Button 3D */
-    .btn-3d {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 1rem 2rem;
-      border-radius: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-      border: none;
-      text-decoration: none;
-      transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-      box-shadow: var(--shadow-md);
-    }
-
-    .btn-primary-3d {
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      color: white;
-    }
-
-    .btn-primary-3d:hover {
-      transform: translateY(-4px) scale(1.05);
-      box-shadow: var(--shadow-xl);
-    }
-
-    .btn-secondary-3d {
-      background: var(--bg-card);
-      color: var(--text-primary);
-      border: 2px solid var(--border-color);
-    }
-
-    .btn-secondary-3d:hover {
-      border-color: var(--accent-primary);
-      transform: translateY(-2px);
-    }
-
-    /* Stats Card */
-    .stats-card {
-      background: rgba(255,255,255,0.2);
-      backdrop-filter: blur(10px);
-      border-radius: 1.5rem;
-      padding: 2rem;
-      border: 2px solid rgba(255,255,255,0.3);
-      box-shadow: var(--shadow-lg);
-    }
-
-    /* Tip Card */
-    .tip-card {
-      background: var(--bg-card);
-      border-radius: 1rem;
-      padding: 1.25rem;
-      border-left: 4px solid;
-      box-shadow: var(--shadow-sm);
-      transition: all 0.3s ease;
-    }
-
-    .tip-card:hover {
-      transform: translateX(4px);
-      box-shadow: var(--shadow-md);
-    }
-
-    /* Grid */
-    .grid { display: grid; gap: 1.5rem; }
-    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
-
-    /* Utilities */
-    .flex { display: flex; align-items: center; }
-    .flex-between { display: flex; justify-content: space-between; align-items: center; }
-    .gap-1 { gap: 0.5rem; }
-    .gap-2 { gap: 1rem; }
-    .gap-3 { gap: 1.5rem; }
-
     @media print {
-      nav, .no-print, button, .notification-bell {
-        display: none !important;
-      }
-      
-      body {
-        background: white !important;
-      }
-      
-      .card-3d, .category-card {
-        box-shadow: none !important;
-        border: 1px solid #ddd;
-        page-break-inside: avoid;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .grid-2, .grid-3 {
-        grid-template-columns: 1fr;
-      }
-      
-      .notification-dropdown {
-        width: calc(100vw - 2rem);
-        right: -1rem;
-      }
-
-      .hero {
-        padding: 2rem;
-      }
+      nav,.action-row,.week-nav,.no-print,.item-check { display:none !important; }
+      body { background:#fff !important; color:#000 !important; }
+      .cat-section { border:1px solid #ddd !important; box-shadow:none !important; }
+      .cat-section.collapsed .cat-body { display:block !important; }
     }
   </style>
 </head>
 <body>
-  <!-- Navigation -->
-  <nav>
-    <div class="container">
-      <div class="flex-between">
-        <div class="flex gap-2">
-          <span style="font-size: 2.5rem;">🥑</span>
-          <div>
-            <h1 style="font-size: 1.375rem; font-weight: 800; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Keto Journey</h1>
-            <p style="font-size: 0.8125rem; color: var(--text-secondary); font-weight: 600;">30-Day Transformation</p>
-          </div>
-        </div>
-        
-        <div class="flex gap-3">
-          <a href="/dashboard">Dashboard</a>
-          <a href="/dashboard/shopping-list" class="active">Shopping</a>
-          <a href="/dashboard/recipes">Recipes</a>
-          <a href="/dashboard/profile">Profile</a>
-          <a href="/dashboard/notifications">🔔 Reminders</a>
-          
-          <div class="flex gap-2" style="padding-left: 1rem; border-left: 1px solid var(--border-color); position: relative;">
-            <!-- Dark Mode Toggle -->
-            <div class="theme-toggle" id="themeToggle">
-              <div class="theme-toggle-slider">
-                <span id="themeIcon">☀️</span>
-              </div>
+
+<div class="bg-mesh" aria-hidden="true">
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="/dashboard" class="nav-brand">🥑 <span>Keto Journey</span></a>
+    <div class="nav-links">
+      <a href="/dashboard"               class="nav-link">📊 <span>Dashboard</span></a>
+      <a href="/dashboard/shopping-list" class="nav-link active">🛒 <span>Shopping</span></a>
+      <a href="/dashboard/recipes"       class="nav-link">🍳 <span>Recipes</span></a>
+      <a href="/dashboard/profile"       class="nav-link">👤 <span>Profile</span></a>
+      <a href="/dashboard/notifications" class="nav-link">🔔 <span>Reminders</span></a>
+      <a href="/dashboard/upgrade"       class="nav-link">⚡ <span>Upgrade</span></a>
+    </div>
+    <div class="nav-right">
+      <button class="theme-btn" id="themeBtn" title="Toggle theme">☀️</button>
+
+      {incompleteTasks.length > 0 && (
+        <div class="notif-wrap">
+          <button class="notif-btn" id="notifBtn">
+            🔔 <span class="notif-badge">{incompleteTasks.length}</span>
+          </button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);font-weight:800;font-size:.9rem;color:var(--green);">
+              🔔 {incompleteTasks.length} Pending Task{incompleteTasks.length !== 1 ? 's' : ''}
             </div>
-
-            <!-- Notification Bell -->
-            {incompleteTasks.length > 0 && (
-              <div style="position: relative;">
-                <button class="notification-bell" id="notif-bell">
-                  <span style="color: white;">🔔</span>
-                  <span class="notification-badge">{incompleteTasks.length}</span>
-                </button>
-                
-                <div class="notification-dropdown" id="notificationDropdown">
-                  <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.1));">
-                    <h3 style="font-size: 1.125rem; font-weight: 800; color: var(--accent-primary); display: flex; align-items: center; gap: 0.75rem;">
-                      <span style="font-size: 1.5rem;">🔔</span>
-                      <span>{incompleteTasks.length} Pending Task{incompleteTasks.length !== 1 ? 's' : ''}</span>
-                    </h3>
+            <div style="max-height:320px;overflow-y:auto;">
+              {incompleteTasks.map(t => (
+                <div class="notif-item">
+                  <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--green),var(--green2));display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">
+                    {t.task_type==='breakfast'?'🍳':t.task_type==='lunch'?'🥗':t.task_type==='dinner'?'🍽️':t.task_type==='snack'?'🍎':'💧'}
                   </div>
-                  <div style="max-height: 400px; overflow-y: auto;">
-                    {incompleteTasks.map(task => (
-                      <div class="notification-item">
-                        <div class="notification-icon">
-                          {task.task_type === 'breakfast' && '🍳'}
-                          {task.task_type === 'lunch' && '🥗'}
-                          {task.task_type === 'dinner' && '🍽️'}
-                          {task.task_type === 'snack' && '🍎'}
-                          {task.task_type === 'water' && '💧'}
-                        </div>
-                        <div style="flex: 1;">
-                          <div style="font-weight: 700; font-size: 0.9375rem; color: var(--text-primary); margin-bottom: 0.25rem;">{task.task_title}</div>
-                          <div style="font-size: 0.8125rem; color: var(--text-secondary); font-weight: 600;">+{task.xp_earned} XP • Day {currentDay}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div style="padding: 1.25rem; border-top: 1px solid var(--border-color); text-align: center;">
-                    <a href="/dashboard" class="btn-primary-3d" style="width: 100%; justify-content: center;">
-                      View All Tasks →
-                    </a>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <!-- Profile Avatar -->
-            <a href="/dashboard/profile" style="width: 2.5rem; height: 2.5rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; text-decoration: none; box-shadow: var(--shadow-md); transition: all 0.3s ease; font-size: 1.125rem;">
-              {profile.full_name.charAt(0).toUpperCase()}
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </nav>
-
-  <!-- Main Content -->
-  <div class="container" style="padding-top: 2rem; padding-bottom: 4rem;">
-    
-    <!-- Hero -->
-    <div class="hero">
-      <div class="hero-content">
-        <div class="flex-between" style="flex-wrap: wrap; gap: 2rem;">
-          <div>
-            <h1 style="font-size: 3.5rem; font-weight: 900; margin-bottom: 1rem; text-shadow: 0 4px 8px rgba(0,0,0,0.3);">🛒 Smart Shopping List</h1>
-            <p style="font-size: 1.25rem; opacity: 0.95; margin-bottom: 0.5rem;">Week {weekNumber} • Days {startDay}-{endDay}</p>
-            <p style="font-size: 1rem; opacity: 0.85;">Automatically calculated from your meal plan</p>
-          </div>
-          
-          <div class="stats-card" style="text-align: center;">
-            <p style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.5rem; font-weight: 600;">Estimated Total</p>
-            <p style="font-size: 4rem; font-weight: 900; text-shadow: 0 4px 8px rgba(0,0,0,0.3);">${Math.round(estimatedCost)}</p>
-            <p style="font-size: 0.875rem; opacity: 0.85;">{totalItems} items</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Smart Tips -->
-    <div class="grid grid-3" style="margin-bottom: 2rem;">
-      <div class="tip-card" style="border-color: #3b82f6;">
-        <div class="flex gap-3" style="align-items: flex-start;">
-          <span style="font-size: 2.5rem;">💡</span>
-          <div>
-            <h3 style="font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">Smart Tip</h3>
-            <p style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.5;">Shop once a week to save time and reduce impulse buys</p>
-          </div>
-        </div>
-      </div>
-      
-      <div class="tip-card" style="border-color: #10b981;">
-        <div class="flex gap-3" style="align-items: flex-start;">
-          <span style="font-size: 2.5rem;">💰</span>
-          <div>
-            <h3 style="font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">Save Money</h3>
-            <p style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.5;">Buy proteins in bulk and freeze for later use</p>
-          </div>
-        </div>
-      </div>
-      
-      <div class="tip-card" style="border-color: #8b5cf6;">
-        <div class="flex gap-3" style="align-items: flex-start;">
-          <span style="font-size: 2.5rem;">📱</span>
-          <div>
-            <h3 style="font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">Pro Tip</h3>
-            <p style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.5;">Print or screenshot this list before heading to the store</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Action Buttons -->
-    <div class="flex gap-2 no-print" style="margin-bottom: 2rem; flex-wrap: wrap;">
-      <button onclick="window.print()" class="btn-primary-3d">
-        <span style="font-size: 1.25rem;">🖨️</span>
-        <span>Print List</span>
-      </button>
-      
-      <button onclick="copyToClipboard()" class="btn-secondary-3d">
-        <span style="font-size: 1.25rem;">📋</span>
-        <span>Copy List</span>
-      </button>
-    </div>
-
-    <!-- Shopping List by Category -->
-    <div id="shopping-list-content">
-      {Object.entries(categorizedList).map(([category, items]: [string, any]) => (
-        items.length > 0 && (
-          <div class="category-card">
-            <div class="category-header">
-              <span style="font-size: 3rem;">{categories[category]?.icon || '📦'}</span>
-              <div style="flex: 1;">
-                <h3 style="font-size: 1.75rem; font-weight: 800; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{category}</h3>
-                <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.25rem;">{items.length} item{items.length !== 1 ? 's' : ''}</p>
-              </div>
-            </div>
-            
-            {categories[category]?.tip && (
-              <div class="no-print" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.1)); border-left: 4px solid var(--accent-primary); padding: 1rem; border-radius: 0.75rem; margin-bottom: 1.5rem;">
-                <p style="font-size: 0.875rem; color: var(--text-primary); font-weight: 600;">
-                  💡 <strong>Tip:</strong> {categories[category].tip}
-                </p>
-              </div>
-            )}
-            
-            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-              {items.map((item: any, idx: number) => (
-                <div class="shopping-item" data-item-id={category + '-' + idx}>
-                  <input 
-                    type="checkbox" 
-                    class="checkbox-3d no-print"
-                    onchange="toggleItem(this)"
-                  />
-                  <div style="flex: 1;">
-                    <div class="flex gap-2" style="align-items: baseline; flex-wrap: wrap;">
-                      <span style="font-weight: 800; font-size: 1.125rem; color: var(--text-primary);">
-                        {item.amount} {item.unit}
-                      </span>
-                      <span style="font-weight: 600; font-size: 1rem; color: var(--text-primary);">{item.item}</span>
-                      {item.count > 1 && (
-                        <span style="padding: 0.25rem 0.75rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(52, 211, 153, 0.15)); color: var(--accent-primary); border-radius: 9999px; font-size: 0.75rem; font-weight: 700; border: 2px solid var(--accent-primary);">
-                          {item.count} recipes
-                        </span>
-                      )}
-                    </div>
+                  <div>
+                    <div style="font-weight:700;font-size:.85rem;">{t.task_title}</div>
+                    <div style="font-size:.75rem;color:var(--soft);">+{t.xp_earned} XP</div>
                   </div>
                 </div>
               ))}
             </div>
+            <div style="padding:.875rem 1.25rem;border-top:1px solid var(--border);">
+              <a href="/dashboard" style="display:block;text-align:center;padding:.6rem;border-radius:10px;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;font-weight:700;font-size:.8rem;text-decoration:none;">View All Tasks →</a>
+            </div>
           </div>
-        )
-      ))}
+        </div>
+      )}
 
-      <!-- Summary -->
-      <div class="card-3d" style="text-align: center; margin-top: 2rem;">
-        <h3 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Shopping Summary</h3>
-        
-        <div class="grid grid-3">
-          <div style="padding: 1.5rem; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.1)); border-radius: 1rem; border: 2px solid #3b82f6;">
-            <p style="font-size: 3rem; font-weight: 800; color: #3b82f6; margin-bottom: 0.5rem;">{totalItems}</p>
-            <p style="font-size: 0.875rem; color: var(--text-secondary); font-weight: 600;">Total Items</p>
+      <a href="/dashboard/profile" class="nav-avatar">{profile.full_name.charAt(0).toUpperCase()}</a>
+    </div>
+  </div>
+</nav>
+
+<!-- PAGE -->
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-content">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:.78rem;font-weight:700;color:rgba(16,185,129,.8);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.5rem;">
+            Hey {userName} 👋
           </div>
-          
-          <div style="padding: 1.5rem; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1)); border-radius: 1rem; border: 2px solid var(--accent-primary);">
-            <p style="font-size: 3rem; font-weight: 800; color: var(--accent-primary); margin-bottom: 0.5rem;">${Math.round(estimatedCost)}</p>
-            <p style="font-size: 0.875rem; color: var(--text-secondary); font-weight: 600;">Est. Cost</p>
-          </div>
-          
-          <div style="padding: 1.5rem; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(124, 58, 237, 0.1)); border-radius: 1rem; border: 2px solid #8b5cf6;">
-            <p style="font-size: 3rem; font-weight: 800; color: #8b5cf6; margin-bottom: 0.5rem;">Week {weekNumber}</p>
-            <p style="font-size: 0.875rem; color: var(--text-secondary); font-weight: 600;">Meal Plan</p>
+          <h1 class="hero-title">
+            Week <span class="hl">{weekNumber}</span> Shopping
+          </h1>
+          <p class="hero-sub">Days {startDay}–{endDay} • {totalItems} ingredients auto-calculated from your meal plan</p>
+
+          <!-- Week Pills -->
+          <div class="week-nav no-print">
+            {[1,2,3,4,5].map(w => (
+              <a href={`/dashboard/shopping-list?week=${w}`} class={`week-pill ${w === weekNumber ? 'active' : ''}`}>
+                Week {w}
+              </a>
+            ))}
           </div>
         </div>
 
-        <p style="font-size: 0.8125rem; color: var(--text-secondary); margin-top: 1.5rem;">Generated on {new Date().toLocaleDateString()} • Keto Journey</p>
+        <!-- Mini stats -->
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+          <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:1rem 1.25rem;text-align:center;min-width:90px;">
+            <div style="font-family:'Fraunces',serif;font-size:2rem;font-weight:900;color:var(--green);line-height:1;">{totalItems}</div>
+            <div style="font-size:.72rem;font-weight:700;color:var(--soft);margin-top:.2rem;text-transform:uppercase;letter-spacing:.05em;">Items</div>
+          </div>
+          <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:1rem 1.25rem;text-align:center;min-width:90px;">
+            <div style="font-family:'Fraunces',serif;font-size:2rem;font-weight:900;color:var(--cyan);line-height:1;">{checkedCategories}</div>
+            <div style="font-size:.72rem;font-weight:700;color:var(--soft);margin-top:.2rem;text-transform:uppercase;letter-spacing:.05em;">Categories</div>
+          </div>
+          <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:1rem 1.25rem;text-align:center;min-width:90px;">
+            <div style="font-family:'Fraunces',serif;font-size:2rem;font-weight:900;color:var(--gold);line-height:1;">{endDay - startDay + 1}</div>
+            <div style="font-size:.72rem;font-weight:700;color:var(--soft);margin-top:.2rem;text-transform:uppercase;letter-spacing:.05em;">Days</div>
+          </div>
+        </div>
       </div>
-    </div>
-
-    <!-- Week Navigation -->
-    <div class="flex gap-2 no-print" style="justify-content: center; margin-top: 2rem; flex-wrap: wrap;">
-      {weekNumber > 1 && (
-        <a href={'/dashboard/shopping-list?week=' + (weekNumber - 1)} class="btn-secondary-3d">
-          ← Week {weekNumber - 1}
-        </a>
-      )}
-      {weekNumber < 5 && (
-        <a href={'/dashboard/shopping-list?week=' + (weekNumber + 1)} class="btn-primary-3d">
-          Week {weekNumber + 1} →
-        </a>
-      )}
     </div>
   </div>
 
-  <script is:inline>
-    // Dark Mode Toggle
-    const themeToggle = document.getElementById('themeToggle');
-    const themeIcon = document.getElementById('themeIcon');
-    const html = document.documentElement;
+  <!-- PROGRESS -->
+  <div class="progress-wrap no-print">
+    <div class="progress-header">
+      <span class="progress-label">Shopping Progress</span>
+      <span class="progress-val" id="progressLabel">0 / {totalItems} checked</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+  </div>
 
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    html.setAttribute('data-theme', savedTheme);
-    themeIcon.textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+  <!-- ACTION BTNS -->
+  <div class="action-row no-print">
+    <button onclick="window.print()" class="btn btn-primary">🖨️ Print List</button>
+    <button onclick="copyList()" class="btn btn-secondary">📋 Copy to Clipboard</button>
+    <button onclick="uncheckAll()" class="btn btn-secondary">↺ Reset All</button>
+  </div>
 
-    if (themeToggle) {
-      themeToggle.addEventListener('click', function() {
-        const currentTheme = html.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        
-        html.setAttribute('data-theme', newTheme);
-        themeIcon.textContent = newTheme === 'dark' ? '🌙' : '☀️';
-        localStorage.setItem('theme', newTheme);
-      });
+  <!-- SHOPPING LIST -->
+  {Object.entries(categorizedList).map(([category, items]: [string, any], catIdx) => (
+    items.length > 0 && (
+      <div class="cat-section" id={`cat-${catIdx}`} style={`animation-delay:${catIdx * 0.05}s`}>
+        <div class="cat-header" onclick={`toggleCat('cat-${catIdx}')`}>
+          <div class="cat-icon-wrap" style={`background:${(categories as any)[category]?.gradient || 'linear-gradient(135deg,#6b7280,#4b5563)'};box-shadow:0 4px 12px ${(categories as any)[category]?.glow || 'rgba(107,114,128,.2)'}`}>
+            {(categories as any)[category]?.icon || '📦'}
+          </div>
+          <div class="cat-name">{category}</div>
+          <span class="cat-count">{items.length}</span>
+          <span class="cat-chevron">▾</span>
+        </div>
+
+        <div class="cat-body">
+          {(categories as any)[category]?.tip && (
+            <div class="cat-tip no-print">
+              💡 {(categories as any)[category].tip}
+            </div>
+          )}
+          <div class="items-grid">
+            {items.map((item: any, idx: number) => (
+              <div class="item-row" id={`item-${catIdx}-${idx}`}>
+                <input
+                  type="checkbox"
+                  class="item-check no-print"
+                  onchange={`toggleItem(this,'item-${catIdx}-${idx}')`}
+                />
+                <div class="item-info">
+                  <div class="item-name">{item.item}</div>
+                  <div class="item-amount">{item.amount} {item.unit}</div>
+                </div>
+                {item.count > 1 && (
+                  <span class="item-badge">×{item.count} recipes</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  ))}
+
+  {totalItems === 0 && (
+    <div class="empty-state">
+      <div class="empty-icon">🛒</div>
+      <p>No ingredients found for this week.<br/>Make sure your meal plan is set up.</p>
+    </div>
+  )}
+
+  <!-- SUMMARY -->
+  {totalItems > 0 && (
+    <div class="summary-card no-print">
+      <div class="summary-title">Shopping Summary — Week {weekNumber}</div>
+      <div class="summary-grid">
+        <div class="summary-item">
+          <div class="summary-num" style="color:var(--blue);">{totalItems}</div>
+          <div class="summary-lbl">Total Items</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-num" style="color:var(--green);">{checkedCategories}</div>
+          <div class="summary-lbl">Categories</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-num" style="color:var(--gold);">W{weekNumber}</div>
+          <div class="summary-lbl">Meal Plan</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-num" style="color:var(--purple);">{endDay - startDay + 1}</div>
+          <div class="summary-lbl">Days Covered</div>
+        </div>
+      </div>
+      <div class="summary-footer">
+        Generated {new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})} · Keto Journey
+      </div>
+    </div>
+  )}
+
+  <!-- PREV/NEXT NAV -->
+  <div class="no-print" style="display:flex;justify-content:center;gap:.75rem;margin-top:2rem;flex-wrap:wrap;">
+    {weekNumber > 1 && (
+      <a href={`/dashboard/shopping-list?week=${weekNumber - 1}`} class="btn btn-secondary">← Week {weekNumber - 1}</a>
+    )}
+    {weekNumber < 5 && (
+      <a href={`/dashboard/shopping-list?week=${weekNumber + 1}`} class="btn btn-primary">Week {weekNumber + 1} →</a>
+    )}
+  </div>
+
+</div><!-- /page -->
+
+<div class="toast" id="toast"></div>
+
+<script is:inline define:vars={{ totalItems }}>
+
+// ── THEME ──
+const html     = document.documentElement;
+const themeBtn = document.getElementById('themeBtn');
+function applyTheme(t) {
+  html.setAttribute('data-theme', t);
+  localStorage.setItem('keto-theme', t);
+  if (themeBtn) themeBtn.textContent = t === 'dark' ? '☀️' : '🌙';
+}
+applyTheme(localStorage.getItem('keto-theme') || 'dark');
+themeBtn?.addEventListener('click', () => {
+  applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+});
+
+// ── NOTIFS ──
+const notifBtn  = document.getElementById('notifBtn');
+const notifDrop = document.getElementById('notifDropdown');
+notifBtn?.addEventListener('click', e => { e.stopPropagation(); notifDrop?.classList.toggle('open'); });
+document.addEventListener('click', e => { if (notifDrop && !notifDrop.contains(e.target) && e.target !== notifBtn) notifDrop.classList.remove('open'); });
+
+// ── PROGRESS ──
+let checkedCount = 0;
+function updateProgress() {
+  const pct = totalItems > 0 ? Math.round((checkedCount / totalItems) * 100) : 0;
+  const fill = document.getElementById('progressFill');
+  const label = document.getElementById('progressLabel');
+  if (fill)  fill.style.width = pct + '%';
+  if (label) label.textContent = `${checkedCount} / ${totalItems} checked`;
+}
+
+// ── TOGGLE ITEM ──
+function toggleItem(checkbox, id) {
+  const row = document.getElementById(id);
+  if (!row) return;
+  if (checkbox.checked) {
+    row.classList.add('checked');
+    checkedCount++;
+    if (checkedCount === totalItems) showToast('🎉 All items checked! You\'re ready to shop!');
+  } else {
+    row.classList.remove('checked');
+    checkedCount--;
+  }
+  updateProgress();
+}
+
+// ── TOGGLE CATEGORY ──
+function toggleCat(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('collapsed');
+}
+
+// ── UNCHECK ALL ──
+function uncheckAll() {
+  document.querySelectorAll('.item-check').forEach(cb => {
+    cb.checked = false;
+  });
+  document.querySelectorAll('.item-row').forEach(row => row.classList.remove('checked'));
+  checkedCount = 0;
+  updateProgress();
+  showToast('↺ All items reset');
+}
+
+// ── COPY LIST ──
+function copyList() {
+  const lines = ['🛒 Keto Shopping List\n'];
+  document.querySelectorAll('.cat-section').forEach(section => {
+    const name = section.querySelector('.cat-name')?.textContent?.trim();
+    const items = [];
+    section.querySelectorAll('.item-row:not(.checked)').forEach(row => {
+      const n = row.querySelector('.item-name')?.textContent?.trim();
+      const a = row.querySelector('.item-amount')?.textContent?.trim();
+      if (n) items.push(`  ☐ ${n} — ${a}`);
+    });
+    if (items.length > 0) {
+      lines.push(`\n${name}`);
+      lines.push(...items);
     }
+  });
+  navigator.clipboard.writeText(lines.join('\n'))
+    .then(() => showToast('📋 Copied to clipboard!'))
+    .catch(() => showToast('❌ Failed to copy'));
+}
 
-    // Notification Toggle
-    const notifBell = document.getElementById('notif-bell');
-    const notifDropdown = document.getElementById('notificationDropdown');
-    
-    if (notifBell && notifDropdown) {
-      notifBell.addEventListener('click', function(e) {
-        e.stopPropagation();
-        notifDropdown.classList.toggle('active');
-      });
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'toast show';
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
 
-      document.addEventListener('click', function(e) {
-        if (!notifDropdown.contains(e.target) && !notifBell.contains(e.target)) {
-          notifDropdown.classList.remove('active');
-        }
-      });
-    }
+window.toggleItem  = toggleItem;
+window.toggleCat   = toggleCat;
+window.uncheckAll  = uncheckAll;
+window.copyList    = copyList;
 
-    // Toggle Item
-    function toggleItem(checkbox) {
-      const item = checkbox.closest('.shopping-item');
-      if (checkbox.checked) {
-        item.classList.add('checked');
-      } else {
-        item.classList.remove('checked');
-      }
-    }
-
-    // Copy to Clipboard
-    function copyToClipboard() {
-      const items = [];
-      document.querySelectorAll('.shopping-item').forEach(item => {
-        if (!item.classList.contains('checked')) {
-          const text = item.textContent.trim().replace(/\s+/g, ' ').replace(/recipes?/i, '').trim();
-          items.push('☐ ' + text);
-        }
-      });
-      
-      navigator.clipboard.writeText(items.join('\n')).then(() => {
-        alert('✅ Shopping list copied to clipboard!');
-      }).catch(() => {
-        alert('❌ Failed to copy. Please try again.');
-      });
-    }
-
-    window.toggleItem = toggleItem;
-    window.copyToClipboard = copyToClipboard;
-
-    console.log('✅ Shopping List loaded successfully!');
-  </script>
+</script>
 </body>
 </html>
