@@ -32,10 +32,10 @@ const { userId, userName, tierLabel, planType, activePage = '' } = Astro.props;
 const initials  = (userName[0] || 'U').toUpperCase();
 const tierText  = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 
-const progressPages = ['progress', 'photos', 'checkin', 'reflections', 'ketones'];
+const progressPages = ['progress', 'photos', 'checkin', 'reflections', 'ketones', 'share'];
 const mealPages     = ['recipes', 'food-log', 'favorites', 'meal-prep'];
-const planPages     = ['shopping', 'habits', 'weekly', 'fasting'];
-const morePages     = ['learn', 'notifications', 'export'];
+const planPages     = ['shopping', 'habits', 'weekly', 'fasting', 'keto-calculator'];
+const morePages     = ['learn', 'notifications', 'export', 'referrals'];
 
 const activeGroup =
   activePage === 'dashboard'          ? 'today'     :
@@ -57,6 +57,7 @@ const groups = [
       { href: '/dashboard/checkin',     key: 'checkin',     label: 'Check-in'  },
       { href: '/dashboard/reflections', key: 'reflections', label: 'Journal'   },
       { href: '/dashboard/ketones',     key: 'ketones',     label: 'Ketones'   },
+      { href: '/dashboard/share',       key: 'share',       label: 'Share'     },
     ],
   },
   {
@@ -74,7 +75,8 @@ const groups = [
       { href: '/dashboard/shopping', key: 'shopping', label: 'Shopping' },
       { href: '/dashboard/habits',   key: 'habits',   label: 'Habits'   },
       { href: '/dashboard/weekly',   key: 'weekly',   label: 'Weekly'   },
-      { href: '/dashboard/fasting',  key: 'fasting',  label: 'Fasting'  },
+      { href: '/dashboard/fasting',          key: 'fasting',          label: 'Fasting'    },
+      { href: '/dashboard/keto-calculator', key: 'keto-calculator', label: 'Calculator' },
     ],
   },
   {
@@ -83,6 +85,7 @@ const groups = [
       { href: '/dashboard/learn',         key: 'learn',         label: 'Learn'         },
       { href: '/dashboard/notifications', key: 'notifications', label: 'Notifications' },
       { href: '/dashboard/export',        key: 'export',        label: 'Export'        },
+      { href: '/dashboard/referrals',     key: 'referrals',     label: 'Refer Friends' },
     ],
   },
 ];
@@ -147,7 +150,7 @@ const groups = [
       </li>
     ))}
 
-    <!-- AI Coach + Community (Elite only) -->
+    <!-- AI Coach + Community (Elite only; locked buttons for others) -->
     {planType === 'elite_12' && (
       <li>
         <a href="/dashboard/ai-coach"
@@ -157,6 +160,17 @@ const groups = [
         </a>
       </li>
     )}
+    {planType !== 'elite_12' && (
+      <li>
+        <button
+          class="dn-tab dn-locked"
+          onclick="window.showFeatureUpsell && window.showFeatureUpsell('ai-coach')"
+          title="Elite only">
+          <Sparkles size={13} />
+          AI Coach 🔒
+        </button>
+      </li>
+    )}
     {planType === 'elite_12' && (
       <li>
         <a href="/dashboard/community"
@@ -164,6 +178,17 @@ const groups = [
           <Users size={13} />
           Community
         </a>
+      </li>
+    )}
+    {planType !== 'elite_12' && (
+      <li>
+        <button
+          class="dn-tab dn-locked"
+          onclick="window.showFeatureUpsell && window.showFeatureUpsell('community')"
+          title="Elite only">
+          <Users size={13} />
+          Community 🔒
+        </button>
       </li>
     )}
 
@@ -408,6 +433,10 @@ body {
 .dn-tab.dn-elite:hover { color: var(--amber); background: var(--amber-bg); }
 .dn-tab.dn-elite.active { background: var(--amber); color: #fff; }
 
+/* Locked feature tab */
+.dn-tab.dn-locked { color: var(--soft); opacity: .65; cursor: pointer; }
+.dn-tab.dn-locked:hover { color: var(--amber); background: var(--amber-bg); opacity: 1; }
+
 /* Upgrade tab */
 .dn-tab.dn-upgrade {
   color: var(--green);
@@ -627,6 +656,114 @@ body {
       });
     };
   })();
+
+  /* ── Service Worker + PWA ────────────────────────────── */
+  (function () {
+    if (!('serviceWorker' in navigator)) return;
+
+    /* Inject manifest link if not already present */
+    if (!document.querySelector('link[rel="manifest"]')) {
+      var ml = document.createElement('link');
+      ml.rel  = 'manifest';
+      ml.href = '/manifest.webmanifest';
+      document.head.appendChild(ml);
+    }
+
+    /* Register SW */
+    navigator.serviceWorker.register('/sw.js').then(function (reg) {
+      /* Check for SW update on page focus */
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') reg.update();
+      });
+
+      /* Notify user when new SW is waiting */
+      reg.addEventListener('updatefound', function () {
+        var newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', function () {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateToast(newWorker);
+          }
+        });
+      });
+    }).catch(function (err) {
+      console.warn('SW registration failed:', err);
+    });
+
+    /* Listen for sync-complete messages from SW */
+    navigator.serviceWorker.addEventListener('message', function (e) {
+      if (e.data && e.data.type === 'SYNC_COMPLETE' && e.data.replayed > 0) {
+        showToast('✓ ' + e.data.replayed + ' offline action(s) synced', 'green');
+      }
+    });
+
+    /* Online/offline indicator */
+    function updateOnlineStatus() {
+      var bar = document.getElementById('offlineBar');
+      if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'offlineBar';
+        bar.style.cssText = [
+          'position:fixed;top:0;left:0;right:0;z-index:9999',
+          'padding:.45rem 1rem;text-align:center',
+          'font-size:.78rem;font-weight:700;letter-spacing:.02em',
+          'transition:transform .25s ease',
+        ].join(';');
+        document.body.appendChild(bar);
+      }
+      if (navigator.onLine) {
+        bar.style.background = '#10b981';
+        bar.style.color      = '#fff';
+        bar.textContent      = '✓ Back online';
+        bar.style.transform  = 'translateY(0)';
+        setTimeout(function () { bar.style.transform = 'translateY(-100%)'; }, 2500);
+      } else {
+        bar.style.background = '#ef4444';
+        bar.style.color      = '#fff';
+        bar.textContent      = '⚠ You\'re offline — some features may be unavailable';
+        bar.style.transform  = 'translateY(0)';
+      }
+    }
+    window.addEventListener('online',  updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    if (!navigator.onLine) updateOnlineStatus();
+  })();
+
+  /* ── Update toast ─────────────────────────────────────── */
+  function showUpdateToast(worker) {
+    var t = document.createElement('div');
+    t.style.cssText = [
+      'position:fixed;bottom:80px;left:50%;transform:translateX(-50%)',
+      'background:#0d1a0f;border:1px solid rgba(16,185,129,.3)',
+      'color:#dfeedd;border-radius:12px;padding:.75rem 1.25rem',
+      'font-size:.82rem;font-weight:600;z-index:9999',
+      'display:flex;align-items:center;gap:.75rem;box-shadow:0 8px 32px rgba(0,0,0,.4)',
+    ].join(';');
+    t.innerHTML = '<span>🔄 App updated — reload to get the latest</span>'
+      + '<button onclick="this.closest(\'div\').remove()" '
+      + 'style="background:#10b981;color:#fff;border:none;border-radius:6px;'
+      + 'padding:.3rem .75rem;cursor:pointer;font-weight:700;font-size:.78rem">Reload</button>';
+    t.querySelector('button').addEventListener('click', function () {
+      worker.postMessage({ type: 'SKIP_WAITING' });
+      window.location.reload();
+    });
+    document.body.appendChild(t);
+  }
+
+  /* ── Generic toast ────────────────────────────────────── */
+  function showToast(msg, color) {
+    var t = document.createElement('div');
+    var bg = color === 'green' ? '#10b981' : '#3b82f6';
+    t.style.cssText = [
+      'position:fixed;bottom:80px;left:50%;transform:translateX(-50%)',
+      'background:' + bg + ';color:#fff;border-radius:10px',
+      'padding:.65rem 1.25rem;font-size:.82rem;font-weight:700',
+      'z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3)',
+    ].join(';');
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 3500);
+  }
 
 })();
 </script>

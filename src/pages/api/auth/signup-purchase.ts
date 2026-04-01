@@ -7,7 +7,7 @@ import type { APIRoute } from 'astro';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const { email, password, fullName, tier, startDate, endDate, saleId } =
+    const { email, password, fullName, tier, startDate, endDate, saleId, referral_code } =
       await request.json();
 
     // ── Validate required fields ──────────────
@@ -133,6 +133,35 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .eq('activated', false);
 
     console.log(`✅ New user registered: ${cleanEmail} | tier: ${tier}`);
+
+    // ── Apply referral code (fire-and-forget) ─────────
+    if (referral_code && typeof referral_code === 'string') {
+      try {
+        const code = referral_code.trim().toUpperCase();
+        const { data: codeRow } = await supabase
+          .from('referral_codes').select('user_id').eq('code', code).maybeSingle();
+        if (codeRow && codeRow.user_id !== userId) {
+          await supabase.from('referrals').insert({
+            referrer_id:      codeRow.user_id,
+            referred_user_id: userId,
+            status:           'completed',
+            xp_awarded:       150,
+          }).then(() =>
+            supabase.rpc('award_xp', {
+              user_id_param:     codeRow.user_id,
+              action_type_param: 'referral',
+              xp_amount_param:   150,
+              description_param: 'Friend joined using your referral code',
+              day_number_param:  1,
+            })
+          ).then(() =>
+            supabase.from('referral_codes')
+              .update({ uses_count: supabase.rpc('increment', { x: 1 }) as any })
+              .eq('code', code)
+          ).catch(() => {});
+        }
+      } catch { /* referral failure must never block signup */ }
+    }
 
     // ── Send welcome email (fire-and-forget) ──────────
     try {

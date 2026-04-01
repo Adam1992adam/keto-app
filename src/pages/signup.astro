@@ -646,19 +646,25 @@ const allowedEmail = emailParam ? emailParam.toLowerCase().trim() : '';
     txt.textContent = 'Creating account…';
 
     try {
+      const refCode = localStorage.getItem('keto_ref') || '';
+
       const res = await fetch('/api/auth/signup-purchase', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
-          email:     verifiedEmail,
-          password,  fullName,
-          tier:      purchaseData.tier,
-          startDate: purchaseData.start_date,
-          endDate:   purchaseData.end_date,
-          saleId:    purchaseData.sale_id,
+          email:         verifiedEmail,
+          password,      fullName,
+          tier:          purchaseData.tier,
+          startDate:     purchaseData.start_date,
+          endDate:       purchaseData.end_date,
+          saleId:        purchaseData.sale_id,
+          referral_code: refCode || undefined,
         })
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || 'Signup failed');
+
+      // Clear the stored referral code after use
+      localStorage.removeItem('keto_ref');
 
       updateStepUI(3);
       goToPanel('panel3');
@@ -671,6 +677,15 @@ const allowedEmail = emailParam ? emailParam.toLowerCase().trim() : '';
       btn.disabled = false; spin.style.display = 'none'; txt.textContent = 'Create My Account 🚀';
     }
   }
+
+  // Capture referral code from URL and persist in localStorage
+  (function() {
+    var params = new URLSearchParams(window.location.search);
+    var ref = params.get('ref');
+    if (ref && ref.length >= 6) {
+      localStorage.setItem('keto_ref', ref.toUpperCase());
+    }
+  })();
 
   // Wire events
   window.addEventListener('DOMContentLoaded', () => {

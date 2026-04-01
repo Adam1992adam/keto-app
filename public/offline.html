@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>You're Offline — KetoJourney</title>
+  <link rel="icon" href="/icon-192.png" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: #060d09; color: #dfeedd;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 2rem; text-align: center;
+    }
+    .logo {
+      width: 56px; height: 56px; border-radius: 16px;
+      background: linear-gradient(135deg, #10b981 0%, #15803d 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; margin: 0 auto 1.5rem;
+      box-shadow: 0 4px 20px rgba(16,185,129,0.3);
+    }
+    h1 {
+      font-size: 1.9rem; font-weight: 800; margin-bottom: .5rem;
+      color: #dfeedd;
+    }
+    .sub {
+      color: #4d7055; font-size: .95rem; margin-bottom: 2.5rem;
+      max-width: 340px; line-height: 1.6;
+    }
+    .card {
+      background: #0d1a0f; border: 1px solid rgba(16,185,129,.12);
+      border-radius: 20px; padding: 1.5rem 2rem;
+      margin-bottom: 1.25rem; max-width: 380px; width: 100%;
+    }
+    .card h2 {
+      font-size: .8rem; font-weight: 800; letter-spacing: .06em;
+      text-transform: uppercase; color: #10b981; margin-bottom: 1rem;
+    }
+    .tip-list { list-style: none; text-align: left; }
+    .tip-list li {
+      display: flex; gap: .7rem; align-items: flex-start;
+      font-size: .87rem; color: #dfeedd; padding: .45rem 0;
+      border-bottom: 1px solid rgba(16,185,129,.07); line-height: 1.5;
+    }
+    .tip-list li:last-child { border-bottom: none; }
+    .tip-list .icon { font-size: 1.1rem; flex-shrink: 0; margin-top: .05rem; }
+    .pages { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+    .page-link {
+      display: flex; align-items: center; gap: .5rem;
+      padding: .65rem .85rem; border-radius: 10px;
+      background: rgba(16,185,129,.07); border: 1px solid rgba(16,185,129,.15);
+      color: #10b981; font-size: .8rem; font-weight: 700;
+      text-decoration: none; cursor: pointer;
+      transition: background .15s;
+    }
+    .page-link:hover { background: rgba(16,185,129,.14); }
+    .retry-btn {
+      display: inline-flex; align-items: center; gap: .5rem;
+      padding: .8rem 2rem; border-radius: 10px;
+      background: #10b981; color: #fff; font-size: .9rem; font-weight: 700;
+      border: none; cursor: pointer; margin-top: 1.5rem;
+      transition: opacity .15s, transform .1s;
+    }
+    .retry-btn:hover { opacity: .9; transform: translateY(-1px); }
+    .status-dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+      background: #ef4444; margin-right: .4rem; vertical-align: middle;
+    }
+    .status-text { font-size: .78rem; color: #4d7055; margin-top: 1rem; }
+    #syncMsg {
+      display: none; color: #10b981; font-size: .82rem;
+      font-weight: 700; margin-top: 1rem;
+      background: rgba(16,185,129,.1); padding: .6rem 1rem;
+      border-radius: 8px; border: 1px solid rgba(16,185,129,.2);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="logo">🥑</div>
+  <h1>You're Offline</h1>
+  <p class="sub">No internet connection detected. Some features are available below while you're offline.</p>
+
+  <div class="card">
+    <h2>Available Offline</h2>
+    <div class="pages" id="cachedLinks">
+      <a class="page-link" href="/dashboard">🏠 Today</a>
+      <a class="page-link" href="/dashboard/fasting">⏱ Fasting</a>
+      <a class="page-link" href="/dashboard/keto-calculator">🧮 Calculator</a>
+      <a class="page-link" href="/dashboard/progress">📊 Progress</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>While You Wait</h2>
+    <ul class="tip-list">
+      <li><span class="icon">💧</span><span>Stay hydrated — keto flushes electrolytes. Drink water and add a pinch of salt.</span></li>
+      <li><span class="icon">🧘</span><span>Light walks keep you in fat-burning mode without spiking cortisol.</span></li>
+      <li><span class="icon">⏱</span><span>Use the offline fasting timer — it works without internet.</span></li>
+      <li><span class="icon">🥑</span><span>Today's goal: keep net carbs under your target and prioritise protein.</span></li>
+    </ul>
+  </div>
+
+  <div id="syncMsg" id="syncMsg">
+    ✓ Back online — syncing your offline actions...
+  </div>
+
+  <button class="retry-btn" onclick="retry()">
+    ↻ Try Again
+  </button>
+
+  <p class="status-text">
+    <span class="status-dot" id="dot"></span>
+    <span id="statusLabel">Offline</span>
+  </p>
+
+  <script>
+    function retry() {
+      window.location.href = '/dashboard';
+    }
+
+    function updateStatus() {
+      var online = navigator.onLine;
+      var dot   = document.getElementById('dot');
+      var label = document.getElementById('statusLabel');
+      if (dot)   dot.style.background   = online ? '#10b981' : '#ef4444';
+      if (label) label.textContent = online ? 'Back online — tap Try Again' : 'Offline';
+    }
+
+    window.addEventListener('online',  function() {
+      updateStatus();
+      var msg = document.getElementById('syncMsg');
+      if (msg) msg.style.display = 'block';
+      setTimeout(function() { window.location.href = '/dashboard'; }, 2000);
+    });
+    window.addEventListener('offline', updateStatus);
+    updateStatus();
+
+    /* Listen for sync complete message from SW */
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', function(e) {
+        if (e.data && e.data.type === 'SYNC_COMPLETE') {
+          var msg = document.getElementById('syncMsg');
+          if (msg) {
+            msg.textContent = '✓ Synced ' + e.data.replayed + ' offline action(s)';
+            msg.style.display = 'block';
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

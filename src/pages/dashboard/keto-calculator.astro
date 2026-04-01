@@ -1,0 +1,777 @@
+---
+// src/pages/dashboard/keto-calculator.astro
+import { supabase } from '../../lib/supabase';
+import { requireAuth } from '../../lib/auth';
+import DashNav from '../../components/DashNav.astro';
+import Calculator from 'lucide-astro/Calculator';
+import Flame from 'lucide-astro/Flame';
+import Beef from 'lucide-astro/Beef';
+import Droplets from 'lucide-astro/Droplets';
+import Zap from 'lucide-astro/Zap';
+import Target from 'lucide-astro/Target';
+import RefreshCw from 'lucide-astro/RefreshCw';
+import Info from 'lucide-astro/Info';
+
+const auth = await requireAuth(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile } = auth;
+const planType  = profile.subscription_tier || 'basic_30';
+const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const userName  = profile.full_name?.split(' ')[0] || 'there';
+
+// Pre-fill from onboarding
+const { data: onboarding } = await supabase
+  .from('onboarding_data')
+  .select('current_weight, target_weight, goal, fasting_protocol')
+  .eq('user_id', user.id)
+  .maybeSingle();
+
+const prefillWeight = onboarding?.current_weight || profile.weight_kg || 70;
+const prefillGoal   = onboarding?.goal === 'gain_muscle' ? 'gain' : onboarding?.goal === 'maintain' ? 'maintain' : 'lose';
+const units         = profile.preferred_units || 'metric';
+const prefillWeightDisplay = units === 'imperial'
+  ? Math.round(prefillWeight * 2.20462)
+  : prefillWeight;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Keto Calculator — KetoJourney</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Fraunces:ital,wght@1,700;1,800&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="keto-calculator" />
+
+<main class="page">
+
+  <!-- ── Header ───────────────────────────────────────────── -->
+  <header class="page-header fade-up">
+    <div class="header-icon">
+      <Calculator size={22} />
+    </div>
+    <div>
+      <h1 class="page-title">Keto Calculator</h1>
+      <p class="page-sub">Your personalised TDEE &amp; macro targets</p>
+    </div>
+  </header>
+
+  <!-- ── Two-column layout ─────────────────────────────────── -->
+  <div class="layout">
+
+    <!-- LEFT — Input form -->
+    <section class="card form-card fade-up" style="animation-delay:.05s">
+      <h2 class="card-title">Your Details</h2>
+
+      <!-- Unit toggle -->
+      <div class="field">
+        <label class="field-label">Units</label>
+        <div class="seg" id="unitSeg">
+          <button class="seg-btn active" data-val="metric"  onclick="setUnit('metric')">Metric (kg / cm)</button>
+          <button class="seg-btn"        data-val="imperial" onclick="setUnit('imperial')">Imperial (lbs / ft)</button>
+        </div>
+      </div>
+
+      <!-- Gender -->
+      <div class="field">
+        <label class="field-label">Biological sex</label>
+        <div class="seg" id="sexSeg">
+          <button class="seg-btn active" data-val="male"   onclick="setSex('male')">Male</button>
+          <button class="seg-btn"        data-val="female" onclick="setSex('female')">Female</button>
+        </div>
+      </div>
+
+      <!-- Age -->
+      <div class="field">
+        <label class="field-label" for="age">Age</label>
+        <div class="input-wrap">
+          <input class="input" type="number" id="age" min="15" max="100" value="30" oninput="calc()" />
+          <span class="input-unit">years</span>
+        </div>
+      </div>
+
+      <!-- Weight -->
+      <div class="field">
+        <label class="field-label" for="weight">Weight</label>
+        <div class="input-wrap">
+          <input class="input" type="number" id="weight" min="30" max="300" step="0.1"
+            value={prefillWeightDisplay} oninput="calc()" />
+          <span class="input-unit" id="wUnit">{units === 'imperial' ? 'lbs' : 'kg'}</span>
+        </div>
+      </div>
+
+      <!-- Height -->
+      <div class="field" id="heightMetricField">
+        <label class="field-label" for="heightCm">Height</label>
+        <div class="input-wrap">
+          <input class="input" type="number" id="heightCm" min="100" max="250" value="170" oninput="calc()" />
+          <span class="input-unit">cm</span>
+        </div>
+      </div>
+      <div class="field hidden" id="heightImperialField">
+        <label class="field-label">Height</label>
+        <div class="height-imperial">
+          <div class="input-wrap">
+            <input class="input" type="number" id="heightFt" min="3" max="8" value="5" oninput="calc()" />
+            <span class="input-unit">ft</span>
+          </div>
+          <div class="input-wrap">
+            <input class="input" type="number" id="heightIn" min="0" max="11" value="7" oninput="calc()" />
+            <span class="input-unit">in</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity level -->
+      <div class="field">
+        <label class="field-label" for="activity">Activity level</label>
+        <select class="select" id="activity" onchange="calc()">
+          <option value="1.2">Sedentary — desk job, little exercise</option>
+          <option value="1.375">Light — exercise 1–3 days/week</option>
+          <option value="1.55" selected>Moderate — exercise 3–5 days/week</option>
+          <option value="1.725">Active — exercise 6–7 days/week</option>
+          <option value="1.9">Very active — physical job + daily training</option>
+        </select>
+      </div>
+
+      <!-- Goal -->
+      <div class="field">
+        <label class="field-label">Goal</label>
+        <div class="goal-grid" id="goalSeg">
+          <button class="goal-btn" data-val="lose" onclick="setGoal('lose')">
+            <span class="goal-icon">🔥</span>
+            <span class="goal-label">Lose Fat</span>
+            <span class="goal-note">−20% calories</span>
+          </button>
+          <button class="goal-btn" data-val="maintain" onclick="setGoal('maintain')">
+            <span class="goal-icon">⚖️</span>
+            <span class="goal-label">Maintain</span>
+            <span class="goal-note">maintenance calories</span>
+          </button>
+          <button class="goal-btn" data-val="gain" onclick="setGoal('gain')">
+            <span class="goal-icon">💪</span>
+            <span class="goal-label">Build Muscle</span>
+            <span class="goal-note">+10% calories</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Keto strictness -->
+      <div class="field">
+        <label class="field-label">Keto strictness</label>
+        <div class="seg" id="strictSeg">
+          <button class="seg-btn active" data-val="strict" onclick="setStrict('strict')">Strict (&lt;20g carbs)</button>
+          <button class="seg-btn"        data-val="moderate" onclick="setStrict('moderate')">Moderate (&lt;35g)</button>
+          <button class="seg-btn"        data-val="lazy" onclick="setStrict('lazy')">Lazy (&lt;50g)</button>
+        </div>
+      </div>
+
+      <button class="reset-btn" onclick="resetForm()">
+        <RefreshCw size={14} />
+        Reset
+      </button>
+    </section>
+
+    <!-- RIGHT — Results -->
+    <div class="results-col">
+
+      <!-- TDEE card -->
+      <div class="card result-card fade-up" style="animation-delay:.1s">
+        <div class="result-header">
+          <Zap size={16} class="result-header-icon amber" />
+          <h3 class="result-title">Daily Calories</h3>
+        </div>
+        <div class="tdee-row">
+          <div class="tdee-block">
+            <div class="tdee-val" id="outBMR">—</div>
+            <div class="tdee-label">BMR</div>
+            <div class="tdee-desc">at rest</div>
+          </div>
+          <div class="tdee-arrow">→</div>
+          <div class="tdee-block">
+            <div class="tdee-val" id="outTDEE">—</div>
+            <div class="tdee-label">TDEE</div>
+            <div class="tdee-desc">with activity</div>
+          </div>
+          <div class="tdee-arrow">→</div>
+          <div class="tdee-block highlight">
+            <div class="tdee-val green" id="outTarget">—</div>
+            <div class="tdee-label">Target</div>
+            <div class="tdee-desc" id="outGoalLabel">your goal</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Macros card -->
+      <div class="card result-card fade-up" style="animation-delay:.15s">
+        <div class="result-header">
+          <Target size={16} class="result-header-icon green" />
+          <h3 class="result-title">Daily Macros</h3>
+        </div>
+
+        <!-- Ring chart -->
+        <div class="ring-wrap">
+          <svg class="ring-svg" viewBox="0 0 160 160">
+            <!-- Fat ring -->
+            <circle class="ring-track" cx="80" cy="80" r="66" />
+            <circle class="ring-seg ring-fat" id="ringFat" cx="80" cy="80" r="66"
+              stroke-dasharray="0 415" stroke-dashoffset="0" />
+            <!-- Protein ring -->
+            <circle class="ring-track ring-track2" cx="80" cy="80" r="50" />
+            <circle class="ring-seg ring-prot" id="ringProt" cx="80" cy="80" r="50"
+              stroke-dasharray="0 314" stroke-dashoffset="0" />
+            <!-- Carbs ring -->
+            <circle class="ring-track ring-track3" cx="80" cy="80" r="34" />
+            <circle class="ring-seg ring-carb" id="ringCarb" cx="80" cy="80" r="34"
+              stroke-dasharray="0 213" stroke-dashoffset="0" />
+            <text x="80" y="76"  class="ring-center-num" id="ringCalLabel">—</text>
+            <text x="80" y="92"  class="ring-center-sub">kcal</text>
+          </svg>
+
+          <!-- Legend -->
+          <div class="ring-legend">
+            <div class="legend-item">
+              <span class="legend-dot fat"></span>
+              <div>
+                <div class="legend-macro" id="outFatG">—g</div>
+                <div class="legend-label">Fat <span class="legend-pct" id="outFatPct"></span></div>
+              </div>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot prot"></span>
+              <div>
+                <div class="legend-macro" id="outProtG">—g</div>
+                <div class="legend-label">Protein <span class="legend-pct" id="outProtPct"></span></div>
+              </div>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot carb"></span>
+              <div>
+                <div class="legend-macro" id="outCarbG">—g</div>
+                <div class="legend-label">Net Carbs <span class="legend-pct" id="outCarbPct"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Macro bars -->
+        <div class="macro-bars">
+          <div class="mbar-row">
+            <span class="mbar-name">Fat</span>
+            <div class="mbar-track"><div class="mbar-fill fat" id="barFat"></div></div>
+            <span class="mbar-val" id="barFatVal">—</span>
+          </div>
+          <div class="mbar-row">
+            <span class="mbar-name">Protein</span>
+            <div class="mbar-track"><div class="mbar-fill prot" id="barProt"></div></div>
+            <span class="mbar-val" id="barProtVal">—</span>
+          </div>
+          <div class="mbar-row">
+            <span class="mbar-name">Net Carbs</span>
+            <div class="mbar-track"><div class="mbar-fill carb" id="barCarb"></div></div>
+            <span class="mbar-val" id="barCarbVal">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tips card -->
+      <div class="card tips-card fade-up" style="animation-delay:.2s">
+        <div class="result-header">
+          <Info size={16} class="result-header-icon blue" />
+          <h3 class="result-title">Keto Tips</h3>
+        </div>
+        <div class="tips-list" id="tipsList">
+          <!-- populated by JS -->
+        </div>
+      </div>
+
+      <!-- Water card -->
+      <div class="card water-card fade-up" style="animation-delay:.25s">
+        <div class="result-header">
+          <Droplets size={16} class="result-header-icon cyan" />
+          <h3 class="result-title">Daily Water</h3>
+        </div>
+        <div class="water-row">
+          <div class="water-val" id="outWater">—</div>
+          <div class="water-sub" id="outWaterGlasses">— glasses of 250ml</div>
+        </div>
+        <p class="water-note">Keto flushes water — drink at least this much to avoid keto flu.</p>
+      </div>
+
+    </div><!-- /results-col -->
+  </div><!-- /layout -->
+
+</main>
+
+<style>
+/* ── Page layout ──────────────────────────────────────────── */
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 6rem;
+}
+@media (max-width: 600px) { .page { padding: 1.25rem 1rem 5rem; } }
+
+.page-header {
+  display: flex; align-items: center; gap: 1rem;
+  margin-bottom: 2rem;
+}
+.header-icon {
+  width: 48px; height: 48px; border-radius: var(--r);
+  background: var(--green-bg);
+  border: 1.5px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--green); flex-shrink: 0;
+}
+.page-title {
+  font-family: 'Fraunces', serif;
+  font-style: italic; font-size: 1.8rem; font-weight: 800;
+  color: var(--text); margin: 0;
+}
+.page-sub { color: var(--soft); font-size: .88rem; margin: 0; }
+
+/* ── Layout grid ─────────────────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; }
+}
+
+.results-col { display: flex; flex-direction: column; gap: 1.25rem; }
+
+/* ── Card base ───────────────────────────────────────────── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+.card-title {
+  font-size: 1rem; font-weight: 700; color: var(--text);
+  margin: 0 0 1.25rem;
+}
+
+/* ── Form fields ─────────────────────────────────────────── */
+.field { margin-bottom: 1.1rem; }
+.field-label {
+  display: block; font-size: .78rem; font-weight: 700;
+  color: var(--soft); letter-spacing: .03em; text-transform: uppercase;
+  margin-bottom: .45rem;
+}
+.input-wrap {
+  position: relative; display: flex; align-items: center;
+}
+.input {
+  width: 100%; padding: .65rem 3rem .65rem .9rem;
+  background: var(--bg2); border: 1.5px solid var(--border);
+  border-radius: var(--r-sm); font-size: .9rem; font-weight: 600;
+  color: var(--text); outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.input:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-ring); }
+.input-unit {
+  position: absolute; right: .75rem;
+  font-size: .76rem; font-weight: 700; color: var(--soft);
+}
+.select {
+  width: 100%; padding: .65rem .9rem;
+  background: var(--bg2); border: 1.5px solid var(--border);
+  border-radius: var(--r-sm); font-size: .88rem; font-weight: 600;
+  color: var(--text); outline: none; cursor: pointer;
+  transition: border-color .15s;
+}
+.select:focus { border-color: var(--green); }
+
+.height-imperial { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.hidden { display: none !important; }
+
+/* ── Segmented control ───────────────────────────────────── */
+.seg {
+  display: flex; background: var(--bg2);
+  border: 1.5px solid var(--border); border-radius: var(--r-sm);
+  padding: 3px; gap: 3px;
+}
+.seg-btn {
+  flex: 1; padding: .48rem .5rem;
+  border: none; border-radius: calc(var(--r-sm) - 2px);
+  font-size: .78rem; font-weight: 700; cursor: pointer;
+  background: transparent; color: var(--soft);
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+.seg-btn.active {
+  background: var(--card); color: var(--text);
+  box-shadow: var(--shadow-xs);
+  border: 1px solid var(--border);
+}
+
+/* ── Goal buttons ────────────────────────────────────────── */
+.goal-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem;
+}
+.goal-btn {
+  display: flex; flex-direction: column; align-items: center;
+  gap: .2rem; padding: .75rem .5rem;
+  border: 1.5px solid var(--border); border-radius: var(--r);
+  background: var(--bg2); cursor: pointer;
+  transition: border-color .15s, background .15s, transform .15s;
+}
+.goal-btn:hover { border-color: var(--border2); transform: translateY(-1px); }
+.goal-btn.active {
+  border-color: var(--green); background: var(--green-bg);
+  box-shadow: 0 0 0 3px var(--green-ring);
+}
+.goal-icon { font-size: 1.3rem; }
+.goal-label { font-size: .78rem; font-weight: 700; color: var(--text); }
+.goal-note { font-size: .68rem; color: var(--soft); text-align: center; }
+
+/* ── Reset button ────────────────────────────────────────── */
+.reset-btn {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .5rem 1rem; border: 1.5px solid var(--border);
+  border-radius: var(--r-sm); background: transparent;
+  font-size: .78rem; font-weight: 700; color: var(--soft);
+  cursor: pointer; margin-top: .5rem;
+  transition: border-color .15s, color .15s;
+}
+.reset-btn:hover { border-color: var(--border2); color: var(--text); }
+
+/* ── Result cards ────────────────────────────────────────── */
+.result-card { }
+.result-header {
+  display: flex; align-items: center; gap: .5rem;
+  margin-bottom: 1.25rem;
+}
+.result-header-icon { flex-shrink: 0; }
+.result-header-icon.amber { color: var(--amber); }
+.result-header-icon.green { color: var(--green); }
+.result-header-icon.blue  { color: var(--blue);  }
+.result-header-icon.cyan  { color: var(--cyan);  }
+.result-title {
+  font-size: .95rem; font-weight: 700; color: var(--text); margin: 0;
+}
+
+/* ── TDEE row ────────────────────────────────────────────── */
+.tdee-row {
+  display: flex; align-items: center; gap: .75rem;
+  flex-wrap: wrap;
+}
+.tdee-block {
+  flex: 1; min-width: 80px;
+  padding: .9rem .75rem; border-radius: var(--r);
+  background: var(--bg2); border: 1px solid var(--border);
+  text-align: center;
+}
+.tdee-block.highlight {
+  background: var(--green-bg); border-color: var(--border2);
+}
+.tdee-val {
+  font-family: 'Fraunces', serif; font-style: italic;
+  font-size: 1.6rem; font-weight: 800; color: var(--text); line-height: 1;
+}
+.tdee-val.green { color: var(--green); }
+.tdee-label { font-size: .72rem; font-weight: 800; color: var(--soft); text-transform: uppercase; letter-spacing: .04em; margin-top: .2rem; }
+.tdee-desc  { font-size: .68rem; color: var(--soft); }
+.tdee-arrow { color: var(--muted); font-size: 1.2rem; flex-shrink: 0; }
+
+/* ── Ring chart ──────────────────────────────────────────── */
+.ring-wrap {
+  display: flex; align-items: center; gap: 1.5rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.ring-svg {
+  width: 160px; height: 160px; flex-shrink: 0;
+  transform: rotate(-90deg);
+}
+.ring-track  { fill: none; stroke: var(--bg2); stroke-width: 14; }
+.ring-track2 { stroke-width: 12; }
+.ring-track3 { stroke-width: 10; }
+.ring-seg { fill: none; stroke-linecap: round; transition: stroke-dasharray .5s ease; }
+.ring-fat  { stroke: var(--amber); stroke-width: 14; }
+.ring-prot { stroke: var(--green); stroke-width: 12; }
+.ring-carb { stroke: var(--blue);  stroke-width: 10; }
+.ring-center-num {
+  font-family: 'Fraunces', serif; font-style: italic;
+  font-size: 22px; font-weight: 800; fill: var(--text);
+  text-anchor: middle; transform: rotate(90deg);
+  transform-origin: 80px 80px;
+}
+.ring-center-sub {
+  font-size: 11px; fill: var(--soft); text-anchor: middle;
+  transform: rotate(90deg); transform-origin: 80px 80px;
+}
+
+/* ── Ring legend ─────────────────────────────────────────── */
+.ring-legend { display: flex; flex-direction: column; gap: .85rem; }
+.legend-item { display: flex; align-items: center; gap: .65rem; }
+.legend-dot {
+  width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+}
+.legend-dot.fat  { background: var(--amber); }
+.legend-dot.prot { background: var(--green); }
+.legend-dot.carb { background: var(--blue);  }
+.legend-macro {
+  font-family: 'Fraunces', serif; font-style: italic;
+  font-size: 1.15rem; font-weight: 800; color: var(--text);
+}
+.legend-label { font-size: .76rem; color: var(--soft); }
+.legend-pct { font-size: .72rem; color: var(--soft); }
+
+/* ── Macro bars ──────────────────────────────────────────── */
+.macro-bars { display: flex; flex-direction: column; gap: .7rem; }
+.mbar-row { display: flex; align-items: center; gap: .75rem; }
+.mbar-name { width: 68px; font-size: .78rem; font-weight: 700; color: var(--soft); flex-shrink: 0; }
+.mbar-track {
+  flex: 1; height: 8px; border-radius: 99px;
+  background: var(--bg2); overflow: hidden;
+}
+.mbar-fill {
+  height: 100%; border-radius: 99px;
+  transition: width .5s ease;
+  width: 0%;
+}
+.mbar-fill.fat  { background: var(--amber); }
+.mbar-fill.prot { background: var(--green); }
+.mbar-fill.carb { background: var(--blue);  }
+.mbar-val { width: 42px; font-size: .78rem; font-weight: 700; color: var(--text); text-align: right; }
+
+/* ── Tips ────────────────────────────────────────────────── */
+.tips-card { }
+.tips-list { display: flex; flex-direction: column; gap: .6rem; }
+.tip-item {
+  display: flex; align-items: flex-start; gap: .6rem;
+  padding: .65rem .85rem; border-radius: var(--r-sm);
+  background: var(--bg2); border: 1px solid var(--border);
+  font-size: .82rem; color: var(--text); line-height: 1.45;
+}
+.tip-dot { font-size: .9rem; flex-shrink: 0; margin-top: .05rem; }
+
+/* ── Water ───────────────────────────────────────────────── */
+.water-card { }
+.water-row { display: flex; align-items: baseline; gap: .75rem; margin-bottom: .5rem; }
+.water-val {
+  font-family: 'Fraunces', serif; font-style: italic;
+  font-size: 2rem; font-weight: 800; color: var(--cyan);
+}
+.water-sub { font-size: .85rem; color: var(--soft); }
+.water-note { font-size: .78rem; color: var(--soft); line-height: 1.5; }
+
+/* ── Animations ──────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp .4s ease both; }
+</style>
+
+<script is:inline define:vars={{ prefillGoal, units }}>
+/* ══ State ═══════════════════════════════════════════════════ */
+var state = {
+  unit:    units === 'imperial' ? 'imperial' : 'metric',
+  sex:     'male',
+  goal:    prefillGoal || 'lose',
+  strict:  'strict',
+};
+
+/* ══ Boot ════════════════════════════════════════════════════ */
+(function () {
+  setUnit(state.unit, true);
+  setSex(state.sex, true);
+  setGoal(state.goal, true);
+  setStrict(state.strict, true);
+  calc();
+})();
+
+/* ══ Setters ════════════════════════════════════════════════ */
+function setUnit(val, silent) {
+  state.unit = val;
+  activateSeg('unitSeg', val);
+  var isImp = val === 'imperial';
+  document.getElementById('wUnit').textContent = isImp ? 'lbs' : 'kg';
+  document.getElementById('heightMetricField').classList.toggle('hidden', isImp);
+  document.getElementById('heightImperialField').classList.toggle('hidden', !isImp);
+  if (!silent) calc();
+}
+function setSex(val, silent) {
+  state.sex = val;
+  activateSeg('sexSeg', val);
+  if (!silent) calc();
+}
+function setGoal(val, silent) {
+  state.goal = val;
+  var btns = document.querySelectorAll('#goalSeg .goal-btn');
+  btns.forEach(function(b) {
+    b.classList.toggle('active', b.dataset.val === val);
+  });
+  if (!silent) calc();
+}
+function setStrict(val, silent) {
+  state.strict = val;
+  activateSeg('strictSeg', val);
+  if (!silent) calc();
+}
+
+function activateSeg(id, val) {
+  var btns = document.querySelectorAll('#' + id + ' .seg-btn');
+  btns.forEach(function(b) {
+    b.classList.toggle('active', b.dataset.val === val);
+  });
+}
+
+/* ══ Reset ══════════════════════════════════════════════════ */
+function resetForm() {
+  document.getElementById('age').value      = '30';
+  document.getElementById('weight').value   = state.unit === 'imperial' ? '154' : '70';
+  document.getElementById('heightCm').value = '170';
+  document.getElementById('heightFt').value = '5';
+  document.getElementById('heightIn').value = '7';
+  document.getElementById('activity').value = '1.55';
+  setUnit('metric', true);
+  setSex('male', true);
+  setGoal('lose', true);
+  setStrict('strict', true);
+  calc();
+}
+
+/* ══ Core calculation ═══════════════════════════════════════ */
+function calc() {
+  var age      = parseFloat(document.getElementById('age').value)    || 30;
+  var weightRaw= parseFloat(document.getElementById('weight').value) || 70;
+  var activity = parseFloat(document.getElementById('activity').value) || 1.55;
+
+  // Convert to metric
+  var weightKg = state.unit === 'imperial' ? weightRaw / 2.20462 : weightRaw;
+
+  var heightCm;
+  if (state.unit === 'imperial') {
+    var ft = parseFloat(document.getElementById('heightFt').value) || 5;
+    var inc= parseFloat(document.getElementById('heightIn').value) || 7;
+    heightCm = (ft * 12 + inc) * 2.54;
+  } else {
+    heightCm = parseFloat(document.getElementById('heightCm').value) || 170;
+  }
+
+  // Mifflin-St Jeor BMR
+  var bmr = state.sex === 'male'
+    ? (10 * weightKg) + (6.25 * heightCm) - (5 * age) + 5
+    : (10 * weightKg) + (6.25 * heightCm) - (5 * age) - 161;
+
+  var tdee = Math.round(bmr * activity);
+  bmr = Math.round(bmr);
+
+  // Goal adjustment
+  var goalMult = state.goal === 'lose' ? 0.80 : state.goal === 'gain' ? 1.10 : 1.0;
+  var target   = Math.round(tdee * goalMult);
+  var goalLabel= state.goal === 'lose' ? '−20% deficit' : state.goal === 'gain' ? '+10% surplus' : 'maintenance';
+
+  // Carb ceiling by strictness
+  var maxCarbs = state.strict === 'strict' ? 20 : state.strict === 'moderate' ? 35 : 50;
+
+  // Macro split — fixed carbs, protein ~1g/lb LBM approx (0.8g/kg), rest fat
+  var carbCals = maxCarbs * 4;
+  var protG    = Math.round(weightKg * 1.6);         // 1.6g per kg body weight
+  var protCals = protG * 4;
+  var fatCals  = Math.max(0, target - carbCals - protCals);
+  var fatG     = Math.round(fatCals / 9);
+
+  // Percentages
+  var fatPct  = Math.round((fatCals  / target) * 100);
+  var protPct = Math.round((protCals / target) * 100);
+  var carbPct = Math.round((carbCals / target) * 100);
+
+  // Water: 35ml per kg + 500ml extra for keto
+  var waterML   = Math.round(weightKg * 35 + 500);
+  var waterL    = (waterML / 1000).toFixed(1);
+  var glasses   = Math.round(waterML / 250);
+
+  // ── Update DOM ──────────────────────────────────────────
+  setText('outBMR',   bmr.toLocaleString());
+  setText('outTDEE',  tdee.toLocaleString());
+  setText('outTarget',target.toLocaleString());
+  setText('outGoalLabel', goalLabel);
+
+  setText('outFatG',  fatG  + 'g');
+  setText('outProtG', protG + 'g');
+  setText('outCarbG', maxCarbs + 'g');
+  setText('outFatPct',  fatPct  + '%');
+  setText('outProtPct', protPct + '%');
+  setText('outCarbPct', carbPct + '%');
+
+  setText('ringCalLabel', target.toLocaleString());
+
+  // Bars
+  setBar('barFat',  fatPct,  fatG  + 'g');
+  setBar('barProt', protPct, protG + 'g');
+  setBar('barCarb', carbPct, maxCarbs + 'g');
+
+  // Rings — circumferences: r66→414.7, r50→314.2, r34→213.6
+  setRing('ringFat',  fatPct,  414.7);
+  setRing('ringProt', protPct, 314.2);
+  setRing('ringCarb', carbPct, 213.6);
+
+  // Water
+  setText('outWater', waterL + ' L');
+  setText('outWaterGlasses', glasses + ' glasses of 250ml');
+
+  // Tips
+  renderTips(weightKg, bmr, state.goal, state.strict, maxCarbs);
+}
+
+function setText(id, val) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+function setBar(id, pct, label) {
+  var fill = document.getElementById(id);
+  var val  = document.getElementById(id + 'Val');
+  if (fill) fill.style.width = Math.min(100, pct) + '%';
+  if (val)  val.textContent  = label;
+}
+function setRing(id, pct, circ) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var arc = (pct / 100) * circ;
+  el.setAttribute('stroke-dasharray', arc + ' ' + circ);
+}
+
+/* ══ Tips ═══════════════════════════════════════════════════ */
+function renderTips(weightKg, bmr, goal, strict, maxCarbs) {
+  var tips = [];
+
+  if (goal === 'lose') {
+    tips.push({ icon: '🔥', text: 'Aim for a consistent 20% deficit — larger cuts risk muscle loss on keto.' });
+  }
+  if (goal === 'gain') {
+    tips.push({ icon: '💪', text: 'Hitting protein targets is critical for muscle growth — prioritise it at every meal.' });
+  }
+  if (strict === 'strict') {
+    tips.push({ icon: '⚡', text: 'Under 20g carbs puts most people in ketosis within 2–4 days.' });
+  }
+  tips.push({ icon: '🥑', text: 'Fill fat from whole foods: avocado, olive oil, fatty fish, nuts — not just oils.' });
+  tips.push({ icon: '🧂', text: 'Supplement electrolytes (sodium, potassium, magnesium) — keto depletes them fast.' });
+  if (weightKg > 90) {
+    tips.push({ icon: '💧', text: 'Heavier bodies need more water. Aim for the full target above — spread it through the day.' });
+  }
+  tips.push({ icon: '📏', text: 'Recalculate every 5 kg of weight lost — your TDEE decreases as you lose.' });
+
+  var html = tips.map(function(t) {
+    return '<div class="tip-item"><span class="tip-dot">' + t.icon + '</span><span>' + t.text + '</span></div>';
+  }).join('');
+  var el = document.getElementById('tipsList');
+  if (el) el.innerHTML = html;
+}
+</script>
+
+</body>
+</html>

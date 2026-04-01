@@ -1,0 +1,398 @@
+---
+// src/components/UpsellModal.astro
+// Context-aware upgrade modal — embedded in DashNav, fires on smart triggers.
+
+interface Props {
+  planType:        string;
+  currentDay:      number;
+  streakDays:      number;
+  weightLost:      number;
+  wUnit:           string;
+  maxDays:         number;
+  checkoutUrl:     string;
+}
+
+const {
+  planType,
+  currentDay,
+  streakDays,
+  weightLost,
+  wUnit,
+  maxDays,
+  checkoutUrl,
+} = Astro.props;
+
+const isBasic = planType === 'basic_30';
+const isPro   = planType === 'pro_6';
+const upgradeTo = isBasic ? 'Pro' : 'Elite';
+const upgradeAccent = isBasic ? '#6366f1' : '#f59e0b';
+const upgradeBg     = isBasic ? 'rgba(99,102,241,.08)' : 'rgba(245,158,11,.08)';
+const upgradeBorder = isBasic ? 'rgba(99,102,241,.3)'  : 'rgba(245,158,11,.3)';
+const upgradeEmoji  = isBasic ? '⚡' : '👑';
+const upgradePrice  = isBasic ? '$99.99 / 6 months' : '$199.99 / 12 months';
+const upgradePerMonth = isBasic ? '$16.67/mo' : '$16.67/mo';
+const daysLeft = maxDays - currentDay;
+---
+
+<!-- Modal overlay — hidden by default, shown by JS -->
+<div id="upsellOverlay" class="upsell-overlay" aria-hidden="true" onclick="closeUpsell(event)">
+  <div class="upsell-modal" id="upsellModal" role="dialog" aria-modal="true">
+
+    <!-- Close -->
+    <button class="upsell-close" onclick="dismissUpsell()" aria-label="Close">✕</button>
+
+    <!-- Emoji badge -->
+    <div class="upsell-badge" id="upsellBadge">🔥</div>
+
+    <!-- Headline -->
+    <h2 class="upsell-title" id="upsellTitle">You're on a roll!</h2>
+    <p  class="upsell-sub"   id="upsellSub">Keep your momentum going.</p>
+
+    <!-- Features highlight -->
+    <div class="upsell-features" id="upsellFeatures">
+      <!-- populated by JS -->
+    </div>
+
+    <!-- Price pill -->
+    <div class="upsell-price-row">
+      <div class="upsell-price-pill">
+        <span class="upsell-plan-name">{upgradeEmoji} {upgradeTo}</span>
+        <span class="upsell-price-val">{upgradePrice}</span>
+        <span class="upsell-price-sub">{upgradePerMonth}</span>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <a href="/dashboard/upgrade" class="upsell-cta" id="upsellCta" onclick="trackUpsellClick()">
+      Upgrade to {upgradeTo} →
+    </a>
+
+    <!-- Dismiss link -->
+    <button class="upsell-later" onclick="dismissUpsell()">Maybe later</button>
+
+  </div>
+</div>
+
+<style>
+.upsell-overlay {
+  position: fixed; inset: 0; z-index: 8000;
+  background: rgba(0,0,0,.65);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1.5rem;
+  opacity: 0; pointer-events: none;
+  transition: opacity .25s ease;
+}
+.upsell-overlay.visible {
+  opacity: 1; pointer-events: auto;
+}
+.upsell-modal {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 24px;
+  padding: 2.5rem 2rem 2rem;
+  max-width: 420px; width: 100%;
+  box-shadow: 0 24px 80px rgba(0,0,0,.5);
+  text-align: center;
+  transform: scale(.94) translateY(16px);
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+}
+.upsell-overlay.visible .upsell-modal {
+  transform: scale(1) translateY(0);
+}
+.upsell-close {
+  position: absolute; top: 1rem; right: 1rem;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--bg2); border: 1px solid var(--border);
+  color: var(--soft); cursor: pointer; font-size: .8rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, color .15s;
+}
+.upsell-close:hover { background: var(--muted); color: var(--text); }
+
+.upsell-badge {
+  font-size: 3.2rem; line-height: 1; margin-bottom: 1rem;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,.3));
+}
+.upsell-title {
+  font-family: 'Fraunces', serif; font-style: italic;
+  font-size: 1.7rem; font-weight: 800; color: var(--text);
+  margin: 0 0 .5rem;
+}
+.upsell-sub {
+  color: var(--soft); font-size: .9rem; line-height: 1.55;
+  margin: 0 0 1.5rem; max-width: 320px; margin-left: auto; margin-right: auto;
+}
+
+.upsell-features {
+  display: flex; flex-direction: column; gap: .45rem;
+  margin-bottom: 1.5rem; text-align: left;
+}
+.upsell-feature {
+  display: flex; align-items: center; gap: .65rem;
+  padding: .55rem .85rem; border-radius: 10px;
+  background: var(--bg2); border: 1px solid var(--border);
+  font-size: .84rem; font-weight: 600; color: var(--text);
+}
+.upsell-feature-icon { font-size: 1rem; flex-shrink: 0; }
+
+.upsell-price-row { margin-bottom: 1.25rem; }
+.upsell-price-pill {
+  display: inline-flex; align-items: center; gap: .75rem;
+  padding: .6rem 1.2rem; border-radius: 99px;
+  background: var(--green-bg);
+  border: 1.5px solid var(--border2);
+}
+.upsell-plan-name { font-weight: 800; font-size: .85rem; color: var(--text); }
+.upsell-price-val { font-weight: 700; font-size: .82rem; color: var(--green); }
+.upsell-price-sub {
+  font-size: .72rem; color: var(--soft);
+  background: var(--muted); padding: .15rem .45rem; border-radius: 99px;
+}
+
+.upsell-cta {
+  display: block; width: 100%;
+  padding: .9rem; border-radius: 14px;
+  background: var(--green); color: #fff;
+  font-size: .95rem; font-weight: 800;
+  text-decoration: none; margin-bottom: .75rem;
+  transition: opacity .15s, transform .12s;
+  box-shadow: 0 4px 20px var(--green-ring);
+}
+.upsell-cta:hover { opacity: .9; transform: translateY(-1px); }
+
+.upsell-later {
+  background: none; border: none; cursor: pointer;
+  color: var(--soft); font-size: .8rem; font-weight: 600;
+  text-decoration: underline; text-underline-offset: 2px;
+  transition: color .15s;
+}
+.upsell-later:hover { color: var(--text); }
+</style>
+
+<script is:inline define:vars={{
+  planType, currentDay, streakDays,
+  weightLost, wUnit, maxDays, checkoutUrl,
+  isBasic, isPro, upgradeTo, upgradeEmoji,
+}}>
+
+/* ══ Trigger definitions ════════════════════════════════════ */
+var TRIGGERS = {
+  journey_ending: {
+    condition: function() {
+      var daysLeft = maxDays - currentDay;
+      if (isBasic && currentDay >= 25) return { daysLeft: daysLeft };
+      if (isPro   && currentDay >= 150) return { daysLeft: daysLeft };
+      return null;
+    },
+    cooldown: 3,   /* days */
+    badge: '⏳',
+    title: function(d) { return d.daysLeft <= 3 ? 'Journey ending soon!' : 'Make the most of it'; },
+    sub: function(d) {
+      return d.daysLeft <= 3
+        ? 'Only ' + d.daysLeft + ' day(s) left on your current plan. Upgrade now to keep your streak alive.'
+        : currentDay + ' days in — you\'re building real habits. Don\'t let your journey stop at ' + maxDays + ' days.';
+    },
+    features: isBasic
+      ? ['⚡ 87+ keto recipes', '📅 6-month meal plan', '📊 Advanced analytics', '🎯 Priority support']
+      : ['🤖 AI Keto Coach', '👥 Community access', '📅 12-month meal plan', '👑 Priority 24/7 support'],
+  },
+
+  streak_momentum: {
+    condition: function() {
+      if (streakDays < 7) return null;
+      var milestone = streakDays >= 30 ? 30 : streakDays >= 21 ? 21 : streakDays >= 14 ? 14 : 7;
+      return { milestone: milestone };
+    },
+    cooldown: 14,
+    badge: '🔥',
+    title: function(d) { return d.milestone + '-day streak!'; },
+    sub: function(d) {
+      return 'You\'ve checked in for ' + streakDays + ' days straight — that\'s serious discipline. '
+        + 'Unlock ' + (isBasic ? 'Pro' : 'Elite') + ' to match your effort with better tools.';
+    },
+    features: isBasic
+      ? ['📊 Advanced analytics & charts', '⚡ 87+ recipe library', '📅 6-month structured plan', '🏆 Weekly progress reports']
+      : ['🤖 Personal AI Keto Coach', '👥 Elite community', '💬 Unlimited AI conversations', '👑 VIP support'],
+  },
+
+  weight_win: {
+    condition: function() {
+      return weightLost >= 2 ? { lost: weightLost } : null;
+    },
+    cooldown: 30,
+    badge: '⚖️',
+    title: function(d) { return d.lost + ' ' + wUnit + ' gone!'; },
+    sub: function() {
+      return 'You\'re already seeing real results. Imagine what 6 more months of structured keto could achieve with better tools.';
+    },
+    features: isBasic
+      ? ['📊 Body composition tracking', '📈 Weight trend analytics', '⚡ 87+ keto recipes', '🎯 Personalised macro goals']
+      : ['🤖 AI Coach to optimise your macros', '📊 Elite body analytics', '👥 Community for accountability', '👑 Priority support'],
+  },
+
+  day_milestone: {
+    condition: function() {
+      var milestones = [7, 14, 21];
+      var hit = milestones.find(function(m) { return currentDay === m; });
+      return hit ? { day: hit } : null;
+    },
+    cooldown: 7,
+    badge: '🏆',
+    title: function(d) { return 'Day ' + d.day + ' complete!'; },
+    sub: function(d) {
+      var msgs = {
+        7:  'First week done — you\'ve kicked the carb cravings. Ready to go further?',
+        14: 'Two weeks strong! Most people quit in week one — you didn\'t.',
+        21: '21 days — science says that\'s a new habit. You\'ve rewired your metabolism.',
+      };
+      return (msgs[d.day] || '') + ' Upgrade to unlock more.';
+    },
+    features: isBasic
+      ? ['📅 6-month structured journey', '⚡ 87+ recipes to beat boredom', '📊 Advanced progress tracking', '🏆 Weekly reports']
+      : ['🤖 AI Coach reviews your week', '👥 Community motivation', '📅 12-month elite plan', '👑 Elite support'],
+  },
+};
+
+/* ══ Core logic ═════════════════════════════════════════════ */
+
+function getStorageKey(type) {
+  return 'upsell_shown_' + type;
+}
+
+function wasDismissedRecently(type, cooldownDays) {
+  var key  = getStorageKey(type);
+  var last = parseInt(localStorage.getItem(key) || '0', 10);
+  if (!last) return false;
+  var daysSince = (Date.now() - last) / (1000 * 60 * 60 * 24);
+  return daysSince < cooldownDays;
+}
+
+function markShown(type) {
+  localStorage.setItem(getStorageKey(type), String(Date.now()));
+}
+
+function pickTrigger() {
+  /* Priority order */
+  var order = ['journey_ending', 'streak_momentum', 'weight_win', 'day_milestone'];
+
+  for (var i = 0; i < order.length; i++) {
+    var name    = order[i];
+    var trigger = TRIGGERS[name];
+    if (!trigger) continue;
+    if (wasDismissedRecently(name, trigger.cooldown)) continue;
+    var data = trigger.condition();
+    if (data) return { name: name, trigger: trigger, data: data };
+  }
+  return null;
+}
+
+function showUpsell(name, trigger, data) {
+  var overlay  = document.getElementById('upsellOverlay');
+  var badge    = document.getElementById('upsellBadge');
+  var title    = document.getElementById('upsellTitle');
+  var sub      = document.getElementById('upsellSub');
+  var features = document.getElementById('upsellFeatures');
+  var cta      = document.getElementById('upsellCta');
+
+  if (!overlay) return;
+
+  if (badge)    badge.textContent = trigger.badge;
+  if (title)    title.textContent = trigger.title(data);
+  if (sub)      sub.textContent   = trigger.sub(data);
+  if (cta)      cta.textContent   = 'Upgrade to ' + upgradeTo + ' →';
+
+  if (features) {
+    features.innerHTML = trigger.features.map(function(f) {
+      return '<div class="upsell-feature"><span class="upsell-feature-icon">' + f.slice(0,2) + '</span><span>' + f.slice(2).trim() + '</span></div>';
+    }).join('');
+  }
+
+  /* Store which trigger is showing so dismissUpsell knows */
+  overlay.dataset.triggerName = name;
+
+  overlay.classList.add('visible');
+  overlay.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+/* ══ Public API (called from other pages/components) ════════ */
+
+window.closeUpsell = function(event) {
+  if (event && event.target !== document.getElementById('upsellOverlay')) return;
+  dismissUpsell();
+};
+
+window.dismissUpsell = function() {
+  var overlay = document.getElementById('upsellOverlay');
+  if (!overlay) return;
+  var name = overlay.dataset.triggerName;
+  if (name) markShown(name);
+  overlay.classList.remove('visible');
+  overlay.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+};
+
+window.trackUpsellClick = function() {
+  var overlay = document.getElementById('upsellOverlay');
+  if (overlay && overlay.dataset.triggerName) {
+    markShown(overlay.dataset.triggerName);
+  }
+};
+
+/* Show the upsell for a specific feature (called from gated pages) */
+window.showFeatureUpsell = function(featureName) {
+  var featureMap = {
+    'ai-coach':  {
+      badge: '🤖', cooldown: 7,
+      title: function() { return 'AI Coach is Elite only'; },
+      sub:   function() { return 'Get a personal AI Keto Coach that knows your history, macros, and struggles — available on Elite.'; },
+      features: ['🤖 Unlimited AI conversations', '🧠 Personalised keto advice', '📊 Analyses your progress data', '👑 Elite priority support'],
+    },
+    'community': {
+      badge: '👥', cooldown: 7,
+      title: function() { return 'Join the community'; },
+      sub:   function() { return 'Connect with thousands of keto journeyers, share wins, and get motivation. Available on Elite.'; },
+      features: ['👥 Active keto community', '🏆 Group challenges', '🤖 AI Coach included', '👑 Elite support'],
+    },
+    'analytics': {
+      badge: '📊', cooldown: 7,
+      title: function() { return 'Unlock advanced analytics'; },
+      sub:   function() { return 'See body composition estimates, energy trends, macro adherence charts, and more.'; },
+      features: ['📈 Body composition tracking', '⚡ 87+ recipe library', '📊 Energy & mood trends', '🏆 Weekly reports'],
+    },
+    'recipes':   {
+      badge: '🍳', cooldown: 7,
+      title: function() { return '87+ recipes waiting'; },
+      sub:   function() { return 'You\'ve seen the basics — Pro unlocks 87+ hand-picked keto recipes with full macros.'; },
+      features: ['🍳 87+ keto recipes', '⭐ Save favourites', '📅 Integrated with meal plan', '⚡ Swap any meal'],
+    },
+  };
+
+  var def = featureMap[featureName];
+  if (!def) return;
+
+  if (wasDismissedRecently('feature_' + featureName, def.cooldown)) return;
+
+  showUpsell('feature_' + featureName, def, {});
+};
+
+/* ══ Auto-trigger on page load (300ms delay for smoothness) = */
+if (planType !== 'elite_12') {
+  setTimeout(function() {
+    /* Don't fire on the upgrade page itself */
+    if (window.location.pathname === '/dashboard/upgrade') return;
+    var hit = pickTrigger();
+    if (hit) showUpsell(hit.name, hit.trigger, hit.data);
+  }, 800);
+}
+
+/* ══ Keyboard dismiss ═══════════════════════════════════════ */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    var overlay = document.getElementById('upsellOverlay');
+    if (overlay && overlay.classList.contains('visible')) dismissUpsell();
+  }
+});
+</script>

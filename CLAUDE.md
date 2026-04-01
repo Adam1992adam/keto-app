@@ -13,13 +13,13 @@
 | 2 | Food Database (Open Food Facts API) | ✅ Done | Real-time search + barcode scanner (BarcodeDetector API) + fallback manual barcode input |
 | 3 | Email Automation | ✅ Done | Resend SDK + 5 templates (welcome, weekly, milestone, streak warning, win-back) + 2 crons |
 | 4 | Before/After Photo Comparison | ✅ Done | Draggable split-view slider on photos.astro + keyboard + touch support |
-| 5 | Recipe Ratings & Personalization | ⬜ Todo | DB table + star-rating UI + recommendation logic |
-| 6 | Keto Calculator Tool | ⬜ Todo | TDEE + macro calculator page |
-| 7 | Social Sharing Cards | ⬜ Todo | Canvas milestone cards (Day 7/30/etc.) |
-| 8 | Offline Mode (finish PWA) | ⬜ Todo | sw.js cache strategy for recipes + meals |
-| 9 | Smart Upsell Triggers | ⬜ Todo | Context-aware upgrade prompts at key moments |
+| 5 | Recipe Ratings & Personalization | ✅ Done | recipe_ratings table + 5-star widget on recipe/[id] + avg rating display + "You might also like" similar recipes |
+| 6 | Keto Calculator Tool | ✅ Done | TDEE + macro calculator page at /dashboard/keto-calculator — Mifflin-St Jeor, macro rings, tips, water |
+| 7 | Social Sharing Cards | ✅ Done | Canvas milestone cards at /dashboard/share — 4 templates, 4 themes, square/story format, download + Web Share API |
+| 8 | Offline Mode (finish PWA) | ✅ Done | sw.js v3: Cache First/Network First/SWR strategies + IndexedDB offline queue + background sync + manifest + offline.html |
+| 9 | Smart Upsell Triggers | ✅ Done | UpsellModal component: 4 triggers (journey_ending/streak/weight_win/milestone) + feature-locked nav buttons + localStorage cooldowns |
 | 10 | ⏸ Subscription Portal | ⏸ Stripe | Stripe Customer Portal for self-service billing |
-| 11 | Referral System | ⬜ Todo | Invite codes + tracking + reward XP |
+| 11 | Referral System | ✅ Done | referral_codes + referrals tables · /dashboard/referrals · 3 APIs · ?ref= capture on signup · 150 XP per referral |
 
 ### Push Notifications — Setup Notes (Step 1)
 ```

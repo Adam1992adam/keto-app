@@ -1,0 +1,657 @@
+---
+// src/pages/dashboard/referrals.astro
+import { supabase, getUserJourney } from '../../lib/supabase';
+import { requireAuth } from '../../lib/auth';
+import DashNav from '../../components/DashNav.astro';
+import Gift    from 'lucide-astro/Gift';
+import Copy    from 'lucide-astro/Copy';
+import Share2  from 'lucide-astro/Share2';
+import Zap     from 'lucide-astro/Zap';
+import Users   from 'lucide-astro/Users';
+import Trophy  from 'lucide-astro/Trophy';
+import Check   from 'lucide-astro/Check';
+import Link    from 'lucide-astro/Link';
+
+const auth = await requireAuth(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile } = auth;
+const planType  = profile.subscription_tier || 'basic_30';
+const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const userName  = profile.full_name?.split(' ')[0] || 'there';
+
+const journey = await getUserJourney(user.id);
+const currentDay = journey?.current_day || 1;
+
+// Load existing code + stats (server-side for initial render)
+const { data: codeRow } = await supabase
+  .from('referral_codes')
+  .select('code, uses_count')
+  .eq('user_id', user.id)
+  .maybeSingle();
+
+const { data: referrals } = await supabase
+  .from('referrals')
+  .select('status, xp_awarded, created_at')
+  .eq('referrer_id', user.id)
+  .order('created_at', { ascending: false });
+
+const refList   = referrals || [];
+const totalXP   = refList.reduce((s, r) => s + (r.xp_awarded || 0), 0);
+const completed = refList.filter(r => r.status === 'completed').length;
+const hasCode   = !!codeRow?.code;
+
+// Pre-compute for template
+const xpPerReferral  = 150;
+const previewCode    = codeRow?.code || '—';
+const previewUses    = codeRow?.uses_count || 0;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Referrals — KetoJourney</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Fraunces:ital,wght@1,700;1,800&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="referrals" />
+
+<main class="page">
+
+  <!-- ── Header ─────────────────────────────────────────── -->
+  <header class="page-header fade-up">
+    <div class="header-icon">
+      <Gift size={22} />
+    </div>
+    <div>
+      <h1 class="page-title">Refer Friends</h1>
+      <p class="page-sub">Earn <strong>{xpPerReferral} XP</strong> for every friend who joins KetoJourney</p>
+    </div>
+  </header>
+
+  <!-- ── Stats row ──────────────────────────────────────── -->
+  <div class="stats-row fade-up" style="animation-delay:.04s">
+    <div class="stat-card">
+      <Users size={18} class="stat-icon blue" />
+      <div class="stat-val" id="statTotal">{refList.length}</div>
+      <div class="stat-label">Referred</div>
+    </div>
+    <div class="stat-card">
+      <Trophy size={18} class="stat-icon green" />
+      <div class="stat-val" id="statCompleted">{completed}</div>
+      <div class="stat-label">Joined</div>
+    </div>
+    <div class="stat-card">
+      <Zap size={18} class="stat-icon amber" />
+      <div class="stat-val" id="statXP">{totalXP}</div>
+      <div class="stat-label">XP Earned</div>
+    </div>
+  </div>
+
+  <!-- ── Main layout ────────────────────────────────────── -->
+  <div class="layout">
+
+    <!-- LEFT: Code + share -->
+    <div class="left-col">
+
+      <!-- Code card -->
+      <div class="card code-card fade-up" style="animation-delay:.08s">
+        <div class="card-header">
+          <Link size={16} class="card-header-icon" />
+          <h2 class="card-title">Your Referral Code</h2>
+        </div>
+
+        <div class="code-display" id="codeDisplay">
+          {hasCode ? previewCode : '—'}
+        </div>
+
+        <div class="code-actions">
+          <button class="btn-copy" id="copyCodeBtn" onclick="copyCode()" title="Copy code">
+            <Copy size={15} />
+            Copy Code
+          </button>
+          <button class="btn-copy btn-link" id="copyLinkBtn" onclick="copyLink()" title="Copy link">
+            <Link size={15} />
+            Copy Link
+          </button>
+        </div>
+
+        {!hasCode && (
+          <button class="btn-generate" id="generateBtn" onclick="generateCode()">
+            <Gift size={15} />
+            Generate My Code
+          </button>
+        )}
+
+        <p class="code-note">
+          Share your link and earn <strong>{xpPerReferral} XP</strong> for each friend who signs up.
+        </p>
+      </div>
+
+      <!-- Share card -->
+      <div class="card share-card fade-up" style="animation-delay:.12s">
+        <div class="card-header">
+          <Share2 size={16} class="card-header-icon" />
+          <h2 class="card-title">Share</h2>
+        </div>
+
+        <div class="share-btns">
+          <button class="share-btn whatsapp" onclick="shareWhatsApp()">
+            <span class="share-icon">💬</span>
+            WhatsApp
+          </button>
+          <button class="share-btn twitter" onclick="shareTwitter()">
+            <span class="share-icon">𝕏</span>
+            Twitter / X
+          </button>
+          <button class="share-btn email-btn" onclick="shareEmail()">
+            <span class="share-icon">✉️</span>
+            Email
+          </button>
+          <button class="share-btn native" id="nativeShareBtn" onclick="nativeShare()" style="display:none">
+            <span class="share-icon">📤</span>
+            Share
+          </button>
+        </div>
+      </div>
+
+      <!-- How it works -->
+      <div class="card how-card fade-up" style="animation-delay:.16s">
+        <div class="card-header">
+          <Trophy size={16} class="card-header-icon" />
+          <h2 class="card-title">How It Works</h2>
+        </div>
+        <ol class="how-list">
+          <li class="how-item">
+            <span class="how-num">1</span>
+            <div>
+              <strong>Share your code</strong>
+              <span>Send your unique link to friends interested in keto</span>
+            </div>
+          </li>
+          <li class="how-item">
+            <span class="how-num">2</span>
+            <div>
+              <strong>They sign up</strong>
+              <span>Friend purchases a plan using your referral link</span>
+            </div>
+          </li>
+          <li class="how-item">
+            <span class="how-num">3</span>
+            <div>
+              <strong>You earn XP</strong>
+              <span>You instantly receive <strong>{xpPerReferral} XP</strong> — pushing you up the levels</span>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- RIGHT: History -->
+    <div class="right-col">
+      <div class="card history-card fade-up" style="animation-delay:.1s">
+        <div class="card-header">
+          <Users size={16} class="card-header-icon" />
+          <h2 class="card-title">Referral History</h2>
+          <span class="history-count" id="historyCount">{refList.length}</span>
+        </div>
+
+        <div id="historyList">
+          {refList.length === 0 && (
+            <div class="empty-state">
+              <div class="empty-icon">🔗</div>
+              <p class="empty-title">No referrals yet</p>
+              <p class="empty-sub">Share your code above and your referrals will appear here.</p>
+            </div>
+          )}
+          {refList.map((r, i) => {
+            const isComplete = r.status === 'completed';
+            const dateStr = r.created_at ? r.created_at.slice(0, 10) : '';
+            return (
+              <div class="ref-row">
+                <div class="ref-avatar">{String(i + 1).padStart(2, '0')}</div>
+                <div class="ref-info">
+                  <div class="ref-label">Friend #{i + 1}</div>
+                  <div class="ref-date">{dateStr}</div>
+                </div>
+                <div class="ref-status-wrap">
+                  {isComplete && (
+                    <span class="ref-badge complete">
+                      <Check size={11} /> Joined
+                    </span>
+                  )}
+                  {!isComplete && (
+                    <span class="ref-badge pending">Pending</span>
+                  )}
+                  <span class="ref-xp">+{r.xp_awarded} XP</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <!-- XP breakdown -->
+      <div class="card xp-card fade-up" style="animation-delay:.14s">
+        <div class="card-header">
+          <Zap size={16} class="card-header-icon amber" />
+          <h2 class="card-title">XP Breakdown</h2>
+        </div>
+        <div class="xp-row">
+          <span class="xp-label">Per referral</span>
+          <span class="xp-val">{xpPerReferral} XP</span>
+        </div>
+        <div class="xp-row">
+          <span class="xp-label">Total earned</span>
+          <span class="xp-val green" id="xpTotal">{totalXP} XP</span>
+        </div>
+        <div class="xp-row">
+          <span class="xp-label">Referrals made</span>
+          <span class="xp-val" id="xpRefs">{completed}</span>
+        </div>
+        <div class="xp-divider"></div>
+        <p class="xp-note">XP is awarded instantly when your friend completes signup. It counts toward your level and streak.</p>
+      </div>
+    </div>
+
+  </div><!-- /layout -->
+
+  <!-- ── Apply a referral code (for users who haven't used one) -->
+  <div class="card apply-card fade-up" style="animation-delay:.2s">
+    <div class="card-header">
+      <Gift size={16} class="card-header-icon" />
+      <h2 class="card-title">Have a Referral Code?</h2>
+    </div>
+    <p class="apply-sub">If a friend invited you, enter their code below to credit them with XP.</p>
+    <div class="apply-row">
+      <input class="apply-input" id="applyInput" type="text" placeholder="e.g. KETOAB1234"
+        maxlength="12" oninput="this.value = this.value.toUpperCase()" />
+      <button class="apply-btn" onclick="applyCode()" id="applyBtn">Apply Code</button>
+    </div>
+    <p class="apply-msg" id="applyMsg"></p>
+  </div>
+
+</main>
+
+<!-- ── Toast ─────────────────────────────────────────────── -->
+<div id="toast" class="toast" aria-live="polite"></div>
+
+<style>
+.page {
+  max-width: 1100px; margin: 0 auto;
+  padding: 2rem 1.5rem 6rem;
+}
+@media (max-width: 600px) { .page { padding: 1.25rem 1rem 5rem; } }
+
+/* Header */
+.page-header {
+  display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
+}
+.header-icon {
+  width: 48px; height: 48px; border-radius: var(--r);
+  background: var(--green-bg); border: 1.5px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--green); flex-shrink: 0;
+}
+.page-title {
+  font-family: 'Fraunces', serif; font-style: italic;
+  font-size: 1.8rem; font-weight: 800; color: var(--text); margin: 0;
+}
+.page-sub { color: var(--soft); font-size: .88rem; margin: 0; }
+.page-sub strong { color: var(--green); }
+
+/* Stats row */
+.stats-row {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: .75rem; margin-bottom: 1.5rem;
+}
+.stat-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 1.1rem 1rem;
+  display: flex; flex-direction: column; align-items: center; gap: .3rem;
+  box-shadow: var(--shadow-sm);
+}
+.stat-icon { flex-shrink: 0; }
+.stat-icon.blue   { color: var(--blue);  }
+.stat-icon.green  { color: var(--green); }
+.stat-icon.amber  { color: var(--amber); }
+.stat-val {
+  font-family: 'Fraunces', serif; font-style: italic;
+  font-size: 1.9rem; font-weight: 800; color: var(--text); line-height: 1;
+}
+.stat-label { font-size: .72rem; font-weight: 700; color: var(--soft); text-transform: uppercase; letter-spacing: .04em; }
+
+/* Layout */
+.layout {
+  display: grid; grid-template-columns: 340px 1fr;
+  gap: 1.25rem; align-items: start; margin-bottom: 1.25rem;
+}
+@media (max-width: 840px) { .layout { grid-template-columns: 1fr; } }
+.left-col, .right-col { display: flex; flex-direction: column; gap: 1.25rem; }
+
+/* Cards */
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+.card-header {
+  display: flex; align-items: center; gap: .5rem; margin-bottom: 1.25rem;
+}
+.card-header-icon { color: var(--green); flex-shrink: 0; }
+.card-header-icon.amber { color: var(--amber); }
+.card-title { font-size: .95rem; font-weight: 700; color: var(--text); margin: 0; flex: 1; }
+
+/* Code display */
+.code-display {
+  font-family: 'Fraunces', serif; font-style: italic;
+  font-size: 2.4rem; font-weight: 800;
+  color: var(--green); text-align: center;
+  letter-spacing: .12em; padding: 1rem;
+  background: var(--green-bg); border: 2px dashed var(--border2);
+  border-radius: var(--r); margin-bottom: 1rem;
+  user-select: all; cursor: text;
+}
+.code-actions {
+  display: flex; gap: .6rem; margin-bottom: 1rem;
+}
+.btn-copy {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: .45rem;
+  padding: .62rem; border-radius: var(--r-sm); font-size: .82rem; font-weight: 700;
+  cursor: pointer; border: 1.5px solid var(--border); background: var(--bg2);
+  color: var(--text); transition: border-color .15s, background .15s;
+}
+.btn-copy:hover { border-color: var(--border2); background: var(--green-bg); color: var(--green); }
+.btn-copy.copied { border-color: var(--green); background: var(--green-bg); color: var(--green); }
+.btn-generate {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: .5rem;
+  padding: .75rem; border-radius: var(--r-sm); font-size: .88rem; font-weight: 700;
+  cursor: pointer; border: none; background: var(--green); color: #fff;
+  margin-bottom: 1rem; transition: opacity .15s, transform .12s;
+}
+.btn-generate:hover { opacity: .9; transform: translateY(-1px); }
+.code-note { font-size: .78rem; color: var(--soft); text-align: center; line-height: 1.5; }
+.code-note strong { color: var(--green); }
+
+/* Share buttons */
+.share-btns { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.share-btn {
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+  padding: .7rem .5rem; border-radius: var(--r-sm);
+  font-size: .82rem; font-weight: 700; cursor: pointer; border: none;
+  transition: opacity .15s, transform .12s;
+}
+.share-btn:hover { opacity: .88; transform: translateY(-1px); }
+.share-icon { font-size: 1.1rem; }
+.share-btn.whatsapp { background: #25d366; color: #fff; }
+.share-btn.twitter  { background: #000;    color: #fff; }
+.share-btn.email-btn{ background: var(--blue); color: #fff; }
+.share-btn.native   { background: var(--purple); color: #fff; }
+
+/* How it works */
+.how-list { list-style: none; display: flex; flex-direction: column; gap: .75rem; }
+.how-item {
+  display: flex; align-items: flex-start; gap: .85rem;
+}
+.how-num {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  background: var(--green-bg); border: 1.5px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .8rem; font-weight: 800; color: var(--green);
+}
+.how-item div { display: flex; flex-direction: column; gap: .15rem; }
+.how-item strong { font-size: .88rem; font-weight: 700; color: var(--text); }
+.how-item span   { font-size: .8rem; color: var(--soft); line-height: 1.45; }
+.how-item span strong { color: var(--green); font-size: inherit; }
+
+/* History */
+.history-count {
+  background: var(--green-bg); border: 1px solid var(--border2);
+  color: var(--green); font-size: .72rem; font-weight: 800;
+  padding: .15rem .55rem; border-radius: 99px;
+}
+.empty-state { text-align: center; padding: 2.5rem 1rem; }
+.empty-icon  { font-size: 2.5rem; margin-bottom: .75rem; }
+.empty-title { font-weight: 700; color: var(--text); font-size: .95rem; margin-bottom: .4rem; }
+.empty-sub   { color: var(--soft); font-size: .82rem; line-height: 1.5; }
+
+.ref-row {
+  display: flex; align-items: center; gap: 1rem;
+  padding: .85rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.ref-row:last-child { border-bottom: none; }
+.ref-avatar {
+  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+  background: var(--bg2); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .72rem; font-weight: 800; color: var(--soft);
+}
+.ref-info { flex: 1; min-width: 0; }
+.ref-label { font-size: .85rem; font-weight: 700; color: var(--text); }
+.ref-date  { font-size: .74rem; color: var(--soft); }
+.ref-status-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: .2rem; }
+.ref-badge {
+  display: inline-flex; align-items: center; gap: .25rem;
+  font-size: .68rem; font-weight: 700; padding: .18rem .55rem; border-radius: 99px;
+}
+.ref-badge.complete { background: var(--green-bg); color: var(--green); border: 1px solid var(--border2); }
+.ref-badge.pending  { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245,158,11,.25); }
+.ref-xp  { font-size: .72rem; font-weight: 700; color: var(--green); }
+
+/* XP card */
+.xp-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .5rem 0; border-bottom: 1px solid var(--border);
+}
+.xp-row:last-of-type { border-bottom: none; }
+.xp-label { font-size: .84rem; color: var(--soft); }
+.xp-val   { font-size: .88rem; font-weight: 800; color: var(--text); }
+.xp-val.green { color: var(--green); }
+.xp-divider { height: 1px; background: var(--border); margin: .75rem 0; }
+.xp-note { font-size: .78rem; color: var(--soft); line-height: 1.55; }
+
+/* Apply card */
+.apply-card { }
+.apply-sub { font-size: .84rem; color: var(--soft); margin-bottom: 1rem; line-height: 1.5; }
+.apply-row { display: flex; gap: .6rem; }
+.apply-input {
+  flex: 1; padding: .65rem .9rem;
+  background: var(--bg2); border: 1.5px solid var(--border);
+  border-radius: var(--r-sm); font-size: .9rem; font-weight: 700;
+  color: var(--text); outline: none; letter-spacing: .08em;
+  transition: border-color .15s;
+}
+.apply-input:focus { border-color: var(--green); }
+.apply-btn {
+  padding: .65rem 1.25rem; border-radius: var(--r-sm);
+  background: var(--green); color: #fff;
+  font-size: .85rem; font-weight: 700; border: none; cursor: pointer;
+  transition: opacity .15s; white-space: nowrap;
+}
+.apply-btn:hover { opacity: .88; }
+.apply-msg { font-size: .8rem; margin-top: .6rem; min-height: 1.2em; }
+.apply-msg.ok  { color: var(--green); }
+.apply-msg.err { color: var(--red); }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: #0d1a0f; border: 1px solid var(--border2);
+  color: var(--text); border-radius: 10px; padding: .65rem 1.25rem;
+  font-size: .82rem; font-weight: 700; z-index: 9000;
+  box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none;
+  transition: opacity .2s, transform .2s; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp .4s ease both; }
+</style>
+
+<script is:inline define:vars={{ hasCode, previewCode, xpPerReferral }}>
+
+var currentCode = hasCode ? previewCode : null;
+
+/* ── Boot ─────────────────────────────────────────────── */
+(function () {
+  if (navigator.share) {
+    var nb = document.getElementById('nativeShareBtn');
+    if (nb) nb.style.display = 'flex';
+  }
+  if (!hasCode) {
+    var display = document.getElementById('codeDisplay');
+    if (display) display.textContent = 'Click below to generate';
+    display && (display.style.color = 'var(--soft)');
+    display && (display.style.fontSize = '1.1rem');
+    display && (display.style.fontFamily = 'DM Sans, sans-serif');
+    display && (display.style.fontStyle = 'normal');
+  }
+})();
+
+/* ── Referral URL ─────────────────────────────────────── */
+function getReferralUrl() {
+  return window.location.origin + '/signup?ref=' + (currentCode || '');
+}
+
+/* ── Generate code ────────────────────────────────────── */
+function generateCode() {
+  var btn = document.getElementById('generateBtn');
+  if (btn) { btn.textContent = 'Generating…'; btn.disabled = true; }
+
+  fetch('/api/referrals/generate', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) { showToast('Error: ' + data.error); return; }
+      currentCode = data.code;
+
+      var display = document.getElementById('codeDisplay');
+      if (display) {
+        display.textContent  = data.code;
+        display.style.color = 'var(--green)';
+        display.style.fontSize = '2.4rem';
+        display.style.fontFamily = 'Fraunces, serif';
+        display.style.fontStyle = 'italic';
+      }
+      if (btn) btn.style.display = 'none';
+      showToast('✓ Code generated!');
+    })
+    .catch(function() { showToast('Failed to generate code'); });
+}
+
+/* ── Copy helpers ─────────────────────────────────────── */
+function copyCode() {
+  if (!currentCode) { showToast('Generate your code first'); return; }
+  navigator.clipboard.writeText(currentCode).then(function() {
+    var btn = document.getElementById('copyCodeBtn');
+    if (btn) { btn.innerHTML = '<span>✓ Copied!</span>'; btn.classList.add('copied'); }
+    showToast('Code copied!');
+    setTimeout(function() {
+      if (btn) { btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy Code'; btn.classList.remove('copied'); }
+    }, 2000);
+  });
+}
+
+function copyLink() {
+  if (!currentCode) { showToast('Generate your code first'); return; }
+  navigator.clipboard.writeText(getReferralUrl()).then(function() {
+    showToast('Link copied!');
+  });
+}
+
+/* ── Share helpers ────────────────────────────────────── */
+function getShareText() {
+  return 'I\'ve been crushing my keto goals with KetoJourney! Join me and let\'s do this together 🥑🔥 Use my referral link:';
+}
+
+function shareWhatsApp() {
+  if (!currentCode) { showToast('Generate your code first'); return; }
+  var url = 'https://wa.me/?text=' + encodeURIComponent(getShareText() + ' ' + getReferralUrl());
+  window.open(url, '_blank');
+}
+
+function shareTwitter() {
+  if (!currentCode) { showToast('Generate your code first'); return; }
+  var url = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(getShareText()) + '&url=' + encodeURIComponent(getReferralUrl()) + '&hashtags=KetoJourney,Keto';
+  window.open(url, '_blank');
+}
+
+function shareEmail() {
+  if (!currentCode) { showToast('Generate your code first'); return; }
+  var subject = encodeURIComponent('Join me on KetoJourney!');
+  var body    = encodeURIComponent(getShareText() + '\n\n' + getReferralUrl() + '\n\nYour referral code: ' + currentCode);
+  window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
+}
+
+function nativeShare() {
+  if (!currentCode) { showToast('Generate your code first'); return; }
+  navigator.share({
+    title: 'Join me on KetoJourney',
+    text:  getShareText(),
+    url:   getReferralUrl(),
+  }).catch(function() {});
+}
+
+/* ── Apply a referral code ────────────────────────────── */
+function applyCode() {
+  var input = document.getElementById('applyInput');
+  var msg   = document.getElementById('applyMsg');
+  var btn   = document.getElementById('applyBtn');
+  if (!input || !msg) return;
+
+  var code = input.value.trim().toUpperCase();
+  if (!code || code.length < 6) {
+    msg.textContent = 'Please enter a valid referral code.';
+    msg.className   = 'apply-msg err';
+    return;
+  }
+
+  if (btn) { btn.textContent = 'Applying…'; btn.disabled = true; }
+  msg.textContent = ''; msg.className = 'apply-msg';
+
+  fetch('/api/referrals/apply', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ referral_code: code }),
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (btn) { btn.textContent = 'Apply Code'; btn.disabled = false; }
+      if (data.error) {
+        msg.textContent = data.error;
+        msg.className   = 'apply-msg err';
+        return;
+      }
+      msg.textContent = '✓ Applied! Your friend earned ' + (data.xp_awarded || xpPerReferral) + ' XP.';
+      msg.className   = 'apply-msg ok';
+      input.value     = '';
+      input.disabled  = true;
+      if (btn) btn.disabled = true;
+    })
+    .catch(function() {
+      if (btn) { btn.textContent = 'Apply Code'; btn.disabled = false; }
+      msg.textContent = 'Something went wrong. Please try again.';
+      msg.className   = 'apply-msg err';
+    });
+}
+
+/* ── Toast ────────────────────────────────────────────── */
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 2500);
+}
+</script>
+
+</body>
+</html>

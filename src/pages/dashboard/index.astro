@@ -3,6 +3,7 @@
 import { supabase, getUserJourney, getMaxJourneyDays, getMealCycleDays } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
+import UpsellModal from '../../components/UpsellModal.astro';
 // ── Lucide icons ──────────────────────────────────────────
 import Scale         from 'lucide-astro/Scale';
 import Flame         from 'lucide-astro/Flame';
@@ -827,6 +828,18 @@ const dailyTip = (() => {
 <body>
 
 <DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="dashboard" />
+
+{planType !== 'elite_12' && (
+  <UpsellModal
+    planType={planType}
+    currentDay={currentDay}
+    streakDays={streakDays}
+    weightLost={units === 'imperial' ? Math.round(weightLost * 2.20462 * 10) / 10 : weightLost}
+    wUnit={wUnit}
+    maxDays={maxDays}
+    checkoutUrl=""
+  />
+)}
 
 <!-- PAGE -->
 <div class="page">
