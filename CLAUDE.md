@@ -11,8 +11,8 @@
 |---|---------|--------|-------|
 | 1 | Browser Push Notifications | ✅ Done | web-push + VAPID + SW + PushPermission component |
 | 2 | Food Database (Open Food Facts API) | ✅ Done | Real-time search + barcode scanner (BarcodeDetector API) + fallback manual barcode input |
-| 3 | Email Automation | ⬜ Todo | Needs Resend API key — prepare templates + triggers |
-| 4 | Before/After Photo Comparison | ⬜ Todo | Split-view comparison UI on photos.astro |
+| 3 | Email Automation | ✅ Done | Resend SDK + 5 templates (welcome, weekly, milestone, streak warning, win-back) + 2 crons |
+| 4 | Before/After Photo Comparison | ✅ Done | Draggable split-view slider on photos.astro + keyboard + touch support |
 | 5 | Recipe Ratings & Personalization | ⬜ Todo | DB table + star-rating UI + recommendation logic |
 | 6 | Keto Calculator Tool | ⬜ Todo | TDEE + macro calculator page |
 | 7 | Social Sharing Cards | ⬜ Todo | Canvas milestone cards (Day 7/30/etc.) |
