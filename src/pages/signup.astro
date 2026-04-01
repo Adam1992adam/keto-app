@@ -405,7 +405,7 @@ const allowedEmail = emailParam ? emailParam.toLowerCase().trim() : '';
         We couldn't find an order for this email.<br/>
         Make sure you used the same email when purchasing.
       </div>
-      <a href="https://payhip.com/b/OEQk9" class="btn-purchase">Purchase Keto Journey →</a>
+      <a href="/" class="btn-purchase">Get Keto Journey →</a>
     </div>
     <button type="button" class="btn-outline" onclick="resetToStep1()">
       ← Try a different email
@@ -581,7 +581,7 @@ const allowedEmail = emailParam ? emailParam.toLowerCase().trim() : '';
     goToPanel('panelLoading');
 
     try {
-      const res = await fetch('/api/payhip/verify-purchase', {
+      const res = await fetch('/api/lemonsqueezy/verify-purchase', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ email })
       });
@@ -646,7 +646,7 @@ const allowedEmail = emailParam ? emailParam.toLowerCase().trim() : '';
     txt.textContent = 'Creating account…';
 
     try {
-      const res = await fetch('/api/auth/signup-payhip', {
+      const res = await fetch('/api/auth/signup-purchase', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
           email:     verifiedEmail,

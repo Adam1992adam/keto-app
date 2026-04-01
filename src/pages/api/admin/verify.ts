@@ -2,8 +2,7 @@ import type { APIRoute } from 'astro';
 
 export const POST: APIRoute = async ({ request, locals, cookies }) => {
   try {
-    // @ts-ignore
-    const env = locals?.runtime?.env || {};
+    const env = (locals as any)?.runtime?.env || {};
     const ADMIN_PASSWORD = env.ADMIN_PASSWORD || import.meta.env.ADMIN_PASSWORD;
 
     const { password } = await request.json();

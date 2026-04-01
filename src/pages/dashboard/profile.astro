@@ -1,21 +1,38 @@
 ---
 import {
-  supabase, getProfile, isSubscriptionActive, getWeightLogs,
+  supabase, getWeightLogs,
   getUserJourney, getDailyTasks, getWaterIntake, getXPTransactions,
   calculateBMI, calculateCalorieTarget,
   formatWeight, formatHeight, weightLabel,
-  kgToLbs, getPlan,
+  kgToLbs, getPlan, getAchievements,
   type UnitSystem
 } from '../../lib/supabase';
+import { requireAuth } from '../../lib/auth';
+import DashNav from '../../components/DashNav.astro';
+import User from 'lucide-astro/User';
+import Zap from 'lucide-astro/Zap';
+import Trophy from 'lucide-astro/Trophy';
+import Target from 'lucide-astro/Target';
+import BarChart3 from 'lucide-astro/BarChart3';
+import Settings from 'lucide-astro/Settings';
+import Award from 'lucide-astro/Award';
+import Flame from 'lucide-astro/Flame';
+import Calendar from 'lucide-astro/Calendar';
+import TrendingUp from 'lucide-astro/TrendingUp';
+import Droplets from 'lucide-astro/Droplets';
+import Utensils from 'lucide-astro/Utensils';
+import Lock from 'lucide-astro/Lock';
+import CheckCircle from 'lucide-astro/CheckCircle';
+import Home from 'lucide-astro/Home';
+import ShoppingCart from 'lucide-astro/ShoppingCart';
+import LogOut from 'lucide-astro/LogOut';
 
-const accessToken = Astro.cookies.get('sb-access-token')?.value;
-if (!accessToken) return Astro.redirect('/login');
-
-const { data: { user } } = await supabase.auth.getUser(accessToken);
-if (!user) return Astro.redirect('/login');
-
-const profile = await getProfile(user.id);
-if (!profile || !isSubscriptionActive(profile)) return Astro.redirect('/dashboard/upgrade');
+const auth = await requireAuth(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile } = auth;
+const planType  = profile.subscription_tier || 'basic_30';
+const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const userName  = profile.full_name?.split(' ')[0] || 'there';
 
 const units: UnitSystem = (profile.preferred_units as UnitSystem) || 'imperial';
 const wLabel = weightLabel(units);
@@ -33,19 +50,20 @@ const weightLogs = await getWeightLogs(user.id, 30);
 const { data: allTasks } = await supabase.from('daily_tasks').select('*').eq('user_id', user.id).order('day_number', { ascending: true });
 const xpTransactions = await getXPTransactions(user.id, 30);
 
-const completionData: {day:number;percentage:number}[] = [];
-for (let day = 1; day <= Math.min(journey?.current_day || 1, 30); day++) {
-  const dt = allTasks?.filter(t => t.day_number === day) || [];
-  const dc = dt.filter(t => t.completed).length;
-  completionData.push({ day, percentage: dt.length > 0 ? Math.round((dc / dt.length) * 100) : 0 });
-}
+const maxDay = Math.min(journey?.current_day || 1, 30);
+const completionData = Array.from({ length: maxDay }, (_, i) => {
+  const day = i + 1;
+  const dt  = allTasks?.filter(t => t.day_number === day) || [];
+  const dc  = dt.filter(t => t.completed).length;
+  return { day, percentage: dt.length > 0 ? Math.round((dc / dt.length) * 100) : 0 };
+});
 
-const xpData: {day:number;xp:number}[] = [];
-let cXP = 0;
-for (let day = 1; day <= Math.min(journey?.current_day || 1, 30); day++) {
-  cXP += xpTransactions?.filter(t => t.day_number === day).reduce((s,t) => s + (t.xp_amount||0), 0) || 0;
-  xpData.push({ day, xp: cXP });
-}
+const xpData = Array.from({ length: maxDay }, (_, i) => {
+  const day    = i + 1;
+  const dayXP  = xpTransactions?.filter(t => t.day_number === day).reduce((s,t) => s + (t.xp_amount||0), 0) || 0;
+  const prevXP = i > 0 ? (xpTransactions?.slice(0, i).reduce((s,t) => s + (t.xp_amount||0), 0) || 0) : 0;
+  return { day, xp: prevXP + dayXP };
+});
 
 const totalDaysCompleted = journey?.current_day ? journey.current_day - 1 : 0;
 const currentStreak  = journey?.streak_days    || 0;
@@ -55,7 +73,7 @@ const totalXP        = journey?.total_xp       || 0;
 const level          = journey?.level          || 1;
 
 const currentWeight = profile.weight_kg || 0;
-const startWeight   = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight_kg : currentWeight;
+const startWeight   = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight : currentWeight;
 const weightChange  = startWeight - currentWeight;
 const targetWeight  = profile.target_weight_kg || currentWeight - 5;
 const weightToLose  = Math.max(0.001, currentWeight - targetWeight);
@@ -114,6 +132,16 @@ const milestones = [
   ...(totalXP >= 500    ? [{ day:0, icon:'🏅', label:'500 XP Earned',    done:true }] : []),
 ];
 
+const dbAchievements = await getAchievements(user.id);
+
+// Macro goals
+const { data: macroGoals } = await supabase
+  .from('macro_goals').select('*').eq('user_id', user.id).maybeSingle();
+const mgCal  = macroGoals?.daily_calories || 1800;
+const mgProt = macroGoals?.protein_g      || 120;
+const mgFat  = macroGoals?.fat_g          || 120;
+const mgCarb = macroGoals?.carbs_g        || 25;
+
 const achievementsList = [
   { name:'First Step',       desc:'Complete your first day',    icon:'🎯', done: perfectDays  >= 1  },
   { name:'Week Warrior',     desc:'7 perfect days',             icon:'📅', done: perfectDays  >= 7  },
@@ -121,21 +149,20 @@ const achievementsList = [
   { name:'On Fire',          desc:'7 day streak',               icon:'🔥', done: currentStreak>= 7  },
   { name:'Level Master',     desc:'Reach Level 5',              icon:'⭐', done: level        >= 5  },
   { name:'XP Hunter',        desc:'Earn 500 XP',                icon:'🏅', done: totalXP      >= 500 },
-  { name:'First Kilo',       desc:'Lose 1 kg',                  icon:'⚖️', done: weightChange >= 1  },
-  { name:'Five Down',        desc:'Lose 5 kg',                  icon:'🏆', done: weightChange >= 5  },
+  { name:'First Kilo',       desc:'Lose 2.2 lbs',               icon:'⚖️', done: weightChange >= 1  },
+  { name:'Five Down',        desc:'Lose 11 lbs',                icon:'🏆', done: weightChange >= 5  },
   { name:'Halfway Hero',     desc:'Reach Day 15',               icon:'🌟', done: currentDay   >= 15 },
   { name:'Keto Champion',    desc:'Complete 30 days',           icon:'👑', done: currentDay   >= 30 },
 ];
 
 const chartDataJson      = JSON.stringify(weightLogs.slice().reverse().map(log => ({
-  date: new Date(log.date).toLocaleDateString('en-US', { month:'short', day:'numeric' }),
-  weight: units === 'imperial' ? kgToLbs(log.weight_kg) : log.weight_kg,
+  date: new Date(log.logged_date).toLocaleDateString('en-US', { month:'short', day:'numeric' }),
+  weight: units === 'imperial' ? kgToLbs(log.weight) : log.weight,
 })));
 const xpDataJson         = JSON.stringify(xpData);
 const completionDataJson = JSON.stringify(completionData);
 const weightChartLabel   = units === 'imperial' ? 'lbs' : 'kg';
 const avatarLetter       = profile.full_name?.charAt(0)?.toUpperCase() || '?';
-const userName           = profile.full_name?.split(' ')[0] || 'Friend';
 ---
 
 <!DOCTYPE html>
@@ -146,7 +173,7 @@ const userName           = profile.full_name?.split(' ')[0] || 'Friend';
   <title>Profile — Keto Journey</title>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script is:inline>(function(){ const t=localStorage.getItem('keto-theme')||'dark'; document.documentElement.setAttribute('data-theme',t); })();</script>
+  <script is:inline>(function(){ const t=localStorage.getItem('keto-theme')||'light'; document.documentElement.setAttribute('data-theme',t); })();</script>
   <style>
     :root{--bg:#0c1117;--surface:#131b24;--card:#1a2535;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.13);--text:#e8edf5;--muted:#4a5a6e;--soft:#8a9ab0;--green:#10b981;--green2:#34d399;--blue:#3b82f6;--purple:#8b5cf6;--gold:#f59e0b;--red:#ef4444;--cyan:#06b6d4;--radius:20px;--nav-h:64px;}
     [data-theme="light"]{--bg:#f0f4f8;--surface:#fff;--card:#fff;--border:rgba(0,0,0,.07);--border2:rgba(0,0,0,.13);--text:#0f172a;--muted:#94a3b8;--soft:#64748b;}
@@ -299,39 +326,7 @@ const userName           = profile.full_name?.split(' ')[0] || 'Friend';
 </div>
 
 <!-- NAV -->
-<nav>
-  <div class="nav-inner">
-    <a href="/dashboard" class="nav-brand">🥑 <span>Keto Journey</span></a>
-    <div class="nav-links">
-      <a href="/dashboard"               class="nav-link">📊 Dashboard</a>
-      <a href="/dashboard/shopping-list" class="nav-link">🛒 Shopping</a>
-      <a href="/dashboard/recipes"       class="nav-link">🍳 Recipes</a>
-      <a href="/dashboard/profile"       class="nav-link active">👤 Profile</a>
-      <a href="/dashboard/notifications" class="nav-link">🔔 Reminders</a>
-    </div>
-    <div class="nav-right">
-      <button class="icon-btn" id="themeBtn">☀️</button>
-      {incompleteTasks.length > 0 && (
-        <div class="notif-wrap">
-          <button class="icon-btn" id="notifBtn" style="position:relative;">🔔<span class="notif-badge">{incompleteTasks.length}</span></button>
-          <div class="notif-drop" id="notifDrop">
-            <div style="padding:.875rem 1.25rem;border-bottom:1px solid var(--border);font-weight:800;font-size:.85rem;color:var(--green);">🔔 {incompleteTasks.length} Pending</div>
-            <div style="max-height:250px;overflow-y:auto;">
-              {incompleteTasks.map(t=>(
-                <div style="display:flex;align-items:center;gap:.75rem;padding:.7rem 1.25rem;border-bottom:1px solid var(--border);">
-                  <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--green),var(--green2));display:flex;align-items:center;justify-content:center;font-size:.9rem;">{t.task_type==='breakfast'?'🍳':t.task_type==='lunch'?'🥗':t.task_type==='dinner'?'🍽️':t.task_type==='snack'?'🍎':'💧'}</div>
-                  <div><div style="font-weight:700;font-size:.8rem;">{t.task_title}</div><div style="font-size:.7rem;color:var(--soft);">+{t.xp_earned} XP</div></div>
-                </div>
-              ))}
-            </div>
-            <div style="padding:.75rem 1.25rem;"><a href="/dashboard" style="display:block;text-align:center;padding:.55rem;border-radius:9px;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;font-weight:700;font-size:.78rem;text-decoration:none;">Go to Dashboard →</a></div>
-          </div>
-        </div>
-      )}
-      <a href="/dashboard/profile" class="nav-avatar">{avatarLetter}</a>
-    </div>
-  </div>
-</nav>
+<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="profile" />
 
 <div class="page">
 
@@ -354,10 +349,10 @@ const userName           = profile.full_name?.split(' ')[0] || 'Friend';
         <div class="hero-email">{profile.email}</div>
         <div class="hero-tags">
           <span class="htag">{plan.emoji} {plan.name}</span>
-          <span class="htag">🔥 {currentStreak}d streak</span>
-          <span class="htag">⚡ Lv.{level}</span>
-          <span class="htag" style={daysLeft<=7?'color:var(--red);border-color:rgba(239,68,68,.3);':''}>📅 {daysLeft}d left</span>
-          <span class="htag">🏆 {achievementsList.filter(a=>a.done).length}/{achievementsList.length} badges</span>
+          <span class="htag"><Flame size={12} style="display:inline;vertical-align:middle;" /> {currentStreak}d streak</span>
+          <span class="htag"><Zap size={12} style="display:inline;vertical-align:middle;" /> Lv.{level}</span>
+          <span class="htag" style={daysLeft<=7?'color:var(--red);border-color:rgba(239,68,68,.3);':''}><Calendar size={12} style="display:inline;vertical-align:middle;" /> {daysLeft}d left</span>
+          <span class="htag"><Trophy size={12} style="display:inline;vertical-align:middle;" /> {achievementsList.filter(a=>a.done).length}/{achievementsList.length} badges</span>
         </div>
         <div class="units-toggle">
           <button class={`units-btn${units==='imperial'?' active':''}`} onclick="setUnits('imperial')">🇺🇸 lbs/ft</button>
@@ -398,41 +393,41 @@ const userName           = profile.full_name?.split(' ')[0] || 'Friend';
 
   <!-- TABS -->
   <div class="tabs-bar">
-    <button class="tab-btn active" data-tab="overview">📊 Overview</button>
-    <button class="tab-btn" data-tab="achievements">🏆 Achievements</button>
-    <button class="tab-btn" data-tab="milestones">🗺️ Milestones</button>
-    <button class="tab-btn" data-tab="settings">⚙️ Settings</button>
+    <button class="tab-btn active" data-tab="overview"><BarChart3 size={14} style="display:inline;vertical-align:middle;" /> Overview</button>
+    <button class="tab-btn" data-tab="achievements"><Trophy size={14} style="display:inline;vertical-align:middle;" /> Achievements</button>
+    <button class="tab-btn" data-tab="milestones"><Target size={14} style="display:inline;vertical-align:middle;" /> Milestones</button>
+    <button class="tab-btn" data-tab="settings"><Settings size={14} style="display:inline;vertical-align:middle;" /> Settings</button>
   </div>
 
   <!-- ══ OVERVIEW ══ -->
   <div id="tab-overview" class="tab-content active">
     <div class="stats-row">
-      <div class="scard"><div class="gl" style="background:var(--green);"></div><div class="scard-icon" style="background:rgba(16,185,129,.1);">⚖️</div><div class="scard-lbl">Weight Lost</div><div class="scard-val" style="color:var(--green);">{weightChange>0?`-${weightChange.toFixed(1)}`:'0.0'} {wLabel}</div><div class="scard-sub">Goal: {displayTargetWeight}</div><div class="mini-bar"><div class="mini-fill" style={`width:${progressPercent}%;background:linear-gradient(90deg,var(--green),var(--green2));`}></div></div></div>
-      <div class="scard"><div class="gl" style="background:var(--blue);"></div><div class="scard-icon" style="background:rgba(59,130,246,.1);">📏</div><div class="scard-lbl">BMI</div><div class="scard-val" style={`color:${bmiCategory.color};`}>{bmi?bmi.toFixed(1):'—'}</div><div class="scard-sub">{bmiCategory.label} · {displayHeight}</div></div>
-      <div class="scard"><div class="gl" style="background:var(--gold);"></div><div class="scard-icon" style="background:rgba(245,158,11,.1);">🏆</div><div class="scard-lbl">Perfect Days</div><div class="scard-val" style="color:var(--gold);">{perfectDays}</div><div class="scard-sub">Longest: {longestStreak}d</div></div>
-      <div class="scard"><div class="gl" style="background:var(--purple);"></div><div class="scard-icon" style="background:rgba(139,92,246,.1);">💧</div><div class="scard-lbl">Water Logged</div><div class="scard-val" style="color:var(--purple);">{totalWaterGlasses}</div><div class="scard-sub">glasses total</div></div>
-      <div class="scard"><div class="gl" style="background:var(--cyan);"></div><div class="scard-icon" style="background:rgba(6,182,212,.1);">🍽️</div><div class="scard-lbl">Meals Done</div><div class="scard-val" style="color:var(--cyan);">{totalMealsCompleted}</div><div class="scard-sub">{totalTasksCompleted} tasks total</div></div>
+      <div class="scard"><div class="gl" style="background:var(--green);"></div><div class="scard-icon" style="background:rgba(16,185,129,.1);"><TrendingUp size={18} color="var(--green)" /></div><div class="scard-lbl">Weight Lost</div><div class="scard-val" style="color:var(--green);">{weightChange>0?`-${weightChange.toFixed(1)}`:'0.0'} {wLabel}</div><div class="scard-sub">Goal: {displayTargetWeight}</div><div class="mini-bar"><div class="mini-fill" style={`width:${progressPercent}%;background:linear-gradient(90deg,var(--green),var(--green2));`}></div></div></div>
+      <div class="scard"><div class="gl" style="background:var(--blue);"></div><div class="scard-icon" style="background:rgba(59,130,246,.1);"><BarChart3 size={18} color="var(--blue)" /></div><div class="scard-lbl">BMI</div><div class="scard-val" style={`color:${bmiCategory.color};`}>{bmi?bmi.toFixed(1):'—'}</div><div class="scard-sub">{bmiCategory.label} · {displayHeight}</div></div>
+      <div class="scard"><div class="gl" style="background:var(--gold);"></div><div class="scard-icon" style="background:rgba(245,158,11,.1);"><Trophy size={18} color="var(--gold)" /></div><div class="scard-lbl">Perfect Days</div><div class="scard-val" style="color:var(--gold);">{perfectDays}</div><div class="scard-sub">Longest: {longestStreak}d</div></div>
+      <div class="scard"><div class="gl" style="background:var(--purple);"></div><div class="scard-icon" style="background:rgba(139,92,246,.1);"><Droplets size={18} color="var(--purple)" /></div><div class="scard-lbl">Water Logged</div><div class="scard-val" style="color:var(--purple);">{totalWaterGlasses}</div><div class="scard-sub">glasses total</div></div>
+      <div class="scard"><div class="gl" style="background:var(--cyan);"></div><div class="scard-icon" style="background:rgba(6,182,212,.1);"><Utensils size={18} color="var(--cyan)" /></div><div class="scard-lbl">Meals Done</div><div class="scard-val" style="color:var(--cyan);">{totalMealsCompleted}</div><div class="scard-sub">{totalTasksCompleted} tasks total</div></div>
     </div>
     <div class="g2" style="margin-bottom:1rem;">
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem;">
-          <div class="card-title" style="margin:0;">📈 Weight Progress</div>
+          <div class="card-title" style="margin:0;"><TrendingUp size={16} style="display:inline;vertical-align:middle;" /> Weight Progress</div>
           <button id="openWM" class="btn-save" style="padding:.45rem .9rem;font-size:.75rem;">+ Log Weight</button>
         </div>
         {weightLogs.length>1?<div class="chart-wrap"><canvas id="weightChart"></canvas></div>:<div style="height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1.5px dashed var(--border);border-radius:12px;gap:.5rem;"><span style="font-size:2.5rem;">⚖️</span><p style="font-size:.82rem;color:var(--soft);">Log weight to see progress</p></div>}
       </div>
       <div class="card">
-        <div class="card-title">⚡ XP Growth</div>
+        <div class="card-title"><Zap size={16} style="display:inline;vertical-align:middle;" /> XP Growth</div>
         {xpData.length>0?<div class="chart-wrap"><canvas id="xpChart"></canvas></div>:<div style="height:180px;display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--border);border-radius:12px;color:var(--soft);font-size:.82rem;">Complete tasks to earn XP</div>}
       </div>
     </div>
     <div class="g2" style="margin-bottom:1rem;">
       <div class="card">
-        <div class="card-title">📊 Daily Completion</div>
+        <div class="card-title"><BarChart3 size={16} style="display:inline;vertical-align:middle;" /> Daily Completion</div>
         {completionData.length>0?<div class="chart-wrap"><canvas id="completionChart"></canvas></div>:<div style="height:180px;display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--border);border-radius:12px;color:var(--soft);font-size:.82rem;">Start your journey!</div>}
       </div>
       <div class="card">
-        <div class="card-title">🥑 Daily Nutrition Targets</div>
+        <div class="card-title"><Target size={16} style="display:inline;vertical-align:middle;" /> Daily Nutrition Targets</div>
         <div class="macro-grid">
           {[{lbl:'Calories',val:`${calorieTarget}`,unit:'kcal',color:'#f093fb'},{lbl:'Protein',val:`${proteinGrams}`,unit:'g',color:'#4facfe'},{lbl:'Fat',val:`${fatGrams}`,unit:'g',color:'#10b981'},{lbl:'Carbs',val:`${carbGrams}`,unit:'g',color:'#f59e0b'}].map(m=>(
             <div class="mring"><div class="mring-val" style={`color:${m.color};`}>{m.val}<span style="font-size:.75rem;opacity:.65;">{m.unit}</span></div><div class="mring-lbl">{m.lbl}</div></div>
@@ -442,15 +437,14 @@ const userName           = profile.full_name?.split(' ')[0] || 'Friend';
       </div>
     </div>
     <div class="card">
-      <div class="card-title">📊 Activity Summary</div>
+      <div class="card-title"><BarChart3 size={16} style="display:inline;vertical-align:middle;" /> Activity Summary</div>
       <div class="g3">
-        {[{icon:'🍽️',lbl:'Meals',val:totalMealsCompleted,color:'#8b5cf6'},{icon:'💧',lbl:'Water Glasses',val:totalWaterGlasses,color:'#3b82f6'},{icon:'✅',lbl:'Tasks Done',val:totalTasksCompleted,color:'#10b981'},{icon:'⚡',lbl:'XP Earned',val:totalXP,color:'#f59e0b'},{icon:'🏆',lbl:'Perfect Days',val:perfectDays,color:'#f093fb'},{icon:'🔥',lbl:'Day Streak',val:currentStreak,color:'#ef4444'}].map(s=>(
-          <div style="text-align:center;padding:1rem .875rem;background:var(--surface);border:1px solid var(--border);border-radius:13px;">
-            <div style="font-size:1.6rem;margin-bottom:.35rem;">{s.icon}</div>
-            <div style={`font-family:'Fraunces',serif;font-size:1.4rem;font-weight:900;color:${s.color};margin-bottom:.15rem;`}>{s.val}</div>
-            <div style="font-size:.67rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">{s.lbl}</div>
-          </div>
-        ))}
+        <div style="text-align:center;padding:1rem .875rem;background:var(--surface);border:1px solid var(--border);border-radius:13px;"><div style="margin-bottom:.35rem;"><Utensils size={24} color="#8b5cf6" /></div><div style="font-family:'Fraunces',serif;font-size:1.4rem;font-weight:900;color:#8b5cf6;margin-bottom:.15rem;">{totalMealsCompleted}</div><div style="font-size:.67rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">Meals</div></div>
+        <div style="text-align:center;padding:1rem .875rem;background:var(--surface);border:1px solid var(--border);border-radius:13px;"><div style="margin-bottom:.35rem;"><Droplets size={24} color="#3b82f6" /></div><div style="font-family:'Fraunces',serif;font-size:1.4rem;font-weight:900;color:#3b82f6;margin-bottom:.15rem;">{totalWaterGlasses}</div><div style="font-size:.67rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">Water Glasses</div></div>
+        <div style="text-align:center;padding:1rem .875rem;background:var(--surface);border:1px solid var(--border);border-radius:13px;"><div style="margin-bottom:.35rem;"><CheckCircle size={24} color="#10b981" /></div><div style="font-family:'Fraunces',serif;font-size:1.4rem;font-weight:900;color:#10b981;margin-bottom:.15rem;">{totalTasksCompleted}</div><div style="font-size:.67rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">Tasks Done</div></div>
+        <div style="text-align:center;padding:1rem .875rem;background:var(--surface);border:1px solid var(--border);border-radius:13px;"><div style="margin-bottom:.35rem;"><Zap size={24} color="#f59e0b" /></div><div style="font-family:'Fraunces',serif;font-size:1.4rem;font-weight:900;color:#f59e0b;margin-bottom:.15rem;">{totalXP}</div><div style="font-size:.67rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">XP Earned</div></div>
+        <div style="text-align:center;padding:1rem .875rem;background:var(--surface);border:1px solid var(--border);border-radius:13px;"><div style="margin-bottom:.35rem;"><Trophy size={24} color="#f093fb" /></div><div style="font-family:'Fraunces',serif;font-size:1.4rem;font-weight:900;color:#f093fb;margin-bottom:.15rem;">{perfectDays}</div><div style="font-size:.67rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">Perfect Days</div></div>
+        <div style="text-align:center;padding:1rem .875rem;background:var(--surface);border:1px solid var(--border);border-radius:13px;"><div style="margin-bottom:.35rem;"><Flame size={24} color="#ef4444" /></div><div style="font-family:'Fraunces',serif;font-size:1.4rem;font-weight:900;color:#ef4444;margin-bottom:.15rem;">{currentStreak}</div><div style="font-size:.67rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;">Day Streak</div></div>
       </div>
     </div>
   </div>
@@ -459,20 +453,35 @@ const userName           = profile.full_name?.split(' ')[0] || 'Friend';
   <div id="tab-achievements" class="tab-content">
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem;">
-        <div class="card-title" style="margin:0;">🏆 Your Achievements</div>
+        <div class="card-title" style="margin:0;"><Trophy size={16} style="display:inline;vertical-align:middle;" /> Your Achievements</div>
         <span style="font-size:.75rem;font-weight:700;color:var(--soft);">{achievementsList.filter(a=>a.done).length} / {achievementsList.length} earned</span>
       </div>
       <div class="mini-bar" style="height:7px;margin-bottom:1.5rem;"><div class="mini-fill" style={`width:${Math.round(achievementsList.filter(a=>a.done).length/achievementsList.length*100)}%;background:linear-gradient(90deg,var(--green),var(--green2));`}></div></div>
-      <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--green);margin-bottom:.75rem;">✅ Earned ({achievementsList.filter(a=>a.done).length})</div>
+
+      {dbAchievements.length > 0 && (
+        <div style="margin-bottom:1.5rem;">
+          <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);margin-bottom:.75rem;"><Award size={12} style="display:inline;vertical-align:middle;" /> Unlocked Badges ({dbAchievements.length})</div>
+          <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
+            {dbAchievements.map(a => (
+              <div style="display:flex;align-items:center;gap:.4rem;padding:.4rem .75rem;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:99px;">
+                <span style="font-size:.95rem;">{a.icon || '🏅'}</span>
+                <span style="font-size:.73rem;font-weight:700;color:var(--gold);">{a.achievement_name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--green);margin-bottom:.75rem;"><CheckCircle size={12} style="display:inline;vertical-align:middle;" /> Earned ({achievementsList.filter(a=>a.done).length})</div>
       <div class="ach-grid" style="margin-bottom:1.5rem;">
         {achievementsList.filter(a=>a.done).length===0?<p style="color:var(--soft);font-size:.82rem;grid-column:1/-1;">Complete tasks to earn your first badge!</p>:achievementsList.filter(a=>a.done).map(a=>(
-          <div class="ach on"><div class="ach-ico">{a.icon}</div><div><div class="ach-name">{a.name}</div><div class="ach-desc">{a.desc}</div></div><span style="margin-left:auto;color:var(--green);font-size:.85rem;">✓</span></div>
+          <div class="ach on"><div class="ach-ico">{a.icon}</div><div><div class="ach-name">{a.name}</div><div class="ach-desc">{a.desc}</div></div><span style="margin-left:auto;color:var(--green);"><CheckCircle size={16} /></span></div>
         ))}
       </div>
-      <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.75rem;">🔒 Locked ({achievementsList.filter(a=>!a.done).length})</div>
+      <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.75rem;"><Lock size={12} style="display:inline;vertical-align:middle;" /> Locked ({achievementsList.filter(a=>!a.done).length})</div>
       <div class="ach-grid">
         {achievementsList.filter(a=>!a.done).map(a=>(
-          <div class="ach" style="opacity:.5;"><div class="ach-ico" style="filter:grayscale(1);">{a.icon}</div><div><div class="ach-name" style="color:var(--soft);">{a.name}</div><div class="ach-desc">{a.desc}</div></div><span style="margin-left:auto;color:var(--muted);font-size:.82rem;">🔒</span></div>
+          <div class="ach" style="opacity:.5;"><div class="ach-ico" style="filter:grayscale(1);">{a.icon}</div><div><div class="ach-name" style="color:var(--soft);">{a.name}</div><div class="ach-desc">{a.desc}</div></div><span style="margin-left:auto;color:var(--muted);"><Lock size={14} /></span></div>
         ))}
       </div>
     </div>
@@ -482,7 +491,7 @@ const userName           = profile.full_name?.split(' ')[0] || 'Friend';
   <div id="tab-milestones" class="tab-content">
     <div class="g2">
       <div class="card">
-        <div class="card-title">🗺️ Journey Timeline</div>
+        <div class="card-title"><Target size={16} style="display:inline;vertical-align:middle;" /> Journey Timeline</div>
         <div class="timeline">
           {[...milestones].sort((a,b)=>a.day-b.day).map(m=>(
             <div class="tl-item">
@@ -498,14 +507,14 @@ const userName           = profile.full_name?.split(' ')[0] || 'Friend';
       <div style="display:flex;flex-direction:column;gap:1rem;">
         <div class="card">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem;">
-            <div class="card-title" style="margin:0;">⚖️ Weight Log</div>
+            <div class="card-title" style="margin:0;"><TrendingUp size={16} style="display:inline;vertical-align:middle;" /> Weight Log</div>
             <button id="openWM2" class="btn-save" style="padding:.4rem .85rem;font-size:.72rem;">+ Add</button>
           </div>
           {weightLogs.length>0?(
             <div style="display:flex;flex-direction:column;gap:.4rem;max-height:280px;overflow-y:auto;">
               {weightLogs.slice(0,10).map(log=>(
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:.625rem .875rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
-                  <div><div style="font-weight:700;font-size:.82rem;">{formatWeight(log.weight_kg,units)}</div><div style="font-size:.7rem;color:var(--soft);">{new Date(log.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div></div>
+                  <div><div style="font-weight:700;font-size:.82rem;">{formatWeight(log.weight,units)}</div><div style="font-size:.7rem;color:var(--soft);">{new Date(log.logged_date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div></div>
                   {log.notes&&<div style="font-size:.7rem;color:var(--muted);max-width:110px;text-align:right;">{log.notes}</div>}
                 </div>
               ))}
@@ -513,7 +522,7 @@ const userName           = profile.full_name?.split(' ')[0] || 'Friend';
           ):<p style="color:var(--soft);font-size:.82rem;text-align:center;padding:1.5rem 0;">No entries yet</p>}
         </div>
         <div class="card">
-          <div class="card-title">📊 Journey Stats</div>
+          <div class="card-title"><BarChart3 size={16} style="display:inline;vertical-align:middle;" /> Journey Stats</div>
           <div style="display:flex;flex-direction:column;gap:.5rem;">
             {[{lbl:'Days Completed',val:`${totalDaysCompleted}/30`},{lbl:'Start Weight',val:formatWeight(startWeight,units)},{lbl:'Current Weight',val:displayWeight},{lbl:'Target Weight',val:displayTargetWeight},{lbl:'Progress',val:`${progressPercent.toFixed(0)}%`}].map(s=>(
               <div style="display:flex;justify-content:space-between;align-items:center;padding:.55rem .875rem;background:var(--surface);border-radius:10px;">
@@ -532,7 +541,7 @@ const userName           = profile.full_name?.split(' ')[0] || 'Friend';
     <div class="g2">
       <div>
         <div class="form-section">
-          <div class="fsec-title">👤 Personal Information</div>
+          <div class="fsec-title"><User size={15} style="display:inline;vertical-align:middle;" /> Personal Information</div>
           <form id="editForm">
             <div class="fgrid">
               <div class="fg"><label>Full Name</label><input type="text" name="full_name" value={profile.full_name} class="fi" required/></div>
@@ -555,20 +564,46 @@ const userName           = profile.full_name?.split(' ')[0] || 'Friend';
               <div class="fg" style="margin-bottom:1rem;"><label>Height (cm)</label><input type="number" name="height_cm" value={profile.height_cm||''} class="fi"/></div>
             )}
             <div class="fg" style="margin-bottom:1.25rem;"><label>Activity Level</label><select name="activity_level" class="fi"><option value="">Select…</option><option value="sedentary" selected={profile.activity_level==='sedentary'}>Sedentary</option><option value="light" selected={profile.activity_level==='light'}>Light (1–3×/wk)</option><option value="moderate" selected={profile.activity_level==='moderate'}>Moderate (3–5×/wk)</option><option value="active" selected={profile.activity_level==='active'}>Active (6–7×/wk)</option><option value="very_active" selected={profile.activity_level==='very_active'}>Very Active</option></select></div>
-            <button type="submit" class="btn-save">💾 Save Changes</button>
+            <button type="submit" class="btn-save">Save Changes</button>
           </form>
+        </div>
+
+        <!-- MACRO GOALS -->
+        <div class="form-section">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem;">
+            <div class="fsec-title" style="margin:0;"><Target size={15} style="display:inline;vertical-align:middle;" /> Daily Macro Goals</div>
+            <button type="button" id="calcMacrosBtn" class="btn-save" style="padding:.35rem .8rem;font-size:.72rem;background:linear-gradient(135deg,var(--purple),#7c3aed);"><Zap size={13} style="display:inline;vertical-align:middle;" /> Auto-Calculate</button>
+          </div>
+          <div id="macroCalcMsg" style="display:none;margin-bottom:.75rem;padding:.5rem .75rem;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.25);border-radius:9px;font-size:.75rem;color:var(--purple2);"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.9rem;">
+            <div class="fg"><label>Calories / day</label><input type="number" id="mgCal"  value={mgCal}  min="500" max="6000" step="50" class="fi"/></div>
+            <div class="fg"><label>Protein (g)</label>   <input type="number" id="mgProt" value={mgProt} min="30"  max="400" step="1"  class="fi"/></div>
+            <div class="fg"><label>Fat (g)</label>        <input type="number" id="mgFat"  value={mgFat}  min="20"  max="400" step="1"  class="fi"/></div>
+            <div class="fg"><label>Net Carbs (g)</label>  <input type="number" id="mgCarb" value={mgCarb} min="5"   max="100" step="1"  class="fi"/></div>
+          </div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.9rem;">
+            {[
+              {lbl:'Strict Keto (20g)',  cal:1700, p:110, f:120, c:20},
+              {lbl:'Standard (25g)',      cal:1900, p:130, f:135, c:25},
+              {lbl:'Liberal (50g)',       cal:2100, p:140, f:140, c:50},
+            ].map(preset => (
+              <button type="button" class="macro-preset" data-cal={preset.cal} data-p={preset.p} data-f={preset.f} data-c={preset.c}
+                style="padding:.3rem .7rem;font-size:.7rem;font-weight:700;border:1px solid var(--border);background:var(--surface);color:var(--soft);border-radius:7px;cursor:pointer;transition:all .15s;">{preset.lbl}</button>
+            ))}
+          </div>
+          <button type="button" id="saveMacroGoals" class="btn-save" style="width:100%;justify-content:center;">Save Macro Goals</button>
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:1rem;">
         <div class="form-section">
-          <div class="fsec-title">📷 Avatar</div>
+          <div class="fsec-title"><User size={15} style="display:inline;vertical-align:middle;" /> Avatar</div>
           <div style="display:flex;align-items:center;gap:1.25rem;margin-bottom:1.25rem;">
             <div id="avaPreview" style="width:60px;height:60px;border-radius:15px;background:linear-gradient(135deg,var(--green),var(--blue));display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:900;color:#fff;overflow:hidden;flex-shrink:0;">
               {profile.avatar_url?.startsWith('emoji:')?profile.avatar_url.replace('emoji:',''):profile.avatar_url?<img src={profile.avatar_url} style="width:100%;height:100%;object-fit:cover;"/>:avatarLetter}
             </div>
             <div>
               <input type="file" id="avaUpload" accept="image/*" style="display:none;"/>
-              <button onclick="document.getElementById('avaUpload').click()" class="btn-save" style="padding:.45rem .9rem;font-size:.75rem;margin-bottom:.4rem;display:block;">📁 Upload Image</button>
+              <button onclick="document.getElementById('avaUpload').click()" class="btn-save" style="padding:.45rem .9rem;font-size:.75rem;margin-bottom:.4rem;display:block;">Upload Image</button>
               <p style="font-size:.68rem;color:var(--muted);">JPG/PNG max 2MB</p>
             </div>
           </div>
@@ -577,16 +612,16 @@ const userName           = profile.full_name?.split(' ')[0] || 'Friend';
               <button type="button" data-emoji={e} class="epick" style="font-size:1.3rem;padding:.3rem;border:1.5px solid var(--border);background:var(--surface);border-radius:7px;cursor:pointer;transition:all .15s;">{e}</button>
             ))}
           </div>
-          <button id="saveAva" class="btn-save" style="width:100%;justify-content:center;">💾 Save Avatar</button>
+          <button id="saveAva" class="btn-save" style="width:100%;justify-content:center;">Save Avatar</button>
         </div>
         <div class="form-section">
-          <div class="fsec-title">⚡ Quick Actions</div>
-          <a href="/dashboard" class="qa">📊 Dashboard</a>
-          <a href="/dashboard/recipes" class="qa">🍳 Recipes</a>
-          <a href="/dashboard/shopping-list" class="qa">🛒 Shopping List</a>
-          <a href="/dashboard/upgrade" class="qa">⬆️ Upgrade Plan</a>
+          <div class="fsec-title"><Zap size={15} style="display:inline;vertical-align:middle;" /> Quick Actions</div>
+          <a href="/dashboard" class="qa"><BarChart3 size={14} style="display:inline;vertical-align:middle;" /> Dashboard</a>
+          <a href="/dashboard/recipes" class="qa"><Utensils size={14} style="display:inline;vertical-align:middle;" /> Recipes</a>
+          <a href="/dashboard/shopping" class="qa"><ShoppingCart size={14} style="display:inline;vertical-align:middle;" /> Shopping List</a>
+          <a href="/dashboard/upgrade" class="qa"><Zap size={14} style="display:inline;vertical-align:middle;" /> Upgrade Plan</a>
           <form action="/api/auth/logout" method="POST" style="margin:0;">
-            <button type="submit" class="qa danger" style="width:100%;text-align:left;border-color:rgba(239,68,68,.15);">🚪 Logout</button>
+            <button type="submit" class="qa danger" style="width:100%;text-align:left;border-color:rgba(239,68,68,.15);"><LogOut size={14} style="display:inline;vertical-align:middle;" /> Logout</button>
           </form>
         </div>
       </div>
@@ -616,18 +651,8 @@ const userName           = profile.full_name?.split(' ')[0] || 'Friend';
 
 <div class="toast" id="toast"></div>
 
-<script is:inline define:vars={{ chartDataJson, xpDataJson, completionDataJson, weightChartLabel, currentUnits:units, ketoScore }}>
-// THEME
+<script is:inline define:vars={{ chartDataJson, xpDataJson, completionDataJson, weightChartLabel, currentUnits:units, ketoScore, profileWeightKg: profile.weight_kg || 0, profileHeightCm: profile.height_cm || 0, profileAge: profile.age || 0, profileGender: profile.gender || 'male', profileActivity: profile.activity_level || 'sedentary' }}>
 const html = document.documentElement;
-const themeBtn = document.getElementById('themeBtn');
-function applyTheme(t){html.setAttribute('data-theme',t);localStorage.setItem('keto-theme',t);if(themeBtn)themeBtn.textContent=t==='dark'?'☀️':'🌙';}
-applyTheme(localStorage.getItem('keto-theme')||'dark');
-themeBtn?.addEventListener('click',()=>applyTheme(html.getAttribute('data-theme')==='dark'?'light':'dark'));
-
-// NOTIF
-const nb=document.getElementById('notifBtn'),nd=document.getElementById('notifDrop');
-nb?.addEventListener('click',e=>{e.stopPropagation();nd?.classList.toggle('open');});
-document.addEventListener('click',e=>{if(!nd?.contains(e.target)&&e.target!==nb)nd?.classList.remove('open');});
 
 // TABS
 function switchTab(n){document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+n)?.classList.add('active');document.querySelector(`[data-tab="${n}"]`)?.classList.add('active');}
@@ -645,8 +670,12 @@ document.getElementById('weightForm')?.addEventListener('submit',async function(
   d.weight_kg=currentUnits==='imperial'?(v/2.20462).toFixed(2):v;
   delete d.weight_display;
   const r=await fetch('/api/profile/add-weight',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
-  if(r.ok){showToast('⚖️ Weight logged!');wm?.classList.remove('open');setTimeout(()=>window.location.reload(),1000);}
-  else showToast('❌ Failed');
+  if(r.ok){
+    showToast('⚖️ Weight logged!');
+    wm?.classList.remove('open');
+    fetch('/api/achievements/check',{method:'POST'}).catch(()=>{});
+    setTimeout(()=>window.location.reload(),1000);
+  } else showToast('❌ Failed');
 });
 
 // AVATAR in settings
@@ -721,6 +750,102 @@ window.addEventListener('load',()=>{
   // Score ring animation
   const ring=document.getElementById('scoreRing');
   if(ring){const c=2*Math.PI*42;setTimeout(()=>{ring.style.strokeDashoffset=(c*(1-ketoScore/100)).toString();},400);}
+});
+
+/* ── Macro Goals ─────────────────────────────────────────── */
+function showMacroMsg(msg, color) {
+  var el = document.getElementById('macroCalcMsg');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = color || 'var(--purple2)';
+  el.style.display = 'block';
+}
+
+document.getElementById('calcMacrosBtn')?.addEventListener('click', function() {
+  var w = profileWeightKg;
+  var h = profileHeightCm;
+  var a = profileAge;
+  // Try reading live values from the edit form first
+  var wInp = document.querySelector('[name="weight_display"]');
+  var hInp = document.querySelector('[name="height_cm"]');
+  var aInp = document.querySelector('[name="age"]');
+  var gSel = document.querySelector('[name="gender"]');
+  var actSel = document.querySelector('[name="activity_level"]');
+  if (wInp && wInp.value) w = parseFloat(wInp.value) || w;
+  if (hInp && hInp.value) h = parseFloat(hInp.value) || h;
+  if (aInp && aInp.value) a = parseInt(aInp.value) || a;
+  var gender   = (gSel && gSel.value) ? gSel.value : profileGender;
+  var activity = (actSel && actSel.value) ? actSel.value : profileActivity;
+
+  if (!w || !h || !a) {
+    showMacroMsg('⚠️ Fill in your weight, height, and age in the form above first.', 'var(--gold)');
+    return;
+  }
+
+  // Mifflin-St Jeor BMR
+  var bmr = gender === 'female'
+    ? (10 * w) + (6.25 * h) - (5 * a) - 161
+    : (10 * w) + (6.25 * h) - (5 * a) + 5;
+
+  var actMap = { sedentary:1.2, light:1.375, moderate:1.55, active:1.725, very_active:1.9 };
+  var multiplier = actMap[activity] || 1.375;
+  var tdee = bmr * multiplier;
+  // 15% caloric deficit for fat loss
+  var cal = Math.round(tdee * 0.85 / 50) * 50;
+  var fat  = Math.round((cal * 0.70) / 9);
+  var prot = Math.round((cal * 0.25) / 4);
+  var carb = Math.round((cal * 0.05) / 4);
+
+  document.getElementById('mgCal').value  = cal;
+  document.getElementById('mgProt').value = prot;
+  document.getElementById('mgFat').value  = fat;
+  document.getElementById('mgCarb').value = carb;
+
+  showMacroMsg('✅ Calculated from your stats: TDEE ' + Math.round(tdee) + ' kcal → 15% deficit = ' + cal + ' kcal/day (70% fat / 25% protein / 5% carbs)', 'var(--green2)');
+});
+
+// Preset buttons
+document.querySelectorAll('.macro-preset').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.getElementById('mgCal').value  = btn.getAttribute('data-cal');
+    document.getElementById('mgProt').value = btn.getAttribute('data-p');
+    document.getElementById('mgFat').value  = btn.getAttribute('data-f');
+    document.getElementById('mgCarb').value = btn.getAttribute('data-c');
+    document.querySelectorAll('.macro-preset').forEach(function(b) { b.style.borderColor = 'var(--border)'; b.style.color = 'var(--soft)'; });
+    btn.style.borderColor = 'var(--green)';
+    btn.style.color = 'var(--green2)';
+  });
+});
+
+document.getElementById('saveMacroGoals')?.addEventListener('click', function() {
+  var btn = document.getElementById('saveMacroGoals');
+  var cal  = parseInt(document.getElementById('mgCal').value);
+  var prot = parseInt(document.getElementById('mgProt').value);
+  var fat  = parseInt(document.getElementById('mgFat').value);
+  var carb = parseInt(document.getElementById('mgCarb').value);
+  if (!cal || cal < 500) { showMacroMsg('⚠️ Please enter a valid calorie goal (min 500).', 'var(--red)'); return; }
+  btn.textContent = 'Saving…';
+  btn.disabled = true;
+  fetch('/api/macro-goals/save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ daily_calories: cal, protein_g: prot, fat_g: fat, carbs_g: carb }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      showMacroMsg('✅ Macro goals saved! Dashboard will use these targets.', 'var(--green2)');
+    } else {
+      showMacroMsg('❌ ' + (data.error || 'Failed to save.'), 'var(--red)');
+    }
+    btn.textContent = '💾 Save Macro Goals';
+    btn.disabled = false;
+  })
+  .catch(function() {
+    showMacroMsg('❌ Network error. Please try again.', 'var(--red)');
+    btn.textContent = '💾 Save Macro Goals';
+    btn.disabled = false;
+  });
 });
 </script>
 </body>

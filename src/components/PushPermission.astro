@@ -1,0 +1,278 @@
+---
+// src/components/PushPermission.astro
+// Push notification permission request + status display
+// Drop this anywhere — it reads its own state from the browser
+
+interface Props {
+  compact?: boolean; // compact = small inline toggle (for nav/header)
+}
+const { compact = false } = Astro.props;
+
+const vapidPublicKey = import.meta.env.PUBLIC_VAPID_PUBLIC_KEY || '';
+---
+
+{!compact ? (
+  <!-- Full card (used in notification-preferences page) -->
+  <div class="push-card" id="pushPermCard">
+    <div class="push-card-icon" id="pushIcon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+      </svg>
+    </div>
+    <div class="push-card-body">
+      <div class="push-card-title">Push Notifications</div>
+      <div class="push-card-desc" id="pushDesc">Get reminders for check-ins, streak warnings, and milestone alerts — even when the app is closed.</div>
+    </div>
+    <div class="push-card-action">
+      <button class="push-btn push-btn-enable" id="pushEnableBtn" onclick="window.__pushRequest()">
+        Enable
+      </button>
+      <button class="push-btn push-btn-disable" id="pushDisableBtn" onclick="window.__pushDisable()" style="display:none">
+        Turn off
+      </button>
+      <span class="push-status push-status-blocked" id="pushBlockedBadge" style="display:none">
+        Blocked in browser
+      </span>
+      <span class="push-status push-status-on" id="pushActiveBadge" style="display:none">
+        Active
+      </span>
+      <span class="push-status push-status-unsupported" id="pushUnsupportedBadge" style="display:none">
+        Not supported
+      </span>
+    </div>
+  </div>
+) : (
+  <!-- Compact toggle (used inline) -->
+  <button class="push-compact-btn" id="pushCompactBtn" onclick="window.__pushRequest()" title="Enable push notifications">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+    </svg>
+  </button>
+)}
+
+<script is:inline define:vars={{ vapidPublicKey }}>
+(function() {
+  // ── Helpers ────────────────────────────────────────────────
+  function urlBase64ToUint8Array(base64String) {
+    var padding = '='.repeat((4 - base64String.length % 4) % 4);
+    var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    var rawData = atob(base64);
+    var outputArray = new Uint8Array(rawData.length);
+    for (var i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+    return outputArray;
+  }
+
+  function setUI(state) {
+    // state: 'default' | 'active' | 'blocked' | 'unsupported' | 'loading'
+    var enableBtn    = document.getElementById('pushEnableBtn');
+    var disableBtn   = document.getElementById('pushDisableBtn');
+    var blockedBadge = document.getElementById('pushBlockedBadge');
+    var activeBadge  = document.getElementById('pushActiveBadge');
+    var unsupBadge   = document.getElementById('pushUnsupportedBadge');
+    var desc         = document.getElementById('pushDesc');
+    var card         = document.getElementById('pushPermCard');
+
+    if (!enableBtn) return; // compact mode or not rendered
+
+    enableBtn.style.display    = state === 'default'  ? '' : 'none';
+    disableBtn.style.display   = state === 'active'   ? '' : 'none';
+    blockedBadge.style.display = state === 'blocked'  ? '' : 'none';
+    activeBadge.style.display  = state === 'active'   ? '' : 'none';
+    unsupBadge.style.display   = state === 'unsupported' ? '' : 'none';
+
+    if (state === 'loading') {
+      enableBtn.style.display = '';
+      enableBtn.disabled = true;
+      enableBtn.textContent = 'Enabling…';
+    }
+
+    if (card) {
+      card.classList.toggle('push-card-active', state === 'active');
+    }
+
+    if (desc) {
+      if (state === 'active') desc.textContent = 'Push notifications are active on this device. You\'ll receive check-in reminders, streak warnings, and milestone alerts.';
+      if (state === 'blocked') desc.textContent = 'Notifications are blocked in your browser. Open browser settings and allow notifications for this site, then refresh the page.';
+      if (state === 'unsupported') desc.textContent = 'Your browser does not support push notifications. Try Chrome, Edge, or Firefox.';
+    }
+
+    // Compact button
+    var compactBtn = document.getElementById('pushCompactBtn');
+    if (compactBtn) {
+      compactBtn.style.opacity = state === 'active' ? '1' : '0.5';
+      compactBtn.title = state === 'active' ? 'Push notifications active' : 'Enable push notifications';
+      compactBtn.style.color = state === 'active' ? 'var(--green, #10b981)' : '';
+    }
+  }
+
+  async function checkStatus() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setUI('unsupported'); return;
+    }
+    var perm = Notification.permission;
+    if (perm === 'denied') { setUI('blocked'); return; }
+
+    var reg = await navigator.serviceWorker.ready;
+    var sub = await reg.pushManager.getSubscription();
+    setUI(sub ? 'active' : 'default');
+  }
+
+  async function requestPermission() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setUI('unsupported'); return;
+    }
+    if (!vapidPublicKey) {
+      alert('Push notifications not configured. Add VAPID keys to your .env file.');
+      return;
+    }
+
+    setUI('loading');
+
+    try {
+      var perm = await Notification.requestPermission();
+      if (perm !== 'granted') { setUI('blocked'); return; }
+
+      var reg = await navigator.serviceWorker.ready;
+      var sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+      });
+
+      var res = await fetch('/api/notifications/push-subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub.toJSON()),
+      });
+
+      if (res.ok) {
+        setUI('active');
+        localStorage.setItem('keto-push-enabled', 'true');
+      } else {
+        setUI('default');
+        console.error('Failed to save push subscription');
+      }
+    } catch (err) {
+      console.error('Push subscribe error:', err);
+      setUI(Notification.permission === 'denied' ? 'blocked' : 'default');
+    }
+  }
+
+  async function disablePush() {
+    try {
+      var reg = await navigator.serviceWorker.ready;
+      var sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        // Tell server to remove it
+        await fetch('/api/notifications/push-unsubscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        });
+        await sub.unsubscribe();
+      }
+      localStorage.removeItem('keto-push-enabled');
+      setUI('default');
+    } catch (err) {
+      console.error('Push unsubscribe error:', err);
+    }
+  }
+
+  // Expose globally
+  window.__pushRequest = requestPermission;
+  window.__pushDisable = disablePush;
+
+  // Check status on load
+  checkStatus();
+})();
+</script>
+
+<style>
+.push-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.2rem;
+  background: var(--card, #0d1a0f);
+  border: 1px solid var(--border, rgba(16,185,129,.1));
+  border-radius: 16px;
+  transition: border-color .2s;
+}
+.push-card-active {
+  border-color: rgba(16,185,129,.35) !important;
+  background: rgba(16,185,129,.04);
+}
+.push-card-icon {
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  background: rgba(16,185,129,.1);
+  color: var(--green, #10b981);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.push-card-active .push-card-icon { background: rgba(16,185,129,.2); }
+.push-card-body { flex: 1; min-width: 0; }
+.push-card-title {
+  font-size: .88rem;
+  font-weight: 800;
+  color: var(--text, #dfeedd);
+  margin-bottom: .2rem;
+}
+.push-card-desc {
+  font-size: .77rem;
+  color: var(--soft, #4d7055);
+  line-height: 1.5;
+}
+.push-card-action { flex-shrink: 0; }
+
+.push-btn {
+  font-family: inherit;
+  font-size: .8rem;
+  font-weight: 800;
+  padding: .45rem 1.1rem;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: transform .15s, opacity .15s;
+}
+.push-btn-enable {
+  background: linear-gradient(135deg, var(--green, #10b981), var(--green2, #34d399));
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(16,185,129,.3);
+}
+.push-btn-enable:hover { transform: translateY(-1px); }
+.push-btn-enable:disabled { opacity: .6; cursor: wait; }
+.push-btn-disable {
+  background: var(--muted, rgba(255,255,255,.06));
+  color: var(--soft, #4d7055);
+  border: 1px solid var(--border, rgba(16,185,129,.1));
+}
+.push-btn-disable:hover { border-color: var(--red, #ef4444); color: var(--red, #ef4444); }
+
+.push-status {
+  display: inline-block;
+  font-size: .72rem;
+  font-weight: 800;
+  padding: .3rem .75rem;
+  border-radius: 99px;
+  letter-spacing: .04em;
+}
+.push-status-on         { background: rgba(16,185,129,.12); color: var(--green, #10b981); }
+.push-status-blocked    { background: rgba(239,68,68,.1);   color: var(--red, #ef4444); }
+.push-status-unsupported{ background: var(--muted, rgba(255,255,255,.06)); color: var(--soft, #4d7055); }
+
+.push-compact-btn {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: var(--bg2, rgba(255,255,255,.05));
+  border: 1px solid var(--border, rgba(16,185,129,.1));
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--soft, #4d7055);
+  transition: background .15s, border-color .15s, color .15s;
+}
+.push-compact-btn:hover {
+  background: var(--card, #0d1a0f);
+  border-color: var(--border2, rgba(16,185,129,.25));
+  color: var(--green, #10b981);
+}
+</style>

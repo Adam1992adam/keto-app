@@ -1,15 +1,11 @@
 ---
 // src/pages/dashboard/expired.astro
-import { supabase, getProfile, getPlan } from '../../lib/supabase';
+import { getPlan } from '../../lib/supabase';
+import { requireLogin } from '../../lib/auth';
 
-const accessToken = Astro.cookies.get('sb-access-token')?.value;
-if (!accessToken) return Astro.redirect('/login');
-
-const { data: { user } } = await supabase.auth.getUser(accessToken);
-if (!user) return Astro.redirect('/login');
-
-const profile = await getProfile(user.id);
-if (!profile) return Astro.redirect('/login');
+const auth = await requireLogin(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { profile } = auth;
 
 if (profile.subscription_status === 'active' && profile.subscription_end_date && new Date(profile.subscription_end_date) > new Date()) {
   return Astro.redirect('/dashboard/');
@@ -21,7 +17,7 @@ const endDate = profile.subscription_end_date
   ? new Date(profile.subscription_end_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
   : 'recently';
 
-const LS_URL = "https://new-keto-plan.lemonsqueezy.com/checkout/buy/b975765f-a640-4cec-b3ef-44112acc9f75";
+const LS_URL = import.meta.env.LEMON_SQUEEZY_CHECKOUT_URL || "https://new-keto-plan.lemonsqueezy.com/checkout/buy/b975765f-a640-4cec-b3ef-44112acc9f75";
 
 const allPlans = [
   {

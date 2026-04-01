@@ -5,6 +5,13 @@ const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Authenticated per-request client — use in API routes that need user-scoped RLS
+export function getUserClient(token: string) {
+  return createClient(supabaseUrl, supabaseKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+}
+
 // ═══════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════
@@ -36,7 +43,7 @@ export interface Profile {
   subscription_status: 'active' | 'expired' | 'cancelled' | 'none';
   subscription_start_date?: string;
   subscription_end_date?: string;
-  payhip_sale_id?: string;
+  sale_id?: string;
   // Units preference
   preferred_units: UnitSystem;
   // Admin
@@ -318,6 +325,11 @@ export function kgToLbs(kg: number): number {
   return Math.round(kg * 2.20462 * 10) / 10;
 }
 
+/** cm → inches */
+export function cmToInches(cm: number): number {
+  return Math.round((cm / 2.54) * 10) / 10;
+}
+
 /** lbs → kg */
 export function lbsToKg(lbs: number): number {
   return Math.round((lbs / 2.20462) * 10) / 10;
@@ -390,6 +402,12 @@ export function getDaysRemaining(profile: Profile): number {
 export function getMaxJourneyDays(tier: PlanTier | null | undefined): number {
   if (!tier || !PLANS[tier]) return 30;
   return PLANS[tier].durationDays;
+}
+
+// How many days of meal_plans data exist per tier in the DB (used for day cycling)
+export function getMealCycleDays(tier: string | null | undefined): number {
+  if (tier === 'pro_6' || tier === 'elite_12') return 90;
+  return 30;
 }
 
 // ═══════════════════════════════════════
@@ -471,7 +489,7 @@ export async function getWeightLogs(userId: string, limit = 30) {
     .from('weight_logs')
     .select('*')
     .eq('user_id', userId)
-    .order('date', { ascending: false })
+    .order('logged_date', { ascending: false })
     .limit(limit);
 
   return data || [];

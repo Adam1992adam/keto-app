@@ -1,22 +1,31 @@
 ---
-import { supabase, getProfile, getPlan, getUserJourney, getDailyTasks } from '../../lib/supabase';
+import { getPlan, getUserJourney, getDailyTasks } from '../../lib/supabase';
+import { requireLogin } from '../../lib/auth';
+import DashNav from '../../components/DashNav.astro';
+import Zap from 'lucide-astro/Zap';
+import Lock from 'lucide-astro/Lock';
+import CheckCircle from 'lucide-astro/CheckCircle';
+import Users from 'lucide-astro/Users';
+import Award from 'lucide-astro/Award';
+import ChevronRight from 'lucide-astro/ChevronRight';
+import Share2 from 'lucide-astro/Share2';
 
-const accessToken = Astro.cookies.get('sb-access-token')?.value;
-if (!accessToken) return Astro.redirect('/login');
+const auth = await requireLogin(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile } = auth;
 
-const { data: { user } } = await supabase.auth.getUser(accessToken);
-if (!user) return Astro.redirect('/login');
-
-const profile = await getProfile(user.id);
-const currentPlan = profile ? getPlan(profile.subscription_tier) : null;
+const currentPlan = getPlan(profile.subscription_tier);
 const isSubscribed = profile?.subscription_status === 'active';
+const planType  = profile.subscription_tier || 'basic_30';
+const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const userName  = profile.full_name?.split(' ')[0] || 'there';
 
 const journey = await getUserJourney(user.id);
 const currentDay = journey?.current_day || 1;
 const dailyTasks = await getDailyTasks(user.id, currentDay);
 const incompleteTasks = dailyTasks?.filter((t: any) => t.task_type !== 'reflection' && t.task_type !== 'weight' && !t.completed) || [];
 
-const LS_URL = "https://new-keto-plan.lemonsqueezy.com/checkout/buy/b975765f-a640-4cec-b3ef-44112acc9f75";
+const LS_URL = import.meta.env.LEMON_SQUEEZY_CHECKOUT_URL || "https://new-keto-plan.lemonsqueezy.com/checkout/buy/b975765f-a640-4cec-b3ef-44112acc9f75";
 
 const plans = [
   {
@@ -99,7 +108,6 @@ const plans = [
   }
 ];
 
-const userName = profile?.full_name?.split(' ')[0] || 'Friend';
 ---
 
 <!DOCTYPE html>
@@ -524,62 +532,15 @@ const userName = profile?.full_name?.split(' ')[0] || 'Friend';
 </div>
 
 <!-- NAV -->
-<nav>
-  <div class="nav-inner">
-    <a href="/dashboard" class="nav-brand">🥑 <span>Keto Journey</span></a>
-    <div class="nav-links">
-      <a href="/dashboard"               class="nav-link">📊 Dashboard</a>
-      <a href="/dashboard/shopping-list" class="nav-link">🛒 Shopping</a>
-      <a href="/dashboard/recipes"       class="nav-link">🍳 Recipes</a>
-      <a href="/dashboard/profile"       class="nav-link">👤 Profile</a>
-      <a href="/dashboard/notifications" class="nav-link">🔔 Reminders</a>
-      <a href="/dashboard/upgrade"       class="nav-link active">⚡ Upgrade</a>
-    </div>
-    <div class="nav-right">
-      <button class="theme-btn" id="themeBtn" title="Toggle theme">☀️</button>
+<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="upgrade" />
 
-      {incompleteTasks.length > 0 && (
-        <div class="notif-wrap">
-          <button class="notif-btn" id="notifBtn">
-            🔔 <span class="notif-badge">{incompleteTasks.length}</span>
-          </button>
-          <div class="notif-dropdown" id="notifDropdown">
-            <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);font-weight:800;font-size:.9rem;color:var(--green);">
-              🔔 {incompleteTasks.length} Pending Task{incompleteTasks.length !== 1 ? 's' : ''}
-            </div>
-            <div style="max-height:320px;overflow-y:auto;">
-              {incompleteTasks.map((t: any) => (
-                <div class="notif-item">
-                  <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--green),var(--green2));display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">
-                    {t.task_type==='breakfast'?'🍳':t.task_type==='lunch'?'🥗':t.task_type==='dinner'?'🍽️':t.task_type==='snack'?'🍎':'💧'}
-                  </div>
-                  <div>
-                    <div style="font-weight:700;font-size:.85rem;">{t.task_title}</div>
-                    <div style="font-size:.75rem;color:var(--soft);">+{t.xp_earned} XP</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div style="padding:.875rem 1.25rem;border-top:1px solid var(--border);">
-              <a href="/dashboard" style="display:block;text-align:center;padding:.6rem;border-radius:10px;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;font-weight:700;font-size:.8rem;text-decoration:none;">View All Tasks →</a>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {profile && (
-        <a href="/dashboard/profile" class="nav-avatar">{profile.full_name.charAt(0).toUpperCase()}</a>
-      )}
-    </div>
-  </div>
-</nav>
 
 <!-- PAGE -->
 <div class="page">
 
   <!-- HERO -->
   <div class="hero">
-    <div class="hero-badge">⚡ Level Up Your Journey</div>
+    <div class="hero-badge"><Zap size={14} style="vertical-align:middle;margin-right:.3rem;" /> Level Up Your Journey</div>
     <h1 class="hero-title">
       Choose Your<br/><span class="hl">Keto Plan</span>
     </h1>
@@ -589,19 +550,19 @@ const userName = profile?.full_name?.split(' ')[0] || 'Friend';
   <!-- TRUST BADGES -->
   <div class="trust-row">
     <div class="trust-item">
-      <div class="trust-icon">🛡️</div>
+      <div class="trust-icon"><Award size={20} /></div>
       <span>30-Day Guarantee</span>
     </div>
     <div class="trust-item">
-      <div class="trust-icon">🔒</div>
+      <div class="trust-icon"><Lock size={20} /></div>
       <span>Secure Checkout</span>
     </div>
     <div class="trust-item">
-      <div class="trust-icon">⚡</div>
+      <div class="trust-icon"><Zap size={20} /></div>
       <span>Instant Access</span>
     </div>
     <div class="trust-item">
-      <div class="trust-icon">🌍</div>
+      <div class="trust-icon"><Users size={20} /></div>
       <span>10,000+ Users</span>
     </div>
   </div>
@@ -642,7 +603,7 @@ const userName = profile?.full_name?.split(' ')[0] || 'Friend';
             <div class="plan-duration">for {plan.duration}</div>
             {plan.perMonth && (
               <div class="plan-per-month">
-                <span>💰</span>
+                <span><Share2 size={13} /></span>
                 <span>${plan.perMonth.toFixed(2)} / month</span>
               </div>
             )}
@@ -678,7 +639,7 @@ const userName = profile?.full_name?.split(' ')[0] || 'Friend';
               data-plan-duration={plan.duration}
               onclick="openModal(this)"
             >
-              <span>🚀</span>
+              <span><ChevronRight size={16} /></span>
               <span>Get {plan.name} — ${plan.price}</span>
             </button>
           )}
@@ -692,9 +653,9 @@ const userName = profile?.full_name?.split(' ')[0] || 'Friend';
     <div class="compare-title">Full Comparison</div>
     <div class="compare-row header">
       <div class="compare-cell header-cell">Feature</div>
-      <div class="compare-cell header-cell center">🥑 Basic</div>
-      <div class="compare-cell header-cell center">⚡ Pro</div>
-      <div class="compare-cell header-cell center">👑 Elite</div>
+      <div class="compare-cell header-cell center">Basic</div>
+      <div class="compare-cell header-cell center">Pro</div>
+      <div class="compare-cell header-cell center">Elite</div>
     </div>
     {[
       ['Meal Plan', '30 days', '6 months', '12 months'],
@@ -741,7 +702,7 @@ const userName = profile?.full_name?.split(' ')[0] || 'Friend';
 
   <!-- GUARANTEE -->
   <div class="guarantee">
-    <div class="guarantee-icon">🛡️</div>
+    <div class="guarantee-icon"><Award size={36} /></div>
     <div class="guarantee-title">30-Day Money-Back Guarantee</div>
     <p class="guarantee-sub">Not satisfied with your results? Contact us within 30 days for a full refund — no questions asked. We stand behind every plan.</p>
   </div>
@@ -752,7 +713,7 @@ const userName = profile?.full_name?.split(' ')[0] || 'Friend';
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <button class="modal-close" onclick="closeModal()">×</button>
-    <div class="modal-title">Confirm Upgrade 🚀</div>
+    <div class="modal-title">Confirm Upgrade <Zap size={18} style="vertical-align:middle;margin-left:.3rem;" /></div>
     <p class="modal-sub">You'll be redirected to our secure checkout to complete your payment instantly.</p>
     <div class="modal-plan-box">
       <div class="modal-plan-emoji" id="modalEmoji"></div>

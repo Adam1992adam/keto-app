@@ -1,0 +1,632 @@
+---
+// src/components/DashNav.astro
+// ═══════════════════════════════════════════════════════════════
+// Shared navigation for ALL dashboard pages.
+// Defines the global design token system for the entire app.
+// ═══════════════════════════════════════════════════════════════
+
+import NotificationsBell from './NotificationsBell.astro';
+import Home         from 'lucide-astro/Home';
+import ChevronDown  from 'lucide-astro/ChevronDown';
+import Sparkles     from 'lucide-astro/Sparkles';
+import Users        from 'lucide-astro/Users';
+import Zap          from 'lucide-astro/Zap';
+import Moon         from 'lucide-astro/Moon';
+import Sun          from 'lucide-astro/Sun';
+import Activity     from 'lucide-astro/Activity';
+import Utensils     from 'lucide-astro/Utensils';
+import ClipboardList from 'lucide-astro/ClipboardList';
+import User         from 'lucide-astro/User';
+import HelpCircle   from 'lucide-astro/HelpCircle';
+
+interface Props {
+  userId:    string;
+  userName:  string;
+  tierLabel: string;
+  planType:  string;
+  activePage?: string;
+}
+
+const { userId, userName, tierLabel, planType, activePage = '' } = Astro.props;
+
+const initials  = (userName[0] || 'U').toUpperCase();
+const tierText  = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
+
+const progressPages = ['progress', 'photos', 'checkin', 'reflections', 'ketones'];
+const mealPages     = ['recipes', 'food-log', 'favorites', 'meal-prep'];
+const planPages     = ['shopping', 'habits', 'weekly', 'fasting'];
+const morePages     = ['learn', 'notifications', 'export'];
+
+const activeGroup =
+  activePage === 'dashboard'          ? 'today'     :
+  progressPages.includes(activePage)  ? 'progress'  :
+  mealPages.includes(activePage)      ? 'meals'     :
+  planPages.includes(activePage)      ? 'plan'      :
+  morePages.includes(activePage)      ? 'more'      :
+  activePage === 'profile'            ? 'profile'   :
+  activePage === 'ai-coach'           ? 'ai-coach'  :
+  activePage === 'community'          ? 'community' :
+  '';
+
+const groups = [
+  {
+    key: 'progress', label: 'Progress',
+    links: [
+      { href: '/dashboard/progress',    key: 'progress',    label: 'Progress'  },
+      { href: '/dashboard/photos',      key: 'photos',      label: 'Photos'    },
+      { href: '/dashboard/checkin',     key: 'checkin',     label: 'Check-in'  },
+      { href: '/dashboard/reflections', key: 'reflections', label: 'Journal'   },
+      { href: '/dashboard/ketones',     key: 'ketones',     label: 'Ketones'   },
+    ],
+  },
+  {
+    key: 'meals', label: 'Meals',
+    links: [
+      { href: '/dashboard/recipes',   key: 'recipes',   label: 'Recipes'   },
+      { href: '/dashboard/food-log',  key: 'food-log',  label: 'Food Log'  },
+      { href: '/dashboard/favorites', key: 'favorites', label: 'Favorites' },
+      { href: '/dashboard/meal-prep', key: 'meal-prep', label: 'Meal Prep' },
+    ],
+  },
+  {
+    key: 'plan', label: 'Plan',
+    links: [
+      { href: '/dashboard/shopping', key: 'shopping', label: 'Shopping' },
+      { href: '/dashboard/habits',   key: 'habits',   label: 'Habits'   },
+      { href: '/dashboard/weekly',   key: 'weekly',   label: 'Weekly'   },
+      { href: '/dashboard/fasting',  key: 'fasting',  label: 'Fasting'  },
+    ],
+  },
+  {
+    key: 'more', label: 'More',
+    links: [
+      { href: '/dashboard/learn',         key: 'learn',         label: 'Learn'         },
+      { href: '/dashboard/notifications', key: 'notifications', label: 'Notifications' },
+      { href: '/dashboard/export',        key: 'export',        label: 'Export'        },
+    ],
+  },
+];
+---
+
+<!-- ══ ANTI-FLASH: apply stored theme before first paint ══ -->
+<script is:inline>
+(function(){
+  var t = localStorage.getItem('keto-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+
+<!-- ══ TOP NAV ═══════════════════════════════════════════════ -->
+<nav class="dash-nav">
+
+  <!-- Logo -->
+  <a href="/dashboard" class="dn-logo">
+    <div class="dn-logo-mark">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
+        <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+      </svg>
+    </div>
+    <span class="dn-logo-text">Keto<strong>Journey</strong></span>
+  </a>
+
+  <!-- ── Desktop pill tabs ───────────────────────────────── -->
+  <ul class="dn-tabs" id="dnLinks">
+
+    <!-- Today (direct link) -->
+    <li>
+      <a href="/dashboard" class={`dn-tab${activeGroup === 'today' ? ' active' : ''}`}>
+        <Home size={13} />
+        Today
+      </a>
+    </li>
+
+    <!-- Dropdown groups -->
+    {groups.map(group => (
+      <li class="dn-group" data-group={group.key}>
+        <button
+          class={`dn-tab${activeGroup === group.key ? ' active' : ''}`}
+          onclick={`window.dnToggle('${group.key}', this)`}
+          aria-expanded="false"
+          aria-haspopup="true"
+        >
+          {group.label}
+          <ChevronDown size={12} class="dn-caret" />
+        </button>
+        <div class="dn-drop" id={`dn-drop-${group.key}`} role="menu">
+          {group.links.map(link => (
+            <a
+              href={link.href}
+              class={`dn-drop-link${activePage === link.key ? ' active' : ''}`}
+              role="menuitem"
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+      </li>
+    ))}
+
+    <!-- AI Coach + Community (Elite only) -->
+    {planType === 'elite_12' && (
+      <li>
+        <a href="/dashboard/ai-coach"
+          class={`dn-tab dn-elite${activePage === 'ai-coach' ? ' active' : ''}`}>
+          <Sparkles size={13} />
+          AI Coach
+        </a>
+      </li>
+    )}
+    {planType === 'elite_12' && (
+      <li>
+        <a href="/dashboard/community"
+          class={`dn-tab dn-elite${activePage === 'community' ? ' active' : ''}`}>
+          <Users size={13} />
+          Community
+        </a>
+      </li>
+    )}
+
+    <!-- Upgrade (non-Elite) -->
+    {planType !== 'elite_12' && (
+      <li>
+        <a href="/dashboard/upgrade"
+          class={`dn-tab dn-upgrade${activePage === 'upgrade' ? ' active' : ''}`}>
+          <Zap size={13} />
+          Upgrade
+        </a>
+      </li>
+    )}
+  </ul>
+
+  <div class="dn-sp"></div>
+
+  <!-- ── Right controls ─────────────────────────────────── -->
+  <div class="dn-right">
+    <span class="dn-tier">{tierText}</span>
+
+    <button class="dn-icon-btn" id="dnThemeBtn" title="Toggle theme" aria-label="Toggle theme">
+      <Moon size={15} class="icon-moon" />
+      <Sun  size={15} class="icon-sun"  />
+    </button>
+
+    <NotificationsBell userId={userId} />
+
+    <a href="/dashboard/learn" class="dn-icon-btn dn-help" title="Learn & Help" aria-label="Help & tutorials">
+      <HelpCircle size={15} />
+    </a>
+
+    <a href="/dashboard/profile" class="dn-avatar" title={userName}>
+      {initials}
+    </a>
+  </div>
+</nav>
+
+<!-- ══ MOBILE BOTTOM NAV ══════════════════════════════════ -->
+<nav class="dn-bottom" aria-label="Mobile navigation">
+  <a href="/dashboard" class={`dn-bn${activeGroup === 'today' ? ' active' : ''}`}>
+    <Home size={20} /><span>Today</span>
+  </a>
+  <a href="/dashboard/progress" class={`dn-bn${activeGroup === 'progress' ? ' active' : ''}`}>
+    <Activity size={20} /><span>Progress</span>
+  </a>
+  <a href="/dashboard/recipes" class={`dn-bn${activeGroup === 'meals' ? ' active' : ''}`}>
+    <Utensils size={20} /><span>Meals</span>
+  </a>
+  <a href="/dashboard/shopping" class={`dn-bn${activeGroup === 'plan' ? ' active' : ''}`}>
+    <ClipboardList size={20} /><span>Plan</span>
+  </a>
+  <a href="/dashboard/profile" class={`dn-bn${activeGroup === 'profile' ? ' active' : ''}`}>
+    <User size={20} /><span>Me</span>
+  </a>
+</nav>
+
+<!-- ══ STYLES ════════════════════════════════════════════════ -->
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL DESIGN TOKEN SYSTEM
+   Strategy: html:not([data-theme="dark"]) = higher specificity
+   than each page's :root { dark }, so light values always win.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Layout / radius / shadow tokens (theme-independent) ── */
+:root {
+  --nav-h:     64px;
+  --r-xs:      6px;
+  --r-sm:      10px;
+  --r:         16px;
+  --r-lg:      22px;
+  --r-xl:      28px;
+  --r-full:    9999px;
+}
+
+/* ── LIGHT theme (default) ────────────────────────────────
+   html:not([data-theme="dark"]) specificity = [0,1,1]
+   beats page :root specificity = [0,1,0]                  */
+html:not([data-theme="dark"]) {
+  /* Backgrounds */
+  --bg:          #f5f7fa;
+  --bg2:         #eef1f6;
+  --card:        #ffffff;
+  --card2:       #f8fafc;
+
+  /* Borders */
+  --border:      rgba(0, 0, 0, .07);
+  --border2:     rgba(22, 163, 74, .22);
+
+  /* Text */
+  --text:        #0f172a;
+  --soft:        #64748b;
+  --muted:       #e2e8f0;
+
+  /* Brand green */
+  --green:       #16a34a;
+  --green2:      #22c55e;
+  --green3:      #4ade80;
+  --green-bg:    #f0fdf4;
+  --green-ring:  rgba(22, 163, 74, .15);
+
+  /* Amber / gold */
+  --amber:       #f59e0b;
+  --amber2:      #fbbf24;
+  --amber-bg:    #fffbeb;
+  --gold:        #f59e0b;
+
+  /* Red */
+  --red:         #ef4444;
+  --red-bg:      #fef2f2;
+
+  /* Purple */
+  --purple:      #8b5cf6;
+  --purple2:     #a78bfa;
+  --purple-bg:   #faf5ff;
+
+  /* Blue */
+  --blue:        #3b82f6;
+  --blue2:       #60a5fa;
+  --blue-bg:     #eff6ff;
+
+  /* Cyan */
+  --cyan:        #06b6d4;
+  --cyan-bg:     #ecfeff;
+
+  /* Shadows */
+  --shadow-xs:   0 1px 2px rgba(0,0,0,.05);
+  --shadow-sm:   0 1px 3px rgba(0,0,0,.07), 0 2px 8px rgba(0,0,0,.04);
+  --shadow:      0 4px 20px rgba(0,0,0,.07), 0 2px 6px rgba(0,0,0,.04);
+  --shadow-lg:   0 8px 32px rgba(0,0,0,.09), 0 4px 12px rgba(0,0,0,.05);
+  --shadow-xl:   0 20px 60px rgba(0,0,0,.10), 0 8px 20px rgba(0,0,0,.06);
+}
+
+/* ── DARK theme override ──────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:          #060d09;
+  --bg2:         #0a1410;
+  --card:        #0d1a0f;
+  --card2:       #111f13;
+  --border:      rgba(16, 185, 129, .1);
+  --border2:     rgba(16, 185, 129, .25);
+  --text:        #dfeedd;
+  --soft:        #4d7055;
+  --muted:       #233328;
+  --green:       #10b981;
+  --green2:      #34d399;
+  --green3:      #6ee7b7;
+  --green-bg:    rgba(16, 185, 129, .1);
+  --green-ring:  rgba(16, 185, 129, .15);
+  --amber:       #f59e0b;
+  --amber2:      #fbbf24;
+  --amber-bg:    rgba(245, 158, 11, .1);
+  --gold:        #f59e0b;
+  --red:         #ef4444;
+  --red-bg:      rgba(239, 68, 68, .1);
+  --purple:      #8b5cf6;
+  --purple2:     #a78bfa;
+  --purple-bg:   rgba(139, 92, 246, .1);
+  --blue:        #3b82f6;
+  --blue2:       #60a5fa;
+  --blue-bg:     rgba(59, 130, 246, .1);
+  --cyan:        #06b6d4;
+  --cyan-bg:     rgba(6, 182, 212, .1);
+  --shadow-xs:   0 1px 2px rgba(0,0,0,.3);
+  --shadow-sm:   0 1px 4px rgba(0,0,0,.3);
+  --shadow:      0 4px 16px rgba(0,0,0,.35);
+  --shadow-lg:   0 8px 32px rgba(0,0,0,.4);
+  --shadow-xl:   0 20px 60px rgba(0,0,0,.5);
+}
+
+/* ── Base reset ─────────────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  transition: background .25s, color .25s;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOP NAV
+   ═══════════════════════════════════════════════════════════ */
+.dash-nav {
+  position: sticky; top: 0; z-index: 200;
+  height: var(--nav-h);
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  display: flex; align-items: center;
+  padding: 0 1.5rem; gap: 1rem;
+}
+
+/* ── Logo ────────────────────────────────────────────────── */
+.dn-logo {
+  display: flex; align-items: center; gap: .6rem;
+  text-decoration: none; flex-shrink: 0; user-select: none;
+}
+.dn-logo-mark {
+  width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--green) 0%, #15803d 100%);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px var(--green-ring);
+}
+.dn-logo-text {
+  font-family: 'DM Sans', sans-serif;
+  font-size: .88rem; font-weight: 500; letter-spacing: -.01em;
+  color: var(--soft);
+}
+.dn-logo-text strong { font-weight: 800; color: var(--text); }
+
+/* ── Pill tabs ───────────────────────────────────────────── */
+.dn-tabs {
+  display: flex; align-items: center; gap: .15rem;
+  list-style: none; margin-left: .4rem;
+}
+@media (max-width: 900px) { .dn-tabs { display: none; } }
+
+.dn-group { position: relative; }
+
+.dn-tab {
+  display: inline-flex; align-items: center; gap: .35rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: .8rem; font-weight: 600;
+  padding: .44rem .88rem; border-radius: var(--r-full);
+  color: var(--soft); background: transparent;
+  border: none; cursor: pointer;
+  text-decoration: none; white-space: nowrap;
+  transition: color .15s, background .15s;
+  line-height: 1;
+}
+.dn-tab:hover { color: var(--text); background: var(--bg2); }
+
+/* Active pill — dark in light mode, green in dark mode */
+.dn-tab.active { background: #0f172a; color: #ffffff; }
+[data-theme="dark"] .dn-tab.active { background: var(--green); color: #ffffff; }
+
+/* Elite tabs */
+.dn-tab.dn-elite { color: var(--amber); }
+.dn-tab.dn-elite:hover { color: var(--amber); background: var(--amber-bg); }
+.dn-tab.dn-elite.active { background: var(--amber); color: #fff; }
+
+/* Upgrade tab */
+.dn-tab.dn-upgrade {
+  color: var(--green);
+  border: 1.5px solid var(--border2);
+}
+.dn-tab.dn-upgrade:hover { background: var(--green-bg); }
+.dn-tab.dn-upgrade.active { background: var(--green); color: #fff; border-color: var(--green); }
+
+/* Caret — targets the svg with class="dn-caret" from lucide-astro */
+.dn-caret { flex-shrink: 0; transition: transform .2s; }
+.dn-group.open .dn-caret { transform: rotate(180deg); }
+/* lucide-astro adds both .lucide and the class, so also target svg */
+.dn-tab svg.dn-caret { flex-shrink: 0; }
+/* Ensure lucide icons in tabs don't inherit unwanted styles */
+.dn-tab svg:not(.dn-caret) { flex-shrink: 0; }
+
+/* ── Dropdown ────────────────────────────────────────────── */
+.dn-drop {
+  position: absolute; top: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  min-width: 158px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: .45rem;
+  box-shadow: var(--shadow-lg);
+  opacity: 0; pointer-events: none;
+  transition: opacity .16s ease, transform .16s ease;
+  z-index: 300;
+}
+.dn-group.open .dn-drop {
+  opacity: 1; pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+.dn-drop-link {
+  display: flex; align-items: center;
+  padding: .52rem .8rem; border-radius: var(--r-sm);
+  font-size: .8rem; font-weight: 600;
+  color: var(--soft); text-decoration: none; white-space: nowrap;
+  transition: color .14s, background .14s;
+}
+.dn-drop-link:hover { color: var(--text); background: var(--bg2); }
+.dn-drop-link.active { color: var(--green); background: var(--green-bg); }
+
+/* ── Spacer ──────────────────────────────────────────────── */
+.dn-sp { flex: 1; min-width: 0; }
+
+/* ── Right controls group ────────────────────────────────── */
+.dn-right {
+  display: flex; align-items: center; gap: .45rem; flex-shrink: 0;
+}
+
+/* Tier badge */
+.dn-tier {
+  font-size: .68rem; font-weight: 800; letter-spacing: .02em;
+  text-transform: uppercase;
+  padding: .22rem .68rem; border-radius: var(--r-full);
+  background: var(--green-bg);
+  border: 1.5px solid var(--border2);
+  color: var(--green); white-space: nowrap; flex-shrink: 0;
+}
+
+/* Icon button */
+.dn-icon-btn {
+  width: 34px; height: 34px; border-radius: var(--r-sm); flex-shrink: 0;
+  background: var(--bg2); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--soft);
+  transition: background .18s, border-color .18s, color .18s;
+}
+.dn-icon-btn:hover {
+  background: var(--card); border-color: var(--border2); color: var(--green);
+}
+
+/* Sun/moon visibility based on theme */
+.icon-moon { display: block; }   /* show in light mode (click → go dark) */
+.icon-sun  { display: none;  }   /* hidden in light mode */
+[data-theme="dark"] .icon-moon { display: none; }
+[data-theme="dark"] .icon-sun  { display: block; }
+
+/* Avatar */
+.dn-avatar {
+  width: 34px; height: 34px; border-radius: var(--r-full); flex-shrink: 0;
+  background: linear-gradient(135deg, var(--green) 0%, #15803d 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: .79rem; color: #fff;
+  text-decoration: none;
+  box-shadow: 0 2px 8px var(--green-ring);
+  transition: transform .18s, box-shadow .18s;
+}
+.dn-avatar:hover { transform: scale(1.07); box-shadow: 0 4px 14px var(--green-ring); }
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE BOTTOM NAV
+   ═══════════════════════════════════════════════════════════ */
+.dn-bottom {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 20px rgba(0,0,0,.06);
+  padding: .5rem 0 calc(.5rem + env(safe-area-inset-bottom));
+  grid-template-columns: repeat(5, 1fr);
+}
+@media (max-width: 900px) { .dn-bottom { display: grid; } }
+
+.dn-bn {
+  display: flex; flex-direction: column; align-items: center; gap: .18rem;
+  padding: .38rem .2rem;
+  color: var(--soft); font-size: .58rem; font-weight: 700;
+  text-decoration: none; letter-spacing: .01em;
+  transition: color .16s, transform .14s;
+}
+.dn-bn:hover { color: var(--text); transform: translateY(-1px); }
+.dn-bn.active { color: var(--green); }
+.dn-bn.active svg { filter: drop-shadow(0 0 5px var(--green-ring)); }
+</style>
+
+<!-- ══ SCRIPT ════════════════════════════════════════════════ -->
+<script is:inline>
+(function () {
+
+  /* ── Theme toggle ─────────────────────────────────────── */
+  function applyTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('keto-theme', t);
+  }
+
+  var themeBtn = document.getElementById('dnThemeBtn');
+  if (themeBtn) {
+    // Ensure current theme is applied
+    var stored = localStorage.getItem('keto-theme') || 'light';
+    applyTheme(stored);
+
+    themeBtn.addEventListener('click', function () {
+      var cur = document.documentElement.getAttribute('data-theme') || 'light';
+      applyTheme(cur === 'dark' ? 'light' : 'dark');
+    });
+  }
+
+  /* ── Dropdown toggle ──────────────────────────────────── */
+  window.dnToggle = function (groupKey, btn) {
+    var allGroups   = document.querySelectorAll('.dn-group');
+    var clickedGrp  = btn ? btn.closest('.dn-group') : null;
+
+    allGroups.forEach(function (g) {
+      if (g !== clickedGrp) {
+        g.classList.remove('open');
+        var b = g.querySelector('.dn-tab');
+        if (b) b.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    if (!clickedGrp) return;
+    var isOpen = clickedGrp.classList.contains('open');
+    if (isOpen) {
+      clickedGrp.classList.remove('open');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    } else {
+      clickedGrp.classList.add('open');
+      if (btn) btn.setAttribute('aria-expanded', 'true');
+    }
+  };
+
+  /* ── Close on click outside ───────────────────────────── */
+  document.addEventListener('click', function (e) {
+    var el = e.target, inside = false;
+    while (el) {
+      if (el.classList && el.classList.contains('dn-group')) { inside = true; break; }
+      el = el.parentElement;
+    }
+    if (!inside) {
+      document.querySelectorAll('.dn-group').forEach(function (g) {
+        g.classList.remove('open');
+        var b = g.querySelector('.dn-tab');
+        if (b) b.setAttribute('aria-expanded', 'false');
+      });
+    }
+  });
+
+  /* ── Close on Escape ──────────────────────────────────── */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.dn-group').forEach(function (g) {
+        g.classList.remove('open');
+        var b = g.querySelector('.dn-tab');
+        if (b) b.setAttribute('aria-expanded', 'false');
+      });
+    }
+  });
+
+  /* ── Global fetch interceptor — auto-refresh expired tokens */
+  (function () {
+    var _fetch = window.fetch.bind(window);
+    var _refreshing = false;
+
+    window.fetch = function (input, init) {
+      var url = typeof input === 'string' ? input
+        : (input instanceof Request ? input.url : '');
+      if (url.indexOf('/api/auth/') !== -1) return _fetch(input, init);
+
+      return _fetch(input, init).then(function (res) {
+        if (res.status !== 401) return res;
+        if (_refreshing) { window.location.href = '/login'; return res; }
+        _refreshing = true;
+        return _fetch('/api/auth/refresh', { method: 'POST' })
+          .then(function (ref) {
+            _refreshing = false;
+            if (!ref.ok) { window.location.href = '/login'; return res; }
+            return _fetch(input, init);
+          })
+          .catch(function () {
+            _refreshing = false;
+            window.location.href = '/login';
+            return res;
+          });
+      });
+    };
+  })();
+
+})();
+</script>

@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
 
 // ═══════════════════════════════════════
-// SIGNUP AFTER PAYHIP PURCHASE VERIFICATION
-// يُستدعى من signup.astro بعد التحقق من الشراء
+// SIGNUP AFTER PURCHASE VERIFICATION
+// Called from signup.astro after verifying the purchase
 // ═══════════════════════════════════════
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -10,7 +10,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { email, password, fullName, tier, startDate, endDate, saleId } =
       await request.json();
 
-    // ── التحقق من الحقول المطلوبة ──────────
+    // ── Validate required fields ──────────────
     if (!email || !password || !fullName || !tier) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400,
@@ -33,9 +33,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // ── قراءة Supabase credentials ──────────
-    // @ts-ignore
-    const env = locals?.runtime?.env || {};
+    // ── Read Supabase credentials ─────────────
+    const env = (locals as any)?.runtime?.env || {};
     const SUPABASE_URL = env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
     const SUPABASE_KEY = env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
@@ -51,12 +50,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    // ── التحقق أن الإيميل غير مسجل مسبقاً ──
+    // ── Check email not already registered ────
     const { data: existingUser } = await supabase
       .from('profiles')
       .select('id')
       .eq('email', cleanEmail)
-      .single();
+      .maybeSingle();
 
     if (existingUser) {
       return new Response(JSON.stringify({ error: 'Email already registered' }), {
@@ -65,7 +64,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // ── إنشاء حساب في Supabase Auth ─────────
+    // ── Create Supabase Auth account ──────────
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: cleanEmail,
       password,
@@ -91,7 +90,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const userId = authData.user.id;
 
-    // ── حساب تواريخ الاشتراك ────────────────
+    // ── Calculate subscription dates ──────────
     const tierDays: Record<string, number> = {
       basic_30:  30,
       pro_6:    180,
@@ -103,27 +102,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
       ? new Date(endDate)
       : new Date(Date.now() + tierDays[tier] * 86400000);
 
-    // ── إنشاء profile في جدول profiles ──────
+    // ── Insert profile row ────────────────────
     const { error: profileError } = await supabase.from('profiles').insert({
-      id:                     userId,
-      email:                  cleanEmail,
-      full_name:              fullName,
-      subscription_tier:      tier,
-      subscription_status:    'active',
+      id:                      userId,
+      email:                   cleanEmail,
+      full_name:               fullName,
+      subscription_tier:       tier,
+      subscription_status:     'active',
       subscription_start_date: subStart.toISOString(),
       subscription_end_date:   subEnd.toISOString(),
       payhip_sale_id:          saleId || null,
-      preferred_units:        'metric',
-      created_at:             new Date().toISOString(),
-      updated_at:             new Date().toISOString(),
+      preferred_units:         'imperial',
+      created_at:              new Date().toISOString(),
+      updated_at:              new Date().toISOString(),
     });
 
     if (profileError) {
       console.error('Profile insert error:', profileError.message);
-      // لا نوقف العملية — الحساب تم إنشاؤه، فقط سجّل الخطأ
+      // Account was created — log error but don't fail
     }
 
-    // ── تفعيل pending_activations إن وُجد ───
+    // ── Mark pending_activations as activated ─
     await supabase
       .from('pending_activations')
       .update({
@@ -149,7 +148,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (err) {
-    console.error('signup-payhip error:', err);
+    console.error('signup-purchase error:', err);
     return new Response(JSON.stringify({
       error: err instanceof Error ? err.message : 'Unknown error',
     }), {

@@ -1,0 +1,1157 @@
+---
+// onboarding.astro
+// Shown once after first login — before dashboard
+import { supabase } from '../../lib/supabase';
+import { requireAuth } from '../../lib/auth';
+import Target from 'lucide-astro/Target';
+import Zap from 'lucide-astro/Zap';
+import Calendar from 'lucide-astro/Calendar';
+import Bell from 'lucide-astro/Bell';
+import BarChart2 from 'lucide-astro/BarChart2';
+import CheckCircle from 'lucide-astro/CheckCircle';
+import Flame from 'lucide-astro/Flame';
+import Utensils from 'lucide-astro/Utensils';
+import Droplets from 'lucide-astro/Droplets';
+import TrendingDown from 'lucide-astro/TrendingDown';
+import Sparkles from 'lucide-astro/Sparkles';
+
+const auth = await requireAuth(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile } = auth;
+
+// Check if already onboarded
+const { data: existing } = await supabase
+  .from('onboarding_data')
+  .select('id')
+  .eq('user_id', user.id)
+  .single();
+
+if (existing) return Astro.redirect('/dashboard');
+
+const userName = profile.full_name?.split(' ')[0] || 'there';
+const tier = profile.subscription_tier || 'basic_30';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Set Up Your Journey — Keto Journey</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,700;1,9..144,900&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
+  <style>
+    /* ─── TOKENS ─── */
+    :root {
+      --bg:#070d0a; --surface:#0e1812; --card:#142010;
+      --card2:#1a2a1a; --border:rgba(16,185,129,.13);
+      --border2:rgba(16,185,129,.28); --border3:rgba(16,185,129,.45);
+      --text:#e6f0e6; --soft:#6b8c6b; --muted:#2e4030;
+      --green:#10b981; --green2:#34d399; --green3:#6ee7b7;
+      --gold:#f59e0b; --red:#ef4444; --blue:#3b82f6;
+      --purple:#8b5cf6; --cyan:#06b6d4; --orange:#f97316;
+    }
+    *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body {
+      font-family:'DM Sans',sans-serif;
+      background:var(--bg); color:var(--text);
+      min-height:100vh; overflow-x:hidden;
+      display:flex; flex-direction:column; align-items:center;
+      justify-content:center; padding:1.5rem;
+    }
+
+    /* ─── ANIMATED BG ─── */
+    .bg-wrap { position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
+    .orb {
+      position:absolute; border-radius:50%; filter:blur(120px);
+      animation:drift ease-in-out infinite;
+    }
+    .o1 { width:600px;height:600px;background:rgba(16,185,129,.07);top:-150px;left:-150px;animation-duration:22s; }
+    .o2 { width:500px;height:500px;background:rgba(6,182,212,.05);bottom:-100px;right:-100px;animation-duration:28s;animation-delay:-12s; }
+    .o3 { width:350px;height:350px;background:rgba(245,158,11,.04);top:45%;left:45%;animation-duration:18s;animation-delay:-7s; }
+    @keyframes drift {
+      0%,100% { transform:translate(0,0) scale(1); }
+      33% { transform:translate(40px,-50px) scale(1.06); }
+      66% { transform:translate(-35px,45px) scale(.95); }
+    }
+    /* Grain */
+    .grain { position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.018;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    /* ─── SHELL ─── */
+    .shell {
+      position:relative; z-index:2;
+      width:100%; max-width:760px;
+    }
+
+    /* ─── TOP BAR ─── */
+    .top-bar {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:2rem;
+    }
+    .logo {
+      font-family:'Fraunces',serif; font-weight:700; font-size:1.1rem;
+      color:var(--text); text-decoration:none; display:flex; align-items:center; gap:.5rem;
+    }
+    .logo span { color:var(--green); }
+    .step-counter { font-size:.78rem; font-weight:700; color:var(--soft); }
+    .step-counter strong { color:var(--green); }
+
+    /* ─── PROGRESS BAR ─── */
+    .progress-wrap { margin-bottom:2.5rem; }
+    .progress-track {
+      height:4px; background:var(--muted); border-radius:99px;
+      overflow:hidden; margin-bottom:.75rem;
+    }
+    .progress-fill {
+      height:100%;
+      background:linear-gradient(90deg,var(--green),var(--green2),var(--cyan));
+      border-radius:99px;
+      transition:width .5s cubic-bezier(.4,0,.2,1);
+      position:relative;
+    }
+    .progress-fill::after {
+      content:'';
+      position:absolute; right:0; top:50%; transform:translateY(-50%);
+      width:10px; height:10px; border-radius:50%;
+      background:var(--green2);
+      box-shadow:0 0 8px var(--green);
+    }
+    .progress-dots {
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .pdot {
+      display:flex; flex-direction:column; align-items:center; gap:.3rem;
+      cursor:pointer;
+    }
+    .pdot-circle {
+      width:28px; height:28px; border-radius:50%;
+      border:2px solid var(--muted);
+      display:flex; align-items:center; justify-content:center;
+      font-size:.72rem; font-weight:800; color:var(--muted);
+      transition:all .3s;
+    }
+    .pdot.done .pdot-circle {
+      background:rgba(16,185,129,.15); border-color:var(--green); color:var(--green);
+    }
+    .pdot.active .pdot-circle {
+      background:var(--green); border-color:var(--green); color:#fff;
+      box-shadow:0 0 0 4px rgba(16,185,129,.2);
+    }
+    .pdot-label {
+      font-size:.62rem; font-weight:700; color:var(--muted);
+      text-transform:uppercase; letter-spacing:.06em;
+      transition:color .3s;
+    }
+    .pdot.active .pdot-label { color:var(--green); }
+    .pdot.done .pdot-label { color:var(--soft); }
+
+    /* ─── CARD ─── */
+    .card {
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:24px;
+      overflow:hidden;
+      box-shadow:0 32px 80px rgba(0,0,0,.35), 0 0 0 1px rgba(16,185,129,.04);
+    }
+    .card-head {
+      padding:2.5rem 2.5rem 0;
+    }
+    .step-badge {
+      display:inline-flex; align-items:center; gap:.4rem;
+      background:rgba(16,185,129,.1); border:1px solid var(--border2);
+      border-radius:99px; padding:.3rem .9rem;
+      font-size:.68rem; font-weight:800; color:var(--green);
+      text-transform:uppercase; letter-spacing:.09em; margin-bottom:1rem;
+    }
+    .card-title {
+      font-family:'Fraunces',serif;
+      font-size:clamp(1.6rem,3vw,2.2rem);
+      font-weight:900; line-height:1.1; margin-bottom:.5rem;
+    }
+    .card-title em {
+      font-style:italic;
+      background:linear-gradient(135deg,var(--green),var(--green2));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    }
+    .card-sub {
+      font-size:.875rem; color:var(--soft); line-height:1.6; margin-bottom:1.75rem;
+    }
+    .card-body { padding:0 2.5rem 2rem; }
+    .card-foot {
+      padding:1.5rem 2.5rem 2.5rem;
+      display:flex; align-items:center; justify-content:space-between; gap:1rem;
+      border-top:1px solid var(--border);
+    }
+
+    /* ─── STEP PANELS ─── */
+    .step-panel { display:none; }
+    .step-panel.active { display:block; animation:fadeUp .35s ease both; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);} }
+
+    /* ─── OPTION GRIDS ─── */
+    .opt-grid {
+      display:grid; gap:.75rem;
+    }
+    .opt-grid-2 { grid-template-columns:1fr 1fr; }
+    .opt-grid-3 { grid-template-columns:1fr 1fr 1fr; }
+    .opt-grid-4 { grid-template-columns:repeat(4,1fr); }
+
+    .opt-card {
+      background:var(--card2); border:1.5px solid var(--border);
+      border-radius:16px; padding:1.25rem 1rem;
+      text-align:center; cursor:pointer;
+      transition:all .22s;
+      display:flex; flex-direction:column; align-items:center; gap:.5rem;
+      user-select:none;
+    }
+    .opt-card:hover {
+      border-color:rgba(16,185,129,.3); transform:translateY(-2px);
+      background:rgba(16,185,129,.05);
+    }
+    .opt-card.selected {
+      border-color:var(--green); background:rgba(16,185,129,.1);
+      box-shadow:0 0 0 3px rgba(16,185,129,.15);
+    }
+    .opt-card.selected .opt-label { color:var(--green); }
+    .opt-icon { font-size:1.75rem; line-height:1; }
+    .opt-label { font-weight:800; font-size:.85rem; }
+    .opt-desc { font-size:.7rem; color:var(--soft); line-height:1.4; }
+    .opt-check {
+      width:18px; height:18px; border-radius:50%;
+      background:var(--green); display:flex; align-items:center; justify-content:center;
+      font-size:.65rem; color:#fff; margin-top:.2rem;
+      opacity:0; transition:opacity .2s;
+    }
+    .opt-card.selected .opt-check { opacity:1; }
+
+    /* multi-select variant */
+    .opt-card.multi { position:relative; }
+    .opt-card.multi .opt-check { position:absolute; top:.6rem; right:.6rem; }
+
+    /* ─── NUMBER INPUT ─── */
+    .num-group {
+      display:flex; align-items:center; gap:1.25rem;
+      background:var(--card2); border:1.5px solid var(--border);
+      border-radius:16px; padding:1rem 1.5rem;
+      margin-bottom:1rem;
+    }
+    .num-icon { font-size:1.75rem; flex-shrink:0; }
+    .num-label-wrap { flex:1; }
+    .num-label { font-weight:800; font-size:.9rem; margin-bottom:.15rem; }
+    .num-sublabel { font-size:.72rem; color:var(--soft); }
+    .num-control { display:flex; align-items:center; gap:.75rem; flex-shrink:0; }
+    .num-btn {
+      width:36px; height:36px; border-radius:10px;
+      background:var(--card); border:1.5px solid var(--border);
+      color:var(--text); font-size:1.1rem; font-weight:700;
+      cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center;
+    }
+    .num-btn:hover { border-color:var(--green); color:var(--green); }
+    .num-val {
+      font-family:'Fraunces',serif; font-size:1.4rem; font-weight:900;
+      min-width:52px; text-align:center;
+    }
+    .num-unit { font-size:.72rem; color:var(--soft); text-align:center; margin-top:-.3rem; }
+
+    /* ─── RANGE SLIDER ─── */
+    .slider-wrap { margin-bottom:1.25rem; }
+    .slider-head { display:flex; justify-content:space-between; margin-bottom:.5rem; }
+    .slider-lbl { font-weight:800; font-size:.875rem; }
+    .slider-val {
+      font-family:'Fraunces',serif; font-size:1.1rem; font-weight:900; color:var(--green);
+    }
+    .slider-unit { font-size:.72rem; color:var(--soft); margin-left:.2rem; }
+    input[type=range] {
+      -webkit-appearance:none; width:100%; height:6px;
+      background:var(--muted); border-radius:99px; outline:none;
+      cursor:pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance:none; width:22px; height:22px; border-radius:50%;
+      background:linear-gradient(135deg,var(--green),var(--green2));
+      box-shadow:0 0 0 4px rgba(16,185,129,.2), 0 2px 8px rgba(0,0,0,.3);
+      cursor:pointer; transition:all .2s;
+    }
+    input[type=range]::-webkit-slider-thumb:hover { transform:scale(1.15); }
+    .slider-marks {
+      display:flex; justify-content:space-between;
+      margin-top:.4rem; font-size:.68rem; color:var(--muted); font-weight:600;
+    }
+
+    /* ─── TEXT INPUT ─── */
+    .text-input {
+      width:100%; background:var(--card2); border:1.5px solid var(--border);
+      border-radius:12px; padding:.825rem 1.1rem;
+      color:var(--text); font-family:'DM Sans',sans-serif;
+      font-size:.9rem; font-weight:500; outline:none;
+      transition:all .22s;
+    }
+    .text-input::placeholder { color:var(--muted); }
+    .text-input:focus {
+      border-color:var(--green); background:rgba(16,185,129,.04);
+      box-shadow:0 0 0 4px rgba(16,185,129,.1);
+    }
+
+    /* ─── TOGGLE ROW ─── */
+    .toggle-row {
+      display:flex; align-items:center; justify-content:space-between;
+      background:var(--card2); border:1.5px solid var(--border);
+      border-radius:14px; padding:1rem 1.25rem; margin-bottom:.75rem;
+      transition:all .2s;
+    }
+    .toggle-row:hover { border-color:rgba(16,185,129,.2); }
+    .tr-left { display:flex; align-items:center; gap:.875rem; }
+    .tr-icon { font-size:1.3rem; }
+    .tr-label { font-weight:800; font-size:.875rem; margin-bottom:.12rem; }
+    .tr-sub { font-size:.72rem; color:var(--soft); }
+    .tog {
+      position:relative; width:46px; height:25px; flex-shrink:0;
+      background:var(--muted); border-radius:99px;
+      cursor:pointer; transition:background .3s;
+      border:none; outline:none;
+    }
+    .tog.on { background:linear-gradient(135deg,var(--green),var(--green2)); }
+    .tog-thumb {
+      position:absolute; top:2.5px; left:2.5px;
+      width:20px; height:20px; border-radius:50%;
+      background:#fff; pointer-events:none;
+      transition:transform .28s cubic-bezier(.4,0,.2,1);
+      box-shadow:0 2px 6px rgba(0,0,0,.22);
+    }
+    .tog.on .tog-thumb { transform:translateX(21px); }
+
+    /* ─── MACRO RESULT (Step 6) ─── */
+    .macro-hero {
+      text-align:center; padding:1.25rem 0 1.5rem;
+    }
+    .macro-ring-wrap {
+      position:relative; width:140px; height:140px;
+      margin:0 auto 1.25rem;
+    }
+    .macro-ring-svg { transform:rotate(-90deg); }
+    .ring-track { fill:none; stroke:var(--muted); stroke-width:10; }
+    .ring-fill {
+      fill:none; stroke-width:10; stroke-linecap:round;
+      stroke-dasharray:347; stroke-dashoffset:347;
+      transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1);
+    }
+    .ring-label {
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      text-align:center;
+    }
+    .ring-cal { font-family:'Fraunces',serif; font-size:1.75rem; font-weight:900; color:var(--green); line-height:1; }
+    .ring-unit { font-size:.65rem; font-weight:700; color:var(--soft); text-transform:uppercase; letter-spacing:.06em; }
+    .macro-title { font-family:'Fraunces',serif; font-size:1.1rem; font-weight:700; margin-bottom:.25rem; }
+    .macro-sub { font-size:.78rem; color:var(--soft); }
+
+    .macro-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem; margin:1.25rem 0; }
+    .macro-card {
+      background:var(--card2); border:1.5px solid var(--border);
+      border-radius:14px; padding:1rem; text-align:center;
+      transition:all .25s;
+    }
+    .macro-card:hover { border-color:var(--border2); transform:translateY(-2px); }
+    .mc-icon { font-size:1.3rem; margin-bottom:.4rem; }
+    .mc-val { font-family:'Fraunces',serif; font-size:1.5rem; font-weight:900; line-height:1; margin-bottom:.2rem; }
+    .mc-lbl { font-size:.68rem; font-weight:700; color:var(--soft); text-transform:uppercase; letter-spacing:.05em; }
+    .mc-pct { font-size:.72rem; color:var(--soft); margin-top:.1rem; }
+
+    .insights-grid { display:flex; flex-direction:column; gap:.65rem; }
+    .insight {
+      display:flex; align-items:center; gap:.875rem;
+      background:var(--card2); border:1px solid var(--border);
+      border-radius:12px; padding:.875rem 1.1rem;
+      font-size:.82rem;
+    }
+    .ins-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .ins-text { line-height:1.5; }
+    .ins-text strong { color:var(--text); }
+
+    /* ─── BUTTONS ─── */
+    .btn-next {
+      display:flex; align-items:center; justify-content:center; gap:.5rem;
+      padding:.875rem 2rem; border-radius:13px;
+      font-family:'DM Sans',sans-serif; font-weight:800; font-size:.9rem;
+      border:none; cursor:pointer; transition:all .25s;
+      background:linear-gradient(135deg,var(--green),var(--green2));
+      color:#fff; box-shadow:0 4px 16px rgba(16,185,129,.3);
+      position:relative; overflow:hidden; min-width:140px;
+    }
+    .btn-next::before {
+      content:''; position:absolute; inset:0;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);
+      transform:translateX(-100%); transition:transform .5s;
+    }
+    .btn-next:hover::before { transform:translateX(100%); }
+    .btn-next:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(16,185,129,.4); }
+    .btn-next:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+    .btn-back {
+      display:flex; align-items:center; gap:.4rem;
+      padding:.875rem 1.4rem; border-radius:13px;
+      font-family:'DM Sans',sans-serif; font-weight:700; font-size:.875rem;
+      border:1.5px solid var(--border); background:transparent; color:var(--soft);
+      cursor:pointer; transition:all .22s;
+    }
+    .btn-back:hover { border-color:var(--green); color:var(--green); }
+
+    .btn-spin {
+      display:none; width:16px; height:16px; border-radius:50%;
+      border:2.5px solid rgba(255,255,255,.35); border-top-color:#fff;
+      animation:spin .7s linear infinite; flex-shrink:0;
+    }
+    @keyframes spin { to{transform:rotate(360deg);} }
+
+    /* ─── SECTION LABEL ─── */
+    .sec-label {
+      font-size:.72rem; font-weight:800; color:var(--soft);
+      text-transform:uppercase; letter-spacing:.08em; margin-bottom:.75rem;
+      display:flex; align-items:center; gap:.5rem;
+    }
+    .sec-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    /* ─── SKIP LINK ─── */
+    .skip-link {
+      text-align:center; margin-top:1rem;
+      font-size:.75rem; color:var(--muted);
+    }
+    .skip-link a { color:var(--soft); text-decoration:none; transition:color .2s; }
+    .skip-link a:hover { color:var(--text); }
+
+    /* ─── SUCCESS OVERLAY ─── */
+    .success-overlay {
+      display:none; position:fixed; inset:0; z-index:9999;
+      background:var(--bg); flex-direction:column;
+      align-items:center; justify-content:center; text-align:center;
+      padding:2rem;
+    }
+    .success-overlay.show { display:flex; animation:fadeIn .5s ease both; }
+    @keyframes fadeIn { from{opacity:0;}to{opacity:1;} }
+    .success-icon { font-size:5rem; margin-bottom:1.5rem; animation:bounceIn .6s ease; }
+    @keyframes bounceIn {
+      0%{transform:scale(0);}70%{transform:scale(1.15);}100%{transform:scale(1);}
+    }
+    .success-title {
+      font-family:'Fraunces',serif; font-size:2.5rem; font-weight:900;
+      margin-bottom:.75rem;
+    }
+    .success-title em {
+      font-style:italic;
+      background:linear-gradient(135deg,var(--green),var(--green2));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    }
+    .success-sub { font-size:1rem; color:var(--soft); max-width:380px; line-height:1.7; }
+    .success-bar { width:320px; height:4px; background:var(--muted); border-radius:99px; margin-top:2rem; overflow:hidden; }
+    .success-fill { height:100%; background:linear-gradient(90deg,var(--green),var(--green2)); border-radius:99px; width:0; transition:width 3s ease; }
+
+    @media(max-width:640px) {
+      body { padding:1rem; align-items:flex-start; }
+      .card-head,.card-body,.card-foot { padding-left:1.5rem; padding-right:1.5rem; }
+      .opt-grid-3,.opt-grid-4 { grid-template-columns:1fr 1fr; }
+      .macro-grid { grid-template-columns:1fr 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-wrap"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
+<div class="grain"></div>
+
+<div class="shell">
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <a href="/" class="logo">Keto<span>Journey</span></a>
+    <div class="step-counter">Step <strong id="stepNum">1</strong> of 6</div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-wrap">
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:16.6%"></div></div>
+    <div class="progress-dots">
+      {[
+        { n:1, label:'Goal' },
+        { n:2, label:'Body' },
+        { n:3, label:'Lifestyle' },
+        { n:4, label:'Diet' },
+        { n:5, label:'Fasting' },
+        { n:6, label:'Your Plan' },
+      ].map(s => (
+        <div class={`pdot ${s.n === 1 ? 'active' : ''}`} id={`pdot${s.n}`}>
+          <div class="pdot-circle">{s.n}</div>
+          <div class="pdot-label">{s.label}</div>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <!-- CARD -->
+  <div class="card">
+
+    <!-- ════════════════ STEP 1: GOAL ════════════════ -->
+    <div class="step-panel active" id="step1">
+      <div class="card-head">
+        <div class="step-badge"><Target size={14} style="vertical-align:middle;margin-right:.3rem;" /> Step 1 · Goal</div>
+        <h2 class="card-title">What's your main <em>goal</em>,<br/>{userName}?</h2>
+        <p class="card-sub">This shapes your entire 30-day plan. Be honest — your results depend on it.</p>
+      </div>
+      <div class="card-body">
+        <div class="opt-grid opt-grid-2">
+          {[
+            { val:'lose_weight',  icon:'⚖️', label:'Lose Weight',      desc:'Reduce body fat and reach a healthier weight' },
+            { val:'lose_fast',    icon:'🔥', label:'Lose Fast',         desc:'Aggressive fat loss with strict keto + fasting' },
+            { val:'build_muscle', icon:'💪', label:'Build Muscle',      desc:'Gain lean muscle while staying in ketosis' },
+            { val:'energy',       icon:'⚡', label:'More Energy',       desc:'Boost daily energy and mental clarity' },
+            { val:'health',       icon:'❤️', label:'Better Health',     desc:'Improve metabolic health and reduce inflammation' },
+            { val:'maintain',     icon:'🎯', label:'Maintain Weight',   desc:'Keep current weight while eating healthy' },
+          ].map(o => (
+            <div class="opt-card" data-group="goal" data-val={o.val} onclick="selectOpt(this,'goal')">
+              <div class="opt-icon">{o.icon}</div>
+              <div class="opt-label">{o.label}</div>
+              <div class="opt-desc">{o.desc}</div>
+              <div class="opt-check">✓</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div class="card-foot">
+        <div></div>
+        <button class="btn-next" onclick="nextStep(1)" id="next1">Continue →</button>
+      </div>
+    </div>
+
+    <!-- ════════════════ STEP 2: BODY STATS ════════════════ -->
+    <div class="step-panel" id="step2">
+      <div class="card-head">
+        <div class="step-badge"><BarChart2 size={14} style="vertical-align:middle;margin-right:.3rem;" /> Step 2 · Body Stats</div>
+        <h2 class="card-title">Tell us about your <em>body</em></h2>
+        <p class="card-sub">We calculate your personal macros — calories, protein, fat — based on these numbers.</p>
+      </div>
+      <div class="card-body">
+        <!-- Age -->
+        <div class="num-group">
+          <div class="num-icon"><Calendar size={22} /></div>
+          <div class="num-label-wrap">
+            <div class="num-label">Age</div>
+            <div class="num-sublabel">Your biological age</div>
+          </div>
+          <div class="num-control">
+            <button class="num-btn" onclick="adjust('age',-1)">−</button>
+            <div>
+              <div class="num-val" id="ageVal">28</div>
+              <div class="num-unit">years</div>
+            </div>
+            <button class="num-btn" onclick="adjust('age',1)">+</button>
+          </div>
+        </div>
+
+        <!-- Gender -->
+        <div class="sec-label">Biological Sex</div>
+        <div class="opt-grid opt-grid-2" style="margin-bottom:1.25rem;">
+          {[
+            { val:'male',   icon:'♂️', label:'Male' },
+            { val:'female', icon:'♀️', label:'Female' },
+          ].map(o => (
+            <div class="opt-card" data-group="gender" data-val={o.val} onclick="selectOpt(this,'gender')">
+              <div class="opt-icon">{o.icon}</div>
+              <div class="opt-label">{o.label}</div>
+              <div class="opt-check">✓</div>
+            </div>
+          ))}
+        </div>
+
+        <!-- Height (in inches internally, display as ft'in") -->
+        <div class="slider-wrap">
+          <div class="slider-head">
+            <div class="slider-lbl">Height</div>
+            <div><span class="slider-val" id="heightVal">5'7"</span></div>
+          </div>
+          <input type="range" id="heightSlider" min="55" max="87" value="67"
+            oninput="(function(v){var f=Math.floor(v/12);var i=v%12;document.getElementById('heightVal').textContent=f+'\''+i+'\"';})(parseInt(this.value))"/>
+          <div class="slider-marks"><span>4'7"</span><span>5'11"</span><span>7'3"</span></div>
+        </div>
+
+        <!-- Current Weight (lbs) -->
+        <div class="slider-wrap">
+          <div class="slider-head">
+            <div class="slider-lbl">Current Weight</div>
+            <div><span class="slider-val" id="weightVal">176</span><span class="slider-unit">lbs</span></div>
+          </div>
+          <input type="range" id="weightSlider" min="88" max="440" value="176"
+            oninput="document.getElementById('weightVal').textContent=this.value"/>
+          <div class="slider-marks"><span>88 lbs</span><span>264 lbs</span><span>440 lbs</span></div>
+        </div>
+
+        <!-- Target Weight (lbs) -->
+        <div class="slider-wrap" id="targetWrap">
+          <div class="slider-head">
+            <div class="slider-lbl">Target Weight</div>
+            <div><span class="slider-val" id="targetVal">154</span><span class="slider-unit">lbs</span></div>
+          </div>
+          <input type="range" id="targetSlider" min="88" max="440" value="154"
+            oninput="document.getElementById('targetVal').textContent=this.value"/>
+          <div class="slider-marks"><span>88 lbs</span><span>264 lbs</span><span>440 lbs</span></div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <button class="btn-back" onclick="prevStep(2)">← Back</button>
+        <button class="btn-next" onclick="nextStep(2)" id="next2">Continue →</button>
+      </div>
+    </div>
+
+    <!-- ════════════════ STEP 3: LIFESTYLE ════════════════ -->
+    <div class="step-panel" id="step3">
+      <div class="card-head">
+        <div class="step-badge"><Zap size={14} style="vertical-align:middle;margin-right:.3rem;" /> Step 3 · Lifestyle</div>
+        <h2 class="card-title">How active are <em>you</em>?</h2>
+        <p class="card-sub">Your activity level determines how many calories you burn daily — crucial for your plan.</p>
+      </div>
+      <div class="card-body">
+        <div class="opt-grid" style="grid-template-columns:1fr;gap:.65rem;">
+          {[
+            { val:'sedentary',  icon:'🛋️', label:'Sedentary',        desc:'Little or no exercise · desk job', multiplier:'×1.2' },
+            { val:'light',      icon:'🚶', label:'Lightly Active',    desc:'Light exercise 1-3 days/week', multiplier:'×1.375' },
+            { val:'moderate',   icon:'🏃', label:'Moderately Active', desc:'Moderate exercise 3-5 days/week', multiplier:'×1.55' },
+            { val:'very',       icon:'💪', label:'Very Active',       desc:'Hard exercise 6-7 days/week', multiplier:'×1.725' },
+            { val:'extreme',    icon:'🔥', label:'Extremely Active',  desc:'Physical job + daily training', multiplier:'×1.9' },
+          ].map(o => (
+            <div class="opt-card" style="flex-direction:row;text-align:left;padding:1rem 1.25rem;gap:1rem;" data-group="activity" data-val={o.val} onclick="selectOpt(this,'activity')">
+              <div class="opt-icon" style="font-size:1.5rem;">{o.icon}</div>
+              <div style="flex:1;">
+                <div class="opt-label">{o.label}</div>
+                <div class="opt-desc" style="margin-top:.1rem;">{o.desc}</div>
+              </div>
+              <div style="background:rgba(16,185,129,.1);border:1px solid var(--border2);border-radius:8px;padding:.25rem .6rem;font-size:.7rem;font-weight:800;color:var(--green);flex-shrink:0;">{o.multiplier}</div>
+              <div class="opt-check" style="position:relative;margin:0;flex-shrink:0;">✓</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div class="card-foot">
+        <button class="btn-back" onclick="prevStep(3)">← Back</button>
+        <button class="btn-next" onclick="nextStep(3)" id="next3">Continue →</button>
+      </div>
+    </div>
+
+    <!-- ════════════════ STEP 4: DIET PREFERENCES ════════════════ -->
+    <div class="step-panel" id="step4">
+      <div class="card-head">
+        <div class="step-badge"><Utensils size={14} style="vertical-align:middle;margin-right:.3rem;" /> Step 4 · Diet Preferences</div>
+        <h2 class="card-title">Any food <em>preferences</em>?</h2>
+        <p class="card-sub">We'll filter your meal plan and recipes to match your needs. Select all that apply.</p>
+      </div>
+      <div class="card-body">
+        <div class="sec-label">Dietary Restrictions</div>
+        <div class="opt-grid opt-grid-3" style="margin-bottom:1.5rem;">
+          {[
+            { val:'none',         icon:'🍽️', label:'None', desc:'Eat everything' },
+            { val:'no_pork',      icon:'🐷', label:'No Pork', desc:'Avoid pork products' },
+            { val:'no_beef',      icon:'🐄', label:'No Beef', desc:'Avoid beef products' },
+            { val:'vegetarian',   icon:'🥦', label:'Vegetarian', desc:'No meat or fish' },
+            { val:'no_shellfish', icon:'🦐', label:'No Shellfish', desc:'Avoid shrimp, crab etc' },
+            { val:'no_nuts',      icon:'🥜', label:'No Nuts', desc:'Nut allergy or preference' },
+          ].map(o => (
+            <div class="opt-card multi" data-group="diet" data-val={o.val} onclick="toggleMulti(this,'diet')">
+              <div class="opt-icon">{o.icon}</div>
+              <div class="opt-label">{o.label}</div>
+              <div class="opt-desc">{o.desc}</div>
+              <div class="opt-check" style="position:absolute;top:.6rem;right:.6rem;">✓</div>
+            </div>
+          ))}
+        </div>
+
+        <div class="sec-label">Cooking Time Available</div>
+        <div class="opt-grid opt-grid-3">
+          {[
+            { val:'15',  icon:'⚡', label:'15 min', desc:'Very quick meals' },
+            { val:'30',  icon:'🍳', label:'30 min', desc:'Standard cooking time' },
+            { val:'60',  icon:'👨‍🍳', label:'1 hour', desc:'Love to cook properly' },
+          ].map(o => (
+            <div class="opt-card" data-group="cooktime" data-val={o.val} onclick="selectOpt(this,'cooktime')">
+              <div class="opt-icon">{o.icon}</div>
+              <div class="opt-label">{o.label}</div>
+              <div class="opt-desc">{o.desc}</div>
+              <div class="opt-check">✓</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div class="card-foot">
+        <button class="btn-back" onclick="prevStep(4)">← Back</button>
+        <button class="btn-next" onclick="nextStep(4)" id="next4">Continue →</button>
+      </div>
+    </div>
+
+    <!-- ════════════════ STEP 5: FASTING + EXTRAS ════════════════ -->
+    <div class="step-panel" id="step5">
+      <div class="card-head">
+        <div class="step-badge"><Sparkles size={14} style="vertical-align:middle;margin-right:.3rem;" /> Step 5 · Advanced Options</div>
+        <h2 class="card-title">Power up your <em>results</em></h2>
+        <p class="card-sub">These optional features can dramatically accelerate your transformation. You can change them anytime.</p>
+      </div>
+      <div class="card-body">
+        <div class="sec-label">Intermittent Fasting</div>
+        <div class="opt-grid opt-grid-3" style="margin-bottom:1.5rem;">
+          {[
+            { val:'none', icon:'🍽️', label:'No Fasting',   desc:'3 meals/day, no restrictions' },
+            { val:'16_8', icon:'⏰', label:'16:8',          desc:'8h eating window (most popular)' },
+            { val:'18_6', icon:'🔥', label:'18:6',          desc:'6h window, faster results' },
+            { val:'omad',  icon:'⚡', label:'OMAD',          desc:'One meal a day, advanced' },
+          ].map(o => (
+            <div class="opt-card" data-group="fasting" data-val={o.val} onclick="selectOpt(this,'fasting')">
+              <div class="opt-icon">{o.icon}</div>
+              <div class="opt-label">{o.label}</div>
+              <div class="opt-desc">{o.desc}</div>
+              <div class="opt-check">✓</div>
+            </div>
+          ))}
+        </div>
+
+        <div class="sec-label">Enable Features</div>
+        <div class="toggle-row">
+          <div class="tr-left">
+            <div class="tr-icon"><Droplets size={20} /></div>
+            <div>
+              <div class="tr-label">Electrolytes Tracker</div>
+              <div class="tr-sub">Daily reminders for sodium, potassium & magnesium — prevents keto flu</div>
+            </div>
+          </div>
+          <button class="tog on" id="tog-electrolytes" onclick="this.classList.toggle('on')"><div class="tog-thumb"></div></button>
+        </div>
+        <div class="toggle-row">
+          <div class="tr-left">
+            <div class="tr-icon"><BarChart2 size={20} /></div>
+            <div>
+              <div class="tr-label">Daily Keto Check-in</div>
+              <div class="tr-sub">Evening check-in tracks energy, hunger & ketosis signals</div>
+            </div>
+          </div>
+          <button class="tog on" id="tog-checkin" onclick="this.classList.toggle('on')"><div class="tog-thumb"></div></button>
+        </div>
+        <div class="toggle-row">
+          <div class="tr-left">
+            <div class="tr-icon"><Calendar size={20} /></div>
+            <div>
+              <div class="tr-label">Weekly Progress Report</div>
+              <div class="tr-sub">Downloadable PDF every Sunday with your stats</div>
+            </div>
+          </div>
+          <button class="tog on" id="tog-report" onclick="this.classList.toggle('on')"><div class="tog-thumb"></div></button>
+        </div>
+        <div class="toggle-row">
+          <div class="tr-left">
+            <div class="tr-icon"><Bell size={20} /></div>
+            <div>
+              <div class="tr-label">Smart Reminders</div>
+              <div class="tr-sub">Meal, water, and streak reminders at your preferred times</div>
+            </div>
+          </div>
+          <button class="tog on" id="tog-reminders" onclick="this.classList.toggle('on')"><div class="tog-thumb"></div></button>
+        </div>
+      </div>
+      <div class="card-foot">
+        <button class="btn-back" onclick="prevStep(5)">← Back</button>
+        <button class="btn-next" onclick="nextStep(5)" id="next5">
+          Calculate My Plan <Zap size={16} style="vertical-align:middle;margin-left:.3rem;" />
+        </button>
+      </div>
+    </div>
+
+    <!-- ════════════════ STEP 6: RESULTS ════════════════ -->
+    <div class="step-panel" id="step6">
+      <div class="card-head">
+        <div class="step-badge"><Sparkles size={14} style="vertical-align:middle;margin-right:.3rem;" /> Step 6 · Your Personal Plan</div>
+        <h2 class="card-title">Your plan is <em>ready</em>!</h2>
+        <p class="card-sub">Based on your data, we've calculated your personal keto macros and built your 30-day roadmap.</p>
+      </div>
+      <div class="card-body">
+        <!-- Macro Ring -->
+        <div class="macro-hero">
+          <div class="macro-ring-wrap">
+            <svg class="macro-ring-svg" width="140" height="140" viewBox="0 0 120 120">
+              <circle class="ring-track" cx="60" cy="60" r="55"/>
+              <circle class="ring-fill" id="ringFill" cx="60" cy="60" r="55" stroke="url(#rg)"/>
+              <defs>
+                <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#10b981"/>
+                  <stop offset="100%" stop-color="#34d399"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="ring-label">
+              <div class="ring-cal" id="ringCal">—</div>
+              <div class="ring-unit">kcal/day</div>
+            </div>
+          </div>
+          <div class="macro-title" id="macroTitle">Calculating…</div>
+          <div class="macro-sub" id="macroSub">Your personalized keto target</div>
+        </div>
+
+        <!-- 3 Macro Cards -->
+        <div class="macro-grid">
+          <div class="macro-card">
+            <div class="mc-icon"><Zap size={22} /></div>
+            <div class="mc-val" id="mcProtein" style="color:#3b82f6;">—</div>
+            <div class="mc-lbl">Protein</div>
+            <div class="mc-pct" id="mcProteinPct">—</div>
+          </div>
+          <div class="macro-card">
+            <div class="mc-icon"><Flame size={22} /></div>
+            <div class="mc-val" id="mcFat" style="color:#f59e0b;">—</div>
+            <div class="mc-lbl">Fat</div>
+            <div class="mc-pct" id="mcFatPct">—</div>
+          </div>
+          <div class="macro-card">
+            <div class="mc-icon"><TrendingDown size={22} /></div>
+            <div class="mc-val" id="mcCarbs" style="color:#10b981;">—</div>
+            <div class="mc-lbl">Net Carbs</div>
+            <div class="mc-pct" id="mcCarbsPct">—</div>
+          </div>
+        </div>
+
+        <!-- Insights -->
+        <div class="sec-label">Your Personalized Insights</div>
+        <div class="insights-grid" id="insightsGrid"></div>
+      </div>
+
+      <div class="card-foot">
+        <button class="btn-back" onclick="prevStep(6)">← Back</button>
+        <button class="btn-next" onclick="saveAndStart()" id="next6">
+          <div class="btn-spin" id="saveSpin"></div>
+          <span id="saveTxt"><Sparkles size={16} style="vertical-align:middle;margin-right:.3rem;" /> Start My Journey</span>
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /card -->
+
+  <div class="skip-link">
+    <a href="/dashboard">Skip setup for now →</a>
+  </div>
+</div>
+
+<!-- SUCCESS OVERLAY -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-icon"><CheckCircle size={52} /></div>
+  <h2 class="success-title">Your journey<br/><em>starts now</em>!</h2>
+  <p class="success-sub">Your 30-day keto plan is personalized and ready. Let's go!</p>
+  <div class="success-bar"><div class="success-fill" id="successFill"></div></div>
+</div>
+
+<!-- ─── SCRIPT ─── -->
+<script is:inline define:vars={{ userName, tier }}>
+
+/* ══════════════ STATE ══════════════ */
+const data = {
+  goal:       null,
+  age:        28,
+  gender:     null,
+  height:     67,   // stored in total inches; converted to cm on submit
+  weight:     176,  // stored in lbs; converted to kg on submit
+  target:     154,  // stored in lbs; converted to kg on submit
+  activity:   null,
+  diet:       [],
+  cooktime:   null,
+  fasting:    null,
+  electrolytes: true,
+  checkin:    true,
+  report:     true,
+  reminders:  true,
+  // calculated
+  tdee:       0,
+  calories:   0,
+  protein:    0,
+  fat:        0,
+  carbs:      0,
+};
+
+/* ══════════════ STEP NAVIGATION ══════════════ */
+var currentStep = 1;
+const TOTAL = 6;
+
+function updateUI(step) {
+  // Dots
+  for (let i = 1; i <= TOTAL; i++) {
+    const dot = document.getElementById(`pdot${i}`);
+    dot.classList.remove('active','done');
+    if (i < step) dot.classList.add('done');
+    else if (i === step) dot.classList.add('active');
+    // Update inner text
+    dot.querySelector('.pdot-circle').textContent = i < step ? '✓' : i;
+  }
+  // Progress bar
+  const pct = (step / TOTAL) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('stepNum').textContent = step;
+
+  // Panels
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('step' + step)?.classList.add('active');
+
+  // Scroll to top
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+function nextStep(from) {
+  if (!validateStep(from)) return;
+  syncData(from);
+  currentStep = from + 1;
+  if (currentStep === 6) calculateMacros();
+  updateUI(currentStep);
+}
+function prevStep(from) {
+  currentStep = from - 1;
+  updateUI(currentStep);
+}
+
+/* ══════════════ VALIDATION ══════════════ */
+function validateStep(step) {
+  if (step === 1 && !data.goal)     { shake('step1'); return false; }
+  if (step === 2 && !data.gender)   { shake('step2'); return false; }
+  if (step === 3 && !data.activity) { shake('step3'); return false; }
+  if (step === 4 && !data.cooktime) { shake('step4'); return false; }
+  if (step === 5 && !data.fasting)  { shake('step5'); return false; }
+  return true;
+}
+function shake(id) {
+  const el = document.getElementById(id);
+  el.style.animation = 'none';
+  el.offsetHeight;
+  el.style.animation = 'shake .4s ease';
+}
+// Add shake keyframe
+const shakeStyle = document.createElement('style');
+shakeStyle.textContent = '@keyframes shake{0%,100%{transform:translateX(0);}20%,60%{transform:translateX(-6px);}40%,80%{transform:translateX(6px);}}'
+document.head.appendChild(shakeStyle);
+
+/* ══════════════ SYNC DATA ══════════════ */
+function syncData(step) {
+  if (step === 2) {
+    data.height = parseInt(document.getElementById('heightSlider').value);
+    data.weight = parseInt(document.getElementById('weightSlider').value);
+    data.target = parseInt(document.getElementById('targetSlider').value);
+  }
+  if (step === 5) {
+    data.electrolytes = document.getElementById('tog-electrolytes').classList.contains('on');
+    data.checkin      = document.getElementById('tog-checkin').classList.contains('on');
+    data.report       = document.getElementById('tog-report').classList.contains('on');
+    data.reminders    = document.getElementById('tog-reminders').classList.contains('on');
+  }
+}
+
+/* ══════════════ SELECTION HELPERS ══════════════ */
+function selectOpt(el, group) {
+  document.querySelectorAll(`[data-group="${group}"]`).forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  data[group] = el.dataset.val;
+}
+function toggleMulti(el, group) {
+  el.classList.toggle('selected');
+  const val = el.dataset.val;
+  if (val === 'none') {
+    // deselect all others
+    document.querySelectorAll(`[data-group="${group}"]`).forEach(c => {
+      if (c !== el) c.classList.remove('selected');
+    });
+    data[group] = ['none'];
+    return;
+  }
+  // deselect "none" if anything else selected
+  document.querySelectorAll(`[data-group="${group}"][data-val="none"]`).forEach(c => c.classList.remove('selected'));
+  data[group] = Array.from(document.querySelectorAll(`[data-group="${group}"].selected`)).map(c => c.dataset.val);
+}
+
+/* ══════════════ NUMBER ADJUST ══════════════ */
+function adjust(field, delta) {
+  const limits = { age:[10,100] };
+  const [min,max] = limits[field] || [0,999];
+  data[field] = Math.max(min, Math.min(max, data[field] + delta));
+  document.getElementById(field + 'Val').textContent = data[field];
+}
+
+/* ══════════════ MACRO CALCULATOR ══════════════ */
+function calculateMacros() {
+  const { age, gender, height, weight, activity, goal } = data;
+
+  // Convert imperial to metric for Mifflin-St Jeor (height in total inches, weight in lbs)
+  var weightKg = weight / 2.20462;
+  var heightCm = height * 2.54;
+
+  // BMR (Mifflin-St Jeor, metric)
+  let bmr;
+  if (gender === 'male') {
+    bmr = 10 * weightKg + 6.25 * heightCm - 5 * age + 5;
+  } else {
+    bmr = 10 * weightKg + 6.25 * heightCm - 5 * age - 161;
+  }
+
+  // TDEE multiplier
+  const multipliers = { sedentary:1.2, light:1.375, moderate:1.55, very:1.725, extreme:1.9 };
+  const tdee = bmr * (multipliers[activity] || 1.55);
+  data.tdee = Math.round(tdee);
+
+  // Calorie target based on goal
+  let cal = tdee;
+  if (goal === 'lose_weight') cal = tdee - 500;
+  if (goal === 'lose_fast')   cal = tdee - 750;
+  if (goal === 'build_muscle') cal = tdee + 200;
+  if (goal === 'maintain')    cal = tdee;
+  if (goal === 'energy')      cal = tdee - 200;
+  if (goal === 'health')      cal = tdee - 300;
+  cal = Math.max(1200, Math.round(cal));
+  data.calories = cal;
+
+  // Keto macro split (standard: 70% fat, 25% protein, 5% carbs)
+  data.fat     = Math.round((cal * 0.70) / 9);
+  data.protein = Math.round((cal * 0.25) / 4);
+  data.carbs   = Math.round((cal * 0.05) / 4);
+
+  // Update UI
+  document.getElementById('ringCal').textContent = cal.toLocaleString();
+  document.getElementById('mcProtein').textContent = data.protein + 'g';
+  document.getElementById('mcFat').textContent     = data.fat + 'g';
+  document.getElementById('mcCarbs').textContent   = data.carbs + 'g';
+  document.getElementById('mcProteinPct').textContent = '25% of calories';
+  document.getElementById('mcFatPct').textContent     = '70% of calories';
+  document.getElementById('mcCarbsPct').textContent   = '5% of calories';
+
+  // Animate ring
+  const circumference = 2 * Math.PI * 55; // 345.6
+  const filled = circumference * 0.78; // show 78% full
+  setTimeout(() => {
+    document.getElementById('ringFill').style.strokeDashoffset = circumference - filled;
+  }, 200);
+
+  // Title
+  const diff = data.weight - data.target;
+  const goalLabels = { lose_weight:'Weight Loss', lose_fast:'Aggressive Fat Loss', build_muscle:'Muscle Building', energy:'Energy Boost', health:'Health Optimization', maintain:'Maintenance' };
+  document.getElementById('macroTitle').textContent = goalLabels[data.goal] || 'Keto Plan';
+  document.getElementById('macroSub').textContent   = diff > 0 ? `Goal: lose ${diff} lbs · estimated ${Math.ceil(diff/1.1)} weeks` : 'Maintain and optimize your body';
+
+  // Insights
+  buildInsights();
+}
+
+function buildInsights() {
+  const { goal, activity, fasting, weight, target, calories, gender } = data;
+  const diff = weight - target;
+  const weeksToGoal = diff > 0 ? Math.ceil(diff / 1.1) : null; // ~1.1 lbs/week on keto
+
+  const items = [
+    {
+      color: '#10b981',
+      text: `Your daily keto target is <strong>${data.calories.toLocaleString()} kcal</strong> — ${data.calories < 1600 ? 'aggressive cut' : data.calories < 2000 ? 'moderate deficit' : 'maintenance zone'} for your goal.`
+    },
+    {
+      color: '#3b82f6',
+      text: `Eat <strong>${data.protein}g protein/day</strong> to preserve muscle while burning fat. Aim for ${Math.round(data.protein / (gender === 'male' ? 3 : 2.5))} servings of meat or eggs.`
+    },
+    {
+      color: '#f59e0b',
+      text: `Keep net carbs under <strong>${data.carbs}g/day</strong> to stay in ketosis. Avoid bread, rice, sugar, and most fruits.`
+    },
+  ];
+
+  if (fasting && fasting !== 'none') {
+    const windows = { '16_8': '8-hour', '18_6': '6-hour', 'omad': '1-hour' };
+    items.push({
+      color: '#ef4444',
+      text: `With <strong>${fasting.replace('_',':')}</strong> fasting, eat all your meals within your ${windows[fasting]} window. This can accelerate fat loss by 15-30%.`
+    });
+  }
+
+  if (weeksToGoal) {
+    items.push({
+      color: '#8b5cf6',
+      text: `At this rate, you can reach your target weight in approximately <strong>${weeksToGoal} weeks</strong>. Consistency is everything.`
+    });
+  }
+
+  items.push({
+    color: '#06b6d4',
+    text: `Drink <strong>2.5–3.5L of water/day</strong> and supplement electrolytes in week 1 to prevent keto flu. This is the #1 reason people quit early.`
+  });
+
+  const grid = document.getElementById('insightsGrid');
+  grid.innerHTML = items.map(i => `
+    <div class="insight">
+      <div class="ins-dot" style="background:${i.color};box-shadow:0 0 6px ${i.color}88;"></div>
+      <div class="ins-text">${i.text}</div>
+    </div>
+  `).join('');
+}
+
+/* ══════════════ SAVE ══════════════ */
+async function saveAndStart() {
+  const btn = document.getElementById('next6');
+  const spin = document.getElementById('saveSpin');
+  const txt = document.getElementById('saveTxt');
+  btn.disabled = true;
+  spin.style.display = 'block';
+  txt.textContent = 'Saving…';
+
+  // Convert imperial → metric for storage (height: total inches → cm, weight: lbs → kg)
+  const heightCmCalc    = Math.round(data.height * 2.54);
+  const weightKgCalc    = Math.round((data.weight  / 2.20462) * 10) / 10;
+  const targetKgCalc    = Math.round((data.target  / 2.20462) * 10) / 10;
+
+  const payload = {
+    goal:         data.goal,
+    age:          data.age,
+    gender:       data.gender,
+    height_cm:    heightCmCalc,
+    current_weight: weightKgCalc,
+    target_weight: targetKgCalc,
+    activity_level: data.activity,
+    dietary_restrictions: data.diet,
+    cook_time_pref: data.cooktime,
+    fasting_protocol: data.fasting,
+    feature_electrolytes: data.electrolytes,
+    feature_checkin:      data.checkin,
+    feature_report:       data.report,
+    feature_reminders:    data.reminders,
+    // Calculated macros
+    tdee:         data.tdee,
+    daily_calories: data.calories,
+    protein_g:    data.protein,
+    fat_g:        data.fat,
+    carbs_g:      data.carbs,
+  };
+
+  try {
+    const res = await fetch('/api/onboarding/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Failed to save');
+
+    // Show success overlay
+    const overlay = document.getElementById('successOverlay');
+    overlay.classList.add('show');
+    setTimeout(() => {
+      document.getElementById('successFill').style.width = '100%';
+    }, 200);
+    setTimeout(() => {
+      window.location.href = '/dashboard?welcome=1';
+    }, 3200);
+
+  } catch (err) {
+    btn.disabled = false;
+    spin.style.display = 'none';
+    txt.textContent = '🚀 Start My Journey';
+    alert('Something went wrong. Please try again.');
+  }
+}
+
+/* ══════════════ EXPOSE GLOBALS ══════════════ */
+window.selectOpt   = selectOpt;
+window.toggleMulti = toggleMulti;
+window.adjust      = adjust;
+window.nextStep    = nextStep;
+window.prevStep    = prevStep;
+window.saveAndStart= saveAndStart;
+
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/daily-push?morning=true",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/daily-push?morning=false",
+      "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/expire-subscriptions",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}

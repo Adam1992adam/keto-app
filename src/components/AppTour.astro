@@ -1,0 +1,212 @@
+---
+// src/components/AppTour.astro
+// Interactive guided tour — auto-starts for first-time visitors,
+// re-triggers when ?tour=1 is in the URL (from Learn page)
+interface Props {
+  userName?: string;
+}
+const { userName = 'there' } = Astro.props;
+---
+
+<!-- Pass server prop to client -->
+<script is:inline define:vars={{ __tn: userName }}>
+window.__tourUserName = __tn;
+</script>
+
+<!-- Tour engine (Vite-bundled, can use ES imports) -->
+<script>
+import { driver } from 'driver.js';
+import 'driver.js/dist/driver.css';
+
+function startTour() {
+  var name = (window as any).__tourUserName || 'there';
+
+  var d = driver({
+    showProgress: true,
+    progressText: '{{current}} of {{total}}',
+    nextBtnText: 'Next →',
+    prevBtnText: '← Back',
+    doneBtnText: "Let's go! 🚀",
+    animate: true,
+    smoothScroll: true,
+    stagePadding: 12,
+    stageRadius: 18,
+    popoverClass: 'keto-tour-popover',
+    onDestroyed: function () {
+      localStorage.setItem('keto-tour-v1', 'done');
+    },
+    steps: [
+      {
+        popover: {
+          title: 'Welcome to Keto Journey! 👋',
+          description:
+            'Hey <strong>' + name + '</strong>! Let\'s take a quick 60-second tour of your dashboard so you know exactly where everything is.',
+        },
+      },
+      {
+        element: '#tour-stats',
+        popover: {
+          title: 'Your Daily Stats',
+          description:
+            'These 4 cards show your most important metrics: weight lost, current streak, XP level, and days remaining. They update automatically every day.',
+          side: 'bottom',
+          align: 'start',
+        },
+      },
+      {
+        element: '#tour-quick-actions',
+        popover: {
+          title: 'Start Here Every Morning',
+          description:
+            'Your daily routine at a glance. Tap <strong>Check-in</strong> first, then log your weight and review your meals. Every action earns XP.',
+          side: 'bottom',
+          align: 'start',
+        },
+      },
+      {
+        element: '#tour-tasks',
+        popover: {
+          title: 'Daily Tasks → XP → Level Up',
+          description:
+            'Complete these tasks each day to earn XP, build your streak, and level up. Tasks are personalized for your current day in the program.',
+          side: 'top',
+          align: 'start',
+        },
+      },
+      {
+        element: '#tour-meals',
+        popover: {
+          title: 'Your Personalized Meal Plan',
+          description:
+            'Keto meals tailored to your dietary preferences and plan tier. Tap any meal card to see the full recipe with step-by-step instructions and nutrition.',
+          side: 'top',
+          align: 'start',
+        },
+      },
+      {
+        element: '.dn-tabs',
+        popover: {
+          title: 'Navigate All Features',
+          description:
+            'Use the top menu to access every feature: Progress charts, Fasting timer, Habits, Shopping list, Recipes, and more. On mobile, use the bottom bar.',
+          side: 'bottom',
+          align: 'start',
+        },
+      },
+      {
+        popover: {
+          title: "You're all set! 🎉",
+          description:
+            'Start with your <strong>first check-in</strong> to earn XP and set your baseline. You can re-run this tour anytime from <strong>More → Learn & Help</strong>.',
+        },
+      },
+    ],
+  });
+
+  d.drive();
+}
+
+// Force restart if navigated from Learn page with ?tour=1
+if (typeof window !== 'undefined') {
+  if (new URLSearchParams(window.location.search).get('tour') === '1') {
+    localStorage.removeItem('keto-tour-v1');
+    // Clean URL without reload
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+  // Auto-start for first-time visitors
+  if (!localStorage.getItem('keto-tour-v1')) {
+    setTimeout(startTour, 1100);
+  }
+  // Expose globally so Learn page can trigger it
+  (window as any).__startTour = startTour;
+}
+</script>
+
+<style is:global>
+/* ══ Driver.js — Keto Journey custom tour theme ═══════════════ */
+.driver-popover.keto-tour-popover {
+  background: var(--card, #0d1a0f) !important;
+  border: 1px solid var(--border2, rgba(16,185,129,.35)) !important;
+  border-radius: 20px !important;
+  padding: 1.35rem 1.5rem 1.2rem !important;
+  box-shadow: 0 24px 64px rgba(0,0,0,.45), 0 0 0 1px rgba(16,185,129,.08) !important;
+  max-width: 340px !important;
+  font-family: 'DM Sans', sans-serif !important;
+  color: var(--text, #dfeedd) !important;
+}
+.driver-popover.keto-tour-popover .driver-popover-title {
+  font-family: 'Fraunces', serif !important;
+  font-weight: 900 !important;
+  font-size: 1.05rem !important;
+  line-height: 1.2 !important;
+  color: var(--text, #dfeedd) !important;
+  margin-bottom: .5rem !important;
+  padding-right: 1.5rem !important;
+}
+.driver-popover.keto-tour-popover .driver-popover-description {
+  font-size: .83rem !important;
+  color: var(--soft, #4d7055) !important;
+  line-height: 1.65 !important;
+}
+.driver-popover.keto-tour-popover .driver-popover-description strong {
+  color: var(--green, #10b981) !important;
+  font-weight: 700 !important;
+}
+.driver-popover.keto-tour-popover .driver-popover-description a {
+  color: var(--green, #10b981) !important;
+  text-decoration: underline !important;
+}
+.driver-popover.keto-tour-popover .driver-popover-progress-text {
+  font-size: .68rem !important;
+  font-weight: 800 !important;
+  letter-spacing: .07em !important;
+  text-transform: uppercase !important;
+  color: var(--soft, #4d7055) !important;
+}
+.driver-popover.keto-tour-popover .driver-popover-footer {
+  margin-top: .9rem !important;
+  gap: .4rem !important;
+}
+.driver-popover.keto-tour-popover .driver-popover-prev-btn,
+.driver-popover.keto-tour-popover .driver-popover-next-btn,
+.driver-popover.keto-tour-popover .driver-popover-done-btn {
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: .78rem !important;
+  font-weight: 700 !important;
+  padding: .44rem 1rem !important;
+  border-radius: 10px !important;
+  border: 1px solid transparent !important;
+  cursor: pointer !important;
+  transition: transform .15s ease, opacity .15s ease !important;
+}
+.driver-popover.keto-tour-popover .driver-popover-prev-btn {
+  background: var(--muted, rgba(255,255,255,.06)) !important;
+  color: var(--soft, #4d7055) !important;
+  border-color: var(--border, rgba(16,185,129,.1)) !important;
+}
+.driver-popover.keto-tour-popover .driver-popover-next-btn,
+.driver-popover.keto-tour-popover .driver-popover-done-btn {
+  background: linear-gradient(135deg, var(--green, #10b981), var(--green2, #34d399)) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 14px rgba(16,185,129,.35) !important;
+}
+.driver-popover.keto-tour-popover .driver-popover-next-btn:hover,
+.driver-popover.keto-tour-popover .driver-popover-done-btn:hover {
+  transform: translateY(-1px) scale(1.02) !important;
+}
+.driver-popover.keto-tour-popover .driver-popover-close-btn {
+  color: var(--soft, #4d7055) !important;
+  opacity: .7 !important;
+  transition: opacity .15s !important;
+  background: none !important;
+  border: none !important;
+  font-size: 1.15rem !important;
+}
+.driver-popover.keto-tour-popover .driver-popover-close-btn:hover {
+  opacity: 1 !important;
+}
+/* Stage highlight ring */
+.driver-active .driver-overlay {
+  background: rgba(0,0,0,.65) !important;
+}
+</style>

@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
 
 // ═══════════════════════════════════════
-// ADMIN SIGNUP — بدون التحقق من Payhip
-// يُستخدم فقط لإنشاء حسابات الأدمن
+// ADMIN SIGNUP — no purchase verification required
+// Used only for creating admin accounts
 // ═══════════════════════════════════════
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -57,7 +57,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .from('profiles')
       .select('id')
       .eq('email', cleanEmail)
-      .single();
+      .maybeSingle();
 
     if (existingUser) {
       return new Response(JSON.stringify({ error: 'Email already registered' }), {

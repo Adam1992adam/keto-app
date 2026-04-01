@@ -14,7 +14,7 @@ if (!profile?.is_admin) return Astro.redirect('/dashboard');
 
 // Layer 2: Check admin session
 const adminSession = Astro.cookies.get('admin-session')?.value;
-if (adminSession !== 'verified') {
+if (adminSession !== 'authenticated') {
   return Astro.redirect('/admin-login');
 }
 
@@ -32,24 +32,23 @@ const avgDay = allDays.length > 0 ? Math.round(allDays.reduce((a,b) => a+b, 0) /
 const completed30 = allJourneys?.filter(j => (j.current_day || 0) >= 30).length || 0;
 
 // Monthly Signups
-const monthlySignups = [];
-for (let i = 5; i >= 0; i--) {
+const monthlySignups = Array.from({ length: 6 }, (_, idx) => {
   const date = new Date();
-  date.setMonth(date.getMonth() - i);
+  date.setMonth(date.getMonth() - (5 - idx));
   const month = date.toLocaleString('en-US', { month: 'short' });
   const count = allUsers?.filter(u => {
     const created = new Date(u.created_at);
     return created.getMonth() === date.getMonth() && created.getFullYear() === date.getFullYear();
   }).length || 0;
-  monthlySignups.push({ month, count });
-}
+  return { month, count };
+});
 
 // Day Distribution
-const dayDistribution = [];
-for (let day = 1; day <= 30; day++) {
+const dayDistribution = Array.from({ length: 30 }, (_, idx) => {
+  const day = idx + 1;
   const count = allJourneys?.filter(j => (j.current_day || 0) === day).length || 0;
-  dayDistribution.push({ day, count });
-}
+  return { day, count };
+});
 
 // Plan Counts
 const planCounts = {

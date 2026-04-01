@@ -9,8 +9,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
   try {
     const { id, email, tier } = await request.json();
 
-    // @ts-ignore
-    const env = locals?.runtime?.env || {};
+    const env = (locals as any)?.runtime?.env || {};
     const SUPABASE_URL = env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
     const SUPABASE_KEY = env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 

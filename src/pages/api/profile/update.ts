@@ -3,36 +3,19 @@ import { supabase } from '../../../lib/supabase';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    // 1. جلب التوكنات من الكوكيز
     const accessToken = cookies.get('sb-access-token')?.value;
     const refreshToken = cookies.get('sb-refresh-token')?.value;
 
-    if (!accessToken) {
-      return new Response(JSON.stringify({ error: 'Session expired. Please login again.' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    if (!accessToken) return json({ error: 'Session expired. Please login again.' }, 401);
 
-    // 2. تعيين الجلسة يدوياً (هذا يحل مشكلة الـ ECONNRESET غالباً)
+    // Set session manually to avoid ECONNRESET issues
     if (refreshToken) {
-        await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken
-        });
+      await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
     }
 
-    // 3. التحقق من المستخدم
     const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken);
-    
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized - Invalid session' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    if (authError || !user) return json({ error: 'Unauthorized' }, 401);
 
-    // 4. جلب البيانات من الطلب
     const body = await request.json();
     const { full_name, weight_kg, height_cm, target_weight_kg } = body;
 
@@ -42,7 +25,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (height_cm !== undefined) updateData.height_cm = parseInt(height_cm);
     if (target_weight_kg !== undefined) updateData.target_weight_kg = parseFloat(target_weight_kg);
 
-    // 5. تحديث قاعدة البيانات
     const { data, error } = await supabase
       .from('profiles')
       .update(updateData)
@@ -50,34 +32,30 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .select()
       .single();
 
-    if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    if (error) return json({ error: error.message }, 500);
 
-    // 6. تسجيل الوزن إذا تم تغييره (مع منع التكرار في نفس اليوم)
+    // Also log weight if changed (upsert to avoid duplicates on same day)
     if (weight_kg !== undefined) {
       await supabase
         .from('weight_logs')
         .upsert({
           user_id: user.id,
-          weight_kg: parseFloat(weight_kg),
-          date: new Date().toISOString().split('T')[0]
-        }, { onConflict: 'user_id,date' });
+          weight: parseFloat(weight_kg),
+          logged_date: new Date().toISOString().split('T')[0],
+        }, { onConflict: 'user_id,logged_date' });
     }
 
-    return new Response(JSON.stringify({ success: true, data }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return json({ success: true, data });
 
-  } catch (error: any) {
-    console.error('Update error:', error);
-    return new Response(JSON.stringify({ error: 'Server error', details: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+  } catch (err: any) {
+    console.error('Profile update error:', err);
+    return json({ error: 'Server error', details: err.message }, 500);
   }
 };
+
+function json(data: any, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}

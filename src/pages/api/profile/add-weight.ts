@@ -1,78 +1,78 @@
 import type { APIRoute } from 'astro';
 import { supabase } from '../../../lib/supabase';
+import { autoCompleteTask, checkAchievements } from '../../../lib/autoTask';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     const accessToken = cookies.get('sb-access-token')?.value;
-    if (!accessToken) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-    }
+    if (!accessToken) return json({ error: 'Unauthorized' }, 401);
 
     const { data: { user } } = await supabase.auth.getUser(accessToken);
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-    }
+    if (!user) return json({ error: 'Unauthorized' }, 401);
 
     const body = await request.json();
-    
-    // Add weight log
+    // Accept both field name variants: weight/weight_kg, logged_date/date
+    const weight = parseFloat(body.weight ?? body.weight_kg);
+    const logged_date = body.logged_date || body.date || new Date().toISOString().split('T')[0];
+
+    if (isNaN(weight) || weight <= 0) return json({ error: 'Invalid weight value' }, 400);
+
     const { error: logError } = await supabase
       .from('weight_logs')
-      .upsert({
-        user_id: user.id,
-        weight_kg: parseFloat(body.weight_kg),
-        date: body.date,
-        notes: body.notes || null
-      }, {
-        onConflict: 'user_id,date'
-      });
+      .upsert(
+        { user_id: user.id, weight, logged_date, notes: body.notes || null },
+        { onConflict: 'user_id,logged_date' }
+      );
 
     if (logError) {
       console.error('Weight log error:', logError);
-      return new Response(JSON.stringify({ error: 'Failed to add weight' }), { status: 500 });
+      return json({ error: 'Failed to add weight' }, 500);
     }
 
-    // Update profile current weight
+    // Keep profile weight in sync
     await supabase
       .from('profiles')
-      .update({
-        weight_kg: parseFloat(body.weight_kg),
-        updated_at: new Date().toISOString()
-      })
+      .update({ weight_kg: weight, updated_at: new Date().toISOString() })
       .eq('id', user.id);
 
-    // Check for achievements
+    // Check weight-loss achievements
     const { data: logs } = await supabase
       .from('weight_logs')
-      .select('*')
+      .select('weight')
       .eq('user_id', user.id)
-      .order('date', { ascending: true });
+      .order('logged_date', { ascending: true });
 
     if (logs && logs.length >= 2) {
-      const firstWeight = logs[0].weight_kg;
-      const currentWeight = parseFloat(body.weight_kg);
-      const weightLost = firstWeight - currentWeight;
-
+      const weightLost = logs[0].weight - weight;
       if (weightLost >= 1) {
-        await supabase.from('achievements').upsert({
-          user_id: user.id,
-          achievement_type: 'weight_loss_1kg',
-          achievement_name: 'First Kilo Lost'
-        }, { onConflict: 'user_id,achievement_type,achievement_name' });
+        await supabase.from('achievements').upsert(
+          { user_id: user.id, achievement_type: 'weight_loss_1kg', achievement_name: 'First Kilo Lost' },
+          { onConflict: 'user_id,achievement_type,achievement_name' }
+        );
       }
-
       if (weightLost >= 5) {
-        await supabase.from('achievements').upsert({
-          user_id: user.id,
-          achievement_type: 'weight_loss_5kg',
-          achievement_name: 'Five Kilos Down'
-        }, { onConflict: 'user_id,achievement_type,achievement_name' });
+        await supabase.from('achievements').upsert(
+          { user_id: user.id, achievement_type: 'weight_loss_5kg', achievement_name: 'Five Kilos Down' },
+          { onConflict: 'user_id,achievement_type,achievement_name' }
+        );
       }
     }
 
-    return new Response(JSON.stringify({ success: true }), { status: 200 });
-  } catch (error) {
-    console.error('Add weight error:', error);
-    return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
+    // Auto-complete the 'weight' daily task
+    const { data: uj } = await supabase.from('user_journey').select('current_day').eq('user_id', user.id).single();
+    if (uj) await autoCompleteTask(user.id, 'weight', uj.current_day);
+
+    checkAchievements(user.id, accessToken); // fire-and-forget
+    return json({ success: true });
+  } catch (err) {
+    console.error('Add weight error:', err);
+    return json({ error: 'Server error' }, 500);
   }
 };
+
+function json(data: any, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}

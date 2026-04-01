@@ -1,0 +1,550 @@
+---
+// src/components/NotificationsBell.astro
+// يُضاف في كل navbar: <NotificationsBell userId={user.id} />
+const { userId } = Astro.props;
+---
+
+<!-- BELL BUTTON -->
+<div class="nb-wrap" id="nbWrap">
+  <button class="nb-btn" id="nbBtn" title="Notifications" aria-label="Notifications">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </svg>
+    <span class="nb-badge" id="nbBadge" style="display:none;">0</span>
+  </button>
+
+  <!-- PANEL -->
+  <div class="nb-panel" id="nbPanel">
+
+    <!-- Header -->
+    <div class="nb-header">
+      <div class="nb-header-left">
+        <span class="nb-title">Notifications</span>
+        <span class="nb-count" id="nbCountLabel">0 new</span>
+      </div>
+      <div class="nb-header-right">
+        <button class="nb-hbtn" id="nbMarkAll" title="Mark all as read">✓ All read</button>
+        <button class="nb-hbtn nb-hbtn-dismiss" id="nbClearAll" title="Clear all">🗑️</button>
+      </div>
+    </div>
+
+    <!-- Push permission banner -->
+    <div id="nbPushBtn" style="display:none;align-items:center;gap:.7rem;padding:.75rem 1.2rem;margin:.6rem .6rem .2rem;border-radius:14px;background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(16,185,129,.06));border:1px solid rgba(16,185,129,.2);cursor:pointer;transition:all .2s;">
+      <div style="width:34px;height:34px;border-radius:10px;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.25);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">🔔</div>
+      <div style="flex:1;">
+        <div style="font-size:.75rem;font-weight:700;color:#10b981;margin-bottom:.1rem;">Enable Meal Reminders</div>
+        <div style="font-size:.67rem;color:#4d7055;line-height:1.4;">Get notified at breakfast, lunch &amp; dinner time</div>
+      </div>
+      <span style="font-size:.65rem;font-weight:800;color:#10b981;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.25);padding:.25rem .6rem;border-radius:99px;white-space:nowrap;">Enable →</span>
+    </div>
+
+    <!-- Loading state -->
+    <div class="nb-loading" id="nbLoading">
+      <div class="nb-spinner"></div>
+      <span>Loading notifications…</span>
+    </div>
+
+    <!-- Empty state -->
+    <div class="nb-empty" id="nbEmpty" style="display:none;">
+      <div class="nb-empty-icon">🎉</div>
+      <div class="nb-empty-title">All caught up!</div>
+      <div class="nb-empty-sub">No new notifications</div>
+    </div>
+
+    <!-- Notifications list -->
+    <div class="nb-list" id="nbList" style="display:none;"></div>
+
+    <!-- Footer -->
+    <div class="nb-footer" id="nbFooter" style="display:none;">
+      <button class="nb-refresh" id="nbRefresh">🔄 Refresh</button>
+    </div>
+
+  </div>
+</div>
+
+<style is:global>
+  /* ── BELL BUTTON ── */
+  .nb-wrap { position: relative; }
+  .nb-btn {
+    width: 35px; height: 35px; border-radius: 9px;
+    background: var(--card, #0d1a0f);
+    border: 1px solid var(--border, rgba(16,185,129,.11));
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--soft, #4e724e);
+    transition: all .22s; position: relative;
+  }
+  .nb-btn:hover { border-color: var(--border2, rgba(16,185,129,.28)); color: var(--green, #10b981); }
+  .nb-btn.has-unread { color: var(--green, #10b981); border-color: rgba(16,185,129,.3); animation: bellShake 3s ease-in-out infinite; }
+  @keyframes bellShake {
+    0%,100%{transform:rotate(0);} 5%{transform:rotate(12deg);} 10%{transform:rotate(-12deg);}
+    15%{transform:rotate(8deg);} 20%{transform:rotate(-8deg);} 25%{transform:rotate(0);}
+  }
+
+  /* Badge */
+  .nb-badge {
+    position: absolute; top: -5px; right: -5px;
+    min-width: 18px; height: 18px; border-radius: 99px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff; font-size: .62rem; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 4px; border: 2px solid var(--bg, #060c08);
+    animation: badgePop .3s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes badgePop { from{transform:scale(0);} to{transform:scale(1);} }
+
+  /* ── PANEL ── */
+  .nb-panel {
+    position: absolute; top: calc(100% + 12px); right: 0; z-index: 300;
+    width: 380px; max-height: 540px;
+    background: #0a1610;
+    border: 1px solid rgba(16,185,129,.22);
+    border-radius: 22px;
+    box-shadow: 0 32px 80px rgba(0,0,0,.65), 0 0 0 1px rgba(16,185,129,.06), inset 0 1px 0 rgba(255,255,255,.04);
+    display: none; flex-direction: column; overflow: hidden;
+    animation: panelDrop .22s cubic-bezier(.34,1.56,.64,1);
+  }
+  .nb-panel.open { display: flex; }
+  @keyframes panelDrop { from{opacity:0;transform:translateY(-10px) scale(.95);} to{opacity:1;transform:translateY(0) scale(1);} }
+  @media(max-width:480px){ .nb-panel{ width:calc(100vw - 2rem); right:-1rem; } }
+
+  /* Header */
+  .nb-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.2rem .85rem; flex-shrink: 0;
+    border-bottom: 1px solid rgba(16,185,129,.1);
+    background: linear-gradient(135deg, rgba(16,185,129,.07) 0%, transparent 60%);
+  }
+  .nb-header-left { display: flex; align-items: center; gap: .55rem; }
+  .nb-title { font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 700; color: #dfeedd; letter-spacing: -.01em; }
+  .nb-count {
+    font-size: .65rem; font-weight: 800; padding: .18rem .55rem; border-radius: 99px;
+    background: rgba(16,185,129,.15); color: #10b981; letter-spacing: .02em; text-transform: uppercase;
+  }
+  .nb-header-right { display: flex; gap: .3rem; }
+  .nb-hbtn {
+    font-size: .68rem; font-weight: 700; padding: .3rem .7rem; border-radius: 9px;
+    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+    color: #4d7055; cursor: pointer; transition: all .18s;
+  }
+  .nb-hbtn:hover { background: rgba(16,185,129,.1); border-color: rgba(16,185,129,.25); color: #10b981; }
+  .nb-hbtn-dismiss:hover { background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.3); color: #f87171; }
+
+  /* Loading */
+  .nb-loading {
+    display: flex; align-items: center; justify-content: center;
+    gap: .75rem; padding: 3rem 1rem; color: #4d7055; font-size: .82rem;
+  }
+  .nb-spinner {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid rgba(16,185,129,.12); border-top-color: #10b981;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Empty */
+  .nb-empty { text-align: center; padding: 3rem 1.5rem; }
+  .nb-empty-icon { font-size: 2.8rem; margin-bottom: .75rem; line-height: 1; }
+  .nb-empty-title { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 700; color: #dfeedd; margin-bottom: .3rem; }
+  .nb-empty-sub { font-size: .78rem; color: #4d7055; }
+
+  /* List */
+  .nb-list { flex: 1; overflow-y: auto; padding: .5rem .65rem .65rem; display: flex; flex-direction: column; gap: .45rem; }
+  .nb-list::-webkit-scrollbar { width: 3px; }
+  .nb-list::-webkit-scrollbar-track { background: transparent; }
+  .nb-list::-webkit-scrollbar-thumb { background: rgba(16,185,129,.15); border-radius: 99px; }
+
+  /* Notification Card */
+  .nb-item {
+    display: flex; align-items: flex-start; gap: .9rem;
+    padding: .9rem 1rem .85rem;
+    border-radius: 16px;
+    border: 1px solid var(--nb-border, rgba(16,185,129,.15));
+    background: var(--nb-bg, rgba(16,185,129,.06));
+    cursor: pointer; position: relative;
+    transition: transform .15s, box-shadow .15s, filter .15s;
+    text-decoration: none; color: inherit;
+  }
+  .nb-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,.3);
+    filter: brightness(1.08);
+  }
+  .nb-item:not(.unread) {
+    background: rgba(255,255,255,.02);
+    border-color: rgba(255,255,255,.06);
+    opacity: .72;
+  }
+  .nb-item.unread {
+    box-shadow: 0 2px 12px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.04);
+  }
+
+  /* Icon circle */
+  .nb-ico {
+    width: 42px; height: 42px; border-radius: 13px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem; margin-top: .05rem;
+    border: 1px solid var(--nb-border, rgba(16,185,129,.2));
+    background: var(--nb-bg2, rgba(16,185,129,.1));
+  }
+
+  /* Content */
+  .nb-content { flex: 1; min-width: 0; padding-right: 1.2rem; }
+  .nb-item-title {
+    font-size: .84rem; font-weight: 700; margin-bottom: .22rem; line-height: 1.3;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    color: #dfeedd;
+  }
+  .nb-item:not(.unread) .nb-item-title { color: #4d7055; }
+  .nb-item-body {
+    font-size: .72rem; color: #4d7055; line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    margin-bottom: .45rem;
+  }
+  .nb-item-meta { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+  .nb-item-time { font-size: .63rem; color: #4d7055; opacity: .55; }
+
+  /* Action pill */
+  .nb-item-action {
+    font-size: .65rem; font-weight: 800; padding: .2rem .65rem; border-radius: 99px;
+    text-decoration: none; transition: filter .15s; white-space: nowrap;
+  }
+  .nb-item-action:hover { filter: brightness(1.25); }
+
+  /* Urgent badge */
+  .nb-urgent-tag {
+    font-size: .58rem; font-weight: 900; padding: .15rem .45rem; border-radius: 5px;
+    background: rgba(239,68,68,.15); color: #f87171; letter-spacing: .05em; text-transform: uppercase;
+  }
+
+  /* Dismiss X */
+  .nb-dismiss {
+    position: absolute; top: .6rem; right: .6rem;
+    width: 20px; height: 20px; border-radius: 6px;
+    background: rgba(0,0,0,.2); border: 1px solid rgba(255,255,255,.08);
+    color: #4d7055; font-size: .75rem; cursor: pointer; line-height: 1;
+    display: none; align-items: center; justify-content: center; transition: all .15s;
+  }
+  .nb-item:hover .nb-dismiss { display: flex; }
+  .nb-dismiss:hover { background: rgba(239,68,68,.2); border-color: rgba(239,68,68,.35); color: #fca5a5; }
+
+  /* Footer */
+  .nb-footer {
+    padding: .65rem 1.2rem; border-top: 1px solid rgba(16,185,129,.08);
+    display: flex; justify-content: center; flex-shrink: 0;
+    background: rgba(16,185,129,.02);
+  }
+  .nb-refresh {
+    font-size: .72rem; font-weight: 700; color: #4d7055;
+    background: none; border: none; cursor: pointer; padding: .3rem .85rem;
+    border-radius: 99px; transition: all .18s; letter-spacing: .01em;
+  }
+  .nb-refresh:hover { color: #10b981; background: rgba(16,185,129,.1); }
+</style>
+
+<script is:inline>
+(function() {
+  const btn      = document.getElementById('nbBtn');
+  const panel    = document.getElementById('nbPanel');
+  const badge    = document.getElementById('nbBadge');
+  const list     = document.getElementById('nbList');
+  const loading  = document.getElementById('nbLoading');
+  const empty    = document.getElementById('nbEmpty');
+  const footer   = document.getElementById('nbFooter');
+  const countLbl = document.getElementById('nbCountLabel');
+  const markAll  = document.getElementById('nbMarkAll');
+  const clearAll = document.getElementById('nbClearAll');
+  const refresh  = document.getElementById('nbRefresh');
+
+  let loaded = false;
+  let notifications = [];
+
+  // ── Open / Close ──────────────────────────────────────────
+  btn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    panel?.classList.toggle('open');
+    if (panel?.classList.contains('open') && !loaded) {
+      generateAndLoad();
+    }
+  });
+  document.addEventListener('click', (e) => {
+    if (!document.getElementById('nbWrap')?.contains(e.target)) {
+      panel?.classList.remove('open');
+    }
+  });
+
+  // ── Generate then Load ────────────────────────────────────
+  async function generateAndLoad() {
+    showLoading(true);
+    try {
+      // Generate smart notifications first
+      await fetch('/api/notifications/generate', { method: 'POST' });
+    } catch {}
+    await loadNotifications();
+  }
+
+  // ── Load notifications ────────────────────────────────────
+  async function loadNotifications() {
+    showLoading(true);
+    loaded = true;
+    try {
+      const res  = await fetch('/api/notifications?limit=25');
+      const data = await res.json();
+      notifications = data.notifications || [];
+      renderNotifications();
+      updateBadge(data.unreadCount || 0);
+    } catch {
+      showLoading(false);
+      if (list) { list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--soft);font-size:.82rem;">Failed to load. Try refreshing.</div>'; list.style.display = 'block'; }
+    }
+  }
+
+  // ── Type → color theme ────────────────────────────────────
+  function typeTheme(type, priority) {
+    var T = {
+      red:    { c:'#ef4444', card:'rgba(239,68,68,.09)',   card2:'rgba(239,68,68,.14)',  border:'rgba(239,68,68,.22)',  ac:'rgba(239,68,68,.15)',  ab:'rgba(239,68,68,.3)',  aColor:'#f87171' },
+      gold:   { c:'#f59e0b', card:'rgba(245,158,11,.09)',  card2:'rgba(245,158,11,.15)', border:'rgba(245,158,11,.22)', ac:'rgba(245,158,11,.14)', ab:'rgba(245,158,11,.3)', aColor:'#fbbf24' },
+      purple: { c:'#8b5cf6', card:'rgba(139,92,246,.09)',  card2:'rgba(139,92,246,.14)', border:'rgba(139,92,246,.22)', ac:'rgba(139,92,246,.14)', ab:'rgba(139,92,246,.3)', aColor:'#a78bfa' },
+      blue:   { c:'#3b82f6', card:'rgba(59,130,246,.09)',  card2:'rgba(59,130,246,.14)', border:'rgba(59,130,246,.22)', ac:'rgba(59,130,246,.14)', ab:'rgba(59,130,246,.3)', aColor:'#60a5fa' },
+      cyan:   { c:'#06b6d4', card:'rgba(6,182,212,.09)',   card2:'rgba(6,182,212,.14)',  border:'rgba(6,182,212,.22)',  ac:'rgba(6,182,212,.14)',  ab:'rgba(6,182,212,.3)',  aColor:'#22d3ee' },
+      green:  { c:'#10b981', card:'rgba(16,185,129,.09)',  card2:'rgba(16,185,129,.14)', border:'rgba(16,185,129,.2)',  ac:'rgba(16,185,129,.13)', ab:'rgba(16,185,129,.28)',aColor:'#34d399' },
+    };
+    if (priority === 'urgent' || type === 'streak_warning') return T.red;
+    if (type.startsWith('streak_') || type.startsWith('milestone_')) return T.gold;
+    if (type.startsWith('level_up_')) return T.purple;
+    if (type === 'incomplete_tasks') return T.blue;
+    if (type === 'fasting_active' || type === 'energy_trend') return T.purple;
+    if (type === 'low_water' || type === 'weekly_review' || type === 'weight_reminder') return T.cyan;
+    return T.green; // checkin, welcome, day1, weight_progress, meal_*
+  }
+
+  // ── Render ────────────────────────────────────────────────
+  function renderNotifications() {
+    showLoading(false);
+    if (!list) return;
+
+    const active = notifications.filter(n => !n.is_dismissed);
+    if (active.length === 0) {
+      if (empty) empty.style.display = 'block';
+      list.style.display = 'none';
+      if (footer) footer.style.display = 'none';
+      if (countLbl) countLbl.textContent = '0 new';
+      return;
+    }
+
+    if (empty) empty.style.display = 'none';
+    list.style.display = 'block';
+    if (footer) footer.style.display = 'flex';
+
+    const unread = active.filter(n => !n.is_read).length;
+    if (countLbl) countLbl.textContent = unread > 0 ? `${unread} new` : 'All read';
+
+    list.innerHTML = active.map(n => {
+      var t = typeTheme(n.type, n.priority);
+      var isUnread = !n.is_read;
+      return `
+      <div class="nb-item ${isUnread ? 'unread' : ''}"
+           data-id="${n.id}"
+           style="--nb-bg:${t.card};--nb-bg2:${t.card2};--nb-border:${t.border};"
+           onclick="handleNotifClick('${n.id}', '${n.action_url || ''}')">
+        <div class="nb-ico">${n.icon || '🔔'}</div>
+        <div class="nb-content">
+          <div class="nb-item-title">${escapeHtml(n.title)}</div>
+          <div class="nb-item-body">${escapeHtml(n.body)}</div>
+          <div class="nb-item-meta">
+            <span class="nb-item-time">${timeAgo(n.created_at)}</span>
+            ${n.action_label && n.action_url
+              ? `<a class="nb-item-action" href="${n.action_url}"
+                    style="background:${t.ac};border:1px solid ${t.ab};color:${t.aColor};"
+                    onclick="event.stopPropagation();">${escapeHtml(n.action_label)} →</a>`
+              : ''}
+            ${n.priority === 'urgent' ? '<span class="nb-urgent-tag">Urgent</span>' : ''}
+          </div>
+        </div>
+        <button class="nb-dismiss" onclick="event.stopPropagation();dismissNotif('${n.id}')" title="Dismiss">×</button>
+      </div>`
+    }).join('');
+  }
+
+  // ── Handlers ──────────────────────────────────────────────
+  window.handleNotifClick = async function(id, url) {
+    // Mark as read
+    await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'read', notificationId: id }),
+    });
+    // Update local state
+    const n = notifications.find(x => x.id === id);
+    if (n) n.is_read = true;
+    renderNotifications();
+    updateBadge(notifications.filter(x => !x.is_read && !x.is_dismissed).length);
+    // Navigate
+    if (url && url !== '') window.location.href = url;
+  };
+
+  window.dismissNotif = async function(id) {
+    await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'dismiss', notificationId: id }),
+    });
+    notifications = notifications.map(n => n.id === id ? { ...n, is_dismissed: true } : n);
+    renderNotifications();
+    updateBadge(notifications.filter(x => !x.is_read && !x.is_dismissed).length);
+  };
+
+  markAll?.addEventListener('click', async () => {
+    await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'read', all: true }),
+    });
+    notifications = notifications.map(n => ({ ...n, is_read: true }));
+    renderNotifications();
+    updateBadge(0);
+  });
+
+  clearAll?.addEventListener('click', async () => {
+    if (!confirm('Clear all notifications?')) return;
+    await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'dismiss_all' }),
+    });
+    notifications = [];
+    renderNotifications();
+    updateBadge(0);
+  });
+
+  refresh?.addEventListener('click', () => {
+    loaded = false;
+    generateAndLoad();
+  });
+
+  // ── Badge ─────────────────────────────────────────────────
+  function updateBadge(count) {
+    if (!badge || !btn) return;
+    if (count > 0) {
+      badge.textContent = count > 99 ? '99+' : String(count);
+      badge.style.display = 'flex';
+      btn.classList.add('has-unread');
+    } else {
+      badge.style.display = 'none';
+      btn.classList.remove('has-unread');
+    }
+  }
+
+  // ── Helpers ───────────────────────────────────────────────
+  function showLoading(show) {
+    if (loading) loading.style.display = show ? 'flex' : 'none';
+    if (list)    list.style.display    = show ? 'none' : '';
+    if (empty)   empty.style.display   = show ? 'none' : '';
+  }
+
+  function timeAgo(dateStr) {
+    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+    if (diff < 60)    return 'just now';
+    if (diff < 3600)  return `${Math.floor(diff/60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+    return `${Math.floor(diff/86400)}d ago`;
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Auto-load badge count on page load ───────────────────
+  async function quickBadgeCheck() {
+    try {
+      const res  = await fetch('/api/notifications?limit=1');
+      const data = await res.json();
+      updateBadge(data.unreadCount || 0);
+    } catch {}
+  }
+  quickBadgeCheck();
+
+  // ── Auto-refresh every 5 minutes ─────────────────────────
+  setInterval(() => {
+    if (!panel?.classList.contains('open')) {
+      loaded = false;
+      quickBadgeCheck();
+    }
+  }, 5 * 60 * 1000);
+
+  // ── Browser Push Permission ───────────────────────────────
+  async function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return null;
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      return reg;
+    } catch { return null; }
+  }
+
+  async function requestPushPermission() {
+    if (!('Notification' in window)) return;
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+      await registerServiceWorker();
+      showPushBtn(false);
+      showInlineNotif('🔔 Notifications enabled!');
+      scheduleMealNotifs();
+    }
+  }
+
+  function showPushBtn(show) {
+    const pb = document.getElementById('nbPushBtn');
+    if (pb) pb.style.display = show ? 'flex' : 'none';
+  }
+
+  function showInlineNotif(msg) {
+    var el = document.createElement('div');
+    el.style.cssText = 'position:fixed;top:4.5rem;right:1.5rem;z-index:9999;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;padding:.75rem 1.25rem;border-radius:12px;font-size:.82rem;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.3);';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(function() { el.remove(); }, 3000);
+  }
+
+  if ('Notification' in window && Notification.permission === 'default') {
+    showPushBtn(true);
+  }
+  if ('Notification' in window && Notification.permission === 'granted') {
+    registerServiceWorker();
+  }
+
+  document.getElementById('nbPushBtn')?.addEventListener('click', function(e) {
+    e.stopPropagation();
+    requestPushPermission();
+  });
+
+  // ── Meal-time browser notifications (tab-based) ───────────
+  function scheduleMealNotifs() {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    var LAST_KEY = 'keto-meal-notif-date';
+    var todayStr = new Date().toISOString().split('T')[0];
+    if (localStorage.getItem(LAST_KEY) === todayStr) return;
+    var now = new Date();
+    var meals = [
+      { h: 8,  title: '🍳 Time for Breakfast!',  body: 'Start your keto morning right — log your breakfast.' },
+      { h: 13, title: '🥗 Lunch Time!',           body: "Midday keto boost — don't forget to log your lunch." },
+      { h: 16, title: '🥜 Afternoon Snack',       body: 'A keto snack keeps cravings away. Log it in the app!' },
+      { h: 19, title: '🍽️ Dinner is Ready!',     body: 'Complete your macros with a satisfying keto dinner.' },
+    ];
+    meals.forEach(function(meal) {
+      var mealTime = new Date(); mealTime.setHours(meal.h, 0, 0, 0);
+      var ms = mealTime.getTime() - now.getTime();
+      if (ms > 0) {
+        setTimeout(function() {
+          if (Notification.permission === 'granted') {
+            new Notification(meal.title, { body: meal.body, icon: '/icon-192.png', tag: 'keto-meal-' + meal.h });
+          }
+        }, ms);
+      }
+    });
+    localStorage.setItem(LAST_KEY, todayStr);
+  }
+  scheduleMealNotifs();
+
+})();
+</script>

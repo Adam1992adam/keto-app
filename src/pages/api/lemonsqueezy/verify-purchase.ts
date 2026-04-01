@@ -1,9 +1,9 @@
 import type { APIRoute } from 'astro';
 
 // ═══════════════════════════════════════
-// VERIFY PURCHASE v5
-// يتحقق من pending_activations في Supabase
-// بدل Payhip API (غير متاح للمبيعات)
+// VERIFY PURCHASE
+// Checks pending_activations in Supabase
+// (populated by LemonSqueezy webhook)
 // ═══════════════════════════════════════
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -33,12 +33,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // ── 1. تحقق أن المستخدم غير مسجل مسبقاً ─
+    // ── 1. Check email not already registered ─
     const { data: existingProfile } = await supabase
       .from('profiles')
       .select('id, email, subscription_tier')
       .eq('email', email)
-      .single();
+      .maybeSingle();
 
     if (existingProfile) {
       return new Response(JSON.stringify({
@@ -52,7 +52,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // ── 2. ابحث في pending_activations ────────
+    // ── 2. Look up pending_activations ────────
     const { data: pending } = await supabase
       .from('pending_activations')
       .select('*')
@@ -60,7 +60,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .eq('activated', false)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (!pending) {
       return new Response(JSON.stringify({
@@ -74,7 +74,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // ── 3. شراء موجود ✅ ──────────────────────
+    // ── 3. Purchase found ✅ ──────────────────
     const tierDays: Record<string, number> = {
       basic_30:  30,
       pro_6:    180,
@@ -97,9 +97,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         email,
         tier,
         days,
-        start_date:  startDate.toISOString(),
-        end_date:    endDate.toISOString(),
-        sale_id:     pending.payhip_sale_id || '',
+        start_date: startDate.toISOString(),
+        end_date:   endDate.toISOString(),
+        sale_id:    pending.payhip_sale_id || pending.sale_id || '',
       },
     }), {
       status: 200,
@@ -119,7 +119,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 export const GET: APIRoute = async () => {
   return new Response(JSON.stringify({
-    message: 'Verify Purchase API v5',
+    message: 'Verify Purchase API',
     usage:   'POST {"email":"buyer@example.com"}',
   }), {
     status: 200,

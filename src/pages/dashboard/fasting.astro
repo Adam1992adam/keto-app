@@ -1,0 +1,1216 @@
+---
+// src/pages/dashboard/fasting.astro
+import { supabase, getUserJourney } from '../../lib/supabase';
+import { requireAuth } from '../../lib/auth';
+import DashNav from '../../components/DashNav.astro';
+import Timer from 'lucide-astro/Timer';
+import Flame from 'lucide-astro/Flame';
+import Zap from 'lucide-astro/Zap';
+import Target from 'lucide-astro/Target';
+import Clock from 'lucide-astro/Clock';
+import TrendingUp from 'lucide-astro/TrendingUp';
+import Award from 'lucide-astro/Award';
+import CheckCircle from 'lucide-astro/CheckCircle';
+import Calendar from 'lucide-astro/Calendar';
+import Droplets from 'lucide-astro/Droplets';
+import AlertTriangle from 'lucide-astro/AlertTriangle';
+import Brain from 'lucide-astro/Brain';
+import Home from 'lucide-astro/Home';
+
+const auth = await requireAuth(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile } = auth;
+const planType  = profile.subscription_tier || 'basic_30';
+const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+
+const journey = await getUserJourney(user.id);
+const currentDay = journey?.current_day || 1;
+
+// Get onboarding fasting protocol
+const { data: onboarding } = await supabase
+  .from('onboarding_data')
+  .select('fasting_protocol, goal')
+  .eq('user_id', user.id)
+  .single();
+
+// Get active fasting session (not ended)
+const { data: activeSession } = await supabase
+  .from('fasting_sessions')
+  .select('*')
+  .eq('user_id', user.id)
+  .is('ended_at', null)
+  .order('started_at', { ascending: false })
+  .limit(1)
+  .maybeSingle();
+
+// Get last 5 fasting sessions for history timeline
+const { data: pastSessions } = await supabase
+  .from('fasting_sessions')
+  .select('*')
+  .eq('user_id', user.id)
+  .not('ended_at', 'is', null)
+  .order('started_at', { ascending: false })
+  .limit(5);
+
+// Stats
+const totalFasts       = pastSessions?.length || 0;
+const completedFasts   = pastSessions?.filter(s => s.completed).length || 0;
+const avgFastHours     = pastSessions && pastSessions.length > 0
+  ? (pastSessions.reduce((s, f) => s + (f.actual_hours || 0), 0) / pastSessions.length).toFixed(1)
+  : '0';
+const totalFastHours   = pastSessions?.reduce((s, f) => s + (f.actual_hours || 0), 0) || 0;
+
+const userName         = profile.full_name?.split(' ')[0] || 'there';
+const defaultProtocol  = onboarding?.fasting_protocol || '16_8';
+
+// Serialize active session safely
+const activeSessionData = activeSession ? {
+  id: activeSession.id,
+  started_at: activeSession.started_at,
+  protocol: activeSession.protocol,
+  target_hours: activeSession.target_hours,
+} : null;
+
+// Pre-compute history data
+const historyRows = (pastSessions || []).map(s => {
+  const started   = new Date(s.started_at);
+  const dateStr   = started.toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' });
+  const timeStr   = started.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
+  const hrs       = s.actual_hours || 0;
+  const target    = s.target_hours || 16;
+  const pct       = Math.min(Math.round((hrs / target) * 100), 100);
+  const protoName = s.protocol ? s.protocol.replace('_', ':') : '—';
+  const done       = s.completed;
+  const barColor   = pct >= 100 ? 'var(--green)' : pct >= 60 ? 'var(--gold)' : 'var(--red)';
+  const checkClass = done ? 'done' : 'partial';
+  const checkIcon  = done ? '✓' : '~';
+  return { dateStr, timeStr, hrs, target, pct, protoName, done, barColor, checkClass, checkIcon };
+});
+
+const hasHistory = historyRows.length > 0;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Fasting Timer — Keto Journey</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
+  <script is:inline>
+    (function(){ var t=localStorage.getItem('keto-theme')||'light'; document.documentElement.setAttribute('data-theme',t); })();
+  </script>
+  <style>
+    :root {
+      --bg:#050b08; --surface:#0a1410; --card:#0f1d12;
+      --card2:#142018; --border:rgba(16,185,129,.1);
+      --border2:rgba(16,185,129,.22); --border3:rgba(16,185,129,.4);
+      --text:#dfeedd; --soft:#4d7055; --muted:#233328;
+      --green:#10b981; --green2:#34d399;
+      --gold:#f59e0b; --amber:#fbbf24; --gold2:#fde68a;
+      --red:#ef4444; --blue:#3b82f6;
+      --orange:#f97316; --purple:#8b5cf6; --cyan:#06b6d4;
+      --nav-h:64px;
+    }
+    [data-theme="light"]{
+      --bg:#f0faf4; --surface:#fff; --card:#f7fdf9; --card2:#edf9f2;
+      --border:rgba(16,185,129,.14); --border2:rgba(16,185,129,.3);
+      --text:#0d1f12; --soft:#3a6b4a; --muted:#cce8d6;
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html{scroll-behavior:smooth;}
+    body{
+      font-family:'DM Sans',sans-serif;
+      background:var(--bg); color:var(--text);
+      min-height:100vh; overflow-x:hidden;
+      transition:background .3s,color .3s;
+    }
+
+    /* ── BG ── */
+    .bg-wrap{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
+    .orb{position:absolute;border-radius:50%;filter:blur(120px);animation:drift ease-in-out infinite;}
+    [data-theme="light"] .orb{opacity:.08;}
+    .o1{width:700px;height:700px;background:rgba(16,185,129,.07);top:-200px;left:-200px;animation-duration:28s;opacity:.4;}
+    .o2{width:500px;height:500px;background:rgba(52,211,153,.05);bottom:-150px;right:-100px;animation-duration:34s;animation-delay:-16s;opacity:.3;}
+    .o3{width:400px;height:400px;background:rgba(16,185,129,.04);top:35%;left:38%;animation-duration:22s;animation-delay:-10s;opacity:.25;}
+    @keyframes drift{0%,100%{transform:translate(0,0) scale(1);}38%{transform:translate(50px,-60px) scale(1.08);}68%{transform:translate(-40px,50px) scale(.93);}}
+
+    /* ── PAGE ── */
+    .page{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:2rem 1.5rem 5rem;}
+
+    /* ── TIMER HERO ── */
+    .timer-hero{
+      text-align:center;padding:2.5rem 2rem 2.25rem;
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:28px;margin-bottom:1.5rem;
+      position:relative;overflow:hidden;
+      animation:fadeUp .5s ease both;
+      transition:background .5s, border-color .5s, box-shadow .5s;
+    }
+    .timer-hero.is-active{
+      background:linear-gradient(160deg,#0a1f10 0%,#060d08 60%,#0d1a10 100%);
+      border-color:rgba(16,185,129,.28);
+      box-shadow:0 0 80px rgba(16,185,129,.1), 0 20px 60px rgba(0,0,0,.4);
+    }
+    .timer-hero::before{
+      content:'';position:absolute;inset:0;
+      background:radial-gradient(ellipse 80% 60% at 50% -10%, rgba(16,185,129,.07), transparent);
+      pointer-events:none;transition:background .5s;
+    }
+    .timer-hero.is-active::before{
+      background:radial-gradient(ellipse 80% 50% at 50% -5%, rgba(16,185,129,.14), transparent);
+    }
+
+    /* Active badge */
+    .active-badge{
+      display:none;align-items:center;gap:.5rem;
+      background:linear-gradient(135deg,rgba(16,185,129,.18),rgba(16,185,129,.08));
+      border:1px solid rgba(16,185,129,.3);border-radius:99px;
+      padding:.35rem 1rem;font-size:.72rem;font-weight:800;
+      color:var(--green);margin:0 auto 1.25rem;width:fit-content;
+      animation:glowPulse 2.5s ease-in-out infinite;
+    }
+    .timer-hero.is-active .active-badge{display:flex;}
+    @keyframes glowPulse{
+      0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.25);}
+      50%{box-shadow:0 0 0 10px rgba(16,185,129,0);}
+    }
+    .active-dot{width:7px;height:7px;border-radius:50%;background:var(--green);
+      animation:pulseDot 1.2s ease-in-out infinite;}
+
+    .stage-pill{
+      display:inline-flex;align-items:center;gap:.45rem;
+      border-radius:99px;padding:.32rem .95rem;
+      font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;
+      margin-bottom:1.5rem;transition:all .5s;
+      border:1px solid currentColor;
+    }
+    .stage-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulseDot 1.5s ease-in-out infinite;}
+    @keyframes pulseDot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(1.4);}}
+
+    /* SVG Ring Timer — 240×240 */
+    .ring-wrap{position:relative;width:240px;height:240px;margin:0 auto 1.25rem;}
+    .ring-svg{width:100%;height:100%;transform:rotate(-90deg);}
+    .ring-track{fill:none;stroke:var(--muted);stroke-width:10;}
+    .ring-progress{
+      fill:none;stroke-width:10;stroke-linecap:round;
+      stroke-dasharray:659.73; /* 2π × 105 */
+      stroke-dashoffset:659.73;
+      transition:stroke-dashoffset .6s ease, stroke 1s ease;
+    }
+    .ring-glow{
+      fill:none;stroke-width:22;stroke-linecap:round;opacity:.18;filter:blur(10px);
+      stroke-dasharray:659.73;stroke-dashoffset:659.73;
+      transition:stroke-dashoffset .6s ease, stroke 1s ease;
+    }
+    /* Active pulsing glow on ring-wrap */
+    .timer-hero.is-active .ring-wrap{
+      filter:drop-shadow(0 0 14px rgba(16,185,129,.35));
+      animation:ringGlowPulse 2.8s ease-in-out infinite;
+    }
+    @keyframes ringGlowPulse{
+      0%,100%{filter:drop-shadow(0 0 10px rgba(16,185,129,.3));}
+      50%{filter:drop-shadow(0 0 24px rgba(16,185,129,.55));}
+    }
+    /* Outer pulse ring */
+    .ring-outer-pulse{
+      fill:none;stroke:var(--green);stroke-width:2.5;opacity:0;
+      stroke-dasharray:722;stroke-dashoffset:0;
+    }
+    .timer-hero.is-active .ring-outer-pulse{
+      opacity:.28;
+      animation:outerPulse 2.8s ease-in-out infinite;
+    }
+    @keyframes outerPulse{
+      0%,100%{opacity:.28;stroke-width:2.5;}
+      50%{opacity:.06;stroke-width:9;}
+    }
+
+    .ring-center{
+      position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      text-align:center;pointer-events:none;
+    }
+    .timer-display{
+      font-family:'Fraunces',serif;
+      font-size:2.8rem;font-weight:900;line-height:1;
+      letter-spacing:-.02em;
+      transition:color .5s;
+    }
+    .timer-of{font-size:.78rem;font-weight:600;color:var(--soft);margin-top:.25rem;transition:opacity .3s;}
+    .timer-pct{
+      font-family:'Fraunces',serif;font-size:.85rem;font-weight:700;
+      color:var(--soft);margin-top:.2rem;
+    }
+
+    /* Stage status */
+    .stage-status{
+      font-size:.88rem;color:var(--soft);line-height:1.6;
+      max-width:420px;margin:0 auto .5rem;
+      transition:all .5s;min-height:2.5rem;
+    }
+    .stage-status strong{color:var(--text);}
+
+    /* ── 4-STAGE BURN STRIP ── */
+    .burn-strip{
+      display:none;
+      gap:.5rem;margin:.75rem auto 1.5rem;max-width:520px;
+    }
+    .timer-hero.is-active .burn-strip{display:flex;}
+    .burn-stage{
+      flex:1;border-radius:12px;padding:.55rem .4rem;text-align:center;
+      background:var(--muted);border:1.5px solid transparent;
+      transition:all .4s;position:relative;overflow:hidden;
+    }
+    .burn-stage.bs-active{
+      background:rgba(16,185,129,.12);
+      border-color:rgba(16,185,129,.3);
+      box-shadow:0 0 0 3px rgba(16,185,129,.1);
+    }
+    .burn-stage.bs-done{
+      background:rgba(16,185,129,.06);
+      border-color:rgba(16,185,129,.15);
+      opacity:.7;
+    }
+    .burn-stage::after{
+      content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+      background:transparent;border-radius:2px;transition:background .4s;
+    }
+    .burn-stage.bs-active::after{background:var(--green);}
+    .burn-stage.bs-done::after{background:rgba(16,185,129,.4);}
+    .bs-emoji{font-size:1rem;line-height:1;display:block;margin-bottom:.2rem;}
+    .bs-name{font-size:.6rem;font-weight:900;color:var(--soft);line-height:1.3;transition:color .4s;}
+    .burn-stage.bs-active .bs-name{color:var(--green);}
+    .burn-stage.bs-done .bs-name{color:rgba(16,185,129,.7);}
+
+    /* Action buttons */
+    .timer-actions{display:flex;gap:.875rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem;}
+    .btn-start{
+      display:flex;align-items:center;gap:.55rem;
+      padding:1rem 2.75rem;border-radius:16px;
+      font-family:'DM Sans',sans-serif;font-weight:900;font-size:1.05rem;
+      border:none;cursor:pointer;transition:all .28s;
+      background:linear-gradient(135deg,var(--green),var(--green2));
+      color:#fff;
+      box-shadow:0 6px 24px rgba(16,185,129,.4);
+      position:relative;overflow:hidden;
+    }
+    .btn-start::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);transform:translateX(-100%);transition:transform .5s;}
+    .btn-start:hover::before{transform:translateX(100%);}
+    .btn-start:hover{transform:translateY(-3px);box-shadow:0 10px 32px rgba(16,185,129,.5);}
+    .btn-end{
+      display:flex;align-items:center;gap:.55rem;
+      padding:1rem 1.75rem;border-radius:16px;
+      font-family:'DM Sans',sans-serif;font-weight:800;font-size:.9rem;
+      border:1.5px solid rgba(239,68,68,.35);cursor:pointer;transition:all .25s;
+      background:rgba(239,68,68,.07);color:var(--red);
+    }
+    .btn-end:hover{background:rgba(239,68,68,.15);border-color:var(--red);transform:translateY(-2px);}
+    .btn-ghost{
+      display:flex;align-items:center;gap:.5rem;
+      padding:.875rem 1.5rem;border-radius:14px;
+      font-family:'DM Sans',sans-serif;font-weight:700;font-size:.85rem;
+      border:1.5px solid var(--border);cursor:pointer;transition:all .22s;
+      background:transparent;color:var(--soft);
+    }
+    .btn-ghost:hover{border-color:var(--green);color:var(--green);}
+
+    /* ── START TIME PICKER ── */
+    .start-picker{
+      display:flex;align-items:center;gap:.875rem;flex-wrap:wrap;
+      padding:1rem 0;justify-content:center;margin-bottom:.5rem;
+    }
+    .sp-label{font-size:.78rem;font-weight:700;color:var(--soft);}
+    .sp-btns{display:flex;gap:.5rem;flex-wrap:wrap;}
+    .sp-btn{
+      padding:.38rem .85rem;border-radius:99px;
+      background:var(--card2);border:1.5px solid var(--border);
+      font-size:.75rem;font-weight:800;color:var(--soft);cursor:pointer;transition:all .2s;
+    }
+    .sp-btn:hover{border-color:var(--green);color:var(--green);}
+    .sp-btn.active{background:rgba(16,185,129,.1);border-color:var(--green);color:var(--green);}
+    .sp-time-input{
+      background:var(--card2);border:1.5px solid var(--border);border-radius:10px;
+      padding:.38rem .75rem;color:var(--text);font-family:'DM Sans',sans-serif;
+      font-size:.82rem;font-weight:600;outline:none;transition:all .2s;cursor:pointer;
+    }
+    .sp-time-input:focus{border-color:var(--green);}
+
+    /* ── PROTOCOL CARDS (2×2 grid) ── */
+    .protocol-section{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:20px;padding:1.5rem;
+      margin-bottom:1.5rem;
+      animation:fadeUp .4s .08s ease both;
+      transition:opacity .4s;
+    }
+    .sec-label{font-size:.72rem;font-weight:800;color:var(--soft);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;}
+    .sec-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+    .protocol-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.875rem;}
+
+    .proto-card{
+      background:var(--card2);border:2px solid var(--border);
+      border-radius:18px;padding:1.35rem 1.2rem 1.15rem;
+      cursor:pointer;transition:all .28s;user-select:none;
+      position:relative;overflow:hidden;
+      display:flex;flex-direction:column;gap:.3rem;
+    }
+    .proto-card::before{
+      content:'';position:absolute;top:0;left:0;right:0;height:3px;
+      opacity:0;transition:opacity .3s;border-radius:18px 18px 0 0;
+    }
+    .proto-card:hover{
+      border-color:rgba(16,185,129,.3);
+      transform:translateY(-3px);
+      box-shadow:0 8px 24px rgba(16,185,129,.1);
+    }
+    .proto-card.active{
+      border-color:var(--green);
+      background:rgba(16,185,129,.07);
+      box-shadow:0 0 0 3px rgba(16,185,129,.12), 0 8px 28px rgba(16,185,129,.15);
+    }
+    .proto-card.active::before{opacity:1;background:linear-gradient(90deg,var(--green),var(--green2));}
+
+    /* Difficulty badge top-right */
+    .proto-diff-badge{
+      position:absolute;top:.65rem;right:.7rem;
+      border-radius:99px;padding:.18rem .6rem;
+      font-size:.6rem;font-weight:900;letter-spacing:.04em;
+      border:1px solid currentColor;
+    }
+    .proto-diff-badge.easy  {color:var(--green);background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.25);}
+    .proto-diff-badge.medium{color:var(--gold); background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.25);}
+    .proto-diff-badge.hard  {color:var(--red);  background:rgba(239,68,68,.1); border-color:rgba(239,68,68,.25);}
+    .proto-diff-badge.extreme{color:var(--purple);background:rgba(139,92,246,.1);border-color:rgba(139,92,246,.25);}
+
+    .proto-header{display:flex;align-items:center;gap:.6rem;margin-bottom:.1rem;}
+    .proto-icon{font-size:1.45rem;line-height:1;}
+    .proto-name{font-family:'Fraunces',serif;font-size:1.2rem;font-weight:900;transition:color .2s;}
+    .proto-card.active .proto-name{color:var(--green);}
+    .proto-window{font-size:.72rem;font-weight:700;color:var(--soft);}
+    .proto-desc{font-size:.68rem;color:var(--soft);line-height:1.5;margin-top:.15rem;}
+
+    /* Start button below cards — prominent */
+    .proto-start-wrap{margin-top:1.1rem;text-align:center;}
+
+    /* ── FASTING STAGES SCIENCE ── */
+    .stages-section{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:20px;overflow:hidden;
+      margin-bottom:1.5rem;
+      animation:fadeUp .4s .12s ease both;
+    }
+    .stages-head{padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.875rem;}
+    .sh-icon2{width:38px;height:38px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;}
+    .sh-title2{font-family:'Fraunces',serif;font-size:.95rem;font-weight:700;flex:1;}
+
+    .stage-item{
+      display:flex;align-items:flex-start;gap:1rem;
+      padding:1rem 1.5rem;border-bottom:1px solid var(--border);
+      transition:all .25s;position:relative;
+    }
+    .stage-item:last-child{border-bottom:none;}
+    .stage-item.current{background:rgba(16,185,129,.04);}
+    .stage-item.past{opacity:.55;}
+    .stage-icon-wrap{
+      width:44px;height:44px;border-radius:12px;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;font-size:1.1rem;
+      border:2px solid transparent;transition:all .4s;
+    }
+    .stage-time{font-family:'Fraunces',serif;font-size:.8rem;font-weight:700;color:var(--soft);flex-shrink:0;min-width:45px;margin-top:.25rem;}
+    .stage-content{flex:1;}
+    .stage-name{font-weight:900;font-size:.88rem;margin-bottom:.15rem;transition:color .3s;}
+    .stage-desc{font-size:.75rem;color:var(--soft);line-height:1.5;}
+    .stage-current-badge{
+      display:inline-flex;align-items:center;gap:.3rem;
+      background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25);
+      border-radius:6px;padding:.15rem .5rem;font-size:.65rem;font-weight:900;
+      color:var(--green);margin-top:.3rem;
+    }
+    .stage-connector{position:absolute;left:calc(1.5rem + 22px);top:calc(44px + 1rem);width:2px;height:calc(100% - 44px - 1rem + .5rem);background:var(--muted);}
+
+    /* ── STATS ROW ── */
+    .stats-row{
+      display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;
+      margin-bottom:1.5rem;
+      animation:fadeUp .4s .16s ease both;
+    }
+    .stat-card{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:16px;padding:1.1rem;text-align:center;
+      transition:all .25s;
+    }
+    .stat-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+    .sc-icon{font-size:1.25rem;margin-bottom:.4rem;}
+    .sc-val{font-family:'Fraunces',serif;font-size:1.7rem;font-weight:900;line-height:1;margin-bottom:.18rem;}
+    .sc-lbl{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);}
+
+    /* ── HISTORY TIMELINE ── */
+    .history-section{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:20px;overflow:hidden;
+      animation:fadeUp .4s .2s ease both;
+      margin-bottom:1.5rem;
+    }
+    .hist-list{display:flex;flex-direction:column;}
+    .hist-item{
+      display:flex;align-items:center;gap:1rem;
+      padding:1rem 1.5rem;border-bottom:1px solid var(--border);
+      transition:background .2s;
+    }
+    .hist-item:last-child{border-bottom:none;}
+    .hist-item:hover{background:rgba(16,185,129,.03);}
+    .hist-proto{
+      width:52px;height:52px;border-radius:12px;flex-shrink:0;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);
+    }
+    .hist-proto-name{font-family:'Fraunces',serif;font-size:.85rem;font-weight:900;color:var(--green);line-height:1;}
+    .hist-proto-sub{font-size:.58rem;font-weight:700;color:var(--soft);}
+    .hist-info{flex:1;min-width:0;}
+    .hist-date{font-weight:800;font-size:.85rem;margin-bottom:.18rem;}
+    .hist-dur{font-size:.72rem;color:var(--soft);margin-bottom:.45rem;}
+
+    /* Completion bar */
+    .hist-bar-wrap{display:flex;align-items:center;gap:.55rem;}
+    .hist-bar-track{flex:1;height:5px;background:var(--muted);border-radius:99px;overflow:hidden;}
+    .hist-bar-fill{height:100%;border-radius:99px;transition:width .6s ease;}
+    .hist-bar-pct{font-size:.65rem;font-weight:900;min-width:30px;text-align:right;}
+
+    .hist-status{flex-shrink:0;}
+    .hist-check{
+      width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+      font-size:.9rem;font-weight:900;
+    }
+    .hist-check.done{background:rgba(16,185,129,.12);color:var(--green);border:1.5px solid rgba(16,185,129,.3);}
+    .hist-check.partial{background:rgba(245,158,11,.1);color:var(--gold);border:1.5px solid rgba(245,158,11,.25);}
+
+    /* ── SCIENCE PANELS ── */
+    .science-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;animation:fadeUp .4s .24s ease both;}
+    .sci-card{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:16px;padding:1.25rem;transition:all .25s;
+    }
+    .sci-card:hover{border-color:var(--border2);}
+    .sci-icon{font-size:1.5rem;margin-bottom:.6rem;}
+    .sci-title{font-family:'Fraunces',serif;font-weight:700;font-size:.95rem;margin-bottom:.4rem;}
+    .sci-text{font-size:.78rem;color:var(--soft);line-height:1.6;}
+    .sci-text strong{color:var(--text);}
+
+    /* ── TOAST ── */
+    .toast{position:fixed;top:5rem;right:1.5rem;z-index:9999;padding:.75rem 1.25rem;border-radius:11px;font-weight:800;font-size:.8rem;box-shadow:0 10px 30px rgba(0,0,0,.3);transform:translateX(120px);opacity:0;pointer-events:none;transition:all .32s cubic-bezier(.4,0,.2,1);display:flex;align-items:center;gap:.5rem;}
+    .toast.show{transform:translateX(0);opacity:1;}
+    .toast-s{background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;}
+    .toast-g{background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;}
+    .toast-e{background:linear-gradient(135deg,var(--red),#dc2626);color:#fff;}
+
+    /* ── COMPLETE OVERLAY ── */
+    .complete-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(5,11,8,.97);backdrop-filter:blur(24px);flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;}
+    .complete-overlay.show{display:flex;animation:fadeIn .5s ease both;}
+    @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+    .co-ring{position:relative;width:160px;height:160px;margin:0 auto 1.5rem;}
+    .co-ring svg{transform:rotate(-90deg);}
+    .co-ring-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:3rem;}
+    .co-title{font-family:'Fraunces',serif;font-size:2.5rem;font-weight:900;margin-bottom:.6rem;animation:bounceIn .6s ease both;}
+    @keyframes bounceIn{0%{transform:scale(0);}70%{transform:scale(1.1);}100%{transform:scale(1);}}
+    .co-title em{font-style:italic;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .co-stats{display:flex;gap:1rem;justify-content:center;margin:1.25rem 0;flex-wrap:wrap;}
+    .co-stat{padding:.75rem 1.25rem;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:14px;text-align:center;}
+    .co-stat-val{font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;color:var(--green);}
+    .co-stat-lbl{font-size:.65rem;font-weight:800;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;}
+    .co-btns{display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center;margin-top:1.25rem;}
+
+    @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+
+    @media(max-width:700px){
+      .protocol-grid{grid-template-columns:1fr 1fr;}
+      .stats-row{grid-template-columns:1fr 1fr;}
+      .science-grid{grid-template-columns:1fr;}
+      .timer-display{font-size:2.2rem;}
+      .ring-wrap{width:200px;height:200px;}
+      .burn-strip{gap:.35rem;}
+      .bs-name{font-size:.55rem;}
+    }
+    @media(max-width:480px){
+      .protocol-grid{grid-template-columns:1fr 1fr;}
+      .burn-strip{flex-wrap:wrap;}
+      .burn-stage{flex:0 0 calc(50% - .25rem);}
+    }
+  </style>
+</head>
+<body>
+<div class="bg-wrap"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
+
+<!-- NAV -->
+<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="fasting" />
+
+<div class="page">
+
+  <!-- ── TIMER HERO ── -->
+  <div class="timer-hero" id="timerHero">
+
+    <!-- Active badge -->
+    <div class="active-badge">
+      <span class="active-dot"></span>
+      <span>Fast Active</span>
+    </div>
+
+    <!-- Stage Pill -->
+    <div class="stage-pill" id="stagePill" style="color:var(--soft);background:rgba(77,112,85,.08);">
+      <span class="stage-dot"></span>
+      <span id="stagePillText">Ready to fast</span>
+    </div>
+
+    <!-- Ring Timer — 240×240 SVG -->
+    <div class="ring-wrap" id="ringWrap">
+      <svg class="ring-svg" viewBox="0 0 240 240" aria-hidden="true">
+        <!-- Outer pulse ring (r=113 — slightly outside track) -->
+        <circle class="ring-outer-pulse" cx="120" cy="120" r="113"/>
+        <!-- Track -->
+        <circle class="ring-track" cx="120" cy="120" r="105"/>
+        <!-- Glow layer -->
+        <circle class="ring-glow" id="ringGlow" cx="120" cy="120" r="105" stroke="var(--soft)"/>
+        <!-- Progress arc -->
+        <circle class="ring-progress" id="ringProgress" cx="120" cy="120" r="105" stroke="var(--green)"/>
+      </svg>
+      <div class="ring-center">
+        <div class="timer-display" id="timerDisplay" style="color:var(--soft);">00:00:00</div>
+        <div class="timer-of" id="timerOf">Start your fast</div>
+        <div class="timer-pct" id="timerPct"></div>
+      </div>
+    </div>
+
+    <!-- Stage status text -->
+    <p class="stage-status" id="stageStatus">
+      Choose your fasting protocol below, then tap <strong>Start Fast</strong> to begin.
+    </p>
+
+    <!-- 4-Stage Fat-Burning Strip (shown when active) -->
+    <div class="burn-strip" id="burnStrip">
+      <div class="burn-stage" id="bs0" data-min="0" data-max="4">
+        <span class="bs-emoji"><Clock size={18} /></span>
+        <span class="bs-name">Glycogen<br>Depleting</span>
+      </div>
+      <div class="burn-stage" id="bs1" data-min="4" data-max="8">
+        <span class="bs-emoji"><Flame size={18} /></span>
+        <span class="bs-name">Fat Burning<br>Begins</span>
+      </div>
+      <div class="burn-stage" id="bs2" data-min="8" data-max="16">
+        <span class="bs-emoji"><Zap size={18} /></span>
+        <span class="bs-name">Deep<br>Fat Burn</span>
+      </div>
+      <div class="burn-stage" id="bs3" data-min="16" data-max="999">
+        <span class="bs-emoji"><Brain size={18} /></span>
+        <span class="bs-name">Autophagy<br>Zone</span>
+      </div>
+    </div>
+
+    <!-- Start Time Picker (hidden when active) -->
+    <div class="start-picker" id="startPicker">
+      <span class="sp-label">Fast started:</span>
+      <div class="sp-btns">
+        <button class="sp-btn active" data-offset="0" onclick="setStartOffset(this,0)">Now</button>
+        <button class="sp-btn" data-offset="1"  onclick="setStartOffset(this,1)">1h ago</button>
+        <button class="sp-btn" data-offset="2"  onclick="setStartOffset(this,2)">2h ago</button>
+        <button class="sp-btn" data-offset="4"  onclick="setStartOffset(this,4)">4h ago</button>
+        <button class="sp-btn" data-offset="8"  onclick="setStartOffset(this,8)">8h ago</button>
+      </div>
+      <input type="time" class="sp-time-input" id="customStartTime" title="Custom start time"/>
+    </div>
+
+    <!-- Actions -->
+    <div class="timer-actions">
+      <button class="btn-start" id="startBtn" onclick="startFast()">
+        <Timer size={16} style="display:inline;vertical-align:middle;" /> Start Fast
+      </button>
+      <button class="btn-end" id="endBtn" style="display:none;" onclick="endFast()">
+        <CheckCircle size={16} style="display:inline;vertical-align:middle;" /> End Fast
+      </button>
+      <button class="btn-ghost" id="resetBtn" style="display:none;" onclick="resetFast()">
+        ↺ Reset
+      </button>
+    </div>
+  </div>
+
+  <!-- ── PROTOCOL CARDS (2×2 grid, shown when not fasting) ── -->
+  <div class="protocol-section" id="protocolSection">
+    <div class="sec-label">Choose Your Protocol</div>
+    <div class="protocol-grid">
+      {[
+        {
+          val:'16_8', hours:16, icon:'⏰', name:'16:8',
+          window:'Fast 16h · Eat in 8h window',
+          desc:'The most popular keto fasting protocol. Effective for fat loss and easy to maintain long-term.',
+          diff:'Easy', diffClass:'easy'
+        },
+        {
+          val:'18_6', hours:18, icon:'🔥', name:'18:6',
+          window:'Fast 18h · Eat in 6h window',
+          desc:'Faster ketosis and deeper fat oxidation. A natural step up from 16:8 once adapted.',
+          diff:'Medium', diffClass:'medium'
+        },
+        {
+          val:'20_4', hours:20, icon:'💪', name:'20:4',
+          window:'Fast 20h · Eat in 4h window',
+          desc:'Extended fat-burning window with strong autophagy benefits. Best for experienced fasters.',
+          diff:'Hard', diffClass:'hard'
+        },
+        {
+          val:'omad', hours:23, icon:'⚡', name:'OMAD 23:1',
+          window:'Fast 23h · One meal a day',
+          desc:'Maximum metabolic impact. One eating window per day. Elite-level discipline required.',
+          diff:'Extreme', diffClass:'extreme'
+        },
+      ].map(p => (
+          <div
+            class={`proto-card${p.val === defaultProtocol ? ' active' : ''}`}
+            data-protocol={p.val}
+            data-hours={p.hours}
+            onclick="selectProtocol(this)"
+          >
+            <div class={`proto-diff-badge ${p.diffClass}`}>{p.diff}</div>
+            <div class="proto-header">
+              <span class="proto-icon">{p.icon}</span>
+              <span class="proto-name">{p.name}</span>
+            </div>
+            <div class="proto-window">{p.window}</div>
+            <div class="proto-desc">{p.desc}</div>
+          </div>
+        ))}
+    </div>
+    <div class="proto-start-wrap">
+      <button class="btn-start" onclick="startFast()" style="margin:0 auto;">
+        <Timer size={16} style="display:inline;vertical-align:middle;" /> Start Fast
+      </button>
+    </div>
+  </div>
+
+  <!-- ── FASTING STAGES SCIENCE ── -->
+  <div class="stages-section">
+    <div class="stages-head">
+      <div class="sh-icon2" style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 10px rgba(16,185,129,.3);"><TrendingUp size={18} /></div>
+      <div class="sh-title2">What Happens to Your Body</div>
+    </div>
+    {[
+      { h:0,  color:'#6b7280', icon:'🍽️', name:'Fed State',          desc:'Insulin is elevated. Your body is digesting nutrients from your last meal. Fat burning is minimal.',                                             key:'fed'      },
+      { h:4,  color:'#10b981', icon:'📉', name:'Insulin Drops',       desc:'Blood sugar normalizes. Insulin falls. Your body begins transitioning from glucose to fat as its primary fuel source.',                         key:'insulin'  },
+      { h:8,  color:'#3b82f6', icon:'⚡', name:'Glycogen Depletion',  desc:'Liver glycogen (stored carbs) starts running out. Your body is forced to find alternative fuel — enter: fat burning.',                         key:'glycogen' },
+      { h:12, color:'#f59e0b', icon:'🔥', name:'Fat Burning Begins',  desc:'Ketone production begins. Free fatty acids are released from fat cells. You enter a mild ketogenic state.',                                    key:'burning'  },
+      { h:16, color:'#f97316', icon:'🔆', name:'Ketosis Deepens',     desc:'Full metabolic shift to fat. Brain switches to ketones for fuel. Mental clarity improves. This is the keto sweet spot.',                       key:'ketosis'  },
+      { h:18, color:'#ef4444', icon:'🧹', name:'Autophagy Activates', desc:'Your cells begin cleaning house — breaking down damaged proteins and cellular waste. Anti-aging effects begin. This is powerful.',              key:'autophagy'},
+      { h:24, color:'#8b5cf6', icon:'🌌', name:'Deep Autophagy',      desc:'Maximum cellular repair mode. Growth hormone spikes by up to 2000%. Stem cell regeneration increases. The deep healing zone.',                  key:'deep'     },
+    ].map((stage, idx) => (
+        <div class="stage-item" id={`stage-${stage.key}`} style="position:relative;">
+          {idx < 6 && <div class="stage-connector" style={`background:${stage.color}33;`}></div>}
+          <div class="stage-icon-wrap" id={`sicon-${stage.key}`} style={`background:${stage.color}18;border-color:${stage.color}30;`}>
+            {stage.icon}
+          </div>
+          <div class="stage-time" style={`color:${stage.color};`}>{stage.h}h</div>
+          <div class="stage-content">
+            <div class="stage-name" id={`sname-${stage.key}`}>{stage.name}</div>
+            <div class="stage-desc">{stage.desc}</div>
+            <div class="stage-current-badge" id={`sbadge-${stage.key}`} style="display:none;">
+              <span>●</span> You are here
+            </div>
+          </div>
+        </div>
+    ))}
+  </div>
+
+  <!-- ── STATS ── -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="sc-icon"><Flame size={20} color="var(--gold)" /></div>
+      <div class="sc-val" style="color:var(--gold);">{totalFasts}</div>
+      <div class="sc-lbl">Total Fasts</div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-icon"><CheckCircle size={20} color="var(--green)" /></div>
+      <div class="sc-val" style="color:var(--green);">{completedFasts}</div>
+      <div class="sc-lbl">Completed</div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-icon"><Timer size={20} color="var(--blue)" /></div>
+      <div class="sc-val" style="color:var(--blue);">{avgFastHours}h</div>
+      <div class="sc-lbl">Avg Duration</div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-icon"><Zap size={20} color="var(--purple)" /></div>
+      <div class="sc-val" style="color:var(--purple);">{Math.round(totalFastHours)}h</div>
+      <div class="sc-lbl">Total Hours</div>
+    </div>
+  </div>
+
+  <!-- ── HISTORY TIMELINE ── -->
+  {hasHistory && (
+    <div class="history-section">
+      <div class="stages-head">
+        <div class="sh-icon2" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 4px 10px rgba(139,92,246,.3);"><Calendar size={18} /></div>
+        <div class="sh-title2">Recent Fasting Sessions</div>
+      </div>
+      <div class="hist-list">
+        {historyRows.map(row => (
+            <div class="hist-item">
+              <div class="hist-proto">
+                <div class="hist-proto-name">{row.protoName}</div>
+                <div class="hist-proto-sub">fast</div>
+              </div>
+              <div class="hist-info">
+                <div class="hist-date">{row.dateStr} at {row.timeStr}</div>
+                <div class="hist-dur">{row.hrs > 0 ? row.hrs.toFixed(1) + 'h fasted of ' + row.target + 'h target' : 'In progress'}</div>
+                <div class="hist-bar-wrap">
+                  <div class="hist-bar-track">
+                    <div class="hist-bar-fill" style={`width:${row.pct}%;background:${row.barColor};`}></div>
+                  </div>
+                  <span class="hist-bar-pct" style={`color:${row.barColor};`}>{row.pct}%</span>
+                </div>
+              </div>
+              <div class="hist-status">
+                <div class={`hist-check ${row.checkClass}`}>{row.checkIcon}</div>
+              </div>
+            </div>
+          ))}
+      </div>
+    </div>
+  )}
+
+  <!-- ── SCIENCE PANELS ── -->
+  <div class="science-grid">
+    <div class="sci-card">
+      <div class="sci-icon"><Brain size={24} /></div>
+      <div class="sci-title">Fasting + Keto = Supercharged</div>
+      <div class="sci-text">Combining intermittent fasting with a keto diet creates a <strong>dual metabolic advantage</strong>. Keto primes your body to burn fat, while fasting depletes glycogen stores faster — meaning you reach deep ketosis in hours, not days.</div>
+    </div>
+    <div class="sci-card">
+      <div class="sci-icon"><TrendingUp size={24} /></div>
+      <div class="sci-title">Why 16+ Hours Matters</div>
+      <div class="sci-text">The most significant metabolic benefits — <strong>autophagy, growth hormone release, and deep fat oxidation</strong> — only kick in after 16 hours. The first 12 hours are just clearing the runway. Push past 16h for the real magic.</div>
+    </div>
+    <div class="sci-card">
+      <div class="sci-icon"><Droplets size={24} /></div>
+      <div class="sci-title">What to Consume While Fasting</div>
+      <div class="sci-text"><strong>Water, black coffee, plain tea, and electrolytes</strong> are fasting-safe. Salt + potassium + magnesium prevent the energy crashes that make people break their fast early. Avoid anything with calories or sweeteners.</div>
+    </div>
+    <div class="sci-card">
+      <div class="sci-icon"><AlertTriangle size={24} /></div>
+      <div class="sci-title">When to Break Your Fast</div>
+      <div class="sci-text"><strong>Extreme dizziness, heart palpitations, or fainting</strong> are signals to eat. If you feel this, break your fast with something small — a few nuts or an egg. These symptoms usually mean electrolyte imbalance, not weakness.</div>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<!-- COMPLETE OVERLAY -->
+<div class="complete-overlay" id="completeOverlay">
+  <div class="co-ring">
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <circle cx="80" cy="80" r="68" fill="none" stroke="rgba(16,185,129,.2)" stroke-width="10"/>
+      <circle cx="80" cy="80" r="68" fill="none" stroke="url(#cg)" stroke-width="10" stroke-linecap="round" stroke-dasharray="427" stroke-dashoffset="0"/>
+      <defs><linearGradient id="cg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#34d399"/></linearGradient></defs>
+    </svg>
+    <div class="co-ring-label"><Award size={28} color="var(--gold)" /></div>
+  </div>
+  <h2 class="co-title">Fast <em>complete</em>!</h2>
+  <p style="color:var(--soft);font-size:.9rem;max-width:380px;line-height:1.6;margin-bottom:1rem;" id="coMessage">You crushed it. Your body just unlocked deep fat-burning mode.</p>
+  <div class="co-stats">
+    <div class="co-stat"><div class="co-stat-val" id="coHours">—</div><div class="co-stat-lbl">Hours Fasted</div></div>
+    <div class="co-stat"><div class="co-stat-val" id="coStage">—</div><div class="co-stat-lbl">Stage Reached</div></div>
+    <div class="co-stat"><div class="co-stat-val" id="coXP">+50</div><div class="co-stat-lbl">XP Earned</div></div>
+  </div>
+  <div class="co-btns">
+    <a href="/dashboard" style="display:inline-flex;align-items:center;gap:.5rem;padding:.875rem 1.75rem;border-radius:13px;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;font-weight:900;font-size:.9rem;text-decoration:none;box-shadow:0 4px 16px rgba(16,185,129,.4);">
+      <Home size={16} /> Back to Dashboard
+    </a>
+    <button onclick="newFast()" style="display:inline-flex;align-items:center;gap:.5rem;padding:.875rem 1.75rem;border-radius:13px;background:var(--card);border:1.5px solid var(--border);color:var(--soft);font-weight:800;font-size:.875rem;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'">
+      <Timer size={16} /> Fast Again
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ── SCRIPT ── -->
+<script is:inline define:vars={{ defaultProtocol, activeSessionData, userName }}>
+
+/* ── FASTING STAGES CONFIG ── */
+var STAGES = [
+  { key:'fed',      h:0,  color:'#6b7280', name:'Fed State',          emoji:'🍽️' },
+  { key:'insulin',  h:4,  color:'#10b981', name:'Insulin Drops',      emoji:'📉' },
+  { key:'glycogen', h:8,  color:'#3b82f6', name:'Glycogen Depletion', emoji:'⚡' },
+  { key:'burning',  h:12, color:'#f59e0b', name:'Fat Burning',        emoji:'🔥' },
+  { key:'ketosis',  h:16, color:'#f97316', name:'Deep Ketosis',       emoji:'🔆' },
+  { key:'autophagy',h:18, color:'#ef4444', name:'Autophagy',          emoji:'🧹' },
+  { key:'deep',     h:24, color:'#8b5cf6', name:'Deep Autophagy',     emoji:'🌌' },
+];
+
+/* 4-stage burn strip config (maps to ids bs0–bs3) */
+var BURN_STAGES = [
+  { id:'bs0', min:0,  max:4   },
+  { id:'bs1', min:4,  max:8   },
+  { id:'bs2', min:8,  max:16  },
+  { id:'bs3', min:16, max:999 },
+];
+
+var RING_CIRC = 2 * Math.PI * 105; /* 659.73 */
+
+/* ── STATE ── */
+var state = {
+  active:      false,
+  startTime:   null,
+  targetHours: 16,
+  protocol:    defaultProtocol || '16_8',
+  startOffset: 0,
+  sessionId:   null,
+};
+window.fastTimer = null;
+
+/* ── RESTORE ACTIVE SESSION ── */
+if (activeSessionData) {
+  state.active      = true;
+  state.startTime   = new Date(activeSessionData.started_at);
+  state.targetHours = activeSessionData.target_hours || 16;
+  state.protocol    = activeSessionData.protocol || '16_8';
+  state.sessionId   = activeSessionData.id;
+  selectProtocol(document.querySelector('[data-protocol="' + state.protocol + '"]'), false);
+  showRunningUI();
+  startTicking();
+}
+
+/* ── PROTOCOL SELECT ── */
+function selectProtocol(el, updateState) {
+  if (!el) return;
+  if (typeof updateState === 'undefined') updateState = true;
+  document.querySelectorAll('.proto-card').forEach(function(c){ c.classList.remove('active'); });
+  el.classList.add('active');
+  if (updateState) {
+    state.protocol    = el.dataset.protocol;
+    state.targetHours = parseInt(el.dataset.hours) || 16;
+    /* Update "of X hours" label if timer is idle */
+    var ofEl = document.getElementById('timerOf');
+    if (ofEl && !state.active) {
+      ofEl.textContent = 'of ' + state.targetHours + ' hours';
+    }
+  }
+}
+window.selectProtocol = selectProtocol;
+
+/* ── START OFFSET ── */
+function setStartOffset(el, hours) {
+  document.querySelectorAll('.sp-btn').forEach(function(b){ b.classList.remove('active'); });
+  el.classList.add('active');
+  state.startOffset = hours;
+  var d = new Date();
+  d.setHours(d.getHours() - hours);
+  document.getElementById('customStartTime').value =
+    d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+}
+window.setStartOffset = setStartOffset;
+
+/* Custom time input */
+document.getElementById('customStartTime').addEventListener('change', function() {
+  var parts = this.value.split(':').map(Number);
+  var h = parts[0];
+  var m = parts[1];
+  var now = new Date();
+  var start = new Date();
+  start.setHours(h, m, 0, 0);
+  if (start > now) start.setDate(start.getDate() - 1);
+  state.startOffset = (now - start) / 3600000;
+  document.querySelectorAll('.sp-btn').forEach(function(b){ b.classList.remove('active'); });
+});
+
+/* Init custom time to now */
+var initNow = new Date();
+document.getElementById('customStartTime').value =
+  initNow.getHours().toString().padStart(2,'0') + ':' + initNow.getMinutes().toString().padStart(2,'0');
+
+/* ── START FAST ── */
+function startFast() {
+  var offsetMs = state.startOffset * 3600000;
+  state.startTime = new Date(Date.now() - offsetMs);
+  state.active    = true;
+
+  fetch('/api/fasting/start', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      protocol:     state.protocol,
+      target_hours: state.targetHours,
+      started_at:   state.startTime.toISOString(),
+    }),
+  }).then(function(res){ return res.json(); }).then(function(data){
+    if (data.id) state.sessionId = data.id;
+  }).catch(function(e){ console.warn('Session save failed', e); });
+
+  showRunningUI();
+  startTicking();
+  showToast('⏱️ Fast started! Stay strong, ' + userName + '.', 's');
+}
+window.startFast = startFast;
+
+/* ── END FAST ── */
+function endFast() {
+  if (!state.active) return;
+  clearInterval(window.fastTimer);
+  window.fastTimer = null;
+
+  var elapsed = getElapsedHours();
+  var completed = elapsed >= state.targetHours;
+
+  fetch('/api/fasting/end', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      session_id:   state.sessionId,
+      ended_at:     new Date().toISOString(),
+      actual_hours: elapsed,
+      completed:    completed,
+    }),
+  }).catch(function(e){ console.warn('End session failed', e); });
+
+  var stage = getCurrentStage(elapsed);
+  document.getElementById('coHours').textContent = elapsed.toFixed(1) + 'h';
+  document.getElementById('coStage').textContent = stage.emoji + ' ' + stage.name;
+  var xp = completed ? 50 + Math.round(elapsed * 2) : 20;
+  document.getElementById('coXP').textContent = '+' + xp;
+  document.getElementById('coMessage').textContent = completed
+    ? 'You hit your ' + state.targetHours + 'h goal! Your body just reached ' + stage.name + '. Incredible.'
+    : elapsed.toFixed(1) + 'h is still a win. Every fast builds your metabolic flexibility.';
+  document.getElementById('completeOverlay').classList.add('show');
+
+  resetState();
+}
+window.endFast = endFast;
+
+/* ── RESET ── */
+function resetFast() {
+  if (state.active && !confirm('Reset your current fast?')) return;
+  clearInterval(window.fastTimer);
+  window.fastTimer = null;
+  resetState();
+  showIdleUI();
+  showToast('↺ Timer reset.', 's');
+}
+window.resetFast = resetFast;
+
+function newFast() {
+  document.getElementById('completeOverlay').classList.remove('show');
+  resetState();
+  showIdleUI();
+}
+window.newFast = newFast;
+
+function resetState() {
+  state.active      = false;
+  state.startTime   = null;
+  state.sessionId   = null;
+  state.startOffset = 0;
+}
+
+/* ── TICK ── */
+function startTicking() {
+  clearInterval(window.fastTimer);
+  tick();
+  window.fastTimer = setInterval(tick, 1000);
+}
+
+function getElapsedHours() {
+  if (!state.startTime) return 0;
+  return (Date.now() - state.startTime.getTime()) / 3600000;
+}
+
+function getCurrentStage(hours) {
+  var current = STAGES[0];
+  for (var i = 0; i < STAGES.length; i++) {
+    if (hours >= STAGES[i].h) current = STAGES[i];
+    else break;
+  }
+  return current;
+}
+
+function tick() {
+  if (!state.startTime) return;
+
+  var elapsed   = getElapsedHours();
+  var target    = state.targetHours;
+  var pct       = Math.min(elapsed / target, 1);
+  var stage     = getCurrentStage(elapsed);
+
+  /* Timer display */
+  var dispH = Math.floor(elapsed);
+  var dispM = Math.floor((elapsed % 1) * 60);
+  var dispS = Math.floor(((elapsed * 60) % 1) * 60);
+  document.getElementById('timerDisplay').textContent =
+    dispH.toString().padStart(2,'0') + ':' +
+    dispM.toString().padStart(2,'0') + ':' +
+    dispS.toString().padStart(2,'0');
+  document.getElementById('timerDisplay').style.color = stage.color;
+
+  /* "of X hours" / "Goal reached" */
+  var ofEl = document.getElementById('timerOf');
+  ofEl.textContent = elapsed >= target ? 'Goal reached! 🎉' : 'of ' + target + ' hours';
+
+  document.getElementById('timerPct').textContent = Math.round(pct * 100) + '% complete';
+
+  /* Ring */
+  var offset = RING_CIRC * (1 - pct);
+  document.getElementById('ringProgress').style.strokeDashoffset = offset;
+  document.getElementById('ringProgress').style.stroke = stage.color;
+  document.getElementById('ringGlow').style.strokeDashoffset = offset;
+  document.getElementById('ringGlow').style.stroke = stage.color;
+
+  /* Stage pill */
+  document.getElementById('stagePill').style.color = stage.color;
+  document.getElementById('stagePill').style.background = stage.color + '18';
+  document.getElementById('stagePillText').textContent = stage.emoji + ' ' + stage.name;
+
+  /* Stage status text */
+  var nextStage = null;
+  for (var i = 0; i < STAGES.length; i++) {
+    if (STAGES[i].h > elapsed) { nextStage = STAGES[i]; break; }
+  }
+  if (nextStage) {
+    var hoursLeft = nextStage.h - elapsed;
+    var minsLeft  = Math.round(hoursLeft * 60);
+    var untilMsg = minsLeft > 60
+      ? '<strong>' + Math.floor(hoursLeft) + 'h ' + (minsLeft % 60) + 'm</strong> until <strong>' + nextStage.emoji + ' ' + nextStage.name + '</strong>.'
+      : 'Only <strong>' + minsLeft + ' minutes</strong> until <strong>' + nextStage.emoji + ' ' + nextStage.name + '</strong>!';
+    document.getElementById('stageStatus').innerHTML =
+      'You\'re in <strong style="color:' + stage.color + '">' + stage.name + '</strong>. ' + untilMsg;
+  } else {
+    document.getElementById('stageStatus').innerHTML =
+      '🌌 <strong>You\'ve reached the pinnacle</strong> — Deep Autophagy. Maximum cellular repair is happening right now. Extraordinary.';
+  }
+
+  /* Update science stage list */
+  for (var j = 0; j < STAGES.length; j++) {
+    var s     = STAGES[j];
+    var item  = document.getElementById('stage-' + s.key);
+    var icon  = document.getElementById('sicon-' + s.key);
+    var badge = document.getElementById('sbadge-' + s.key);
+    if (!item) continue;
+    item.classList.remove('current', 'past');
+    if (s.key === stage.key) {
+      item.classList.add('current');
+      icon.style.borderColor = s.color;
+      icon.style.boxShadow   = '0 0 0 4px ' + s.color + '22, 0 4px 14px ' + s.color + '44';
+      badge.style.display    = 'inline-flex';
+    } else if (elapsed >= s.h) {
+      item.classList.add('past');
+      icon.style.borderColor = s.color + '80';
+      badge.style.display    = 'none';
+    } else {
+      icon.style.borderColor = 'transparent';
+      icon.style.boxShadow   = 'none';
+      badge.style.display    = 'none';
+    }
+  }
+
+  /* 4-stage burn strip */
+  for (var k = 0; k < BURN_STAGES.length; k++) {
+    var bs   = BURN_STAGES[k];
+    var bsEl = document.getElementById(bs.id);
+    if (!bsEl) continue;
+    bsEl.classList.remove('bs-active', 'bs-done');
+    if (elapsed >= bs.min && elapsed < bs.max) {
+      bsEl.classList.add('bs-active');
+    } else if (elapsed >= bs.max) {
+      bsEl.classList.add('bs-done');
+    }
+  }
+
+  /* Auto-complete toast */
+  if (pct >= 1 && !document.getElementById('completeOverlay').classList.contains('show')) {
+    showToast('🏆 You hit your fasting goal!', 'g');
+  }
+}
+
+/* ── UI STATES ── */
+function showRunningUI() {
+  document.getElementById('timerHero').classList.add('is-active');
+  document.getElementById('startBtn').style.display    = 'none';
+  document.getElementById('endBtn').style.display      = 'flex';
+  document.getElementById('resetBtn').style.display    = 'flex';
+  document.getElementById('startPicker').style.display = 'none';
+  document.getElementById('protocolSection').style.opacity = '.45';
+  document.getElementById('protocolSection').style.pointerEvents = 'none';
+  /* Show burn strip, hide second start btn in protocol section */
+  document.getElementById('burnStrip').style.display = 'flex';
+}
+
+function showIdleUI() {
+  document.getElementById('timerHero').classList.remove('is-active');
+  document.getElementById('startBtn').style.display    = 'flex';
+  document.getElementById('endBtn').style.display      = 'none';
+  document.getElementById('resetBtn').style.display    = 'none';
+  document.getElementById('startPicker').style.display = 'flex';
+  document.getElementById('burnStrip').style.display   = 'none';
+
+  document.getElementById('timerDisplay').textContent  = '00:00:00';
+  document.getElementById('timerDisplay').style.color  = 'var(--soft)';
+  document.getElementById('timerOf').textContent       = 'of ' + state.targetHours + ' hours';
+  document.getElementById('timerPct').textContent      = '';
+  document.getElementById('stagePillText').textContent = 'Ready to fast';
+  document.getElementById('stagePill').style.color     = 'var(--soft)';
+  document.getElementById('stagePill').style.background= 'rgba(77,112,85,.08)';
+  document.getElementById('stageStatus').innerHTML     = 'Choose your protocol below, then tap <strong>Start Fast</strong> to begin.';
+  document.getElementById('ringProgress').style.strokeDashoffset = RING_CIRC;
+  document.getElementById('ringGlow').style.strokeDashoffset     = RING_CIRC;
+  document.getElementById('ringProgress').style.stroke = 'var(--green)';
+  document.getElementById('ringGlow').style.stroke     = 'var(--green)';
+  document.getElementById('protocolSection').style.opacity = '1';
+  document.getElementById('protocolSection').style.pointerEvents = 'auto';
+
+  /* Reset science stages */
+  for (var i = 0; i < STAGES.length; i++) {
+    var s    = STAGES[i];
+    var item = document.getElementById('stage-' + s.key);
+    var icon = document.getElementById('sicon-' + s.key);
+    var bdg  = document.getElementById('sbadge-' + s.key);
+    if (item) item.classList.remove('current', 'past');
+    if (icon) { icon.style.borderColor = 'transparent'; icon.style.boxShadow = 'none'; }
+    if (bdg)  bdg.style.display = 'none';
+  }
+
+  /* Reset burn strip */
+  for (var j = 0; j < BURN_STAGES.length; j++) {
+    var bsEl = document.getElementById(BURN_STAGES[j].id);
+    if (bsEl) bsEl.classList.remove('bs-active', 'bs-done');
+  }
+}
+
+/* ── TOAST ── */
+function showToast(msg, type) {
+  if (!type) type = 's';
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast toast-' + type + ' show';
+  setTimeout(function(){ t.classList.remove('show'); }, 3500);
+}
+
+/* ── INIT RING ── */
+document.getElementById('ringProgress').style.strokeDashoffset = RING_CIRC;
+document.getElementById('ringGlow').style.strokeDashoffset     = RING_CIRC;
+/* Init "of X hours" label */
+document.getElementById('timerOf').textContent = 'of ' + state.targetHours + ' hours';
+/* Burn strip hidden on load */
+document.getElementById('burnStrip').style.display = 'none';
+
+/* ── CLEANUP ON UNLOAD ── */
+window.addEventListener('beforeunload', function() {
+  clearInterval(window.fastTimer);
+  window.fastTimer = null;
+});
+
+/* ── PAUSE TIMER WHEN TAB IS HIDDEN, RESUME WHEN VISIBLE ── */
+document.addEventListener('visibilitychange', function() {
+  if (document.hidden) {
+    clearInterval(window.fastTimer);
+    window.fastTimer = null;
+  } else if (state.active) {
+    startTicking();
+  }
+});
+
+</script>
+</body>
+</html>
