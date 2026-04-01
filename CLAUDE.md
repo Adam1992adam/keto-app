@@ -1,5 +1,5 @@
 # CLAUDE.md — Keto Journey App — Complete Project Reference
-> Last updated: 2026-04-01 | Astro 4 + Supabase + Cloudflare Pages
+> Last updated: 2026-04-01 | Astro 4 + Supabase + Vercel
 
 ---
 
@@ -10,7 +10,7 @@
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
 | 1 | Browser Push Notifications | ✅ Done | web-push + VAPID + SW + PushPermission component |
-| 2 | Food Database (Open Food Facts API) | ⬜ Todo | Free API, no key needed, barcode scanner included |
+| 2 | Food Database (Open Food Facts API) | ✅ Done | Real-time search + barcode scanner (BarcodeDetector API) + fallback manual barcode input |
 | 3 | Email Automation | ⬜ Todo | Needs Resend API key — prepare templates + triggers |
 | 4 | Before/After Photo Comparison | ⬜ Todo | Split-view comparison UI on photos.astro |
 | 5 | Recipe Ratings & Personalization | ⬜ Todo | DB table + star-rating UI + recommendation logic |
