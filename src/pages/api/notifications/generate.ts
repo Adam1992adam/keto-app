@@ -452,12 +452,10 @@ async function generate(userId: string): Promise<number> {
   }
 
   // ── Send push notification for urgent items ─────────────────
-  // Fire-and-forget: push failure should never block in-app notification delivery
   try {
     const urgentNotifs = notifs.filter((n: any) => n.priority === 'urgent');
     if (urgentNotifs.length > 0) {
       const { sendPushToUser } = await import('../../../lib/push');
-      // Send the most urgent one (first in list)
       const top = urgentNotifs[0];
       await sendPushToUser(userId, {
         title:    top.title,
@@ -465,11 +463,31 @@ async function generate(userId: string): Promise<number> {
         url:      top.action_url  || '/dashboard',
         tag:      top.type,
         priority: 'urgent',
-      }).catch(() => {}); // swallow — push is best-effort
+      }).catch(() => {});
     }
-  } catch {
-    // VAPID not configured or push_subscriptions table doesn't exist yet — skip silently
-  }
+  } catch { /* VAPID not configured — skip silently */ }
+
+  // ── Send milestone email ─────────────────────────────────────
+  try {
+    const milestoneNotif = notifs.find((n: any) => n.type?.startsWith('milestone_'));
+    if (milestoneNotif) {
+      const day = parseInt(milestoneNotif.type.split('_')[1] || '0', 10);
+      if ([7, 14, 21, 30, 60, 90].includes(day)) {
+        const { data: userProfile } = await supabase
+          .from('profiles').select('email, full_name').eq('id', userId).maybeSingle();
+        if (userProfile?.email) {
+          const { sendMilestoneEmail } = await import('../../../lib/email');
+          await sendMilestoneEmail(
+            userProfile.email,
+            userProfile.full_name || 'there',
+            day,
+            journey?.streak_days || 0,
+            journey?.total_xp    || 0,
+          ).catch(() => {});
+        }
+      }
+    }
+  } catch { /* email not configured — skip silently */ }
 
   return notifs.length;
 }

@@ -118,6 +118,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
             priority: 'urgent',
           });
           if (result.sent > 0) sent++;
+
+          // Also send streak warning email
+          try {
+            const { data: userProfile } = await db
+              .from('profiles').select('email, full_name').eq('id', userId).maybeSingle();
+            if (userProfile?.email) {
+              const { sendStreakWarningEmail } = await import('../../../lib/email');
+              await sendStreakWarningEmail(userProfile.email, userProfile.full_name || 'there', streak).catch(() => {});
+            }
+          } catch { /* email not configured */ }
         } else {
           skipped++;
         }

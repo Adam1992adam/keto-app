@@ -134,6 +134,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     console.log(`✅ New user registered: ${cleanEmail} | tier: ${tier}`);
 
+    // ── Send welcome email (fire-and-forget) ──────────
+    try {
+      const { sendWelcomeEmail } = await import('../../../lib/email');
+      await sendWelcomeEmail(cleanEmail, fullName, tier).catch(() => {});
+    } catch { /* email failure must never block signup */ }
+
     return new Response(JSON.stringify({
       success: true,
       message: 'Account created successfully',
