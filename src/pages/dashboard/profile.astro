@@ -29,7 +29,7 @@ import LogOut from 'lucide-astro/LogOut';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
@@ -38,17 +38,17 @@ const units: UnitSystem = (profile.preferred_units as UnitSystem) || 'imperial';
 const wLabel = weightLabel(units);
 const plan = getPlan(profile.subscription_tier);
 
-const journey = await getUserJourney(user.id);
+const journey = await getUserJourney(user.id, db);
 const currentDay = journey?.current_day || 1;
-const dailyTasks = await getDailyTasks(user.id, currentDay);
-await getWaterIntake(user.id, currentDay);
+const dailyTasks = await getDailyTasks(user.id, currentDay, db);
+await getWaterIntake(user.id, currentDay, db);
 const incompleteTasks = dailyTasks?.filter(
   t => t.task_type !== 'reflection' && t.task_type !== 'weight' && !t.completed
 ) || [];
 
-const weightLogs = await getWeightLogs(user.id, 30);
-const { data: allTasks } = await supabase.from('daily_tasks').select('*').eq('user_id', user.id).order('day_number', { ascending: true });
-const xpTransactions = await getXPTransactions(user.id, 30);
+const weightLogs = await getWeightLogs(user.id, 30, db);
+const { data: allTasks } = await db.from('daily_tasks').select('*').eq('user_id', user.id).order('day_number', { ascending: true });
+const xpTransactions = await getXPTransactions(user.id, 30, db);
 
 const maxDay = Math.min(journey?.current_day || 1, 30);
 const completionData = Array.from({ length: maxDay }, (_, i) => {
@@ -96,7 +96,7 @@ const daysLeft = profile.subscription_end_date
 
 const totalTasksCompleted = allTasks?.filter(t => t.completed).length || 0;
 const totalMealsCompleted = allTasks?.filter(t => t.completed && ['breakfast','lunch','dinner','snack'].includes(t.task_type)).length || 0;
-const { data: waterData } = await supabase.from('water_intake').select('glasses_count').eq('user_id', user.id);
+const { data: waterData } = await db.from('water_intake').select('glasses_count').eq('user_id', user.id);
 const totalWaterGlasses = waterData?.reduce((s,w) => s + w.glasses_count, 0) || 0;
 
 const displayWeight       = formatWeight(currentWeight, units);

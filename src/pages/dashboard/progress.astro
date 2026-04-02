@@ -1,15 +1,15 @@
 ---
-import { supabase, getUserJourney, getMaxJourneyDays, getAchievements, kgToLbs, cmToInches } from '../../lib/supabase';
+import { getUserJourney, getMaxJourneyDays, getAchievements, kgToLbs, cmToInches } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 
-const journey = await getUserJourney(user.id);
+const journey = await getUserJourney(user.id, db);
 if (!journey) return Astro.redirect('/dashboard');
 
 const currentDay  = journey.current_day  || 1;
@@ -32,7 +32,7 @@ const toW    = (kg) => units === 'imperial' ? kgToLbs(kg)    : Math.round(kg * 1
 const toM    = (cm) => units === 'imperial' ? cmToInches(cm) : Math.round(cm * 10) / 10;
 
 // Weight logs
-const { data: weightLogs } = await supabase
+const { data: weightLogs } = await db
   .from('weight_logs')
   .select('weight, logged_date')
   .eq('user_id', user.id)
@@ -40,7 +40,7 @@ const { data: weightLogs } = await supabase
   .limit(30);
 
 // Onboarding for start weight / target
-const { data: onboarding } = await supabase
+const { data: onboarding } = await db
   .from('onboarding_data').select('*').eq('user_id', user.id).single();
 
 const startWeight  = onboarding?.current_weight || profile.weight_kg || 0;
@@ -51,7 +51,7 @@ const weightGoalPct = targetWeight && startWeight > targetWeight
   ? Math.min(100, Math.round((weightLost / (startWeight - targetWeight)) * 100)) : 0;
 
 // Recent check-ins for energy / compliance chart
-const { data: checkins } = await supabase
+const { data: checkins } = await db
   .from('daily_checkins')
   .select('checkin_date, energy_level, followed_meals, water_glasses, mood_level, sleep_hours, sleep_quality')
   .eq('user_id', user.id)
@@ -59,7 +59,7 @@ const { data: checkins } = await supabase
   .limit(14);
 
 // XP transactions
-const { data: xpTxns } = await supabase
+const { data: xpTxns } = await db
   .from('xp_transactions')
   .select('action_type, xp_amount, description, created_at')
   .eq('user_id', user.id)
@@ -67,7 +67,7 @@ const { data: xpTxns } = await supabase
   .limit(10);
 
 // Completed tasks count
-const { data: completedTasksData } = await supabase
+const { data: completedTasksData } = await db
   .from('daily_tasks')
   .select('id')
   .eq('user_id', user.id)
@@ -109,7 +109,7 @@ const bcKgToHealthy = (bcWeight && bcHealthyMax && bcWeight > bcHealthyMax)
 const bcGaugePct = bcBMI ? Math.min(100, Math.max(0, ((bcBMI - 15) / 25) * 100)) : 0;
 
 // Ketone logs
-const { data: ketoneLogs } = await supabase
+const { data: ketoneLogs } = await db
   .from('ketone_logs')
   .select('id, ketone_mmol, measurement_type, logged_date, notes')
   .eq('user_id', user.id)
@@ -191,7 +191,7 @@ const daysActive = journey.start_date
   ? Math.max(1, Math.floor((Date.now() - new Date(journey.start_date).getTime()) / 86400000) + 1)
   : currentDay;
 const totalCheckins = checkins?.length
-  ? (await supabase.from('daily_checkins').select('id', { count: 'exact', head: true }).eq('user_id', user.id)).count || checkins.length
+  ? (await db.from('daily_checkins').select('id', { count: 'exact', head: true }).eq('user_id', user.id)).count || checkins.length
   : 0;
 const weightDeltaFromStart = latestWeight && startWeight ? Math.round((latestWeight - startWeight) * 10) / 10 : 0;
 const kgToGoal = targetWeight && latestWeight ? Math.round(Math.abs(latestWeight - targetWeight) * 10) / 10 : null;
@@ -249,13 +249,13 @@ const avgSleepHours = sleepChart.length
   : null;
 
 // Macro goals
-const { data: macroGoals } = await supabase
+const { data: macroGoals } = await db
   .from('macro_goals').select('daily_calories, protein_g, fat_g, carbs_g')
   .eq('user_id', user.id).maybeSingle();
 
 // Last 14 days of food_logs for macro trend
 const fourteenAgo = new Date(Date.now() - 13 * 86400000).toISOString().split('T')[0];
-const { data: foodLogTrend } = await supabase
+const { data: foodLogTrend } = await db
   .from('food_logs').select('logged_date, calories, protein_g, fat_g, carbs_g')
   .eq('user_id', user.id)
   .gte('logged_date', fourteenAgo)
@@ -320,10 +320,10 @@ const tier      = planType;
 const planLabel = tierLabel;
 
 // Achievements
-const achievements = await getAchievements(user.id);
+const achievements = await getAchievements(user.id, db);
 
 // Body measurements (latest + previous for trend)
-const { data: measurements } = await supabase
+const { data: measurements } = await db
   .from('body_measurements')
   .select('logged_date, neck_cm, waist_cm, hips_cm, chest_cm, arm_cm, thigh_cm')
   .eq('user_id', user.id)
@@ -334,7 +334,7 @@ const prevMeasurements   = measurements?.[1] || null;
 
 // Activity heatmap — past 90 days of check-ins
 const ninetyDaysAgo = new Date(Date.now() - 89 * 86400000).toISOString().split('T')[0];
-const { data: checkin90 } = await supabase
+const { data: checkin90 } = await db
   .from('daily_checkins')
   .select('checkin_date, energy_level')
   .eq('user_id', user.id)
@@ -446,7 +446,7 @@ const achievementsDisplay = achievements.map(a => ({
 }));
 
 // Progress photos (last 4, server-side)
-const { data: progressPhotos } = await supabase
+const { data: progressPhotos } = await db
   .from('progress_photos')
   .select('id, photo_data, taken_date, notes')
   .eq('user_id', user.id)
