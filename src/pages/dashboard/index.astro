@@ -1,6 +1,6 @@
 ---
 // src/pages/dashboard/index.astro
-import { supabase, getUserJourney, getMaxJourneyDays, getMealCycleDays } from '../../lib/supabase';
+import { supabase, getUserClient, getUserJourney, getMaxJourneyDays, getMealCycleDays } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import UpsellModal from '../../components/UpsellModal.astro';
@@ -34,8 +34,10 @@ const planType  = profile.subscription_tier || 'basic_30';
 const maxDays   = getMaxJourneyDays(planType);
 const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 
-const { data: onboarding } = await supabase
-  .from('onboarding_data').select('*').eq('user_id', user.id).single();
+const _accessToken = Astro.cookies.get('sb-access-token')?.value;
+const _userClient = getUserClient(_accessToken!);
+const { data: onboarding } = await _userClient
+  .from('onboarding_data').select('*').eq('user_id', user.id).maybeSingle();
 if (!onboarding) return Astro.redirect('/dashboard/onboarding');
 
 const journey     = await getUserJourney(user.id);
