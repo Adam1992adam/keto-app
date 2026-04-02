@@ -1,6 +1,6 @@
 ---
 // src/pages/dashboard/referrals.astro
-import { supabase, getUserJourney } from '../../lib/supabase';
+import { getUserJourney } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import Gift    from 'lucide-astro/Gift';
@@ -14,22 +14,22 @@ import Link    from 'lucide-astro/Link';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
 
-const journey = await getUserJourney(user.id);
+const journey = await getUserJourney(user.id, db);
 const currentDay = journey?.current_day || 1;
 
 // Load existing code + stats (server-side for initial render)
-const { data: codeRow } = await supabase
+const { data: codeRow } = await db
   .from('referral_codes')
   .select('code, uses_count')
   .eq('user_id', user.id)
   .maybeSingle();
 
-const { data: referrals } = await supabase
+const { data: referrals } = await db
   .from('referrals')
   .select('status, xp_awarded, created_at')
   .eq('referrer_id', user.id)

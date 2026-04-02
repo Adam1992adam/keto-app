@@ -1,5 +1,5 @@
 ---
-import { supabase, getUserJourney, getDailyTasks } from '../../lib/supabase';
+import { getUserJourney, getDailyTasks } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import Bell from 'lucide-astro/Bell';
@@ -14,19 +14,19 @@ import Settings from 'lucide-astro/Settings';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
 
-const journey = await getUserJourney(user.id);
+const journey = await getUserJourney(user.id, db);
 const currentDay = journey?.current_day || 1;
-const dailyTasks = await getDailyTasks(user.id, currentDay);
+const dailyTasks = await getDailyTasks(user.id, currentDay, db);
 const incompleteTasks = dailyTasks?.filter((t: any) =>
   t.task_type !== 'reflection' && t.task_type !== 'weight' && !t.completed
 ) || [];
 
-const { data: existingPrefs } = await supabase
+const { data: existingPrefs } = await db
   .from('notification_preferences')
   .select('*').eq('user_id', user.id).single();
 

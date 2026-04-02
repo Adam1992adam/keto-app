@@ -1,5 +1,5 @@
 ---
-import { supabase, getUserJourney, getMaxJourneyDays, getMealCycleDays } from '../../lib/supabase';
+import { getUserJourney, getMaxJourneyDays, getMealCycleDays } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import ShoppingCart from 'lucide-astro/ShoppingCart';
@@ -11,11 +11,11 @@ import AlertTriangle from 'lucide-astro/AlertTriangle';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 
-const journey = await getUserJourney(user.id);
+const journey = await getUserJourney(user.id, db);
 if (!journey) return Astro.redirect('/dashboard');
 
 const currentDay  = journey.current_day || 1;
@@ -35,14 +35,14 @@ const mealCycleDays = getMealCycleDays(planType);
 const cycledDays = Array.from({ length: endDay - startDay + 1 }, (_, i) => ((startDay + i - 1) % mealCycleDays) + 1);
 
 // Meal plans for this week — select only existing recipe columns (no ingredients column in DB)
-const { data: mealPlansDirect } = await supabase
+const { data: mealPlansDirect } = await db
   .from('meal_plans')
   .select('day_number, meal_type, recipe:recipes(id, title, calories, protein, fat, net_carbs, tags)')
   .eq('plan_type', planType)
   .in('day_number', cycledDays)
   .order('day_number');
 
-const { data: mealPlansFallback } = mealPlansDirect?.length ? { data: null } : await supabase
+const { data: mealPlansFallback } = mealPlansDirect?.length ? { data: null } : await db
   .from('meal_plans')
   .select('day_number, meal_type, recipe:recipes(id, title, calories, protein, fat, net_carbs, tags)')
   .eq('plan_type', 'basic_30')
@@ -52,7 +52,7 @@ const { data: mealPlansFallback } = mealPlansDirect?.length ? { data: null } : a
 const mealPlans = mealPlansDirect?.length ? mealPlansDirect : (mealPlansFallback || []);
 
 // Personalization data
-const { data: onboarding } = await supabase
+const { data: onboarding } = await db
   .from('onboarding_data')
   .select('dietary_restrictions, goal, current_weight, target_weight')
   .eq('user_id', user.id).maybeSingle();

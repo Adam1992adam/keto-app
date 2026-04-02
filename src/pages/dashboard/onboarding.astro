@@ -1,7 +1,7 @@
 ---
 // onboarding.astro
 // Shown once after first login — before dashboard
-import { supabase, getUserClient } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import Target from 'lucide-astro/Target';
 import Zap from 'lucide-astro/Zap';
@@ -17,12 +17,10 @@ import Sparkles from 'lucide-astro/Sparkles';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 
 // Check if already onboarded — use user-scoped client so RLS passes
-const accessToken = Astro.cookies.get('sb-access-token')?.value;
-const userClient = getUserClient(accessToken!);
-const { data: existing } = await userClient
+const { data: existing } = await db
   .from('onboarding_data')
   .select('id')
   .eq('user_id', user.id)
@@ -1135,7 +1133,7 @@ async function saveAndStart() {
       document.getElementById('successFill').style.width = '100%';
     }, 200);
     setTimeout(() => {
-      window.location.href = '/dashboard?welcome=1';
+      window.location.href = data.redirect || '/dashboard/welcome';
     }, 3200);
 
   } catch (err) {

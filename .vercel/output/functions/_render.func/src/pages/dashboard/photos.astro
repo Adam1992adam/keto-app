@@ -1,0 +1,1436 @@
+---
+// src/pages/dashboard/photos.astro
+// Progress Photo Gallery — full-featured with upload, compare, timeline
+import { supabase, getUserJourney } from '../../lib/supabase';
+import { requireAuth } from '../../lib/auth';
+import DashNav from '../../components/DashNav.astro';
+import Camera from 'lucide-astro/Camera';
+import Image from 'lucide-astro/Image';
+import Plus from 'lucide-astro/Plus';
+import Calendar from 'lucide-astro/Calendar';
+import TrendingUp from 'lucide-astro/TrendingUp';
+import Trash2 from 'lucide-astro/Trash2';
+import Upload from 'lucide-astro/Upload';
+import BarChart2 from 'lucide-astro/BarChart2';
+
+const auth = await requireAuth(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile } = auth;
+
+const planType  = profile.subscription_tier || 'basic_30';
+const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const userName  = profile.full_name?.split(' ')[0] || 'there';
+
+const journey = await getUserJourney(user.id);
+const startDate   = journey?.start_date  ? new Date(journey.start_date)  : new Date();
+const currentDay  = journey?.current_day || 1;
+
+// Fetch photos sorted ASC (for timeline), then reverse for grid
+const { data: photosAsc } = await supabase
+  .from('progress_photos')
+  .select('id, photo_data, taken_date, notes, created_at')
+  .eq('user_id', user.id)
+  .order('taken_date', { ascending: true });
+
+const photos = photosAsc || [];
+const photosDesc = [...photos].reverse();
+
+// Compute day-on-plan for each photo
+const startMs = startDate.getTime();
+
+const photosWithDay = photosDesc.map((p) => {
+  const takenMs  = new Date(p.taken_date).getTime();
+  const dayNum   = Math.max(1, Math.floor((takenMs - startMs) / 86400000) + 1);
+  return { ...p, dayNum };
+});
+
+const photosTimeline = [...photosWithDay].reverse(); // ASC for timeline
+
+// Insights
+const totalPhotos = photos.length;
+const today = new Date();
+const lastPhotoDate = photosDesc[0] ? new Date(photosDesc[0].taken_date) : null;
+const daysSinceLast = lastPhotoDate
+  ? Math.floor((today.getTime() - lastPhotoDate.getTime()) / 86400000)
+  : null;
+const firstPhotoDate = photos[0] ? new Date(photos[0].taken_date) : null;
+const spanDays = firstPhotoDate
+  ? Math.floor((today.getTime() - firstPhotoDate.getTime()) / 86400000) + 1
+  : 0;
+
+const todayStr = today.toISOString().split('T')[0];
+
+// Milestone days for timeline badges
+const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
+---
+
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Progress Photos — Keto Journey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700;1,900&family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Page layout ── */
+    .page-wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 6rem;
+    }
+
+    /* ── Page header ── */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .page-title {
+      font-family: 'Fraunces', serif;
+      font-size: 1.85rem;
+      font-weight: 900;
+      color: var(--text);
+      line-height: 1.1;
+    }
+    .page-title span { color: var(--green); font-style: italic; }
+    .header-actions {
+      display: flex;
+      gap: .6rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: .55rem 1.1rem;
+      border-radius: 12px;
+      font-size: .82rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      transition: all .2s;
+      font-family: 'DM Sans', sans-serif;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+    }
+    .btn-primary {
+      background: var(--green);
+      color: #fff;
+      border-color: var(--green);
+    }
+    .btn-primary:hover { background: var(--green2); border-color: var(--green2); }
+    .btn-ghost {
+      background: var(--card);
+      color: var(--soft);
+    }
+    .btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+    .btn-active {
+      background: rgba(16,185,129,.15);
+      color: var(--green);
+      border-color: rgba(16,185,129,.35);
+    }
+
+    /* ── Insights banner ── */
+    .insights-banner {
+      display: flex;
+      gap: .75rem;
+      flex-wrap: wrap;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      align-items: center;
+    }
+    .insight-pill {
+      font-size: .78rem;
+      font-weight: 700;
+      padding: .32rem .8rem;
+      border-radius: 99px;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      color: var(--soft);
+      white-space: nowrap;
+    }
+    .insight-pill.warn { border-color: rgba(245,158,11,.3); color: var(--gold); background: rgba(245,158,11,.08); }
+    .insight-tip { font-size: .78rem; color: var(--soft); font-style: italic; margin-left: auto; }
+
+    /* ── Upload section ── */
+    .upload-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      animation: fadeUp .4s ease both;
+    }
+    .upload-title {
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+      font-size: 1.05rem;
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+    .upload-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      align-items: start;
+    }
+    @media(max-width: 640px) { .upload-grid { grid-template-columns: 1fr; } }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed var(--border2);
+      border-radius: 16px;
+      padding: 2rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+      background: var(--card2);
+      position: relative;
+      min-height: 160px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: .6rem;
+    }
+    .drop-zone:hover, .drop-zone.dragging {
+      border-color: var(--green);
+      background: rgba(16,185,129,.06);
+    }
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .drop-icon { font-size: 2.2rem; }
+    .drop-label { font-size: .85rem; color: var(--soft); font-weight: 600; }
+    .drop-sub   { font-size: .72rem; color: var(--muted); }
+    .preview-img {
+      max-height: 130px;
+      max-width: 100%;
+      border-radius: 10px;
+      object-fit: cover;
+      display: none;
+    }
+
+    /* Upload fields */
+    .upload-fields { display: flex; flex-direction: column; gap: .85rem; }
+    .field-label {
+      font-size: .75rem;
+      font-weight: 700;
+      color: var(--soft);
+      margin-bottom: .3rem;
+      display: block;
+    }
+    .field-input {
+      width: 100%;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: .6rem .85rem;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: .85rem;
+      transition: border-color .2s;
+    }
+    .field-input:focus { outline: none; border-color: var(--green); }
+    textarea.field-input { resize: vertical; min-height: 70px; }
+    .upload-actions { display: flex; gap: .6rem; align-items: center; margin-top: .25rem; }
+    .upload-status { font-size: .78rem; color: var(--soft); }
+    .upload-status.ok  { color: var(--green); }
+    .upload-status.err { color: var(--red); }
+
+    /* ── Gallery grid ── */
+    .gallery-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: .6rem;
+    }
+    .gallery-title {
+      font-family: 'Fraunces', serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .view-toggles { display: flex; gap: .4rem; }
+
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+    @media(max-width: 900px)  { .photo-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media(max-width: 500px)  { .photo-grid { grid-template-columns: 1fr; } }
+
+    .photo-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: all .22s;
+      animation: fadeUp .4s ease both;
+      cursor: pointer;
+      position: relative;
+    }
+    .photo-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--border2);
+      box-shadow: 0 8px 24px rgba(0,0,0,.3);
+    }
+    .photo-card.selected {
+      border-color: var(--green);
+      box-shadow: 0 0 0 2px rgba(16,185,129,.4);
+    }
+    .photo-card img {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+      display: block;
+    }
+    .photo-info {
+      padding: .75rem;
+    }
+    .photo-date {
+      font-size: .82rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .photo-notes {
+      font-size: .73rem;
+      color: var(--soft);
+      margin-top: .2rem;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .photo-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: .5rem;
+      gap: .4rem;
+    }
+    .day-badge {
+      font-size: .68rem;
+      font-weight: 800;
+      padding: .2rem .55rem;
+      border-radius: 99px;
+      background: rgba(59,130,246,.12);
+      border: 1px solid rgba(59,130,246,.25);
+      color: var(--blue);
+    }
+    .delete-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: rgba(239,68,68,.1);
+      border: 1px solid rgba(239,68,68,.2);
+      color: var(--red);
+      font-size: .85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .18s;
+      flex-shrink: 0;
+    }
+    .delete-btn:hover { background: rgba(239,68,68,.22); border-color: rgba(239,68,68,.4); }
+
+    /* Compare overlay badge */
+    .compare-badge {
+      position: absolute;
+      top: .5rem;
+      left: .5rem;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--green);
+      color: #fff;
+      font-size: .75rem;
+      font-weight: 900;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,.4);
+    }
+    .photo-card.selected .compare-badge { display: flex; }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: var(--card);
+      border: 2px dashed var(--border2);
+      border-radius: 20px;
+    }
+    .empty-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+    .empty-title { font-family: 'Fraunces', serif; font-size: 1.3rem; font-weight: 900; color: var(--text); margin-bottom: .5rem; }
+    .empty-sub   { font-size: .88rem; color: var(--soft); }
+
+    /* ── Comparison panel ── */
+    .compare-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 300;
+      background: rgba(6,13,9,.97);
+      border-top: 2px solid var(--green);
+      backdrop-filter: blur(24px);
+      padding: 1.25rem 1.5rem;
+      transform: translateY(100%);
+      transition: transform .3s cubic-bezier(.4,0,.2,1);
+    }
+    .compare-panel.open { transform: translateY(0); }
+    .compare-inner {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .compare-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .compare-heading {
+      font-family: 'Fraunces', serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .compare-photos {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .compare-slot {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      text-align: center;
+    }
+    .compare-slot img {
+      width: 100%;
+      max-height: 220px;
+      object-fit: cover;
+      display: block;
+    }
+    .compare-slot-info {
+      padding: .6rem .8rem;
+    }
+    .compare-slot-date { font-size: .82rem; font-weight: 700; color: var(--text); }
+    .compare-slot-day  { font-size: .72rem; color: var(--blue); margin-top: .15rem; font-weight: 700; }
+    .compare-slot-notes { font-size: .7rem; color: var(--soft); margin-top: .2rem; }
+    .compare-placeholder {
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: .82rem;
+    }
+
+    /* ── Timeline view ── */
+    .timeline-view { display: none; }
+    .timeline-line {
+      position: relative;
+      padding-left: 2.5rem;
+    }
+    .timeline-line::before {
+      content: '';
+      position: absolute;
+      left: .85rem;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--border2);
+    }
+    .timeline-item {
+      position: relative;
+      margin-bottom: 2rem;
+      animation: fadeUp .4s ease both;
+    }
+    .timeline-dot {
+      position: absolute;
+      left: -1.95rem;
+      top: .75rem;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--green);
+      border: 2px solid var(--bg);
+      box-shadow: 0 0 0 3px rgba(16,185,129,.2);
+    }
+    .timeline-milestone .timeline-dot {
+      background: var(--gold);
+      box-shadow: 0 0 0 4px rgba(245,158,11,.2);
+    }
+    .timeline-date-marker {
+      font-size: .72rem;
+      font-weight: 700;
+      color: var(--soft);
+      margin-bottom: .5rem;
+    }
+    .milestone-tag {
+      display: inline-block;
+      font-size: .65rem;
+      font-weight: 800;
+      padding: .15rem .5rem;
+      border-radius: 99px;
+      background: rgba(245,158,11,.12);
+      border: 1px solid rgba(245,158,11,.3);
+      color: var(--gold);
+      margin-left: .5rem;
+    }
+    .timeline-card {
+      display: flex;
+      gap: 1rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: all .2s;
+      cursor: pointer;
+    }
+    .timeline-card:hover {
+      border-color: var(--border2);
+      box-shadow: 0 4px 16px rgba(0,0,0,.25);
+    }
+    .timeline-card img {
+      width: 120px;
+      height: 90px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .timeline-card-info {
+      padding: .75rem .75rem .75rem 0;
+      flex: 1;
+    }
+    .timeline-card-date { font-size: .85rem; font-weight: 700; color: var(--text); }
+    .timeline-card-notes { font-size: .75rem; color: var(--soft); margin-top: .2rem; line-height: 1.4; }
+    .timeline-card-day {
+      display: inline-block;
+      margin-top: .4rem;
+      font-size: .68rem;
+      font-weight: 800;
+      padding: .18rem .5rem;
+      border-radius: 99px;
+      background: rgba(59,130,246,.1);
+      color: var(--blue);
+      border: 1px solid rgba(59,130,246,.2);
+    }
+
+    /* ── Lightbox ── */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      background: rgba(0,0,0,.92);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      backdrop-filter: blur(8px);
+    }
+    .lightbox.open { display: flex; }
+    .lightbox-inner {
+      position: relative;
+      max-width: 820px;
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border2);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .lightbox-img {
+      width: 100%;
+      max-height: 70vh;
+      object-fit: contain;
+      display: block;
+      background: #000;
+    }
+    .lightbox-info {
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .lightbox-date { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 700; color: var(--text); }
+    .lightbox-notes { font-size: .82rem; color: var(--soft); margin-top: .25rem; }
+    .lightbox-close {
+      position: absolute;
+      top: .75rem;
+      right: .75rem;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(0,0,0,.6);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .18s;
+    }
+    .lightbox-close:hover { background: rgba(239,68,68,.3); border-color: var(--red); }
+
+    /* ── Before/After Slider overlay ── */
+    .slider-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 600;
+      background: rgba(0,0,0,.96);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .slider-overlay.open { display: flex; }
+
+    .slider-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 820px;
+      max-height: 70vh;
+      overflow: hidden;
+      border-radius: 16px;
+      user-select: none;
+      touch-action: none;
+      cursor: ew-resize;
+    }
+
+    /* AFTER image — always full width underneath */
+    .slider-img-after {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 70vh;
+      object-fit: contain;
+    }
+
+    /* BEFORE image — clipped to left portion via clip-path */
+    .slider-img-before {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Divider line */
+    .slider-divider {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: rgba(255,255,255,.85);
+      box-shadow: 0 0 12px rgba(0,0,0,.6);
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+
+    /* Drag handle circle */
+    .slider-handle {
+      position: absolute;
+      top: 50%;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 16px rgba(0,0,0,.5);
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 900;
+      color: #000;
+      pointer-events: none;
+      letter-spacing: -2px;
+    }
+
+    /* Before / After labels */
+    .slider-label {
+      position: absolute;
+      top: .75rem;
+      padding: .3rem .75rem;
+      border-radius: 8px;
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+    .slider-label-before {
+      left: .75rem;
+      background: rgba(0,0,0,.65);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.2);
+    }
+    .slider-label-after {
+      right: .75rem;
+      background: rgba(16,185,129,.8);
+      color: #fff;
+    }
+
+    /* Photo info bar below slider */
+    .slider-info {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 820px;
+      margin-top: .85rem;
+      padding: 0 .25rem;
+    }
+    .slider-info-side {
+      font-size: .82rem;
+      font-weight: 700;
+      color: rgba(255,255,255,.75);
+    }
+    .slider-info-side span {
+      display: block;
+      font-size: .68rem;
+      font-weight: 600;
+      color: rgba(255,255,255,.4);
+      margin-top: .1rem;
+    }
+    .slider-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.15);
+      color: #fff;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .slider-close:hover { background: rgba(239,68,68,.4); }
+    .slider-hint {
+      font-size: .72rem;
+      color: rgba(255,255,255,.35);
+      margin-top: .6rem;
+      text-align: center;
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .photo-card:nth-child(1)  { animation-delay: .03s; }
+    .photo-card:nth-child(2)  { animation-delay: .06s; }
+    .photo-card:nth-child(3)  { animation-delay: .09s; }
+    .photo-card:nth-child(4)  { animation-delay: .12s; }
+    .photo-card:nth-child(5)  { animation-delay: .15s; }
+    .photo-card:nth-child(6)  { animation-delay: .18s; }
+    .photo-card:nth-child(7)  { animation-delay: .21s; }
+    .photo-card:nth-child(8)  { animation-delay: .24s; }
+    .photo-card:nth-child(9)  { animation-delay: .27s; }
+  </style>
+</head>
+<body>
+  <DashNav
+    userId={user.id}
+    userName={userName}
+    tierLabel={tierLabel}
+    planType={planType}
+    activePage="photos"
+  />
+
+  <div class="page-wrap">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Progress <span>Photos</span></h1>
+        <p style="font-size:.83rem;color:var(--soft);margin-top:.2rem;">
+          Visual proof of your keto transformation
+        </p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-ghost" id="btnCompare" onclick="window.toggleCompareMode()">
+          <Image size={15} style="vertical-align:middle;margin-right:.3rem;" /> Compare
+        </button>
+        <button class="btn btn-ghost" id="btnUploadToggle" onclick="window.toggleUpload()">
+          <Upload size={15} style="vertical-align:middle;margin-right:.3rem;" /> Upload
+        </button>
+      </div>
+    </div>
+
+    <!-- Insights Banner (2+ photos) -->
+    {totalPhotos >= 2 && (
+      <div class="insights-banner">
+        <div class="insight-pill"><Camera size={13} style="vertical-align:middle;margin-right:.2rem;" /> {totalPhotos} photo{totalPhotos === 1 ? '' : 's'}</div>
+        {spanDays > 0 && (
+          <div class="insight-pill"><Calendar size={13} style="vertical-align:middle;margin-right:.2rem;" /> Over {spanDays} days</div>
+        )}
+        {daysSinceLast !== null && daysSinceLast > 7 && (
+          <div class="insight-pill warn"><TrendingUp size={13} style="vertical-align:middle;margin-right:.2rem;" /> Last photo {daysSinceLast} days ago — time for an update!</div>
+        )}
+        {daysSinceLast !== null && daysSinceLast <= 7 && (
+          <div class="insight-pill"><TrendingUp size={13} style="vertical-align:middle;margin-right:.2rem;" /> Last photo {daysSinceLast === 0 ? 'today' : daysSinceLast + 'd ago'}</div>
+        )}
+        <p class="insight-tip"><Plus size={13} style="vertical-align:middle;margin-right:.2rem;" /> Take photos weekly on the same day for best comparison</p>
+      </div>
+    )}
+
+    <!-- Upload Section (hidden by default) -->
+    <div class="upload-section" id="uploadSection" style="display:none;">
+      <div class="upload-title"><Camera size={18} style="vertical-align:middle;margin-right:.4rem;" /> Upload a Progress Photo</div>
+      <div class="upload-grid">
+        <!-- Drop Zone -->
+        <div>
+          <div class="drop-zone" id="dropZone">
+            <input type="file" id="fileInput" accept="image/*" />
+            <div id="dropZoneContent">
+              <div class="drop-icon"><Camera size={36} /></div>
+              <div class="drop-label">Drop image here or click to select</div>
+              <div class="drop-sub">Images only · Max 5MB · Auto-compressed</div>
+            </div>
+            <img id="previewImg" class="preview-img" alt="Preview" />
+          </div>
+        </div>
+
+        <!-- Fields -->
+        <div class="upload-fields">
+          <div>
+            <label class="field-label" for="photoDate">Date taken</label>
+            <input
+              class="field-input"
+              type="date"
+              id="photoDate"
+              max={todayStr}
+            />
+          </div>
+          <div>
+            <label class="field-label" for="photoNotes">Notes (optional)</label>
+            <textarea
+              class="field-input"
+              id="photoNotes"
+              placeholder="How are you feeling? Any measurements? Milestones?"
+            ></textarea>
+          </div>
+          <div class="upload-actions">
+            <button class="btn btn-primary" id="uploadBtn" onclick="window.doUpload()">
+              Upload Photo
+            </button>
+            <span class="upload-status" id="uploadStatus"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gallery Header -->
+    <div class="gallery-header">
+      <div class="gallery-title">
+        {totalPhotos > 0 ? `${totalPhotos} Photo${totalPhotos === 1 ? '' : 's'}` : 'Your Gallery'}
+      </div>
+      <div class="view-toggles">
+        <button class="btn btn-active" id="btnGrid" onclick="window.switchView('grid')">
+          ⊞ Grid
+        </button>
+        <button class="btn btn-ghost" id="btnTimeline" onclick="window.switchView('timeline')">
+          <Calendar size={15} style="vertical-align:middle;margin-right:.3rem;" /> Timeline
+        </button>
+      </div>
+    </div>
+
+    <!-- Grid View -->
+    <div id="gridView">
+      {photosWithDay.length === 0 && (
+        <div class="empty-state">
+          <div class="empty-icon"><Camera size={42} /></div>
+          <div class="empty-title">Your gallery is empty</div>
+          <p class="empty-sub">
+            Upload your first progress photo to start tracking your transformation.<br />
+            Seeing is believing — every photo tells your story.
+          </p>
+          <button class="btn btn-primary" style="margin-top:1.25rem;" onclick="window.toggleUpload()">
+            <Upload size={15} style="vertical-align:middle;margin-right:.3rem;" /> Upload First Photo
+          </button>
+        </div>
+      )}
+
+      {photosWithDay.length > 0 && (
+        <div class="photo-grid" id="photoGrid">
+          {photosWithDay.map((photo) => {
+            const dateFormatted = new Date(photo.taken_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const notesSnippet = photo.notes ? photo.notes.slice(0, 60) + (photo.notes.length > 60 ? '…' : '') : '';
+            return (
+              <div
+                class="photo-card"
+                id={`card-${photo.id}`}
+                data-id={photo.id}
+                data-src={photo.photo_data}
+                data-date={dateFormatted}
+                data-day={photo.dayNum}
+                data-notes={photo.notes || ''}
+                onclick={`window.handleCardClick('${photo.id}')`}
+              >
+                <div class="compare-badge" id={`badge-${photo.id}`}>✓</div>
+                <img src={photo.photo_data} alt={`Progress photo ${dateFormatted}`} loading="lazy" />
+                <div class="photo-info">
+                  <div class="photo-date">{dateFormatted}</div>
+                  {notesSnippet && <div class="photo-notes">{notesSnippet}</div>}
+                  <div class="photo-meta">
+                    <span class="day-badge">Day {photo.dayNum}</span>
+                    <button
+                      class="delete-btn"
+                      title="Delete photo"
+                      onclick={`event.stopPropagation(); window.deletePhoto('${photo.id}')`}
+                    >×</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+
+    <!-- Timeline View -->
+    <div id="timelineView" class="timeline-view">
+      {photosTimeline.length === 0 && (
+        <div class="empty-state">
+          <div class="empty-icon"><Calendar size={42} /></div>
+          <div class="empty-title">No photos yet</div>
+          <p class="empty-sub">Upload photos to see your timeline.</p>
+        </div>
+      )}
+
+      {photosTimeline.length > 0 && (
+        <div class="timeline-line">
+          {photosTimeline.map((photo) => {
+            const dateFormatted = new Date(photo.taken_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const isMilestone = MILESTONES.includes(photo.dayNum);
+            return (
+              <div class={`timeline-item${isMilestone ? ' timeline-milestone' : ''}`}>
+                <div class="timeline-dot"></div>
+                <div class="timeline-date-marker">
+                  {dateFormatted}
+                  {isMilestone && <span class="milestone-tag">Day {photo.dayNum}</span>}
+                </div>
+                <div
+                  class="timeline-card"
+                  onclick={`window.openLightbox('${photo.photo_data}', '${dateFormatted}', ${photo.dayNum}, \`${(photo.notes || '').replace(/`/g, "'")}\`)`}
+                >
+                  <img src={photo.photo_data} alt={`Day ${photo.dayNum}`} loading="lazy" />
+                  <div class="timeline-card-info">
+                    <div class="timeline-card-date">{dateFormatted}</div>
+                    {photo.notes && (
+                      <div class="timeline-card-notes">
+                        {photo.notes.slice(0, 120)}{photo.notes.length > 120 ? '…' : ''}
+                      </div>
+                    )}
+                    <span class="timeline-card-day">Day {photo.dayNum}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+
+  </div><!-- /page-wrap -->
+
+  <!-- Comparison Panel -->
+  <div class="compare-panel" id="comparePanel">
+    <div class="compare-inner">
+      <div class="compare-header">
+        <span class="compare-heading"><BarChart2 size={16} style="vertical-align:middle;margin-right:.4rem;" /> Side-by-Side Comparison</span>
+        <div style="display:flex;gap:.5rem;">
+          <button class="btn btn-active" id="btnSlider" onclick="window.openSlider()" style="display:none;">
+            ⟺ Slider View
+          </button>
+          <button class="btn btn-ghost" onclick="window.clearComparison()">Clear</button>
+        </div>
+      </div>
+      <div class="compare-photos">
+        <div class="compare-slot" id="compareSlot1">
+          <div class="compare-placeholder">Select first photo</div>
+        </div>
+        <div class="compare-slot" id="compareSlot2">
+          <div class="compare-placeholder">Select second photo</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Before/After Slider Overlay -->
+  <div class="slider-overlay" id="sliderOverlay">
+    <button class="slider-close" onclick="window.closeSlider()">✕</button>
+    <div class="slider-wrap" id="sliderWrap">
+      <img class="slider-img-after"  id="sliderImgAfter"  src="" alt="After" />
+      <img class="slider-img-before" id="sliderImgBefore" src="" alt="Before" />
+      <div class="slider-divider"    id="sliderDivider"></div>
+      <div class="slider-handle"     id="sliderHandle">⟺</div>
+      <div class="slider-label slider-label-before">Before</div>
+      <div class="slider-label slider-label-after">After</div>
+    </div>
+    <div class="slider-info">
+      <div class="slider-info-side" id="sliderInfoLeft">—</div>
+      <div class="slider-info-side" style="text-align:right;" id="sliderInfoRight">—</div>
+    </div>
+    <p class="slider-hint">Drag the handle · ← → arrow keys</p>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" onclick="window.closeLightbox()">
+    <div class="lightbox-inner" onclick="event.stopPropagation()">
+      <button class="lightbox-close" onclick="window.closeLightbox()">✕</button>
+      <img class="lightbox-img" id="lightboxImg" src="" alt="Progress photo" />
+      <div class="lightbox-info">
+        <div>
+          <div class="lightbox-date" id="lightboxDate"></div>
+          <div class="lightbox-notes" id="lightboxNotes"></div>
+        </div>
+        <span class="day-badge" id="lightboxDay" style="font-size:.78rem;"></span>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline define:vars={{ todayStr }}>
+  (function () {
+    /* ── State ── */
+    var compareMode     = false;
+    var selectedIds     = [];
+    var selectedData    = {};
+    var uploadVisible   = false;
+    var currentView     = 'grid';
+    var selectedFile    = null;
+
+    /* ── Init date input ── */
+    var dateInput = document.getElementById('photoDate');
+    if (dateInput) dateInput.value = todayStr;
+
+    /* ── Upload toggle ── */
+    window.toggleUpload = function () {
+      uploadVisible = !uploadVisible;
+      var sec = document.getElementById('uploadSection');
+      var btn = document.getElementById('btnUploadToggle');
+      if (sec) sec.style.display = uploadVisible ? 'block' : 'none';
+      if (btn) btn.className = uploadVisible ? 'btn btn-active' : 'btn btn-ghost';
+      if (uploadVisible && sec) sec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
+    /* ── View toggle ── */
+    window.switchView = function (v) {
+      currentView = v;
+      var grid     = document.getElementById('gridView');
+      var timeline = document.getElementById('timelineView');
+      var btnGrid  = document.getElementById('btnGrid');
+      var btnTl    = document.getElementById('btnTimeline');
+      if (v === 'grid') {
+        if (grid)     grid.style.display     = '';
+        if (timeline) timeline.style.display = 'none';
+        if (btnGrid)  btnGrid.className = 'btn btn-active';
+        if (btnTl)    btnTl.className   = 'btn btn-ghost';
+      } else {
+        if (grid)     grid.style.display     = 'none';
+        if (timeline) timeline.style.display = 'block';
+        if (btnGrid)  btnGrid.className = 'btn btn-ghost';
+        if (btnTl)    btnTl.className   = 'btn btn-active';
+      }
+    };
+
+    /* ── Compare mode ── */
+    window.toggleCompareMode = function () {
+      compareMode = !compareMode;
+      var btn = document.getElementById('btnCompare');
+      if (btn) btn.className = compareMode ? 'btn btn-active' : 'btn btn-ghost';
+      if (!compareMode) window.clearComparison();
+    };
+
+    window.clearComparison = function () {
+      selectedIds  = [];
+      selectedData = {};
+      compareMode  = false;
+      var btn = document.getElementById('btnCompare');
+      if (btn) btn.className = 'btn btn-ghost';
+      // Remove selected class from all cards
+      var cards = document.querySelectorAll('.photo-card');
+      for (var i = 0; i < cards.length; i++) {
+        cards[i].classList.remove('selected');
+      }
+      var panel = document.getElementById('comparePanel');
+      if (panel) panel.classList.remove('open');
+    };
+
+    function updateComparePanel() {
+      var slot1 = document.getElementById('compareSlot1');
+      var slot2 = document.getElementById('compareSlot2');
+      var panel = document.getElementById('comparePanel');
+
+      function renderSlot(slot, id) {
+        var d = selectedData[id];
+        if (!d) {
+          slot.innerHTML = '<div class="compare-placeholder">' + (slot === slot1 ? 'Select first photo' : 'Select second photo') + '</div>';
+          return;
+        }
+        slot.innerHTML =
+          '<img src="' + d.src + '" alt="Compare" />' +
+          '<div class="compare-slot-info">' +
+            '<div class="compare-slot-date">' + d.date + '</div>' +
+            '<div class="compare-slot-day">Day ' + d.day + '</div>' +
+            (d.notes ? '<div class="compare-slot-notes">' + d.notes.slice(0, 80) + '</div>' : '') +
+          '</div>';
+      }
+
+      renderSlot(slot1, selectedIds[0]);
+      renderSlot(slot2, selectedIds[1]);
+
+      if (panel) {
+        if (selectedIds.length > 0) panel.classList.add('open');
+        else panel.classList.remove('open');
+      }
+    }
+
+    /* ── Card click handler ── */
+    window.handleCardClick = function (id) {
+      if (compareMode) {
+        var card = document.getElementById('card-' + id);
+        var idx  = selectedIds.indexOf(id);
+
+        if (idx !== -1) {
+          // Deselect
+          selectedIds.splice(idx, 1);
+          delete selectedData[id];
+          if (card) card.classList.remove('selected');
+          var badges = document.querySelectorAll('.compare-badge');
+          // Reindex badges
+          document.querySelectorAll('.photo-card.selected').forEach(function (c, i) {
+            var b = c.querySelector('.compare-badge');
+            if (b) b.textContent = i === 0 ? '1' : '2';
+          });
+        } else {
+          if (selectedIds.length >= 2) return; // max 2
+          selectedIds.push(id);
+          if (card) {
+            var d = {
+              src:   card.getAttribute('data-src'),
+              date:  card.getAttribute('data-date'),
+              day:   card.getAttribute('data-day'),
+              notes: card.getAttribute('data-notes'),
+            };
+            selectedData[id] = d;
+            card.classList.add('selected');
+            var badge = document.getElementById('badge-' + id);
+            if (badge) badge.textContent = selectedIds.length === 1 ? '1' : '2';
+          }
+        }
+        updateComparePanel();
+      } else {
+        // Open lightbox
+        var card = document.getElementById('card-' + id);
+        if (!card) return;
+        var src   = card.getAttribute('data-src');
+        var date  = card.getAttribute('data-date');
+        var day   = card.getAttribute('data-day');
+        var notes = card.getAttribute('data-notes');
+        window.openLightbox(src, date, day, notes);
+      }
+    };
+
+    /* ── Lightbox ── */
+    window.openLightbox = function (src, date, day, notes) {
+      var lb     = document.getElementById('lightbox');
+      var lbImg  = document.getElementById('lightboxImg');
+      var lbDate = document.getElementById('lightboxDate');
+      var lbDay  = document.getElementById('lightboxDay');
+      var lbNotes = document.getElementById('lightboxNotes');
+      if (!lb) return;
+      if (lbImg)   lbImg.src           = src;
+      if (lbDate)  lbDate.textContent  = date;
+      if (lbDay)   lbDay.textContent   = 'Day ' + day;
+      if (lbNotes) lbNotes.textContent = notes || '';
+      lb.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    };
+
+    window.closeLightbox = function () {
+      var lb = document.getElementById('lightbox');
+      if (lb) lb.classList.remove('open');
+      document.body.style.overflow = '';
+    };
+
+    // ESC key closes lightbox (slider ESC handled separately below)
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        window.closeLightbox();
+      }
+    });
+
+    /* ── Delete photo ── */
+    window.deletePhoto = function (id) {
+      if (!confirm('Delete this photo? This cannot be undone.')) return;
+      fetch('/api/photos/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photo_id: id }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.success) {
+            var card = document.getElementById('card-' + id);
+            if (card) card.remove();
+          } else {
+            alert('Could not delete photo: ' + (d.error || 'Unknown error'));
+          }
+        })
+        .catch(function () {
+          alert('Network error. Please try again.');
+        });
+    };
+
+    /* ── File input / drag-drop ── */
+    var fileInput  = document.getElementById('fileInput');
+    var dropZone   = document.getElementById('dropZone');
+    var previewImg = document.getElementById('previewImg');
+    var dropContent = document.getElementById('dropZoneContent');
+
+    function showPreview(file) {
+      if (!file || !file.type.startsWith('image/')) return;
+      selectedFile = file;
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        if (previewImg) {
+          previewImg.src    = e.target.result;
+          previewImg.style.display = 'block';
+        }
+        if (dropContent) dropContent.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    if (fileInput) {
+      fileInput.addEventListener('change', function () {
+        if (this.files && this.files[0]) showPreview(this.files[0]);
+      });
+    }
+
+    if (dropZone) {
+      dropZone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        this.classList.add('dragging');
+      });
+      dropZone.addEventListener('dragleave', function () {
+        this.classList.remove('dragging');
+      });
+      dropZone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        this.classList.remove('dragging');
+        var file = e.dataTransfer && e.dataTransfer.files[0];
+        if (file) showPreview(file);
+      });
+    }
+
+    /* ── Canvas compression + upload ── */
+    window.doUpload = function () {
+      if (!selectedFile) {
+        setStatus('Please select an image first.', 'err');
+        return;
+      }
+
+      var dateVal  = document.getElementById('photoDate') ? document.getElementById('photoDate').value : todayStr;
+      var notesVal = document.getElementById('photoNotes') ? document.getElementById('photoNotes').value.trim() : '';
+      var btn      = document.getElementById('uploadBtn');
+      var MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+      if (selectedFile.size > MAX_SIZE) {
+        setStatus('File too large (max 5MB).', 'err');
+        return;
+      }
+
+      setStatus('Compressing…', '');
+      if (btn) { btn.disabled = true; btn.textContent = 'Uploading…'; }
+
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        var img = new Image();
+        img.onload = function () {
+          var MAX_DIM = 800;
+          var w = img.width;
+          var h = img.height;
+          if (w > MAX_DIM || h > MAX_DIM) {
+            if (w > h) { h = Math.round(h * MAX_DIM / w); w = MAX_DIM; }
+            else        { w = Math.round(w * MAX_DIM / h); h = MAX_DIM; }
+          }
+          var canvas = document.createElement('canvas');
+          canvas.width  = w;
+          canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          var b64 = canvas.toDataURL('image/jpeg', 0.7);
+
+          setStatus('Uploading…', '');
+          fetch('/api/photos/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              photo_data: b64,
+              taken_date: dateVal,
+              notes: notesVal || null,
+            }),
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              if (d.success) {
+                setStatus('Photo uploaded!', 'ok');
+                if (btn) { btn.disabled = false; btn.textContent = 'Upload Photo'; }
+                setTimeout(function () { window.location.reload(); }, 900);
+              } else {
+                setStatus(d.error || 'Upload failed.', 'err');
+                if (btn) { btn.disabled = false; btn.textContent = 'Upload Photo'; }
+              }
+            })
+            .catch(function () {
+              setStatus('Network error. Try again.', 'err');
+              if (btn) { btn.disabled = false; btn.textContent = 'Upload Photo'; }
+            });
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(selectedFile);
+    };
+
+    function setStatus(msg, type) {
+      var el = document.getElementById('uploadStatus');
+      if (!el) return;
+      el.textContent  = msg;
+      el.className = 'upload-status' + (type ? ' ' + type : '');
+    }
+
+    /* ── Show/hide Slider button when 2 photos selected ── */
+    var _origUpdateCompare = updateComparePanel;
+    updateComparePanel = function() {
+      _origUpdateCompare();
+      var btn = document.getElementById('btnSlider');
+      if (btn) btn.style.display = selectedIds.length === 2 ? 'inline-flex' : 'none';
+    };
+
+    /* ── Before/After Slider ─────────────────────────── */
+    var sliderPos = 50; // percentage
+    var sliderDragging = false;
+
+    window.openSlider = function() {
+      if (selectedIds.length < 2) return;
+
+      // Photo 1 = before (first selected), Photo 2 = after (second selected)
+      var d1 = selectedData[selectedIds[0]];
+      var d2 = selectedData[selectedIds[1]];
+      if (!d1 || !d2) return;
+
+      var before = document.getElementById('sliderImgBefore');
+      var after  = document.getElementById('sliderImgAfter');
+      var infoL  = document.getElementById('sliderInfoLeft');
+      var infoR  = document.getElementById('sliderInfoRight');
+
+      if (before) before.src = d1.src;
+      if (after)  after.src  = d2.src;
+      if (infoL) {
+        infoL.innerHTML = d1.date + '<span>Day ' + d1.day + ' · Before</span>';
+      }
+      if (infoR) {
+        infoR.innerHTML = d2.date + '<span>Day ' + d2.day + ' · After</span>';
+      }
+
+      sliderPos = 50;
+      applySliderPos();
+
+      var overlay = document.getElementById('sliderOverlay');
+      if (overlay) overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    };
+
+    window.closeSlider = function() {
+      var overlay = document.getElementById('sliderOverlay');
+      if (overlay) overlay.classList.remove('open');
+      document.body.style.overflow = '';
+    };
+
+    function applySliderPos() {
+      var before   = document.getElementById('sliderImgBefore');
+      var divider  = document.getElementById('sliderDivider');
+      var handle   = document.getElementById('sliderHandle');
+      var pct = sliderPos + '%';
+      if (before)  before.style.clipPath  = 'inset(0 ' + (100 - sliderPos) + '% 0 0)';
+      if (divider) divider.style.left     = pct;
+      if (handle)  handle.style.left      = pct;
+    }
+
+    function getSliderPct(clientX) {
+      var wrap = document.getElementById('sliderWrap');
+      if (!wrap) return 50;
+      var rect = wrap.getBoundingClientRect();
+      var x    = Math.max(0, Math.min(clientX - rect.left, rect.width));
+      return Math.round((x / rect.width) * 100);
+    }
+
+    // Mouse events
+    var sliderWrap = document.getElementById('sliderWrap');
+    if (sliderWrap) {
+      sliderWrap.addEventListener('mousedown', function(e) {
+        sliderDragging = true;
+        sliderPos = getSliderPct(e.clientX);
+        applySliderPos();
+      });
+      document.addEventListener('mousemove', function(e) {
+        if (!sliderDragging) return;
+        sliderPos = getSliderPct(e.clientX);
+        applySliderPos();
+      });
+      document.addEventListener('mouseup', function() { sliderDragging = false; });
+
+      // Touch events
+      sliderWrap.addEventListener('touchstart', function(e) {
+        sliderDragging = true;
+        sliderPos = getSliderPct(e.touches[0].clientX);
+        applySliderPos();
+      }, { passive: true });
+      sliderWrap.addEventListener('touchmove', function(e) {
+        if (!sliderDragging) return;
+        sliderPos = getSliderPct(e.touches[0].clientX);
+        applySliderPos();
+      }, { passive: true });
+      sliderWrap.addEventListener('touchend', function() { sliderDragging = false; });
+    }
+
+    // Keyboard control for slider
+    document.addEventListener('keydown', function(e) {
+      var overlay = document.getElementById('sliderOverlay');
+      if (!overlay || !overlay.classList.contains('open')) return;
+      if (e.key === 'Escape') { window.closeSlider(); return; }
+      if (e.key === 'ArrowLeft')  { sliderPos = Math.max(0,   sliderPos - 2); applySliderPos(); }
+      if (e.key === 'ArrowRight') { sliderPos = Math.min(100, sliderPos + 2); applySliderPos(); }
+    });
+
+  })();
+  </script>
+
+</body>
+</html>

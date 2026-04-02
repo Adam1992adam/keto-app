@@ -1,0 +1,403 @@
+{
+	"version": 3,
+	"routes": [
+		{
+			"src": "^/_astro/(.*)$",
+			"headers": {
+				"cache-control": "public, max-age=31536000, immutable"
+			},
+			"continue": true
+		},
+		{
+			"handle": "filesystem"
+		},
+		{
+			"src": "^\\/_image$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/admin\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/admin login\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/admin-login\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/achievements\\/check\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/admin\\/activate-pending\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/admin\\/delete-pending\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/admin\\/update-user\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/admin\\/verify\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/auth\\/login\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/auth\\/logout\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/auth\\/refresh\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/auth\\/signup\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/auth\\/signup-purchase\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/chat\\/gemini\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/chat\\/history\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/checkin\\/save\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/community\\/posts\\/([^/]+?)\\/comments\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/community\\/posts\\/([^/]+?)\\/delete\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/community\\/posts\\/([^/]+?)\\/react\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/community\\/posts\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/cron\\/daily-push\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/cron\\/expire-subscriptions\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/cron\\/weekly-email\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/cron\\/winback-email\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/export\\/([^/]+?)\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/fasting\\/end\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/fasting\\/start\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/food-log\\/add\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/food-log\\/delete\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/habits\\/delete\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/habits\\/toggle\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/habits\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/ketones\\/delete\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/ketones\\/log\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/lemonsqueezy\\/verify-purchase\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/lemonsqueezy\\/webhook\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/macro-goals\\/save\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/meal-prep\\/save\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/meals\\/complete\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/meals\\/swap\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/meals\\/today\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/measurements\\/delete\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/measurements\\/save\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/notifications\\/generate\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/notifications\\/preferences\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/notifications\\/push-send\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/notifications\\/push-subscribe\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/notifications\\/push-unsubscribe\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/notifications\\/save\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/notifications\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/onboarding\\/save\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/photos\\/delete\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/photos\\/list\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/photos\\/upload\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/profile\\/add-weight\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/profile\\/update\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/profile\\/update-avatar\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/profile\\/update-units\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/recipes\\/favorite\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/recipes\\/rate\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/reflection\\/save\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/shopping\\/custom\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/shopping\\/toggle\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/tasks\\/complete\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/water\\/log\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/water\\/update\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/api\\/weekly\\/save\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/admin\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/ai-coach\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/checkin\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/community\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/expired\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/export\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/fasting\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/favorites\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/food-log\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/habits\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/ketones\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/learn\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/meal-prep\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/notification-preferences\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/notifications\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/onboarding\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/photos\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/profile\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/progress\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/recipe\\/([^/]+?)\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/recipes\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/reflections\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/shopping\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/upgrade\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/weekly\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/dashboard\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/login\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/signup\\/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^\\/$",
+			"dest": "_render"
+		}
+	]
+}

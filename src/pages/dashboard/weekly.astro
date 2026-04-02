@@ -1,6 +1,6 @@
 ---
 // src/pages/dashboard/weekly.astro
-import { supabase, getUserJourney, getMaxJourneyDays } from '../../lib/supabase';
+import { getUserJourney, getMaxJourneyDays } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import BarChart3 from 'lucide-astro/BarChart3';
@@ -19,19 +19,19 @@ import Brain from 'lucide-astro/Brain';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
 
-const journey = await getUserJourney(user.id);
+const journey = await getUserJourney(user.id, db);
 const currentDay  = journey?.current_day  || 1;
 const maxDays     = getMaxJourneyDays(planType);
 const maxWeeks    = Math.ceil(maxDays / 7);
 const currentWeek = Math.min(Math.ceil(currentDay / 7), maxWeeks);
 
 // Check if already submitted this week
-const { data: existingReport } = await supabase
+const { data: existingReport } = await db
   .from('weekly_reports')
   .select('*')
   .eq('user_id', user.id)
@@ -43,7 +43,7 @@ const weekStart = new Date();
 weekStart.setDate(weekStart.getDate() - ((currentWeek - 1) * 7 + (currentDay % 7 || 7) - 1));
 const weekStartStr = weekStart.toISOString().split('T')[0];
 
-const { data: weekCheckins } = await supabase
+const { data: weekCheckins } = await db
   .from('daily_checkins')
   .select('*')
   .eq('user_id', user.id)
@@ -51,7 +51,7 @@ const { data: weekCheckins } = await supabase
   .order('checkin_date', { ascending: true });
 
 // Get weight logs for this week
-const { data: weightLogs } = await supabase
+const { data: weightLogs } = await db
   .from('weight_logs')
   .select('weight, logged_date, notes')
   .eq('user_id', user.id)
@@ -59,21 +59,21 @@ const { data: weightLogs } = await supabase
   .limit(10);
 
 // Get macro goals
-const { data: macroGoals } = await supabase
+const { data: macroGoals } = await db
   .from('macro_goals')
   .select('*')
   .eq('user_id', user.id)
   .single();
 
 // Get onboarding data
-const { data: onboarding } = await supabase
+const { data: onboarding } = await db
   .from('onboarding_data')
   .select('goal, target_weight, current_weight, fasting_protocol, activity_level')
   .eq('user_id', user.id)
   .single();
 
 // Get all previous weekly reports for history
-const { data: prevReports } = await supabase
+const { data: prevReports } = await db
   .from('weekly_reports')
   .select('*')
   .eq('user_id', user.id)
@@ -103,14 +103,14 @@ const tier        = profile.subscription_tier || 'basic_30';
 const totalXP     = journey?.total_xp || 0;
 
 // Habits for this week
-const weekHabits = await supabase
+const weekHabits = await db
   .from('habits').select('id, title, icon, category')
   .eq('user_id', user.id).eq('is_active', true)
   .order('sort_order');
 const habitsForWeek = weekHabits.data || [];
 
 const weekEnd = new Date();
-const weekHabitComps = await supabase
+const weekHabitComps = await db
   .from('habit_completions').select('habit_id, completed_date')
   .eq('user_id', user.id)
   .gte('completed_date', weekStartStr)

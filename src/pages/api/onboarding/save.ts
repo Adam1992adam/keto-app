@@ -165,7 +165,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // ── 6. Initialize user journey + day 1 tasks (idempotent — safe to call twice) ──
     await initializeUserJourney(user.id);
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, redirect: '/dashboard/welcome' }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });

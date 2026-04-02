@@ -1,5 +1,5 @@
 ---
-import { supabase, getUserJourney, getMealCycleDays } from '../../lib/supabase';
+import { getUserJourney, getMealCycleDays } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import Bot from 'lucide-astro/Bot';
@@ -26,7 +26,7 @@ import User from 'lucide-astro/User';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 
 if (profile.subscription_tier !== 'elite_12') return Astro.redirect('/dashboard/upgrade');
 
@@ -36,7 +36,7 @@ const userName  = profile.full_name?.split(' ')[0] || 'there';
 const today     = new Date().toISOString().split('T')[0];
 const nowHour   = new Date().getHours();
 
-const journey    = await getUserJourney(user.id);
+const journey    = await getUserJourney(user.id, db);
 const currentDay = journey?.current_day || 1;
 const streak     = journey?.streak_days || 0;
 const totalXp    = journey?.total_xp || 0;
@@ -46,14 +46,14 @@ const cycledDay  = ((currentDay - 1) % getMealCycleDays(planType)) + 1;
 
 // Parallel data fetch
 const results = await Promise.all([
-  supabase.from('onboarding_data').select('current_weight,target_weight,dietary_restrictions,fasting_protocol').eq('user_id', user.id).single(),
-  supabase.from('daily_checkins').select('energy_level,water_glasses,had_headache,had_fatigue').eq('user_id', user.id).eq('checkin_date', today).maybeSingle(),
-  supabase.from('daily_tasks').select('task_title,completed').eq('user_id', user.id).eq('day_number', currentDay),
-  supabase.from('weight_logs').select('weight,logged_date').eq('user_id', user.id).order('logged_date', { ascending: false }).limit(3),
-  supabase.from('fasting_sessions').select('started_at,target_hours').eq('user_id', user.id).is('ended_at', null).order('started_at', { ascending: false }).limit(1).maybeSingle(),
-  supabase.from('macro_goals').select('daily_calories,protein_g,fat_g,carbs_g').eq('user_id', user.id).single(),
-  supabase.from('meal_completions').select('meal_type').eq('user_id', user.id).eq('day_number', currentDay),
-  supabase.from('chat_messages').select('role,content,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(40),
+  db.from('onboarding_data').select('current_weight,target_weight,dietary_restrictions,fasting_protocol').eq('user_id', user.id).single(),
+  db.from('daily_checkins').select('energy_level,water_glasses,had_headache,had_fatigue').eq('user_id', user.id).eq('checkin_date', today).maybeSingle(),
+  db.from('daily_tasks').select('task_title,completed').eq('user_id', user.id).eq('day_number', currentDay),
+  db.from('weight_logs').select('weight,logged_date').eq('user_id', user.id).order('logged_date', { ascending: false }).limit(3),
+  db.from('fasting_sessions').select('started_at,target_hours').eq('user_id', user.id).is('ended_at', null).order('started_at', { ascending: false }).limit(1).maybeSingle(),
+  db.from('macro_goals').select('daily_calories,protein_g,fat_g,carbs_g').eq('user_id', user.id).single(),
+  db.from('meal_completions').select('meal_type').eq('user_id', user.id).eq('day_number', currentDay),
+  db.from('chat_messages').select('role,content,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(40),
 ]);
 
 const onboarding    = results[0].data;

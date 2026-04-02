@@ -1,6 +1,5 @@
 ---
 // src/pages/dashboard/learn.astro
-import { supabase } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import BookOpen    from 'lucide-astro/BookOpen';
@@ -25,17 +24,17 @@ import HelpCircle  from 'lucide-astro/HelpCircle';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
 
 // ── Quick-start progress (server-side checks) ────────────────
-const { data: weightLogCheck }  = await supabase.from('weight_logs').select('id').eq('user_id', user.id).limit(1);
-const { data: checkinCheck }    = await supabase.from('daily_checkins').select('id').eq('user_id', user.id).limit(1);
-const { data: taskCheck }       = await supabase.from('daily_tasks').select('id').eq('user_id', user.id).eq('completed', true).limit(1);
-const { data: onboardingCheck } = await supabase.from('onboarding_data').select('fasting_protocol').eq('user_id', user.id).maybeSingle();
+const { data: weightLogCheck }  = await db.from('weight_logs').select('id').eq('user_id', user.id).limit(1);
+const { data: checkinCheck }    = await db.from('daily_checkins').select('id').eq('user_id', user.id).limit(1);
+const { data: taskCheck }       = await db.from('daily_tasks').select('id').eq('user_id', user.id).eq('completed', true).limit(1);
+const { data: onboardingCheck } = await db.from('onboarding_data').select('fasting_protocol').eq('user_id', user.id).maybeSingle();
 
 const hasWeight     = (weightLogCheck?.length || 0) > 0;
 const hasCheckin    = (checkinCheck?.length   || 0) > 0;

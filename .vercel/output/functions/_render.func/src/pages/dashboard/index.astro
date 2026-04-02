@@ -1,0 +1,2249 @@
+---
+// src/pages/dashboard/index.astro
+import { supabase, getUserJourney, getMaxJourneyDays, getMealCycleDays } from '../../lib/supabase';
+import { requireAuth } from '../../lib/auth';
+import DashNav from '../../components/DashNav.astro';
+// ── Lucide icons ──────────────────────────────────────────
+import Scale         from 'lucide-astro/Scale';
+import Flame         from 'lucide-astro/Flame';
+import Zap           from 'lucide-astro/Zap';
+import CalendarDays  from 'lucide-astro/CalendarDays';
+import ClipboardCheck from 'lucide-astro/ClipboardCheck';
+import Timer         from 'lucide-astro/Timer';
+import BarChart3     from 'lucide-astro/BarChart3';
+import Compass       from 'lucide-astro/Compass';
+import TrendingUp    from 'lucide-astro/TrendingUp';
+import ShoppingCart  from 'lucide-astro/ShoppingCart';
+import CheckCircle2  from 'lucide-astro/CheckCircle2';
+import Utensils      from 'lucide-astro/Utensils';
+import Droplets      from 'lucide-astro/Droplets';
+import Pill          from 'lucide-astro/Pill';
+import Target        from 'lucide-astro/Target';
+import Activity      from 'lucide-astro/Activity';
+import LineChart     from 'lucide-astro/LineChart';
+import Info          from 'lucide-astro/Info';
+import Moon         from 'lucide-astro/Moon';
+import AppTour      from '../../components/AppTour.astro';
+
+const auth = await requireAuth(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile } = auth;
+
+const planType  = profile.subscription_tier || 'basic_30';
+const maxDays   = getMaxJourneyDays(planType);
+const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
+
+const { data: onboarding } = await supabase
+  .from('onboarding_data').select('*').eq('user_id', user.id).single();
+if (!onboarding) return Astro.redirect('/dashboard/onboarding');
+
+const journey     = await getUserJourney(user.id);
+const currentDay  = journey?.current_day  || 1;
+const currentWeek = Math.ceil(currentDay / 7);
+const totalXP     = journey?.total_xp     || 0;
+const xpLevel     = journey?.level        || 1;
+const streakDays  = journey?.streak_days  || 0;
+const today       = new Date().toISOString().split('T')[0];
+
+const { data: rawTasksCurrent } = await supabase
+  .from('daily_tasks').select('id, task_title, task_type, completed, xp_earned')
+  .eq('user_id', user.id).eq('day_number', currentDay).order('created_at');
+
+const { data: rawTasksDay1 } = await supabase
+  .from('daily_tasks').select('id, task_title, task_type, completed, xp_earned')
+  .eq('user_id', user.id).eq('day_number', 1).order('created_at');
+
+const usingFallback  = !(rawTasksCurrent && rawTasksCurrent.length > 0);
+const tasks          = !usingFallback ? rawTasksCurrent : (rawTasksDay1 || []);
+const totalTasks     = tasks.length;
+const completedTasks = tasks.filter((t) => t.completed).length;
+const taskPct        = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+const { data: todayCheckin } = await supabase
+  .from('daily_checkins').select('*')
+  .eq('user_id', user.id).eq('checkin_date', today).maybeSingle();
+
+const { data: weightLogs } = await supabase
+  .from('weight_logs').select('weight, logged_date')
+  .eq('user_id', user.id).order('logged_date', { ascending: false }).limit(8);
+
+const { data: activeFast } = await supabase
+  .from('fasting_sessions').select('*').eq('user_id', user.id)
+  .is('ended_at', null).order('started_at', { ascending: false }).limit(1).maybeSingle();
+
+const { data: recentCheckins } = await supabase
+  .from('daily_checkins').select('checkin_date, energy_level, followed_meals, water_glasses')
+  .eq('user_id', user.id).order('checkin_date', { ascending: false }).limit(7);
+
+const { data: weekReport } = await supabase
+  .from('weekly_reports').select('id')
+  .eq('user_id', user.id).eq('week_number', currentWeek).maybeSingle();
+
+// Try the user's plan first, fall back to basic_30 if no meals exist for this tier in the DB
+const mealCycleDays = getMealCycleDays(planType);
+const mealDayTarget = ((currentDay - 1) % mealCycleDays) + 1; // cycle within available days
+const { data: rawMealsDirect } = await supabase
+  .from('meal_plans')
+  .select('*, recipe:recipes(id, title, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, tags)')
+  .eq('plan_type', planType).eq('day_number', mealDayTarget).order('meal_type');
+
+const rawMeals = (rawMealsDirect && rawMealsDirect.length > 0)
+  ? rawMealsDirect
+  : await supabase
+      .from('meal_plans')
+      .select('*, recipe:recipes(id, title, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, tags)')
+      .eq('plan_type', 'basic_30').eq('day_number', mealDayTarget).order('meal_type')
+      .then(({ data }) => data || []);
+
+
+const restrictions = onboarding?.dietary_restrictions || [];
+const userGoal     = onboarding?.goal || 'weight_loss';
+const twoWeeksAgo  = new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0];
+const { data: recentSwaps } = await supabase
+  .from('meal_swaps').select('original_recipe_id')
+  .eq('user_id', user.id).gte('swap_date', twoWeeksAgo);
+const rejectedIds = recentSwaps?.map((s) => s.original_recipe_id) || [];
+const avgEnergy   = recentCheckins?.length
+  ? recentCheckins.reduce((s, c) => s + (c.energy_level || 3), 0) / recentCheckins.length : 3;
+
+// Step 1: filter out meals that violate dietary restrictions
+const filteredMealTypes = new Set();
+const allTodayMeals = (rawMeals || []).filter((meal) => {
+  const recipe = meal.recipe;
+  if (!recipe) return true;
+  const tags  = recipe.tags || [];
+  const title = (recipe.title || '').toLowerCase();
+  if (restrictions.includes('no_pork') && ['bacon','ham','prosciutto','chorizo','sausage','pork'].some(w => title.includes(w))) {
+    filteredMealTypes.add(meal.meal_type);
+    return false;
+  }
+  if (restrictions.includes('vegetarian') && ['chicken','beef','steak','lamb','duck','salmon','tuna','shrimp','cod','fish'].some(w => title.includes(w))) {
+    filteredMealTypes.add(meal.meal_type);
+    return false;
+  }
+  if (restrictions.includes('no_seafood') && ['salmon','tuna','shrimp','cod','fish'].some(w => title.includes(w))) {
+    filteredMealTypes.add(meal.meal_type);
+    return false;
+  }
+  return true;
+});
+
+// Step 2: enrich remaining meals with icons + smart-adapt flags
+const todayMeals = allTodayMeals.map((meal) => {
+  const r   = meal.recipe;
+  const mt0 = meal.meal_type;
+  meal.icon = mt0;
+  // Mark as "Adapted" if a restriction caused another meal in that slot to be filtered
+  meal.slot_adapted = restrictions.length > 0 && filteredMealTypes.has(mt0);
+  if (!r) { meal.is_adapted = false; meal.adapt_reason = ''; return meal; }
+  const totalTime  = (r.prep_time || 0) + (r.cook_time || 0);
+  const adaptReason = (
+    rejectedIds.includes(r.id)                          ? 'Previously swapped' :
+    (avgEnergy < 2.5 && totalTime > 20 && meal.meal_type !== 'snack') ? 'Try something quicker' : ''
+  );
+  meal.is_adapted   = !!adaptReason;
+  meal.adapt_reason = adaptReason;
+  return meal;
+});
+const adaptedCount = todayMeals.filter((m) => m.is_adapted || m.slot_adapted).length;
+
+// Cycle variety: how many full 30-day cycles have been completed
+const cycleNum  = Math.floor((currentDay - 1) / mealCycleDays);
+const cycleWeek = Math.ceil(((((currentDay - 1) % mealCycleDays) + 1)) / 7);
+
+// Goal-aware macro totals from today's plan
+const totalCalToday     = todayMeals.reduce((s, m) => s + (m.recipe?.calories || 0), 0);
+const totalProteinToday = todayMeals.reduce((s, m) => s + parseFloat(m.recipe?.protein || '0'), 0);
+
+// Today's meal completions
+const { data: mealCompletions } = await supabase
+  .from('meal_completions')
+  .select('meal_type, recipe_id')
+  .eq('user_id', user.id)
+  .eq('day_number', currentDay);
+const completedMealTypesArr = (mealCompletions || []).map((c: any) => c.meal_type);
+const completedMealSet = new Set(completedMealTypesArr);
+
+// Consumed macros from completed meals today
+const consumedMacros = todayMeals
+  .filter((m: any) => completedMealSet.has(m.meal_type) && m.recipe)
+  .reduce((acc: any, m: any) => ({
+    calories:  acc.calories  + (m.recipe.calories  || 0),
+    protein:   acc.protein   + parseFloat(m.recipe.protein   || '0'),
+    fat:       acc.fat       + parseFloat(m.recipe.fat       || '0'),
+    net_carbs: acc.net_carbs + parseFloat(m.recipe.net_carbs || '0'),
+  }), { calories: 0, protein: 0, fat: 0, net_carbs: 0 });
+
+// Macro goals
+const { data: macroGoals } = await supabase
+  .from('macro_goals')
+  .select('daily_calories, protein_g, fat_g, carbs_g')
+  .eq('user_id', user.id)
+  .maybeSingle();
+const goalCal  = macroGoals?.daily_calories || 1800;
+const goalProt = macroGoals?.protein_g      || 120;
+const goalFat  = macroGoals?.fat_g          || 120;
+const goalCarb = macroGoals?.carbs_g        || 25;
+
+// Today's custom food log entries
+const { data: foodLogs } = await supabase
+  .from('food_logs').select('*')
+  .eq('user_id', user.id).eq('logged_date', today)
+  .order('created_at', { ascending: true });
+const todayFoodLogs = foodLogs || [];
+const foodLogMacros = todayFoodLogs.reduce((acc, f) => ({
+  calories:  acc.calories  + (f.calories  || 0),
+  protein:   acc.protein   + parseFloat(f.protein_g || '0'),
+  fat:       acc.fat       + parseFloat(f.fat_g     || '0'),
+  net_carbs: acc.net_carbs + parseFloat(f.carbs_g   || '0'),
+}), { calories: 0, protein: 0, fat: 0, net_carbs: 0 });
+
+const totalConsumed = {
+  calories:  consumedMacros.calories  + foodLogMacros.calories,
+  protein:   consumedMacros.protein   + foodLogMacros.protein,
+  fat:       consumedMacros.fat       + foodLogMacros.fat,
+  net_carbs: consumedMacros.net_carbs + foodLogMacros.net_carbs,
+};
+const calPct   = Math.min(100, Math.round((totalConsumed.calories  / goalCal)  * 100));
+const protPct  = Math.min(100, Math.round((totalConsumed.protein   / goalProt) * 100));
+const fatPct   = Math.min(100, Math.round((totalConsumed.fat       / goalFat)  * 100));
+const carbPct  = Math.min(100, Math.round((totalConsumed.net_carbs / goalCarb) * 100));
+
+const startWeight  = onboarding?.current_weight || profile.weight_kg || 0;
+const latestWeight = weightLogs?.[0]?.weight    || startWeight;
+const weightLost   = Math.max(0, startWeight - latestWeight);
+const targetWeight = onboarding?.target_weight  || profile.target_weight_kg || 0;
+const progressPct  = (targetWeight && startWeight > targetWeight)
+  ? Math.min(100, Math.round((weightLost / (startWeight - targetWeight)) * 100)) : 0;
+
+const xpInLevel  = totalXP % 500;
+const xpPct      = Math.round((xpInLevel / 500) * 100);
+const journeyPct = Math.min(100, Math.round((currentDay / maxDays) * 100));
+const daysLeft   = Math.max(0, maxDays - currentDay);
+const streakPct  = Math.min(100, Math.round((streakDays / 30) * 100));
+const userName   = profile.full_name?.split(' ')[0] || 'there';
+const hour      = new Date().getHours();
+const greeting  = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+const greetIcon = '';
+const daysToGo   = Math.max(0, maxDays - currentDay);
+const xpDisplay  = totalXP >= 1000 ? (totalXP / 1000).toFixed(1) + 'k' : String(totalXP);
+
+const units      = (profile.preferred_units as string) || 'imperial';
+const wUnit      = units === 'imperial' ? 'lbs' : 'kg';
+const dispLatest = latestWeight ? (units === 'imperial' ? Math.round(latestWeight * 2.20462 * 10) / 10 : latestWeight) : 0;
+const weekNum    = currentWeek;
+const streak     = streakDays;
+const level      = xpLevel;
+
+const checkinDone    = !!todayCheckin;
+const weeklyDone     = !!weekReport;
+const fastingActive  = !!activeFast;
+const weightLogToday = weightLogs?.[0]?.logged_date === today;
+const waterGlasses   = (todayCheckin as any)?.water_glasses || 0;
+const waterPct       = Math.min(100, Math.round((waterGlasses / 8) * 100));
+
+// Smart task pct — avoids showing 0% when using fallback data
+const smartTaskPct = usingFallback
+  ? Math.min(100, (checkinDone ? 40 : 0) + (fastingActive ? 20 : 0) + (completedTasks > 0 ? 40 : 0))
+  : taskPct;
+
+// Pre-computed flags to avoid Fragment issues in JSX (no < numbers in JSX ternaries)
+const weekPhase    = currentDay <= 7 ? 'adapt' : (currentDay <= 14 ? 'burn' : 'thrive');
+const progressMsg  = smartTaskPct === 0 ? 'Start your day!' : (smartTaskPct < 50 ? 'Keep going!' : (smartTaskPct < 100 ? 'Almost there!' : 'Perfect day!'));
+const streakDotMax = Math.min(streakDays + 3, 14);
+
+// Weight data passed to ApexCharts via client script (weightLogs already fetched above)
+
+// Journey milestones — no `let` in frontmatter per Astro/esbuild rules
+const milestoneInterval = planType === 'basic_30' ? 7 : 30;
+const milestoneCount = Math.floor(maxDays / milestoneInterval);
+const journeyMilestones = Array.from({ length: milestoneCount }, (_, i) => {
+  const d = (i + 1) * milestoneInterval;
+  return { day: d, pct: Math.round((d / maxDays) * 100), reached: currentDay >= d };
+});
+
+// meal icons computed per-meal inside todayMeals map (see below) to avoid implicit-any indexing
+const mealTypeConfig = {
+  breakfast: { label: 'Breakfast', color: '#b45309', bg: 'linear-gradient(135deg,#92400e,#b45309)' },
+  lunch:     { label: 'Lunch',     color: '#059669', bg: 'linear-gradient(135deg,#065f46,#059669)' },
+  dinner:    { label: 'Dinner',    color: '#7c3aed', bg: 'linear-gradient(135deg,#3730a3,#6d28d9)' },
+  snack:     { label: 'Snack',     color: '#0284c7', bg: 'linear-gradient(135deg,#0c4a6e,#0369a1)' },
+};
+
+const fastingData = activeFast ? {
+  started_at:   activeFast.started_at,
+  target_hours: activeFast.target_hours || 16,
+  protocol:     activeFast.protocol || 'IF',
+} : null;
+
+// ── Personalized daily tip ────────────────────────────────
+const recentAvgEnergy = recentCheckins?.length
+  ? recentCheckins.reduce((s, c) => s + (c.energy_level || 3), 0) / recentCheckins.length : 3;
+
+const week1Tips = [
+  { icon:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', color:'#f59e0b', title:'Salt is your best friend this week', body:'Your kidneys dump sodium on keto. Add ½ tsp of salt to a glass of water each morning. This alone fixes most keto flu symptoms within hours.' },
+  { icon:'<path d="M12 2C12 2 5 10 5 15a7 7 0 0014 0c0-5-7-13-7-13z"/>', color:'#3b82f6', title:'Drink before you feel thirsty', body:'On keto, thirst response lags behind. Aim for 2.5–3L of water per day. Set phone reminders if needed — dehydration causes false hunger cravings.' },
+  { icon:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>', color:'#10b981', title:'Fat doesn\'t make you fat on keto', body:'The old "dietary fat = body fat" myth is wrong. On keto, dietary fat is your primary fuel. Eating fat turns OFF fat storage hormones and keeps you satiated for hours.' },
+  { icon:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>', color:'#ef4444', title:'Keto flu is temporary — push through', body:'Headaches, fatigue, and brain fog in days 1–5 are normal. Your brain is switching fuel sources. Electrolytes + hydration + sleep will cut this phase short.' },
+  { icon:'<path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>', color:'#8b5cf6', title:'Your brain runs on ketones now', body:'The brain is 25% of your energy budget. It\'s learning to use ketones instead of glucose. By week 2, most people report sharper mental clarity than they\'ve had in years.' },
+  { icon:'<path d="M3 11l19-9-9 19-2-8-8-2z"/>', color:'#10b981', title:'Protein protects your muscle', body:'Aim for 1.2–1.7g of protein per kg of bodyweight per day. Too little = muscle loss. Too much = gluconeogenesis. For a 75kg person: 90–130g protein/day.' },
+  { icon:'<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>', color:'#8b5cf6', title:'Sleep is a keto superpower', body:'During sleep, growth hormone surges and fat burning peaks. Poor sleep raises cortisol → raises blood sugar → kicks you out of ketosis. Protect your sleep this week.' },
+];
+
+const week2Tips = [
+  { icon:'<path d="M12 2c0 0-5 4.5-5 9a5 5 0 0010 0c0-4.5-5-9-5-9zm0 14a3 3 0 01-3-3c0-2 2-4.5 3-6 1 1.5 3 4 3 6a3 3 0 01-3 3z"/>', color:'#f97316', title:'You\'re building fat-burning machinery', body:'Week 2 is when your mitochondria start multiplying and fat-oxidation enzymes upregulate. Energy will stabilize. The keto flu is behind you — the real benefits are ahead.' },
+  { icon:'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>', color:'#3b82f6', title:'Scale stall? That\'s normal.', body:'After week 1\'s water loss, the scale often stalls for 3–5 days. Your body is adapting internally. Waist circumference is shrinking even when weight doesn\'t move. Keep going.' },
+  { icon:'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>', color:'#10b981', title:'You can exercise now — but go easy', body:'Light weights and walking are perfect this week. High-intensity training is best saved for week 4+ when fat adaptation is complete. Your muscles are still learning.' },
+  { icon:'<path d="M3 11l19-9-9 19-2-8-8-2z"/>', color:'#f59e0b', title:'Meal prep is the #1 habit', body:'People who succeed on keto have one thing in common: they cook in batches. Spend 90 minutes on Sunday preparing proteins and vegetables. It removes daily willpower decisions.' },
+];
+
+const week3Tips = [
+  { icon:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', color:'#10b981', title:'You\'ve entered fat-adaptation', body:'By week 3, your fat-burning enzymes are maximized. Energy is stable all day. This is why keto feels so different from calorie restriction — you\'re running on a clean, abundant fuel.' },
+  { icon:'<path d="M3 11l19-9-9 19-2-8-8-2z"/>', color:'#f59e0b', title:'Try combining keto + intermittent fasting', body:'Now that you\'re adapted, 16:8 fasting is effortless. Skip breakfast, eat noon–8pm. The synergy between keto and IF burns fat at a rate neither achieves alone.' },
+  { icon:'<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>', color:'#8b5cf6', title:'Your inflammation is dropping', body:'Ketones are anti-inflammatory. By week 3, many people notice less joint pain, better skin, reduced bloating, and clearer sinuses. This is your body healing systemically.' },
+];
+
+// Pick the right tip pool and rotate by currentDay
+const tipPool = weekPhase === 'adapt' ? week1Tips : (weekPhase === 'burn' ? week2Tips : week3Tips);
+// Today's habits
+const { data: habitsRaw } = await supabase
+  .from('habits').select('id, title, icon, category')
+  .eq('user_id', user.id).eq('is_active', true)
+  .order('sort_order').order('created_at').limit(6);
+const dashHabits = habitsRaw || [];
+
+const { data: habitDoneRaw } = await supabase
+  .from('habit_completions').select('habit_id')
+  .eq('user_id', user.id).eq('completed_date', today);
+const habitDoneIds = new Set((habitDoneRaw || []).map(h => h.habit_id));
+const habitsDoneCount = dashHabits.filter(h => habitDoneIds.has(h.id)).length;
+
+const dailyTip = (() => {
+  if (!checkinDone && currentDay > 1)
+    return { icon:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>', color:'#10b981', title:'Complete your daily check-in', body:'Tracking energy, mood, and water takes 60 seconds but gives you weeks of insight. Your streak depends on it — don\'t break it today!' };
+  if (waterGlasses === 0 && currentDay > 1)
+    return { icon:'<path d="M12 2C12 2 5 10 5 15a7 7 0 0014 0c0-5-7-13-7-13z"/>', color:'#3b82f6', title:'Start drinking water now', body:'You haven\'t logged any water today. Keto demands more hydration than a standard diet. Low water = false hunger, headaches, and reduced fat burning. Drink a glass right now.' };
+  if (recentAvgEnergy < 2.5 && recentCheckins && recentCheckins.length >= 3)
+    return { icon:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', color:'#f59e0b', title:'Low energy? Check your electrolytes', body:'3+ days of low energy usually means electrolyte deficiency, not a keto problem. Add sodium, potassium (avocado), and magnesium glycinate at bedtime. Results are felt within 24 hours.' };
+  if (streakDays >= 7)
+    return { icon:'<path d="M12 2c0 0-5 4.5-5 9a5 5 0 0010 0c0-4.5-5-9-5-9zm0 14a3 3 0 01-3-3c0-2 2-4.5 3-6 1 1.5 3 4 3 6a3 3 0 01-3 3z"/>', color:'#f97316', title:`${streakDays}-day streak — you're on fire!`, body:'Consistency is the #1 predictor of long-term keto success. Your body is adapting more deeply every day you stay on track. Each day now compounds the results of every day before it.' };
+  if (fastingActive)
+    return { icon:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', color:'#8b5cf6', title:'Fasting + keto: the ultimate combo', body:'While you fast, your already-low glycogen burns away in hours instead of days. You\'ll reach deep fat-burning mode today faster than any non-keto faster. Stay strong — the hardest part is hour 10–14.' };
+  return tipPool[(currentDay - 1) % tipPool.length];
+})();
+
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard · Day {currentDay} · Keto</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
+  <script is:inline>(function(){const t=localStorage.getItem('keto-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
+  <style>
+    /* Design tokens defined globally in DashNav.astro */
+    /* Dark-mode local fallbacks only */
+    :root{
+      --bg:#060d09;--bg2:#0a1410;--card:#0d1a0f;--card2:#111f13;
+      --border:rgba(16,185,129,.1);--border2:rgba(16,185,129,.22);
+      --text:#dfeedd;--soft:#4d7055;--muted:#233328;
+      --green:#10b981;--green2:#34d399;--gold:#f59e0b;--gold2:#fcd34d;
+      --amber:#f59e0b;--amber2:#fbbf24;--amber-bg:rgba(245,158,11,.1);
+      --purple:#8b5cf6;--purple2:#a78bfa;--blue:#3b82f6;--blue2:#60a5fa;
+      --red:#ef4444;--green-bg:rgba(16,185,129,.1);--nav-h:64px;
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html{scroll-behavior:smooth;}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5;-webkit-font-smoothing:antialiased;}
+    a{text-decoration:none;color:inherit;}
+    button{font-family:inherit;cursor:pointer;}
+    img{max-width:100%;display:block;}
+
+    /* PAGE */
+    .page{max-width:1200px;margin:0 auto;padding:1.75rem 1.5rem 5rem;}
+    @media(max-width:640px){.page{padding:1.25rem 1rem 5rem;}}
+
+    /* HERO */
+    .hero{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;}
+    .hero-eyebrow{font-size:.7rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--green);margin-bottom:.35rem;display:flex;align-items:center;gap:.4rem;}
+    .hero-eyebrow span{opacity:.6;}
+    .hero-title{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(1.7rem,4vw,2.5rem);line-height:1.06;margin-bottom:.4rem;}
+    .hero-title em{font-style:italic;color:var(--green2);}
+    .hero-sub{font-size:.83rem;color:var(--soft);}
+    .hero-r{display:flex;align-items:center;gap:.65rem;flex-shrink:0;}
+    .day-pill{font-family:'Fraunces',serif;font-weight:900;font-size:.82rem;padding:.4rem .9rem;border-radius:99px;background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(52,211,153,.08));border:1px solid rgba(16,185,129,.25);color:var(--green2);}
+    .week-pill{font-size:.72rem;font-weight:800;padding:.4rem .9rem;border-radius:99px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--soft);}
+
+    /* JOURNEY PROGRESS BAR */
+    .journey-bar{margin-bottom:1.5rem;padding:1rem 1.25rem;background:var(--card);border:1px solid var(--border);border-radius:16px;animation:fadeUp .5s .1s ease both;}
+    .journey-bar-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:.55rem;}
+    .journey-bar-lbl{font-size:.72rem;font-weight:800;color:var(--soft);}
+    .journey-bar-pct{font-size:.72rem;font-weight:900;color:var(--green);}
+    .journey-track{height:8px;background:var(--muted);border-radius:99px;overflow:hidden;}
+    .journey-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--green),var(--green2));transition:width 1.5s .3s ease;}
+    .journey-meta{display:flex;justify-content:space-between;margin-top:.45rem;}
+    .journey-meta span{font-size:.67rem;color:var(--soft);}
+    .journey-meta strong{color:var(--text);font-weight:700;}
+
+    /* DAILY TIP */
+    .daily-tip{display:flex;align-items:flex-start;gap:.9rem;padding:1rem 1.1rem;border-radius:16px;margin-bottom:1.25rem;border:1px solid rgba(255,255,255,.08);background:var(--card);position:relative;animation:fadeUp .4s .15s ease both;}
+    .dt-icon{font-size:1.5rem;flex-shrink:0;margin-top:.05rem;}
+    .dt-body{flex:1;}
+    .dt-title{font-weight:800;font-size:.86rem;color:var(--tip-color);margin-bottom:.25rem;}
+    .dt-text{font-size:.78rem;color:var(--soft);line-height:1.6;}
+    .dt-close{position:absolute;top:.6rem;right:.7rem;background:none;border:none;color:var(--soft);font-size:1.1rem;cursor:pointer;line-height:1;padding:.1rem .3rem;border-radius:4px;transition:color .15s;}
+    .dt-close:hover{color:var(--text);}
+
+    /* ═══════════════════════════════════════
+       STAT CARDS — uiverse-grade glass cards
+       ═══════════════════════════════════════ */
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem;margin-bottom:1.5rem;}
+    @media(max-width:900px){.stats-row{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:480px){.stats-row{gap:.6rem;}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+    @keyframes shimmerSweep{0%{transform:translateX(-120%);}100%{transform:translateX(120%);}}
+    @keyframes borderSpin{0%{background-position:0% 50%;}50%{background-position:100% 50%;}100%{background-position:0% 50%;}}
+
+    .stat-card{
+      position:relative;border-radius:20px;padding:1.15rem 1.2rem;
+      background:var(--card);
+      animation:fadeUp .5s ease both;
+      cursor:default;isolation:isolate;
+      transition:transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .3s ease;
+    }
+    /* Animated gradient border via pseudo-element */
+    .stat-card::before{
+      content:'';position:absolute;inset:-1.5px;border-radius:21.5px;z-index:-1;
+      background:conic-gradient(from 180deg at 50% 50%,
+        transparent 0deg,
+        var(--glow-color,rgba(16,185,129,.5)) 60deg,
+        transparent 120deg,
+        transparent 360deg);
+      opacity:0;transition:opacity .35s ease;
+      animation:borderSpin 3s linear infinite;
+    }
+    /* Radial glow fill behind card */
+    .stat-card::after{
+      content:'';position:absolute;inset:0;border-radius:20px;z-index:-1;
+      background:radial-gradient(ellipse at 80% 10%,var(--glow,rgba(16,185,129,.07)),transparent 65%);
+      pointer-events:none;
+    }
+    /* Shimmer sweep on hover */
+    .stat-card .sc-shimmer{
+      position:absolute;top:0;left:0;width:40%;height:100%;
+      background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.08) 50%,transparent 60%);
+      transform:translateX(-120%);pointer-events:none;border-radius:inherit;z-index:1;
+    }
+    .stat-card:hover{transform:translateY(-5px) scale(1.01);box-shadow:0 20px 48px rgba(0,0,0,.14),0 6px 16px rgba(0,0,0,.08);}
+    .stat-card:hover::before{opacity:1;}
+    .stat-card:hover .sc-shimmer{animation:shimmerSweep .65s ease forwards;}
+
+    /* Light theme overrides for border glow */
+    html:not([data-theme="dark"]) .stat-card{box-shadow:0 2px 12px rgba(0,0,0,.06),0 1px 3px rgba(0,0,0,.04);}
+    html:not([data-theme="dark"]) .stat-card:hover{box-shadow:0 16px 40px rgba(0,0,0,.1),0 4px 12px rgba(0,0,0,.06);}
+
+    .stat-icon{
+      width:40px;height:40px;border-radius:11px;
+      display:flex;align-items:center;justify-content:center;
+      margin-bottom:.65rem;
+      background:var(--icon-bg,rgba(16,185,129,.1));
+      transition:transform .3s cubic-bezier(.34,1.56,.64,1);
+    }
+    .stat-card:hover .stat-icon{transform:scale(1.12) rotate(-4deg);}
+    .stat-val{font-family:'Fraunces',serif;font-weight:900;font-size:clamp(1.5rem,3vw,2rem);line-height:1;margin-bottom:.2rem;}
+    .stat-lbl{font-size:.7rem;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.55rem;}
+    .stat-badge{display:inline-flex;align-items:center;gap:.3rem;font-size:.65rem;font-weight:800;padding:.2rem .55rem;border-radius:99px;}
+    .bg-g{background:rgba(16,185,129,.12);color:var(--green2);}
+    .bg-a{background:rgba(245,158,11,.12);color:var(--gold);}
+    .bg-b{background:rgba(139,92,246,.12);color:var(--purple2);}
+    .stat-mini-bar{margin-top:.75rem;height:5px;background:var(--muted);border-radius:99px;overflow:hidden;}
+    .stat-mini-fill{height:100%;border-radius:99px;transition:width 1.5s .4s cubic-bezier(.16,1,.3,1);position:relative;}
+    /* Animated gloss on mini fill bar */
+    .stat-mini-fill::after{
+      content:'';position:absolute;right:0;top:0;height:100%;width:30%;
+      background:rgba(255,255,255,.35);border-radius:99px;
+    }
+
+    /* ═══════════════════════════════════════
+       QUICK ACTIONS — magnetic shimmer buttons
+       ═══════════════════════════════════════ */
+    @keyframes qaShimmer{0%{transform:translateX(-150%) skewX(-15deg);}100%{transform:translateX(250%) skewX(-15deg);}}
+    @keyframes qaPop{0%{transform:scale(1);}50%{transform:scale(1.08);}100%{transform:scale(1);}}
+
+    .qa-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:.65rem;margin-bottom:1.5rem;}
+    @media(max-width:900px){.qa-grid{grid-template-columns:repeat(3,1fr);}}
+    @media(max-width:480px){.qa-grid{grid-template-columns:repeat(2,1fr);}}
+
+    .qa-btn{
+      display:flex;flex-direction:column;align-items:center;gap:.35rem;
+      padding:.9rem .5rem .75rem;
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:18px;
+      position:relative;overflow:hidden;
+      transition:transform .28s cubic-bezier(.34,1.56,.64,1),
+                 box-shadow .28s ease,
+                 border-color .2s ease,
+                 background .2s ease;
+      box-shadow:0 1px 4px rgba(0,0,0,.05);
+      text-decoration:none;color:inherit;
+    }
+    /* Diagonal shimmer streak */
+    .qa-btn::before{
+      content:'';position:absolute;top:0;left:0;
+      width:35%;height:100%;
+      background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.12) 50%,transparent 70%);
+      transform:translateX(-150%) skewX(-15deg);
+      pointer-events:none;
+    }
+    .qa-btn:hover{
+      transform:translateY(-5px) scale(1.03);
+      border-color:rgba(16,185,129,.35);
+      background:var(--card);
+      box-shadow:0 12px 32px rgba(0,0,0,.1),0 3px 8px rgba(0,0,0,.06);
+    }
+    .qa-btn:hover::before{animation:qaShimmer .6s ease forwards;}
+    .qa-btn:active{transform:translateY(-2px) scale(.98);transition-duration:.1s;}
+
+    /* Done state — solid green tint */
+    .qa-btn.done{
+      border-color:rgba(16,185,129,.3);
+      background:var(--green-bg);
+    }
+    /* Tiny checkmark badge */
+    .qa-btn.done::after{
+      content:'✓';
+      position:absolute;top:.3rem;right:.4rem;
+      font-size:.52rem;font-weight:900;color:var(--green);
+      width:15px;height:15px;border-radius:50%;
+      background:rgba(16,185,129,.18);border:1.5px solid rgba(16,185,129,.4);
+      display:flex;align-items:center;justify-content:center;
+      line-height:15px;text-align:center;
+    }
+
+    /* Icon wrap — pill with color accent on hover */
+    .qa-icon-wrap{
+      width:42px;height:42px;border-radius:14px;
+      display:flex;align-items:center;justify-content:center;
+      transition:transform .28s cubic-bezier(.34,1.56,.64,1),
+                 background .2s ease,color .2s ease;
+      background:rgba(100,116,139,.07);
+      color:var(--soft);
+    }
+    .qa-btn:hover .qa-icon-wrap{
+      transform:scale(1.15) rotate(-6deg);
+      background:rgba(16,185,129,.12);
+      color:var(--green);
+    }
+    .qa-btn.done .qa-icon-wrap{
+      background:rgba(16,185,129,.15);
+      color:var(--green);
+    }
+    .qa-lbl{font-size:.73rem;font-weight:800;transition:color .2s;}
+    .qa-btn:hover .qa-lbl{color:var(--green);}
+    .qa-sub{font-size:.62rem;color:var(--soft);font-weight:600;}
+    .qa-btn.done .qa-sub{color:var(--green);font-weight:700;}
+
+    /* Light theme shadows */
+    html:not([data-theme="dark"]) .qa-btn{box-shadow:0 1px 5px rgba(0,0,0,.06),0 0 0 1px rgba(0,0,0,.03);}
+    html:not([data-theme="dark"]) .qa-btn:hover{box-shadow:0 10px 28px rgba(0,0,0,.09),0 3px 8px rgba(0,0,0,.05);}
+
+    /* MAIN GRID */
+    .main-grid{display:grid;grid-template-columns:1fr 340px;gap:1.1rem;}
+    @media(max-width:1024px){.main-grid{grid-template-columns:1fr;}}
+
+    /* CARD */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:1.25rem 1.35rem;margin-bottom:1.1rem;box-shadow:var(--shadow-xs);}
+    .card:last-child{margin-bottom:0;}
+    .card-title{font-family:'Fraunces',serif;font-size:.95rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;}
+    .ct-badge{font-family:'DM Sans',sans-serif;font-size:.62rem;font-weight:800;padding:.15rem .45rem;border-radius:6px;margin-left:auto;}
+
+    /* TASKS */
+    .ring-row{display:flex;align-items:center;gap:1.25rem;margin-bottom:1rem;}
+    .ring-wrap{position:relative;width:72px;height:72px;flex-shrink:0;}
+    .ring-wrap svg{transform:rotate(-90deg);}
+    .ring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    .ring-pct{font-family:'Fraunces',serif;font-size:1.05rem;font-weight:900;color:var(--green);line-height:1;}
+    .ring-lbl{font-size:.5rem;font-weight:700;color:var(--soft);}
+    .ring-stats{display:flex;flex-direction:column;gap:.3rem;}
+    .rs-row{display:flex;align-items:center;gap:.5rem;}
+    .rs-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+    .rs-num{font-family:'Fraunces',serif;font-size:.92rem;font-weight:900;min-width:20px;}
+    .rs-txt{font-size:.71rem;color:var(--soft);font-weight:600;}
+
+    /* ═══════════════════════════════════════
+       TASK CHECKBOXES — SVG draw + spring
+       ═══════════════════════════════════════ */
+    @keyframes taskSlideIn{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:translateX(0);}}
+    @keyframes checkDraw{
+      0%  {stroke-dashoffset:24;opacity:0;}
+      20% {opacity:1;}
+      100%{stroke-dashoffset:0;}
+    }
+    @keyframes cbBounce{
+      0%  {transform:scale(1);}
+      35% {transform:scale(.78);}
+      65% {transform:scale(1.18);}
+      85% {transform:scale(.96);}
+      100%{transform:scale(1);}
+    }
+    @keyframes cbRipple{
+      0%  {box-shadow:0 0 0 0 rgba(16,185,129,.45);}
+      100%{box-shadow:0 0 0 10px rgba(16,185,129,0);}
+    }
+
+    .tasks-list{display:flex;flex-direction:column;gap:.45rem;}
+    .task-item{
+      display:flex;align-items:center;gap:.8rem;
+      padding:.7rem .9rem;
+      background:var(--card2);
+      border:1px solid var(--border);
+      border-radius:14px;
+      transition:background .2s ease,border-color .2s ease,
+                 transform .22s cubic-bezier(.34,1.56,.64,1),
+                 opacity .3s ease,box-shadow .2s ease;
+      cursor:pointer;user-select:none;
+      animation:taskSlideIn .3s ease both;
+    }
+    .task-item:hover{
+      border-color:rgba(16,185,129,.25);
+      background:rgba(16,185,129,.04);
+      transform:translateX(3px);
+    }
+    .task-item.done{opacity:.5;}
+    .task-item.done .task-name{text-decoration:line-through;color:var(--soft);}
+    .task-item.done{border-color:rgba(16,185,129,.2);background:rgba(16,185,129,.04);}
+
+    /* Custom checkbox box */
+    .task-cb{
+      width:22px;height:22px;border-radius:7px;
+      border:2px solid var(--border2);
+      display:flex;align-items:center;justify-content:center;
+      flex-shrink:0;
+      transition:background .2s ease,border-color .2s ease;
+      position:relative;
+    }
+    .task-item:hover .task-cb{border-color:rgba(16,185,129,.5);}
+    .task-item.done .task-cb{
+      background:linear-gradient(135deg,#10b981,#34d399);
+      border-color:transparent;
+      animation:cbBounce .4s cubic-bezier(.34,1.56,.64,1),
+                cbRipple .5s ease;
+    }
+    /* SVG check path — drawn on done */
+    .task-chk{
+      display:block;
+      width:12px;height:12px;overflow:visible;
+    }
+    .task-chk-path{
+      fill:none;stroke:#fff;stroke-width:2.2;
+      stroke-linecap:round;stroke-linejoin:round;
+      stroke-dasharray:24;stroke-dashoffset:24;
+      opacity:0;
+    }
+    .task-item.done .task-chk-path{
+      animation:checkDraw .28s .05s cubic-bezier(.16,1,.3,1) forwards;
+    }
+
+    .task-name{font-size:.8rem;font-weight:600;flex:1;transition:color .2s;}
+    .task-xp{
+      font-size:.65rem;font-weight:800;
+      color:var(--amber);
+      background:rgba(245,158,11,.1);
+      padding:.12rem .45rem;border-radius:99px;
+      border:1px solid rgba(245,158,11,.18);
+      white-space:nowrap;
+      transition:opacity .2s;
+    }
+    .task-item.done .task-xp{opacity:0.4;}
+    .task-item.loading{opacity:.6;pointer-events:none;}
+
+    /* MEALS */
+    .meals-list{display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem;}
+    .meal-item{display:flex;flex-direction:column;gap:.5rem;border-radius:16px;transition:all .22s;}
+    .meal-flag{font-size:.62rem;font-weight:700;color:var(--gold);padding:.18rem .5rem;border-radius:6px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.18);flex-shrink:0;white-space:nowrap;}
+    .meal-flag-row{display:flex;flex-direction:column;align-items:flex-start;gap:.3rem;}
+    .meal-swap-btn{font-size:.62rem;font-weight:800;padding:.22rem .5rem;border-radius:8px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);color:var(--green);cursor:pointer;transition:all .2s;white-space:nowrap;}
+    .meal-swap-btn:hover{background:rgba(16,185,129,.22);}
+    .meal-swap-btn:disabled{opacity:.5;cursor:not-allowed;}
+    .meal-link{font-size:.68rem;font-weight:800;padding:.28rem .6rem;border-radius:8px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);color:var(--green);flex-shrink:0;transition:all .2s;}
+    .meal-link:hover{background:rgba(16,185,129,.2);}
+    .mic-actions{display:flex;flex-direction:column;align-items:flex-start;gap:.4rem;padding:0 .1rem;}
+    .meal-btn-row{display:flex;align-items:center;gap:.4rem;}
+    .meal-eat-btn{font-size:.68rem;font-weight:800;padding:.28rem .65rem;border-radius:8px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);color:var(--green);cursor:pointer;transition:all .2s;white-space:nowrap;}
+    .meal-eat-btn:hover{background:rgba(16,185,129,.22);}
+    .meal-eat-btn.eaten{background:rgba(16,185,129,.18);border-color:var(--green);color:var(--green2);}
+    .meal-eat-btn:disabled{opacity:.5;cursor:not-allowed;}
+    .meal-item.meal-eaten .mic-title{text-decoration:line-through;opacity:.6;}
+    .meal-item.meal-eaten .meal-img-card{opacity:.7;}
+    /* Meal image cards */
+    .meal-img-card{position:relative;border-radius:16px;overflow:hidden;height:180px;background-size:cover;background-position:center;cursor:pointer;transition:transform .25s;}
+    .meal-img-card:hover{transform:translateY(-4px) scale(1.01);}
+    .mic-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.85) 0%,rgba(0,0,0,.2) 60%,transparent 100%);}
+    .mic-badge{position:absolute;top:.6rem;left:.6rem;font-size:.62rem;font-weight:800;padding:.2rem .55rem;border-radius:99px;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);color:#fff;text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:.35rem;}
+    .mic-adapted{font-size:.55rem;font-weight:800;padding:.08rem .32rem;border-radius:5px;background:rgba(16,185,129,.25);color:var(--green2);border:1px solid rgba(16,185,129,.3);}
+    .mic-body{position:absolute;bottom:.75rem;left:.75rem;right:.75rem;}
+    .mic-title{color:#fff;font-weight:700;font-size:.9rem;line-height:1.3;margin-bottom:.35rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    .mic-macros{display:flex;gap:.5rem;flex-wrap:wrap;}
+    .mic-macros span{font-size:.65rem;font-weight:700;color:rgba(255,255,255,.85);background:rgba(0,0,0,.35);padding:.15rem .4rem;border-radius:6px;}
+    @media(max-width:600px){.meals-list{grid-template-columns:1fr;}}
+    /* Macro ring */
+    .macro-header{display:flex;align-items:center;gap:.85rem;margin-bottom:.75rem;}
+    .macro-ring-wrap{position:relative;width:56px;height:56px;flex-shrink:0;}
+    .macro-ring-wrap svg{transform:rotate(-90deg);}
+    .macro-ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    .macro-ring-pct{font-family:'Fraunces',serif;font-size:.88rem;font-weight:900;color:var(--gold);line-height:1;}
+    .macro-ring-lbl{font-size:.44rem;font-weight:700;color:var(--soft);}
+    .macro-ring-info{flex:1;}
+    .macro-cal-total{font-family:'Fraunces',serif;font-size:1.2rem;font-weight:900;color:var(--gold);line-height:1;}
+    .macro-cal-label{font-size:.7rem;color:var(--soft);margin-top:.1rem;}
+    /* Macro progress bars */
+    .macro-bar-section{margin-top:1rem;padding:1rem;background:var(--card2);border-radius:14px;border:1px solid var(--border);}
+    .macro-bar-title{font-size:.75rem;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem;}
+    .macro-bars{display:flex;flex-direction:column;gap:.55rem;}
+    .mbr{display:flex;flex-direction:column;gap:.25rem;}
+    .mb-top{display:flex;align-items:baseline;gap:.3rem;}
+    .mb-lbl{font-size:.72rem;color:var(--soft);flex:1;}
+    .mb-val{font-size:.78rem;font-weight:700;color:var(--text);}
+    .mb-goal{font-size:.65rem;color:var(--soft);}
+    .mb-track{height:5px;background:var(--muted);border-radius:3px;overflow:hidden;}
+    .mb-fill{height:100%;border-radius:3px;transition:width .6s ease;}
+    .mb-cal{background:var(--gold);}
+    .mb-prot{background:var(--blue);}
+    .mb-fat{background:var(--purple);}
+    .mb-carb{background:var(--green);}
+    .no-meals{text-align:center;padding:2rem;color:var(--soft);font-size:.83rem;}
+    .empty-state{display:flex;flex-direction:column;align-items:center;gap:.6rem;padding:2.25rem 1rem;text-align:center;}
+    .empty-icon{width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:1.75rem;background:var(--card2);border:1px solid var(--border);margin-bottom:.25rem;}
+    .empty-title{font-family:'Fraunces',serif;font-size:.95rem;font-weight:700;color:var(--text);}
+    .empty-body{font-size:.76rem;color:var(--soft);max-width:220px;line-height:1.5;}
+    .empty-cta{display:inline-flex;align-items:center;gap:.35rem;margin-top:.35rem;padding:.42rem .9rem;border-radius:10px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);color:var(--green);font-size:.76rem;font-weight:800;transition:all .2s;}
+    .empty-cta:hover{background:rgba(16,185,129,.18);}
+
+    /* SIDEBAR */
+    .sidebar{display:flex;flex-direction:column;gap:1.1rem;}
+    .big-ring{position:relative;width:120px;height:120px;margin:.5rem auto 1rem;}
+    .big-ring svg{transform:rotate(-90deg);}
+    .big-ring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    .big-ring-pct{font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;color:var(--green);line-height:1;}
+    .big-ring-lbl{font-size:.58rem;font-weight:700;color:var(--soft);}
+    .prog-sub{font-size:.75rem;color:var(--soft);margin-bottom:.9rem;text-align:center;}
+    .prog-bars{display:flex;flex-direction:column;gap:.5rem;}
+    .pb-row{display:flex;flex-direction:column;gap:.25rem;}
+    .pb-top{display:flex;justify-content:space-between;}
+    .pb-lbl{font-size:.7rem;font-weight:700;color:var(--soft);}
+    .pb-val{font-size:.7rem;font-weight:800;}
+    .pb-track{height:6px;background:var(--muted);border-radius:99px;overflow:hidden;}
+    .pb-fill{height:100%;border-radius:99px;transition:width 1s ease;}
+    .xp-row{display:flex;align-items:center;gap:.7rem;margin-bottom:.85rem;}
+    .xp-badge{width:42px;height:42px;border-radius:12px;flex-shrink:0;background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(167,139,250,.1));border:1px solid rgba(139,92,246,.3);display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-size:1.1rem;font-weight:900;color:var(--purple2);}
+    .xp-info{flex:1;}
+    .xp-lv{font-family:'Fraunces',serif;font-size:.88rem;font-weight:700;margin-bottom:.15rem;}
+    .xp-bar-track{height:6px;background:var(--muted);border-radius:99px;overflow:hidden;}
+    .xp-bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--purple),var(--purple2));transition:width 1s .3s ease;}
+    .xp-next{font-size:.62rem;color:var(--soft);margin-top:.2rem;}
+    .xp-rows{display:flex;flex-direction:column;gap:.4rem;}
+    .xp-item{display:flex;align-items:center;gap:.6rem;padding:.5rem .7rem;border-radius:10px;background:var(--card2);border:1px solid var(--border);}
+    .xp-item.done{opacity:.5;}
+    .xp-dot{width:7px;height:7px;border-radius:50%;background:var(--border2);flex-shrink:0;}
+    .xp-item.done .xp-dot{background:var(--green);}
+    .xp-txt{font-size:.75rem;font-weight:600;flex:1;}
+    .xp-item.done .xp-txt{text-decoration:line-through;color:var(--soft);}
+    .xp-pts{font-size:.65rem;font-weight:800;color:var(--gold);}
+    .fast-timer{font-family:'Fraunces',serif;font-size:2rem;font-weight:900;color:var(--gold);letter-spacing:-.02em;margin:.35rem 0;}
+    .fast-bar-track{height:7px;background:var(--muted);border-radius:99px;overflow:hidden;margin-bottom:.5rem;}
+    .fast-bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--gold),var(--gold2));transition:width 1s ease;}
+    .fast-meta{font-size:.73rem;color:var(--soft);}
+    .fast-cta{display:block;width:100%;margin-top:.75rem;padding:.6rem;border-radius:11px;background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(252,211,77,.08));border:1px solid rgba(245,158,11,.3);color:var(--gold);font-size:.8rem;font-weight:800;text-align:center;transition:all .2s;}
+    .fast-cta:hover{background:rgba(245,158,11,.22);}
+    /* ApexCharts weight sparkline container */
+    #weightSparkline .apexcharts-canvas{border-radius:10px;overflow:hidden;}
+    .wt-stat{display:flex;justify-content:space-between;align-items:center;}
+    .wt-val{font-family:'Fraunces',serif;font-size:.95rem;font-weight:900;}
+    .wt-tag{font-size:.7rem;font-weight:800;padding:.18rem .5rem;border-radius:6px;}
+    .streak-card{text-align:center;}
+    .streak-num{font-family:'Fraunces',serif;font-size:3rem;font-weight:900;color:var(--gold);line-height:1;margin:.3rem 0;}
+    .streak-lbl{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--soft);}
+    .streak-dots{display:flex;justify-content:center;gap:.3rem;margin-top:.75rem;flex-wrap:wrap;}
+    .sd{width:8px;height:8px;border-radius:50%;background:var(--muted);}
+    .sd.done{background:var(--gold);}
+    .sd.today{background:var(--green);box-shadow:0 0 6px var(--green);}
+
+    /* WEIGHT LOG WIDGET */
+    .wl-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.8rem;}
+    .wl-current{font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;color:var(--green);line-height:1;}
+    .wl-unit{font-size:.8rem;color:var(--soft);font-weight:600;}
+    .wl-inputs{display:flex;gap:.45rem;margin-bottom:.65rem;}
+    .wl-input{flex:1;padding:.5rem .7rem;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:.82rem;font-family:inherit;outline:none;transition:border-color .2s;}
+    .wl-input:focus{border-color:rgba(16,185,129,.4);}
+    .wl-btn{width:100%;padding:.55rem;border-radius:11px;background:linear-gradient(135deg,rgba(16,185,129,.18),rgba(52,211,153,.1));border:1px solid rgba(16,185,129,.35);color:var(--green2);font-size:.82rem;font-weight:800;cursor:pointer;transition:all .2s;}
+    .wl-btn:hover{background:rgba(16,185,129,.28);border-color:rgba(16,185,129,.5);}
+    .wl-btn:disabled{opacity:.5;cursor:not-allowed;}
+    .wl-confirm{display:none;text-align:center;font-size:.78rem;font-weight:800;color:var(--green);margin-top:.4rem;padding:.3rem;border-radius:8px;background:rgba(16,185,129,.1);}
+    .wl-history{display:block;text-align:center;margin-top:.55rem;font-size:.72rem;font-weight:700;color:var(--soft);text-decoration:none;transition:color .2s;}
+    .wl-history:hover{color:var(--green);}
+
+    /* XP popup — floating burst */
+    .xp-float{position:fixed;left:50%;bottom:30%;z-index:600;transform:translateX(-50%);pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:.3rem;animation:xpFloat 2s ease forwards;}
+    .xp-float-txt{font-family:'Fraunces',serif;font-size:2rem;font-weight:900;color:var(--gold);text-shadow:0 0 20px rgba(245,158,11,.7),0 2px 8px rgba(0,0,0,.8);white-space:nowrap;}
+    .xp-float-sub{font-size:.7rem;font-weight:800;color:var(--gold2);opacity:.8;text-shadow:0 1px 4px rgba(0,0,0,.6);}
+    @keyframes xpFloat{0%{opacity:0;transform:translateX(-50%) translateY(20px) scale(.7);}15%{opacity:1;transform:translateX(-50%) translateY(0) scale(1.15);}30%{transform:translateX(-50%) translateY(-5px) scale(1);}80%{opacity:1;transform:translateX(-50%) translateY(-60px);}100%{opacity:0;transform:translateX(-50%) translateY(-100px) scale(.8);}}
+    /* XP particle sparks */
+    .xp-spark{position:fixed;z-index:599;width:6px;height:6px;border-radius:50%;pointer-events:none;animation:sparkFly var(--d,1.2s) ease-out forwards;}
+    @keyframes sparkFly{0%{opacity:1;transform:translate(0,0) scale(1);}100%{opacity:0;transform:translate(var(--tx,0),var(--ty,-80px)) scale(0);}}
+    /* Level-up overlay */
+    .lvlup-overlay{position:fixed;inset:0;z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);pointer-events:none;animation:lvlIn .4s ease,lvlOut .5s ease 2.8s both;}
+    @keyframes lvlIn{from{opacity:0;}to{opacity:1;}}
+    @keyframes lvlOut{from{opacity:1;}to{opacity:0;}}
+    .lvlup-ring{width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(245,158,11,.25),transparent 70%);border:3px solid var(--gold);display:flex;align-items:center;justify-content:center;flex-direction:column;box-shadow:0 0 60px rgba(245,158,11,.4);animation:lvlPulse 1s ease infinite alternate;}
+    @keyframes lvlPulse{from{box-shadow:0 0 40px rgba(245,158,11,.4);}to{box-shadow:0 0 90px rgba(245,158,11,.7);}}
+    .lvlup-num{font-family:'Fraunces',serif;font-size:3.5rem;font-weight:900;color:var(--gold);line-height:1;}
+    .lvlup-lbl{font-size:.75rem;font-weight:800;color:var(--gold2);letter-spacing:.1em;text-transform:uppercase;}
+    .lvlup-title{font-family:'Fraunces',serif;font-size:1.8rem;font-weight:900;color:#fff;margin-top:1.5rem;text-align:center;}
+    .lvlup-sub{color:rgba(255,255,255,.6);font-size:.9rem;margin-top:.4rem;}
+
+    /* TOAST */
+    .toast-wrap{position:fixed;bottom:5rem;left:50%;transform:translateX(-50%);z-index:500;display:flex;flex-direction:column;gap:.5rem;pointer-events:none;}
+    .toast{padding:.65rem 1.25rem;border-radius:12px;font-size:.82rem;font-weight:700;background:var(--card);border:1px solid var(--border2);box-shadow:0 8px 24px rgba(0,0,0,.4);white-space:nowrap;animation:tIn .3s ease,tOut .3s ease 2.7s both;}
+    @keyframes tIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+    @keyframes tOut{from{opacity:1;}to{opacity:0;}}
+
+    /* DASH HERO */
+    .dash-hero{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:1.75rem 2rem;margin-bottom:1.5rem;position:relative;overflow:hidden;box-shadow:var(--shadow-sm);}
+    .dash-hero::before{content:'';position:absolute;top:0;right:0;width:220px;height:100%;background:linear-gradient(135deg,transparent 40%,var(--green-bg) 100%);pointer-events:none;border-radius:inherit;}
+    .dh-greeting{font-family:'Fraunces',serif;font-size:1.7rem;font-weight:900;color:var(--text);margin-bottom:.25rem;letter-spacing:-.02em;}
+    .dh-sub{color:var(--soft);font-size:.9rem;margin-bottom:1rem;}
+    .dh-stats{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.25rem;}
+    .dh-pill{font-size:.72rem;font-weight:700;padding:.3rem .7rem;border-radius:99px;border:1px solid;}
+    .dh-fire{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.25);color:#f87171;}
+    .dh-xp{background:rgba(139,92,246,.1);border-color:rgba(139,92,246,.25);color:#a78bfa;}
+    .dh-lvl{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.25);color:#fbbf24;}
+    .dh-prog-label{display:flex;justify-content:space-between;font-size:.72rem;color:var(--soft);margin-bottom:.4rem;}
+    .dh-prog-track{height:6px;background:var(--muted);border-radius:99px;overflow:visible;}
+    .dh-prog-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--green2));border-radius:99px;transition:width .8s ease;max-width:100%;overflow:hidden;}
+  </style>
+</head>
+<body>
+
+<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="dashboard" />
+
+<!-- PAGE -->
+<div class="page">
+
+  <!-- HERO -->
+  <div class="dash-hero">
+    <div class="dh-left">
+      <div class="dh-greeting">{greeting}, <em>{userName}</em></div>
+      <div class="dh-sub">Day {currentDay} of your keto journey &middot; Week {weekNum}</div>
+      <div class="dh-stats">
+        <span class="dh-pill dh-fire">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 23c6.075 0 11-4.925 11-11 0-3.63-1.756-6.852-4.474-8.882C18.526 3.118 18 3.5 18 4c0 1.657-1.343 3-3 3-1.657 0-3-1.343-3-3 0-.552-.447-1-.999-.955C7.137 3.517 4 7.41 4 12c0 6.075 4.925 11 8 11z"/></svg>
+          {streak} day streak
+        </span>
+        <span class="dh-pill dh-xp">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          {xpDisplay} XP
+        </span>
+        <span class="dh-pill dh-lvl">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+          Level {level}
+        </span>
+      </div>
+    </div>
+    <div class="dh-progress">
+      <div class="dh-prog-label">
+        <span>{journeyPct}% complete</span>
+        <span>{daysToGo} days to go</span>
+      </div>
+      <div class="dh-prog-track" style="position:relative;">
+        <div class="dh-prog-fill" style={`width:${journeyPct}%`}></div>
+        {journeyMilestones.slice(0, 12).map((m) => (
+          <div style={`position:absolute;top:50%;transform:translate(-50%,-50%);left:${m.pct}%;width:${m.reached ? '9px' : '7px'};height:${m.reached ? '9px' : '7px'};border-radius:50%;background:${m.reached ? 'var(--green2)' : 'var(--soft)'};border:${m.reached ? '1.5px solid rgba(52,211,153,.5)' : '1.5px solid rgba(77,112,85,.4)'};z-index:2;transition:all .3s;`} title={`Day ${m.day}`}></div>
+        ))}
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:.3rem;">
+        {journeyMilestones.slice(0, 6).map((m) => (
+          <span style={`font-size:.58rem;font-weight:700;color:${m.reached ? 'var(--green)' : 'var(--muted)'};`}>D{m.day}</span>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <!-- DAILY TIP -->
+  <div class="daily-tip" style={`border-left:3px solid ${dailyTip.color};`}>
+    <div class="dt-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={dailyTip.color} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={dailyTip.icon}></svg></div>
+    <div class="dt-body">
+      <div class="dt-title">{dailyTip.title}</div>
+      <div class="dt-text">{dailyTip.body}</div>
+    </div>
+    <button class="dt-close" onclick="this.closest('.daily-tip').style.display='none'" title="Dismiss">×</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row" id="tour-stats">
+    <div class="stat-card" style="--glow:rgba(16,185,129,.09);--glow-color:rgba(16,185,129,.6);--icon-bg:rgba(16,185,129,.1);animation-delay:.04s">
+      <div class="sc-shimmer"></div>
+      <div class="stat-icon" style="color:var(--green)"><Scale size={20} /></div>
+      <div class="stat-val" style="color:var(--green)">{weightLost > 0 ? `-${weightLost.toFixed(1)}kg` : '—'}</div>
+      <div class="stat-lbl">Weight Lost</div>
+      {weightLost > 0
+        ? <span class="stat-badge bg-g">{progressPct}% to goal</span>
+        : <span class="stat-badge bg-a">Log your weight</span>}
+      <div class="stat-mini-bar"><div class="stat-mini-fill" style={`width:${progressPct}%;background:linear-gradient(90deg,#10b981,#34d399);`}></div></div>
+    </div>
+    <div class="stat-card" style="--glow:rgba(245,158,11,.09);--glow-color:rgba(245,158,11,.6);--icon-bg:rgba(245,158,11,.1);animation-delay:.08s">
+      <div class="sc-shimmer"></div>
+      <div class="stat-icon" style="color:var(--amber)"><Flame size={20} /></div>
+      <div class="stat-val" style="color:var(--amber)">{streakDays}</div>
+      <div class="stat-lbl">Day Streak</div>
+      {checkinDone
+        ? <span class="stat-badge bg-g">Streak safe</span>
+        : <span class="stat-badge bg-a">Check in today</span>}
+      <div class="stat-mini-bar"><div class="stat-mini-fill" style={`width:${streakPct}%;background:linear-gradient(90deg,#f59e0b,#fcd34d);`}></div></div>
+    </div>
+    <div class="stat-card" style="--glow:rgba(139,92,246,.09);--glow-color:rgba(139,92,246,.6);--icon-bg:rgba(139,92,246,.1);animation-delay:.12s">
+      <div class="sc-shimmer"></div>
+      <div class="stat-icon" style="color:var(--purple)"><Zap size={20} /></div>
+      <div class="stat-val" style="color:var(--purple2)" id="xpLevelDisplay">Lv.{xpLevel}</div>
+      <div class="stat-lbl" id="xpTotalDisplay">{totalXP.toLocaleString()} XP</div>
+      <span class="stat-badge bg-b" id="xpInLevelDisplay">→ {xpInLevel}/500</span>
+      <div class="stat-mini-bar"><div class="stat-mini-fill" id="xpMiniBar" style={`width:${xpPct}%;background:linear-gradient(90deg,#8b5cf6,#a78bfa);`}></div></div>
+    </div>
+    <div class="stat-card" style="--glow:rgba(59,130,246,.09);--glow-color:rgba(59,130,246,.6);--icon-bg:rgba(59,130,246,.1);animation-delay:.16s">
+      <div class="sc-shimmer"></div>
+      <div class="stat-icon" style="color:var(--blue)"><CalendarDays size={20} /></div>
+      <div class="stat-val" style="color:var(--blue2)">{currentDay}</div>
+      <div class="stat-lbl">of {maxDays} days</div>
+      {weekPhase === 'adapt' && <span class="stat-badge bg-a">Week 1 · Adapt</span>}
+      {weekPhase === 'burn'  && <span class="stat-badge bg-b">Week 2 · Burn</span>}
+      {weekPhase === 'thrive'&& <span class="stat-badge bg-g">Week 3+ · Thrive</span>}
+      <div class="stat-mini-bar"><div class="stat-mini-fill" style={`width:${journeyPct}%;background:var(--blue);`}></div></div>
+    </div>
+  </div>
+
+  <!-- QUICK ACTIONS -->
+  <div class="qa-grid" id="tour-quick-actions">
+    <a href="/dashboard/checkin" class={`qa-btn${checkinDone ? ' done' : ''}`}>
+      <div class="qa-icon-wrap"><ClipboardCheck size={18} /></div>
+      <span class="qa-lbl">Check-in</span>
+      <span class="qa-sub">{checkinDone ? 'Done' : '+30 XP'}</span>
+    </a>
+    <a href="/dashboard/fasting" class={`qa-btn${fastingActive ? ' done' : ''}`}>
+      <div class="qa-icon-wrap"><Timer size={18} /></div>
+      <span class="qa-lbl">Fasting</span>
+      <span class="qa-sub">{fastingActive ? 'Active' : 'Start fast'}</span>
+    </a>
+    <a href="/dashboard/weekly" class={`qa-btn${weeklyDone ? ' done' : ''}`}>
+      <div class="qa-icon-wrap"><BarChart3 size={18} /></div>
+      <span class="qa-lbl">Weekly</span>
+      <span class="qa-sub">{weeklyDone ? 'Done' : `Week ${currentWeek}`}</span>
+    </a>
+    <a href="/dashboard/recipes" class="qa-btn">
+      <div class="qa-icon-wrap"><Utensils size={18} /></div>
+      <span class="qa-lbl">Recipes</span>
+      <span class="qa-sub">{maxDays === 30 ? '30 meals' : maxDays === 180 ? '87+ meals' : 'All meals'}</span>
+    </a>
+    <a href="/dashboard/progress" class="qa-btn">
+      <div class="qa-icon-wrap"><Activity size={18} /></div>
+      <span class="qa-lbl">Progress</span>
+      <span class="qa-sub">Charts</span>
+    </a>
+    <a href="/dashboard/shopping" class="qa-btn">
+      <div class="qa-icon-wrap"><ShoppingCart size={18} /></div>
+      <span class="qa-lbl">Shopping</span>
+      <span class="qa-sub">Week {currentWeek}</span>
+    </a>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+    <div>
+      <!-- TASKS CARD -->
+      <div class="card" id="tour-tasks" style="border-left:3px solid rgba(16,185,129,.35);">
+        <div class="card-title">
+          <CheckCircle2 size={16} color="var(--green)" />
+          Today's Tasks — Day {currentDay}
+          <span class="ct-badge bg-g" id="tasksBadge">{completedTasks}/{totalTasks} done</span>
+        </div>
+        <div class="ring-row">
+          <div class="ring-wrap">
+            <svg width="72" height="72" viewBox="0 0 72 72">
+              <defs>
+                <linearGradient id="rg1" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#34d399"/>
+                </linearGradient>
+              </defs>
+              <circle fill="none" stroke="var(--muted)" stroke-width="6" cx="36" cy="36" r="32"/>
+              <circle id="ringSmall" fill="none" stroke="url(#rg1)" stroke-width="6" stroke-linecap="round"
+                cx="36" cy="36" r="32" stroke-dasharray="201"
+                style={`stroke-dashoffset:${201 - (201 * smartTaskPct / 100)};transition:stroke-dashoffset 1s ease;`}/>
+            </svg>
+            <div class="ring-inner">
+              <span class="ring-pct" id="ringPct">{smartTaskPct}%</span>
+              <span class="ring-lbl">done</span>
+            </div>
+          </div>
+          <div class="ring-stats">
+            <div class="rs-row">
+              <div class="rs-dot" style="background:var(--green)"></div>
+              <span class="rs-num" id="completedCount">{completedTasks}</span>
+              <span class="rs-txt">Completed</span>
+            </div>
+            <div class="rs-row">
+              <div class="rs-dot" style="background:var(--muted)"></div>
+              <span class="rs-num" id="remainingCount">{totalTasks - completedTasks}</span>
+              <span class="rs-txt">Remaining</span>
+            </div>
+          </div>
+        </div>
+        {tasks.length > 0 ? (
+          <div class="tasks-list" id="tasksList">
+            {tasks.slice(0, 7).map((t) => (
+              <div class={`task-item${t.completed ? ' done' : ''}`}
+                   data-task-id={t.id}
+                   data-completed={t.completed ? 'true' : 'false'}
+                   onclick="toggleTask(this)">
+                <div class="task-cb">
+                  <svg class="task-chk" viewBox="0 0 12 12">
+                    <path class="task-chk-path" d="M2 6l3 3 5-5"/>
+                  </svg>
+                </div>
+                <span class="task-name">{t.task_title}</span>
+                {t.xp_earned && <span class="task-xp">+{t.xp_earned} XP</span>}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div class="empty-state">
+            <div class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--soft)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+            <div class="empty-title">No tasks yet for Day {currentDay}</div>
+            <p class="empty-body">Your daily tasks will appear here once they're generated for today.</p>
+            <a href="/dashboard/checkin" class="empty-cta">Start with a check-in →</a>
+          </div>
+        )}
+      </div>
+
+      <!-- MEALS CARD -->
+      <div class="card" id="tour-meals" style="border-left:3px solid rgba(245,158,11,.3);">
+        <div class="card-title">
+          <Utensils size={16} color="var(--amber)" />
+          Today's Meals
+          {adaptedCount > 0 && <span class="ct-badge bg-a">{adaptedCount} flagged</span>}
+        </div>
+        <!-- Cycle variety info line -->
+        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.85rem;flex-wrap:wrap;">
+          <span style="font-size:.7rem;color:var(--soft);font-weight:700;">Week {cycleWeek} · Cycle {cycleNum + 1}</span>
+          {cycleNum > 0 && <span style="font-size:.67rem;font-weight:800;padding:.12rem .4rem;border-radius:6px;background:rgba(16,185,129,.1);color:var(--green2);">Variety rotation active</span>}
+        </div>
+        {todayMeals.length > 0 ? (
+          <div class="meals-list">
+            {todayMeals.map((meal) => (
+              <div class={`meal-item${completedMealSet.has(meal.meal_type) ? ' meal-eaten' : ''}`}
+                   data-meal-type={meal.meal_type}
+                   data-recipe-id={meal.recipe?.id || ''}>
+                <div class="meal-img-card"
+                     style={meal.recipe?.image_url
+                       ? `background-image:url('${meal.recipe.image_url}')`
+                       : `background:${mealTypeConfig[meal.meal_type]?.bg || 'linear-gradient(135deg,#065f46,#059669)'}`}>
+                  <div class="mic-overlay"></div>
+                  <div class="mic-badge">
+                    {mealTypeConfig[meal.meal_type]?.label || meal.meal_type}
+                    {meal.slot_adapted && <span class="mic-adapted">Adapted</span>}
+                  </div>
+                  <div class="mic-body">
+                    <div class="mic-title">{meal.recipe?.title || 'No meal planned'}</div>
+                    <div class="mic-macros">
+                      <span>{meal.recipe?.calories || 0} cal</span>
+                      <span>{meal.recipe?.protein || 0}g P</span>
+                      <span>{meal.recipe?.net_carbs || 0}g C</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="meal-actions mic-actions">
+                  {meal.is_adapted && (
+                    <div class="meal-flag-row">
+                      <span class="meal-flag">{meal.adapt_reason}</span>
+                      {meal.recipe && <button class="meal-swap-btn" data-recipe-id={meal.recipe.id} data-reason={meal.adapt_reason} onclick="swapMeal(this)">Swap</button>}
+                    </div>
+                  )}
+                  <div class="meal-btn-row">
+                    {meal.recipe && !meal.is_adapted && <a href={`/dashboard/recipe/${meal.recipe.id}`} class="meal-link">View →</a>}
+                    <button class={`meal-eat-btn${completedMealSet.has(meal.meal_type) ? ' eaten' : ''}`}
+                            data-meal-type={meal.meal_type}
+                            data-recipe-id={meal.recipe?.id || ''}
+                            onclick="toggleMealEaten(this)">
+                      {completedMealSet.has(meal.meal_type) ? '✓ Eaten' : 'Mark Eaten'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : restrictions.length > 0 ? (
+          <div class="empty-state">
+            <div class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--soft)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg></div>
+            <div class="empty-title">No meals match your preferences</div>
+            <p class="empty-body">All meals for today were filtered by your dietary restrictions. Update your preferences to see meals.</p>
+            <a href="/dashboard/profile" class="empty-cta">Set Preferences →</a>
+          </div>
+        ) : (
+          <div class="empty-state">
+            <div class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--soft)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg></div>
+            <div class="empty-title">No meals for today</div>
+            <p class="empty-body">Your {tierLabel} meal plan for Day {currentDay} hasn't loaded yet.</p>
+            <a href="/dashboard/recipes" class="empty-cta">Browse recipes →</a>
+          </div>
+        )}
+        {todayMeals.length > 0 && (
+          <div class="macro-bar-section" id="macroBarSection">
+            <div class="macro-header">
+              <div class="macro-ring-wrap">
+                <svg width="56" height="56" viewBox="0 0 56 56">
+                  <circle fill="none" stroke="var(--muted)" stroke-width="5" cx="28" cy="28" r="23"/>
+                  <circle id="macroRingCircle" fill="none" stroke="#f59e0b" stroke-width="5" stroke-linecap="round"
+                    cx="28" cy="28" r="23" stroke-dasharray="144.5"
+                    style={`stroke-dashoffset:${(144.5 - 144.5 * calPct / 100).toFixed(1)};transition:stroke-dashoffset 1s ease;`}/>
+                </svg>
+                <div class="macro-ring-center">
+                  <span class="macro-ring-pct" id="macroRingPct">{calPct}%</span>
+                  <span class="macro-ring-lbl">cal</span>
+                </div>
+              </div>
+              <div class="macro-ring-info">
+                <div class="macro-cal-total" id="macroCalsDisplay">{Math.round(totalConsumed.calories)} <span style="font-size:.75rem;font-weight:600;color:var(--soft);">/ {goalCal}</span></div>
+                <div class="macro-cal-label">calories consumed today</div>
+              </div>
+            </div>
+            <div class="macro-bar-title">Macros breakdown</div>
+            <div class="macro-bars">
+              <div class="mbr">
+                <div class="mb-top"><span class="mb-lbl">Calories</span><span class="mb-val" id="mbCalVal">{Math.round(totalConsumed.calories)}</span><span class="mb-goal">/ {goalCal}</span></div>
+                <div class="mb-track"><div class="mb-fill mb-cal" id="mbCalFill" style={`width:${calPct}%`}></div></div>
+              </div>
+              <div class="mbr">
+                <div class="mb-top"><span class="mb-lbl">Protein</span><span class="mb-val" id="mbProtVal">{Math.round(totalConsumed.protein)}g</span><span class="mb-goal">/ {goalProt}g</span></div>
+                <div class="mb-track"><div class="mb-fill mb-prot" id="mbProtFill" style={`width:${protPct}%`}></div></div>
+              </div>
+              <div class="mbr">
+                <div class="mb-top"><span class="mb-lbl">Fat</span><span class="mb-val" id="mbFatVal">{Math.round(totalConsumed.fat)}g</span><span class="mb-goal">/ {goalFat}g</span></div>
+                <div class="mb-track"><div class="mb-fill mb-fat" id="mbFatFill" style={`width:${fatPct}%`}></div></div>
+              </div>
+              <div class="mbr">
+                <div class="mb-top"><span class="mb-lbl">Net Carbs</span><span class="mb-val" id="mbCarbVal">{Math.round(totalConsumed.net_carbs)}g</span><span class="mb-goal">/ {goalCarb}g</span></div>
+                <div class="mb-track"><div class="mb-fill mb-carb" id="mbCarbFill" style={`width:${carbPct}%`}></div></div>
+              </div>
+            </div>
+            <!-- Food Log entries -->
+            {todayFoodLogs.length > 0 && (
+              <div id="foodLogList" style="margin-top:.75rem;display:flex;flex-direction:column;gap:.3rem;">
+                {todayFoodLogs.map((f) => (
+                  <div class="fl-item" data-id={f.id} style="display:flex;align-items:center;gap:.5rem;padding:.35rem .6rem;background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.18);border-radius:8px;">
+                    <span style="font-size:.72rem;font-weight:700;color:#a78bfa;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{f.food_name}</span>
+                    <span style="font-size:.67rem;color:var(--soft);white-space:nowrap;">{f.calories}cal · {f.protein_g}P · {f.carbs_g}C</span>
+                    <button onclick="deleteFoodLog(this)" data-id={f.id} style="background:none;border:none;color:var(--soft);cursor:pointer;font-size:.9rem;padding:0 .1rem;line-height:1;" title="Remove">×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {todayFoodLogs.length === 0 && (
+              <div id="foodLogList" style="display:flex;flex-direction:column;gap:.3rem;"></div>
+            )}
+            <div style="display:flex;gap:.5rem;margin-top:.65rem;">
+              <button onclick="openFoodModal()" style="flex:1;padding:.5rem;border-radius:9px;background:rgba(99,102,241,.09);border:1px dashed rgba(99,102,241,.3);color:#a78bfa;font-size:.75rem;font-weight:700;cursor:pointer;transition:all .18s;" id="openFoodModalBtn">+ Log Custom Food</button>
+              <a href="/dashboard/food-log" style="padding:.5rem .75rem;border-radius:9px;background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.2);color:#a78bfa;font-size:.72rem;font-weight:700;text-decoration:none;white-space:nowrap;display:flex;align-items:center;">History</a>
+            </div>
+          </div>
+        )}
+        <!-- Goal-aware macro tip -->
+        {todayMeals.length > 0 && (
+          <div style="margin-top:.85rem;padding:.75rem 1rem;border-radius:14px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:flex-start;gap:.6rem;">
+            <Info size={16} color="var(--green)" style="flex-shrink:0;margin-top:1px" />
+            <div>
+              {userGoal === 'muscle_gain' && <span style="font-size:.76rem;font-weight:700;color:var(--text);">Today's tip: Hit your protein goal. Total protein from plan: <strong style="color:var(--green2);">{Math.round(totalProteinToday)}g</strong></span>}
+              {userGoal === 'maintenance' && <span style="font-size:.76rem;font-weight:700;color:var(--text);">Today's tip: Balance your macros. Total cal from plan: <strong style="color:var(--gold);">{Math.round(totalCalToday)} cal</strong></span>}
+              {userGoal !== 'muscle_gain' && userGoal !== 'maintenance' && <span style="font-size:.76rem;font-weight:700;color:var(--text);">Today's tip: Stay under your calorie target. Total macros from plan: <strong style="color:var(--gold);">{Math.round(totalCalToday)} cal</strong></span>}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <!-- Today's Progress -->
+      <div class="card" style="text-align:center;">
+        <div class="card-title" style="justify-content:center;">
+          <BarChart3 size={16} color="var(--blue)" />
+          Today's Progress
+        </div>
+        <div class="big-ring">
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <defs>
+              <linearGradient id="rg2" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#34d399"/>
+              </linearGradient>
+            </defs>
+            <circle fill="none" stroke="var(--muted)" stroke-width="8" cx="60" cy="60" r="52"/>
+            <circle id="ringBig" fill="none" stroke="url(#rg2)" stroke-width="8" stroke-linecap="round"
+              cx="60" cy="60" r="52" stroke-dasharray="327"
+              style={`stroke-dashoffset:${327 - (327 * smartTaskPct / 100)};transition:stroke-dashoffset 1.2s ease;`}/>
+          </svg>
+          <div class="big-ring-inner">
+            <div class="big-ring-pct" id="bigRingPct">{smartTaskPct}%</div>
+            <div class="big-ring-lbl">done today</div>
+          </div>
+        </div>
+        <p class="prog-sub" id="progMsg">{progressMsg}</p>
+        <div class="prog-bars">
+          <div class="pb-row">
+            <div class="pb-top"><span class="pb-lbl">Check-in</span><span class="pb-val">{checkinDone ? '✓' : '○'}</span></div>
+            <div class="pb-track"><div class="pb-fill" style={`width:${checkinDone ? 100 : 0}%;background:var(--green);`}></div></div>
+          </div>
+          <div class="pb-row">
+            <div class="pb-top"><span class="pb-lbl">Tasks</span><span class="pb-val" id="tasksPbVal">{completedTasks}/{totalTasks}</span></div>
+            <div class="pb-track"><div class="pb-fill" id="tasksPbFill" style={`width:${taskPct}%;background:var(--blue);`}></div></div>
+          </div>
+          <div class="pb-row">
+            <div class="pb-top"><span class="pb-lbl">Weight goal</span><span class="pb-val">{progressPct}%</span></div>
+            <div class="pb-track"><div class="pb-fill" style={`width:${progressPct}%;background:var(--purple);`}></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- XP & Level -->
+      <div class="card" style="border-left:3px solid rgba(139,92,246,.3);">
+        <div class="card-title">
+          <Zap size={16} color="var(--purple)" />
+          XP & Level
+        </div>
+        <div class="xp-row">
+          <div class="xp-badge" id="xpBadge">{xpLevel}</div>
+          <div class="xp-info">
+            <div class="xp-lv" id="xpLvText">Level {xpLevel} — {xpInLevel}/500 XP</div>
+            <div class="xp-bar-track"><div class="xp-bar-fill" id="xpBarFill" style={`width:${xpPct}%;`}></div></div>
+            <div class="xp-next" id="xpNextText">{500 - xpInLevel} XP to Level {xpLevel + 1}</div>
+          </div>
+        </div>
+        <div class="xp-rows">
+          <div class={`xp-item${checkinDone ? ' done' : ''}`}>
+            <div class="xp-dot"></div><span class="xp-txt">Daily Check-in</span><span class="xp-pts">+30 XP</span>
+          </div>
+          <div class={`xp-item${fastingActive ? ' done' : ''}`}>
+            <div class="xp-dot"></div><span class="xp-txt">Complete a Fast</span><span class="xp-pts">+50 XP</span>
+          </div>
+          <div class={`xp-item${weeklyDone ? ' done' : ''}`}>
+            <div class="xp-dot"></div><span class="xp-txt">Weekly Report</span><span class="xp-pts">+100 XP</span>
+          </div>
+          <div class={`xp-item${weightLogToday ? ' done' : ''}`}>
+            <div class="xp-dot"></div><span class="xp-txt">Log Weight</span><span class="xp-pts">+15 XP</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fasting -->
+      <div class="card">
+        <div class="card-title">
+          <Timer size={16} color={fastingActive ? 'var(--amber)' : 'var(--soft)'} />
+          {fastingActive ? 'Fasting Active' : 'Intermittent Fasting'}
+        </div>
+        {fastingActive ? (
+          <div>
+            <div class="fast-timer" id="fastTimer">00:00:00</div>
+            <div class="fast-bar-track"><div class="fast-bar-fill" id="fastBar" style="width:0%;"></div></div>
+            <p class="fast-meta">Target: {fastingData?.target_hours}h · {fastingData?.protocol}</p>
+            <a href="/dashboard/fasting" style="display:block;text-align:center;margin-top:.75rem;font-size:.78rem;font-weight:700;color:var(--gold);">View details →</a>
+          </div>
+        ) : (
+          <div>
+            <p style="font-size:.78rem;color:var(--soft);margin-bottom:.5rem;">Boost ketosis &amp; burn more fat with intermittent fasting.</p>
+            <a href="/dashboard/fasting" class="fast-cta">Start Fasting</a>
+          </div>
+        )}
+      </div>
+
+      <!-- Water Tracker -->
+      <div class="card">
+        <div class="card-title">
+          <Droplets size={16} color="var(--blue)" />
+          Water Today
+        </div>
+        <div style="text-align:center;margin:.25rem 0 .75rem;">
+          <span id="waterNum" style="font-family:'Fraunces',serif;font-size:2.4rem;font-weight:900;color:var(--blue);">{waterGlasses}</span>
+          <span style="font-size:.85rem;color:var(--soft);font-weight:600;">/ 8 glasses</span>
+        </div>
+        <!-- Glass icons -->
+        <div id="waterGlasses" style="display:flex;justify-content:center;gap:.3rem;flex-wrap:wrap;margin-bottom:.85rem;">
+          {Array.from({ length: 8 }, (_, i) => (
+            <div style={`width:22px;height:28px;border-radius:4px 4px 6px 6px;border:2px solid ${i < waterGlasses ? 'var(--blue)' : 'rgba(255,255,255,.1)'};background:${i < waterGlasses ? 'rgba(59,130,246,.35)' : 'transparent'};transition:all .25s;`}></div>
+          ))}
+        </div>
+        <!-- Progress bar -->
+        <div style="height:5px;border-radius:99px;background:rgba(255,255,255,.07);margin-bottom:.85rem;overflow:hidden;">
+          <div id="waterBar" style={`height:100%;border-radius:99px;background:linear-gradient(90deg,#3b82f6,#60a5fa);width:${waterPct}%;transition:width .4s;`}></div>
+        </div>
+        <!-- Buttons -->
+        <div style="display:flex;gap:.5rem;">
+          <button onclick="logWater(-1)" style="flex:1;padding:.55rem;border-radius:10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#f87171;font-size:1.1rem;font-weight:800;cursor:pointer;transition:all .18s;" title="Remove glass">−</button>
+          <button onclick="logWater(1)"  style="flex:2;padding:.55rem;border-radius:10px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);color:#60a5fa;font-size:.82rem;font-weight:800;cursor:pointer;transition:all .18s;">+ Add Glass</button>
+        </div>
+        {waterGlasses >= 8 && <div style="text-align:center;margin-top:.6rem;font-size:.72rem;color:#60a5fa;font-weight:700;">Daily goal reached!</div>}
+      </div>
+
+      <!-- Supplement Tracker -->
+      <div class="card">
+        <div class="card-title">
+          <Pill size={16} color="var(--purple)" />
+          Electrolytes Today
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.65rem;">
+          {[
+            { key:'took_sodium',    svg:'<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>',     label:'Sodium',    color:'#f59e0b' },
+            { key:'took_potassium', svg:'<path d="M12 22V12M12 12C12 7 7 4 7 4s5 3 5 8M12 12c0-5 5-8 5-8s-5 3-5 8"/>',label:'Potassium', color:'#10b981' },
+            { key:'took_magnesium', svg:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',label:'Magnesium', color:'#8b5cf6' },
+          ].map(s => {
+            const taken = (todayCheckin as any)?.[s.key];
+            return (
+              <div style={`text-align:center;padding:.6rem .3rem;border-radius:12px;border:1.5px solid ${taken ? s.color+'55' : 'var(--border)'};background:${taken ? s.color+'11' : 'var(--card2)'};transition:all .2s;`}>
+                <div style={`margin-bottom:.2rem;display:flex;justify-content:center;`}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={taken ? s.color : 'var(--soft)'} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={s.svg}></svg></div>
+                <div style={`font-size:.62rem;font-weight:800;color:${taken ? s.color : 'var(--soft)'};`}>{s.label}</div>
+                <div style={`font-size:.58rem;margin-top:.1rem;color:${taken ? s.color : 'var(--muted)'};font-weight:700;`}>{taken ? '✓ Taken' : '—'}</div>
+              </div>
+            );
+          })}
+        </div>
+        {!checkinDone && <div style="font-size:.7rem;color:var(--soft);text-align:center;">Log in check-in to track</div>}
+        {checkinDone && !(todayCheckin as any)?.took_sodium && !(todayCheckin as any)?.took_potassium && !(todayCheckin as any)?.took_magnesium && (
+          <div style="font-size:.7rem;color:var(--soft);text-align:center;">None logged today — remember your electrolytes!</div>
+        )}
+      </div>
+
+      <!-- Habits Widget -->
+      {dashHabits.length > 0 && (
+        <div class="card">
+          <div class="card-title" style="justify-content:space-between;">
+            <span style="display:flex;align-items:center;gap:.4rem;">
+              <Target size={15} color="var(--green)" />
+              Today's Habits
+            </span>
+            <a href="/dashboard/habits" style="font-size:.68rem;color:var(--soft);font-weight:700;text-decoration:none;">View all →</a>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.6rem;">
+            {dashHabits.map(h => {
+              const done = habitDoneIds.has(h.id);
+              return (
+                <div style={`display:flex;align-items:center;gap:.6rem;padding:.45rem .65rem;border-radius:10px;background:${done ? 'rgba(16,185,129,.08)' : 'var(--card2)'};border:1px solid ${done ? 'rgba(16,185,129,.25)' : 'var(--border)'};cursor:pointer;transition:all .2s;`}
+                     onclick={`window.dashToggleHabit('${h.id}', this)`} id={`dh-${h.id}`}>
+                  <span style="font-size:1rem;">{h.icon}</span>
+                  <span style={`font-size:.75rem;font-weight:700;flex:1;${done ? 'text-decoration:line-through;color:var(--soft);' : ''}`}>{h.title}</span>
+                  <span style={`font-size:.75rem;${done ? 'color:var(--green);' : 'color:var(--muted);'}`}>{done ? '✓' : '○'}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style="font-size:.7rem;color:var(--soft);text-align:center;">{habitsDoneCount}/{dashHabits.length} done today</div>
+        </div>
+      )}
+      {dashHabits.length === 0 && (
+        <div class="card" style="text-align:center;padding:1rem;">
+          <div style="margin-bottom:.4rem;display:flex;justify-content:center;"><Target size={28} color="var(--soft)" /></div>
+          <div style="font-size:.75rem;color:var(--soft);margin-bottom:.5rem;">No habits set yet</div>
+          <a href="/dashboard/habits" style="font-size:.72rem;font-weight:700;color:var(--green);text-decoration:none;">+ Add habits →</a>
+        </div>
+      )}
+
+      <!-- Weight Trend -->
+      {weightLogs && weightLogs.length > 0 && (
+        <div class="card" style="border-left:3px solid rgba(16,185,129,.3);">
+          <div class="card-title">
+            <LineChart size={16} color="var(--green)" />
+            Weight Trend
+          </div>
+          <div id="weightSparkline" style="margin:-.25rem -.5rem .25rem;"></div>
+          <div class="wt-stat">
+            <span class="wt-val">{dispLatest} {wUnit}</span>
+            {weightLost > 0
+              ? <span class="wt-tag bg-g">-{units === 'imperial' ? Math.round(weightLost * 2.20462 * 10) / 10 : weightLost.toFixed(1)} {wUnit}</span>
+              : <span class="wt-tag bg-a">Log weight</span>}
+          </div>
+        </div>
+      )}
+
+      <!-- Log Weight Widget -->
+      <div class="card">
+        <div class="card-title">
+          <Scale size={16} color="var(--green)" />
+          Log Weight
+        </div>
+        <div class="wl-row">
+          <span class="wl-current" id="wlCurrentVal">{dispLatest}</span>
+          <span class="wl-unit">{wUnit} current</span>
+        </div>
+        <div class="wl-inputs">
+          <input
+            id="wlWeightInput"
+            class="wl-input"
+            type="number"
+            step="0.1"
+            min={units === 'imperial' ? 44 : 20}
+            max={units === 'imperial' ? 1100 : 500}
+            placeholder={`Weight (${wUnit})`}
+            value={dispLatest || ''}
+          />
+          <input
+            id="wlDateInput"
+            class="wl-input"
+            type="date"
+            value={today}
+          />
+        </div>
+        <button class="wl-btn" id="wlBtn" onclick="window.logWeight()">Log Weight</button>
+        <div class="wl-confirm" id="wlConfirm">✓ Logged!</div>
+        <a href="/dashboard/progress" class="wl-history">View history →</a>
+      </div>
+
+      <!-- Streak -->
+      <div class="card streak-card" style="border-left:3px solid rgba(245,158,11,.35);">
+        <div class="card-title" style="justify-content:center;">
+          <Flame size={16} color="var(--amber)" />
+          Streak
+        </div>
+        <div class="streak-num">{streakDays}</div>
+        <div class="streak-lbl">days in a row</div>
+        <div class="streak-dots">
+          {Array.from({ length: streakDotMax }, (_, i) => (
+            <div class={`sd${i < streakDays ? ' done' : (i === streakDays ? ' today' : '')}`}></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script is:inline define:vars={{ fastingData, totalTasks, initCompleted: completedTasks, initTaskPct: taskPct, xpLevel, xpInLevel, xpPct, totalXP, currentDay, completedMealTypesArr, initConsumedMacros: totalConsumed, goalCal, goalProt, goalFat, goalCarb, initWaterGlasses: waterGlasses, initFoodLogs: todayFoodLogs, units, wUnit }}>
+/* ── FASTING TIMER ── */
+if (fastingData) {
+  var t0 = new Date(fastingData.started_at).getTime();
+  var tgt = fastingData.target_hours * 3600000;
+  var timerEl = document.getElementById('fastTimer');
+  var barEl   = document.getElementById('fastBar');
+  function tick() {
+    var ms = Date.now() - t0;
+    var h  = Math.floor(ms / 3600000);
+    var m  = Math.floor((ms % 3600000) / 60000);
+    var s  = Math.floor((ms % 60000) / 1000);
+    if (timerEl) timerEl.textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
+    if (barEl)   barEl.style.width = Math.min(100, (ms / tgt) * 100) + '%';
+  }
+  function pad(n) { return String(n).padStart(2, '0'); }
+  tick(); setInterval(tick, 1000);
+}
+
+/* ── TASK TOGGLE ── */
+var _completed = initCompleted;
+var _total     = totalTasks;
+var _taskPct   = initTaskPct;
+
+window.toggleTask = function toggleTask(el) {
+  var id   = el.getAttribute('data-task-id');
+  var done = el.getAttribute('data-completed') === 'true';
+  var newDone = !done;
+
+  // Optimistic UI update
+  el.classList.toggle('done', newDone);
+  el.setAttribute('data-completed', newDone ? 'true' : 'false');
+  el.classList.add('loading');
+  // Re-trigger SVG draw animation by cloning the path
+  if (newDone) {
+    var path = el.querySelector('.task-chk-path');
+    if (path) { var p2 = path.cloneNode(true); path.parentNode.replaceChild(p2, path); }
+  }
+
+  fetch('/api/tasks/complete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ taskId: id, completed: newDone }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    el.classList.remove('loading');
+    if (!data.success) {
+      // Revert on failure
+      el.classList.toggle('done', done);
+      el.setAttribute('data-completed', done ? 'true' : 'false');
+      return;
+    }
+    // Update counts
+    _completed = newDone ? _completed + 1 : _completed - 1;
+    _completed = Math.max(0, Math.min(_total, _completed));
+    _taskPct   = _total > 0 ? Math.round((_completed / _total) * 100) : 0;
+    updateTaskUI();
+
+    // Toast when all tasks complete
+    if (newDone && _taskPct === 100) showToast('Perfect day! All tasks done!');
+    // Check achievements
+    if (newDone) checkAchievements();
+
+    // Update XP display + celebration if awarded
+    if (data.xpAwarded && newDone) {
+      var prevLevel = Math.floor(totalXP / 500) + 1;
+      var newTotal  = totalXP + data.xpAwarded;
+      var newInLvl  = newTotal % 500;
+      var newLevel  = Math.floor(newTotal / 500) + 1;
+      var newPct    = Math.round((newInLvl / 500) * 100);
+      var leveledUp = newLevel > prevLevel;
+      totalXP = newTotal;
+      updateXPDisplay(newTotal, newInLvl, newLevel, newPct);
+      showXP('+' + data.xpAwarded + ' XP', leveledUp, leveledUp ? newLevel : null);
+    }
+  })
+  .catch(function() {
+    el.classList.remove('loading');
+    el.classList.toggle('done', done);
+    el.setAttribute('data-completed', done ? 'true' : 'false');
+  });
+}
+
+function updateTaskUI() {
+  var badge   = document.getElementById('tasksBadge');
+  var pctEl   = document.getElementById('ringPct');
+  var bigPct  = document.getElementById('bigRingPct');
+  var compEl  = document.getElementById('completedCount');
+  var remEl   = document.getElementById('remainingCount');
+  var pbVal   = document.getElementById('tasksPbVal');
+  var pbFill  = document.getElementById('tasksPbFill');
+  var rSmall  = document.getElementById('ringSmall');
+  var rBig    = document.getElementById('ringBig');
+  var msgEl   = document.getElementById('progMsg');
+
+  if (badge)  badge.textContent  = _completed + '/' + _total + ' done';
+  if (pctEl)  pctEl.textContent  = _taskPct + '%';
+  if (bigPct) bigPct.textContent = _taskPct + '%';
+  if (compEl) compEl.textContent = String(_completed);
+  if (remEl)  remEl.textContent  = String(_total - _completed);
+  if (pbVal)  pbVal.textContent  = _completed + '/' + _total;
+  if (pbFill) pbFill.style.width = _taskPct + '%';
+  if (rSmall) rSmall.style.strokeDashoffset = String(201 - (201 * _taskPct / 100));
+  if (rBig)   rBig.style.strokeDashoffset   = String(327 - (327 * _taskPct / 100));
+  if (msgEl)  msgEl.textContent = _taskPct === 0 ? 'Start your day!' : (_taskPct < 50 ? 'Keep going!' : (_taskPct < 100 ? 'Almost there!' : 'Perfect day!'));
+}
+
+function updateXPDisplay(newTotal, newInLvl, newLevel, newPct) {
+  var lvDisp = document.getElementById('xpLevelDisplay');
+  var ttDisp = document.getElementById('xpTotalDisplay');
+  var ilDisp = document.getElementById('xpInLevelDisplay');
+  var badge  = document.getElementById('xpBadge');
+  var lvTxt  = document.getElementById('xpLvText');
+  var bar    = document.getElementById('xpBarFill');
+  var nxt    = document.getElementById('xpNextText');
+
+  var mini = document.getElementById('xpMiniBar');
+  if (lvDisp) lvDisp.textContent = 'Lv.' + newLevel;
+  if (ttDisp) ttDisp.textContent = newTotal.toLocaleString() + ' XP';
+  if (ilDisp) ilDisp.textContent = '→ ' + newInLvl + '/500';
+  if (badge)  badge.textContent  = String(newLevel);
+  if (lvTxt)  lvTxt.textContent  = 'Level ' + newLevel + ' — ' + newInLvl + '/500 XP';
+  if (bar)    bar.style.width    = newPct + '%';
+  if (mini)   mini.style.width   = newPct + '%';
+  if (nxt)    nxt.textContent    = (500 - newInLvl) + ' XP to Level ' + (newLevel + 1);
+}
+
+function showXP(msg, isLevelUp, newLevel) {
+  // Floating XP burst
+  var wrap = document.createElement('div');
+  wrap.className = 'xp-float';
+  var txt = document.createElement('div');
+  txt.className = 'xp-float-txt';
+  txt.textContent = msg;
+  var sub = document.createElement('div');
+  sub.className = 'xp-float-sub';
+  sub.textContent = 'XP earned!';
+  wrap.appendChild(txt);
+  wrap.appendChild(sub);
+  document.body.appendChild(wrap);
+  setTimeout(function() { wrap.remove(); }, 2100);
+
+  // Particle sparks
+  var colors = ['#f59e0b','#fcd34d','#34d399','#a78bfa','#f87171'];
+  for (var i = 0; i < 14; i++) {
+    var spark = document.createElement('div');
+    spark.className = 'xp-spark';
+    var angle = (i / 14) * 360;
+    var dist  = 60 + Math.random() * 80;
+    var tx    = Math.round(Math.cos(angle * Math.PI / 180) * dist);
+    var ty    = Math.round(Math.sin(angle * Math.PI / 180) * dist - 120);
+    spark.style.cssText = 'left:50%;bottom:30%;margin-left:-3px;background:' + colors[i % colors.length] + ';--tx:' + tx + 'px;--ty:' + ty + 'px;--d:' + (0.8 + Math.random() * 0.6) + 's;';
+    document.body.appendChild(spark);
+    setTimeout(function(s) { s.remove(); }, 1500, spark);
+  }
+
+  // Level-up overlay if leveled up
+  if (isLevelUp && newLevel) {
+    setTimeout(function() {
+      var ov = document.createElement('div');
+      ov.className = 'lvlup-overlay';
+      ov.innerHTML = '<div class="lvlup-ring"><div class="lvlup-num">' + newLevel + '</div><div class="lvlup-lbl">Level</div></div><div class="lvlup-title">Level Up!</div><div class="lvlup-sub">You reached Level ' + newLevel + '</div>';
+      document.body.appendChild(ov);
+      setTimeout(function() { ov.remove(); }, 3400);
+    }, 300);
+  }
+}
+
+/* ── MEAL EATEN ── */
+var _eatenTypes;
+try { _eatenTypes = new Set(completedMealTypesArr || []); } catch(e) { _eatenTypes = new Set(); }
+var _macros = { calories: initConsumedMacros.calories, protein: initConsumedMacros.protein, fat: initConsumedMacros.fat, net_carbs: initConsumedMacros.net_carbs };
+
+window.toggleMealEaten = function toggleMealEaten(btn) {
+  var mealType = btn.getAttribute('data-meal-type');
+  var recipeId = btn.getAttribute('data-recipe-id') || null;
+  var isEaten  = _eatenTypes.has(mealType);
+  var action   = isEaten ? 'uncomplete' : 'complete';
+
+  btn.disabled = true;
+  btn.textContent = '⏳';
+
+  fetch('/api/meals/complete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ meal_type: mealType, recipe_id: recipeId || undefined, day_number: currentDay, action: action, client_date: new Date().toLocaleDateString('en-CA') }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    btn.disabled = false;
+    if (!data.success) {
+      btn.textContent = isEaten ? '✓ Eaten' : 'Mark Eaten';
+      showToast(data.error || 'Failed');
+      return;
+    }
+    // Update eaten state
+    if (action === 'complete') {
+      _eatenTypes.add(mealType);
+      btn.textContent = '✓ Eaten';
+      btn.classList.add('eaten');
+      btn.closest('.meal-item').classList.add('meal-eaten');
+      if (data.xp_earned) showXP('+' + data.xp_earned + ' XP');
+      showToast(mealType.charAt(0).toUpperCase() + mealType.slice(1) + ' logged!');
+      checkAchievements();
+    } else {
+      _eatenTypes.delete(mealType);
+      btn.textContent = 'Mark Eaten';
+      btn.classList.remove('eaten');
+      btn.closest('.meal-item').classList.remove('meal-eaten');
+    }
+    // Update macros display
+    if (data.macros) {
+      _macros = data.macros;
+      updateMacroBars();
+    }
+    // XP display update
+    if (data.xp_earned && action === 'complete') {
+      var newTotal = totalXP + data.xp_earned;
+      var newInLvl = newTotal % 500;
+      var newLevel = Math.floor(newTotal / 500) + 1;
+      var newPct   = Math.round((newInLvl / 500) * 100);
+      updateXPDisplay(newTotal, newInLvl, newLevel, newPct);
+    }
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.textContent = isEaten ? '✓ Eaten' : 'Mark Eaten';
+    showToast('Connection error');
+  });
+}
+
+function updateMacroBars() {
+  var cPct = Math.min(100, Math.round((_macros.calories  / goalCal)  * 100));
+  var pPct = Math.min(100, Math.round((_macros.protein   / goalProt) * 100));
+  var fPct = Math.min(100, Math.round((_macros.fat       / goalFat)  * 100));
+  var kPct = Math.min(100, Math.round((_macros.net_carbs / goalCarb) * 100));
+
+  var calFill = document.getElementById('mbCalFill'); if (calFill) calFill.style.width = cPct + '%';
+  var prtFill = document.getElementById('mbProtFill'); if (prtFill) prtFill.style.width = pPct + '%';
+  var fatFill = document.getElementById('mbFatFill'); if (fatFill) fatFill.style.width = fPct + '%';
+  var crbFill = document.getElementById('mbCarbFill'); if (crbFill) crbFill.style.width = kPct + '%';
+  var calVal  = document.getElementById('mbCalVal');  if (calVal)  calVal.textContent  = Math.round(_macros.calories);
+  var prtVal  = document.getElementById('mbProtVal'); if (prtVal)  prtVal.textContent  = Math.round(_macros.protein) + 'g';
+  var fatVal  = document.getElementById('mbFatVal');  if (fatVal)  fatVal.textContent  = Math.round(_macros.fat) + 'g';
+  var crbVal  = document.getElementById('mbCarbVal'); if (crbVal)  crbVal.textContent  = Math.round(_macros.net_carbs) + 'g';
+  // Update calorie ring
+  var ring = document.getElementById('macroRingCircle');
+  if (ring) ring.style.strokeDashoffset = (144.5 - 144.5 * cPct / 100).toFixed(1);
+  var ringPct = document.getElementById('macroRingPct');
+  if (ringPct) ringPct.textContent = cPct + '%';
+  var calsDisp = document.getElementById('macroCalsDisplay');
+  if (calsDisp) calsDisp.firstChild.textContent = Math.round(_macros.calories) + ' ';
+}
+
+/* ── MEAL SWAP ── */
+window.swapMeal = function swapMeal(btn) {
+  var recipeId = btn.getAttribute('data-recipe-id');
+  var reason   = btn.getAttribute('data-reason');
+  btn.disabled = true;
+  btn.textContent = '⏳';
+  fetch('/api/meals/swap', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ original_recipe_id: recipeId, reason: reason }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success && data.new_recipe) {
+      showToast('Meal swapped!');
+      setTimeout(function() { window.location.reload(); }, 800);
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Swap';
+      showToast(data.error || 'No alternatives found');
+    }
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.textContent = 'Swap';
+    showToast('Swap failed');
+  });
+}
+
+/* ── FOOD LOG ── */
+var _foodLogs = (initFoodLogs || []).map(function(f) { return Object.assign({}, f); });
+
+window.openFoodModal = function openFoodModal() {
+  var m = document.getElementById('foodModal');
+  if (m) { m.style.display = 'flex'; document.getElementById('flName').focus(); }
+};
+window.closeFoodModal = function closeFoodModal() {
+  var m = document.getElementById('foodModal');
+  if (m) m.style.display = 'none';
+  ['flName','flCal','flProt','flFat','flCarb'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+};
+
+window.saveFoodLog = function saveFoodLog() {
+  var name = document.getElementById('flName').value.trim();
+  if (!name) { document.getElementById('flName').focus(); return; }
+  var cal  = parseFloat(document.getElementById('flCal').value)  || 0;
+  var prot = parseFloat(document.getElementById('flProt').value) || 0;
+  var fat  = parseFloat(document.getElementById('flFat').value)  || 0;
+  var carb = parseFloat(document.getElementById('flCarb').value) || 0;
+  var meal = document.getElementById('flMeal').value || 'other';
+
+  var btn = document.getElementById('flSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  fetch('/api/food-log/add', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ food_name: name, calories: cal, protein_g: prot, fat_g: fat, carbs_g: carb, meal_type: meal }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    btn.disabled = false; btn.textContent = 'Add to Log';
+    if (data.success && data.entry) {
+      _foodLogs.push(data.entry);
+      addFoodLogItemToUI(data.entry);
+      // Update macro totals
+      _macros.calories  += cal;
+      _macros.protein   += prot;
+      _macros.fat       += fat;
+      _macros.net_carbs += carb;
+      updateMacroBars();
+      closeFoodModal();
+      showToast(name + ' logged!');
+    } else {
+      showToast(data.error || 'Failed');
+    }
+  })
+  .catch(function() {
+    btn.disabled = false; btn.textContent = 'Add to Log';
+    showToast('Connection error');
+  });
+};
+
+function addFoodLogItemToUI(f) {
+  var list = document.getElementById('foodLogList');
+  if (!list) return;
+  var el = document.createElement('div');
+  el.className = 'fl-item';
+  el.setAttribute('data-id', f.id);
+  el.style.cssText = 'display:flex;align-items:center;gap:.5rem;padding:.35rem .6rem;background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.18);border-radius:8px;';
+  el.innerHTML = '<span style="font-size:.72rem;font-weight:700;color:#a78bfa;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(f.food_name) + '</span>'
+    + '<span style="font-size:.67rem;color:var(--soft);white-space:nowrap;">' + f.calories + 'cal · ' + f.protein_g + 'P · ' + f.carbs_g + 'C</span>'
+    + '<button onclick="deleteFoodLog(this)" data-id="' + f.id + '" style="background:none;border:none;color:var(--soft);cursor:pointer;font-size:.9rem;padding:0 .1rem;line-height:1;" title="Remove">×</button>';
+  list.appendChild(el);
+}
+
+window.deleteFoodLog = function deleteFoodLog(btn) {
+  var id = btn.getAttribute('data-id');
+  var item = btn.closest('.fl-item');
+  var entry = _foodLogs.find(function(f) { return f.id === id; });
+
+  fetch('/api/food-log/delete', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: id }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      if (item) item.remove();
+      if (entry) {
+        _macros.calories  -= (entry.calories  || 0);
+        _macros.protein   -= parseFloat(entry.protein_g  || 0);
+        _macros.fat       -= parseFloat(entry.fat_g      || 0);
+        _macros.net_carbs -= parseFloat(entry.carbs_g    || 0);
+        _macros.calories   = Math.max(0, _macros.calories);
+        _macros.protein    = Math.max(0, _macros.protein);
+        _macros.fat        = Math.max(0, _macros.fat);
+        _macros.net_carbs  = Math.max(0, _macros.net_carbs);
+        _foodLogs = _foodLogs.filter(function(f) { return f.id !== id; });
+        updateMacroBars();
+      }
+    }
+  })
+  .catch(function() {});
+};
+
+// Close modal on overlay click
+document.getElementById('foodModal')?.addEventListener('click', function(e) {
+  if (e.target === this) closeFoodModal();
+});
+
+// Enter key submits food log form
+document.getElementById('flName')?.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') window.saveFoodLog();
+});
+
+/* ── WATER TRACKER ── */
+var _water = initWaterGlasses;
+
+window.logWater = function logWater(delta) {
+  var newVal = Math.max(0, Math.min(20, _water + delta));
+  if (newVal === _water) return;
+  _water = newVal;
+  updateWaterUI();
+
+  fetch('/api/water/log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ delta: delta }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      _water = data.glasses;
+      updateWaterUI();
+      if (data.glasses >= 8) {
+        showToast('8 glasses reached — great hydration!');
+        checkAchievements();
+      }
+    }
+  })
+  .catch(function() {});
+};
+
+function updateWaterUI() {
+  var numEl   = document.getElementById('waterNum');
+  var barEl   = document.getElementById('waterBar');
+  var glEl    = document.getElementById('waterGlasses');
+  if (numEl)  numEl.textContent = String(_water);
+  if (barEl)  barEl.style.width = Math.min(100, Math.round((_water / 8) * 100)) + '%';
+  if (glEl) {
+    var divs = glEl.querySelectorAll('div');
+    divs.forEach(function(d, i) {
+      var filled = i < _water;
+      d.style.borderColor  = filled ? 'var(--blue)' : 'rgba(255,255,255,.1)';
+      d.style.background   = filled ? 'rgba(59,130,246,.35)' : 'transparent';
+    });
+  }
+}
+
+/* ── ACHIEVEMENTS ── */
+function checkAchievements() {
+  fetch('/api/achievements/check', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.newAchievements && data.newAchievements.length > 0) {
+        data.newAchievements.forEach(function(a) {
+          showAchievement(a.icon, a.name, a.desc);
+        });
+      }
+    })
+    .catch(function() {});
+}
+
+function showAchievement(icon, name, desc) {
+  var el = document.createElement('div');
+  el.style.cssText = [
+    'position:fixed;bottom:5rem;right:1.25rem;z-index:9999;',
+    'background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(139,92,246,.12));',
+    'border:1.5px solid rgba(245,158,11,.45);border-radius:16px;',
+    'padding:.875rem 1.1rem;max-width:280px;',
+    'box-shadow:0 12px 40px rgba(0,0,0,.4),0 0 0 1px rgba(245,158,11,.12);',
+    'animation:achIn .4s cubic-bezier(.4,0,.2,1);',
+    'backdrop-filter:blur(16px);',
+  ].join('');
+  el.innerHTML = [
+    '<div style="display:flex;align-items:center;gap:.6rem;">',
+    '<span style="font-size:1.6rem;flex-shrink:0;">' + icon + '</span>',
+    '<div>',
+    '<div style="font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:rgba(245,158,11,.9);margin-bottom:.1rem;">Achievement Unlocked!</div>',
+    '<div style="font-size:.85rem;font-weight:800;color:#fde68a;">' + name + '</div>',
+    '<div style="font-size:.72rem;color:rgba(255,255,255,.6);margin-top:.1rem;">' + desc + '</div>',
+    '</div></div>',
+  ].join('');
+  document.body.appendChild(el);
+  setTimeout(function() {
+    el.style.transition = 'all .4s ease';
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(10px)';
+    setTimeout(function() { if (el.parentNode) el.remove(); }, 400);
+  }, 4000);
+}
+
+// Add keyframe if not already present
+if (!document.getElementById('achStyle')) {
+  var s = document.createElement('style');
+  s.id = 'achStyle';
+  s.textContent = '@keyframes achIn{from{opacity:0;transform:translateY(20px) scale(.95);}to{opacity:1;transform:translateY(0) scale(1);}}';
+  document.head.appendChild(s);
+}
+
+// Check achievements on load (catches any missed ones)
+setTimeout(checkAchievements, 2000);
+
+/* ── TOAST ── */
+function showToast(msg) {
+  var wrap = document.getElementById('toastWrap');
+  if (!wrap) return;
+  var el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(function() { if (el.parentNode) el.remove(); }, 3200);
+}
+var _u = new URL(window.location.href);
+if (_u.searchParams.get('welcome') === '1') {
+  _u.searchParams.delete('welcome');
+  history.replaceState({}, '', _u);
+  var wm = document.getElementById('welcomeModal');
+  if (wm) setTimeout(function() { wm.style.display = 'flex'; }, 400);
+}
+document.getElementById('welcomeClose')?.addEventListener('click', function() {
+  document.getElementById('welcomeModal').style.display = 'none';
+});
+document.getElementById('welcomeStartBtn')?.addEventListener('click', function() {
+  document.getElementById('welcomeModal').style.display = 'none';
+});
+
+/* ── WEIGHT LOG WIDGET ── */
+window.logWeight = function logWeight() {
+  var weightInput = document.getElementById('wlWeightInput');
+  var dateInput   = document.getElementById('wlDateInput');
+  var btn         = document.getElementById('wlBtn');
+  var confirm     = document.getElementById('wlConfirm');
+  var currentVal  = document.getElementById('wlCurrentVal');
+
+  if (!weightInput || !dateInput) return;
+
+  var weightDisp  = parseFloat(weightInput.value);
+  var logged_date = dateInput.value;
+
+  if (!weightDisp || weightDisp <= 0) {
+    weightInput.focus();
+    return;
+  }
+  if (!logged_date) {
+    dateInput.focus();
+    return;
+  }
+
+  // Convert to kg for storage
+  var weightKg = units === 'imperial'
+    ? Math.round((weightDisp / 2.20462) * 10) / 10
+    : weightDisp;
+
+  btn.disabled    = true;
+  btn.textContent = 'Logging…';
+
+  fetch('/api/profile/add-weight', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ weight: weightKg, logged_date: logged_date }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    btn.disabled    = false;
+    btn.textContent = 'Log Weight';
+    if (data.success) {
+      if (currentVal) currentVal.textContent = weightDisp.toFixed(1);
+      confirm.style.display = 'block';
+      setTimeout(function() { confirm.style.display = 'none'; }, 3000);
+      showToast('Weight logged — ' + weightDisp + ' ' + wUnit);
+    } else {
+      showToast(data.error || 'Failed to log weight');
+    }
+  })
+  .catch(function() {
+    btn.disabled    = false;
+    btn.textContent = 'Log Weight';
+    showToast('Connection error');
+  });
+};
+
+window.dashToggleHabit = function(habitId, el) {
+  var done = el.style.background.includes('185,129');
+  fetch('/api/habits/toggle', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ habit_id: habitId, date: new Date().toISOString().split('T')[0] }),
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if (d.success) {
+      if (d.completed) {
+        el.style.background = 'rgba(16,185,129,.08)';
+        el.style.borderColor = 'rgba(16,185,129,.25)';
+        var lbl = el.querySelector('span:nth-child(2)');
+        var chk = el.querySelector('span:last-child');
+        if (lbl) { lbl.style.textDecoration = 'line-through'; lbl.style.color = 'var(--soft)'; }
+        if (chk) { chk.textContent = '✓'; chk.style.color = 'var(--green)'; }
+      } else {
+        el.style.background = 'var(--card2)';
+        el.style.borderColor = 'var(--border)';
+        var lbl2 = el.querySelector('span:nth-child(2)');
+        var chk2 = el.querySelector('span:last-child');
+        if (lbl2) { lbl2.style.textDecoration = 'none'; lbl2.style.color = ''; }
+        if (chk2) { chk2.textContent = '○'; chk2.style.color = 'var(--muted)'; }
+      }
+    }
+  });
+};
+</script>
+<!-- FOOD LOG MODAL -->
+<div id="foodModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:var(--card);border:1.5px solid rgba(99,102,241,.3);border-radius:22px;padding:1.75rem 1.75rem 1.5rem;max-width:400px;width:100%;box-shadow:0 32px 80px rgba(0,0,0,.5);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:900;display:flex;align-items:center;gap:.5rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg> Log Custom Food</div>
+      <button onclick="closeFoodModal()" style="background:none;border:none;color:var(--soft);font-size:1.3rem;cursor:pointer;line-height:1;">×</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.65rem;">
+      <input id="flName" type="text" placeholder="Food name (e.g. Greek Yogurt)" style="width:100%;padding:.6rem .85rem;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:.82rem;font-family:inherit;outline:none;"/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+        <input id="flCal"  type="number" placeholder="Calories" min="0" style="padding:.6rem .7rem;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:.82rem;font-family:inherit;outline:none;"/>
+        <input id="flProt" type="number" placeholder="Protein (g)" min="0" step="0.1" style="padding:.6rem .7rem;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:.82rem;font-family:inherit;outline:none;"/>
+        <input id="flFat"  type="number" placeholder="Fat (g)" min="0" step="0.1" style="padding:.6rem .7rem;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:.82rem;font-family:inherit;outline:none;"/>
+        <input id="flCarb" type="number" placeholder="Net Carbs (g)" min="0" step="0.1" style="padding:.6rem .7rem;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:.82rem;font-family:inherit;outline:none;"/>
+      </div>
+      <select id="flMeal" style="padding:.6rem .7rem;border-radius:10px;background:var(--card2);border:1px solid var(--border);color:var(--text);font-size:.82rem;font-family:inherit;outline:none;">
+        <option value="breakfast">Breakfast</option>
+        <option value="lunch">Lunch</option>
+        <option value="dinner">Dinner</option>
+        <option value="snack">Snack</option>
+        <option value="other" selected>Other</option>
+      </select>
+      <button id="flSaveBtn" onclick="saveFoodLog()" style="padding:.7rem;border-radius:11px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;font-weight:800;font-size:.85rem;cursor:pointer;transition:all .18s;">Add to Log</button>
+    </div>
+  </div>
+</div>
+
+<!-- WELCOME MODAL (shown once after onboarding) -->
+<div id="welcomeModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:var(--card);border:1.5px solid rgba(16,185,129,.3);border-radius:24px;padding:2.25rem 2rem;max-width:420px;width:100%;text-align:center;position:relative;box-shadow:0 32px 80px rgba(0,0,0,.5);">
+    <button id="welcomeClose" style="position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--soft);font-size:1.3rem;cursor:pointer;line-height:1;">×</button>
+    <div style="width:64px;height:64px;border-radius:20px;background:var(--green-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;"><Activity size={32} color="var(--green)" /></div>
+    <div style="font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;line-height:1.1;margin-bottom:.5rem;">Welcome, <em style="font-style:italic;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">{userName}</em>!</div>
+    <div style="font-size:.85rem;color:var(--soft);margin-bottom:1.5rem;line-height:1.6;">Your <strong style="color:var(--text);">{tierLabel}</strong> journey is set up and ready. Complete your first daily check-in to start earning XP and building your streak.</div>
+    <div style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.5rem;">
+      <div style="display:flex;align-items:center;gap:.75rem;padding:.65rem 1rem;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.15);border-radius:12px;text-align:left;">
+        <ClipboardCheck size={20} color="var(--green)" style="flex-shrink:0" />
+        <div><div style="font-size:.8rem;font-weight:700;">Daily Check-in</div><div style="font-size:.72rem;color:var(--soft);">Track energy, water &amp; meals — earn 30 XP</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.75rem;padding:.65rem 1rem;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.15);border-radius:12px;text-align:left;">
+        <CheckCircle2 size={20} color="var(--green)" style="flex-shrink:0" />
+        <div><div style="font-size:.8rem;font-weight:700;">Complete Daily Tasks</div><div style="font-size:.72rem;color:var(--soft);">Finish all tasks to build a perfect day</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.75rem;padding:.65rem 1rem;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.15);border-radius:12px;text-align:left;">
+        <TrendingUp size={20} color="var(--green)" style="flex-shrink:0" />
+        <div><div style="font-size:.8rem;font-weight:700;">Log Your Weight</div><div style="font-size:.72rem;color:var(--soft);">Track progress toward your goal weight</div></div>
+      </div>
+    </div>
+    <button id="welcomeStartBtn" style="width:100%;padding:1rem;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;border:none;border-radius:14px;font-weight:900;font-size:.95rem;cursor:pointer;box-shadow:0 6px 20px rgba(16,185,129,.35);">Start Day 1 →</button>
+  </div>
+</div>
+
+<!-- ══ APEXCHARTS + GSAP — bundled by Vite ══════════════════ -->
+<script>
+import ApexCharts from 'apexcharts';
+import gsap from 'gsap';
+
+/* ─────────────────────────────────────────────────────────────
+   WEIGHT SPARKLINE — ApexCharts area chart
+   ───────────────────────────────────────────────────────────── */
+(function initWeightChart() {
+  const el = document.getElementById('weightSparkline');
+  if (!el) return;
+
+  // Read weight data embedded by Astro server
+  const raw = (window as any).__weightData as Array<{w: number; d: string}> | undefined;
+  if (!raw || raw.length < 2) return;
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const green  = getComputedStyle(document.documentElement).getPropertyValue('--green').trim() || '#16a34a';
+  const soft   = getComputedStyle(document.documentElement).getPropertyValue('--soft').trim()  || '#64748b';
+
+  const opts = {
+    chart: {
+      type: 'area',
+      height: 110,
+      sparkline: { enabled: true },
+      animations: {
+        enabled: true,
+        easing: 'easeinout',
+        speed: 900,
+        animateGradually: { enabled: true, delay: 80 },
+      },
+      background: 'transparent',
+    },
+    series: [{ name: 'Weight', data: raw.map(p => p.w) }],
+    xaxis:  { categories: raw.map(p => p.d) },
+    stroke: { curve: 'smooth', width: 2.5, colors: ['#10b981'] },
+    fill: {
+      type: 'gradient',
+      gradient: {
+        shadeIntensity: 1,
+        opacityFrom: 0.35,
+        opacityTo: 0.02,
+        stops: [0, 100],
+        colorStops: [
+          { offset: 0,   color: '#10b981', opacity: 0.3 },
+          { offset: 100, color: '#10b981', opacity: 0   },
+        ],
+      },
+    },
+    markers: {
+      size: [3, 3, 3, 3, 3, 3, 3, 5],
+      colors: ['#10b981'],
+      strokeColors: isDark ? '#0d1a0f' : '#ffffff',
+      strokeWidth: 2,
+      hover: { size: 7 },
+    },
+    tooltip: {
+      theme: isDark ? 'dark' : 'light',
+      x: { show: true },
+      y: { formatter: (v: number) => v + ' ' + ((window as any).__wUnit || 'kg') },
+    },
+    grid: { show: false },
+    theme: { mode: isDark ? 'dark' : 'light' },
+  };
+
+  const chart = new ApexCharts(el, opts);
+  chart.render();
+
+  // Re-render on theme toggle
+  document.getElementById('dnThemeBtn')?.addEventListener('click', () => {
+    setTimeout(() => {
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      chart.updateOptions({ theme: { mode: dark ? 'dark' : 'light' }, tooltip: { theme: dark ? 'dark' : 'light' } });
+    }, 50);
+  });
+})();
+
+/* ─────────────────────────────────────────────────────────────
+   GSAP — staggered card reveals + number counters
+   ───────────────────────────────────────────────────────────── */
+(function initGSAP() {
+  // Stagger stat cards
+  gsap.from('.stat-card', {
+    y: 22, opacity: 0, duration: 0.55,
+    stagger: 0.08,
+    ease: 'back.out(1.4)',
+    clearProps: 'transform,opacity',
+  });
+
+  // Stagger quick action buttons
+  gsap.from('.qa-btn', {
+    y: 16, opacity: 0, duration: 0.45,
+    stagger: 0.05,
+    ease: 'back.out(1.6)',
+    delay: 0.25,
+    clearProps: 'transform,opacity',
+  });
+
+  // Number counter for stat values
+  function countUp(selector: string, end: number, decimals = 0, prefix = '', suffix = '') {
+    const el = document.querySelector(selector) as HTMLElement;
+    if (!el || !end) return;
+    gsap.from({ val: 0 }, {
+      val: end, duration: 1.4,
+      ease: 'power2.out',
+      delay: 0.3,
+      onUpdate: function() {
+        el.textContent = prefix + this.targets()[0].val.toFixed(decimals) + suffix;
+      },
+    });
+  }
+
+  // Animate XP level display
+  const xpEl = document.getElementById('xpLevelDisplay');
+  if (xpEl) {
+    const lvl = parseInt(xpEl.textContent?.replace('Lv.', '') || '1');
+    gsap.from({ v: 1 }, {
+      v: lvl, duration: 1.2, ease: 'power2.out', delay: 0.5,
+      onUpdate: function() {
+        xpEl.textContent = 'Lv.' + Math.round(this.targets()[0].v);
+      },
+    });
+  }
+
+  // Animate streak number
+  const streakEl = document.querySelector('.stat-card:nth-child(2) .stat-val') as HTMLElement;
+  if (streakEl) {
+    const val = parseInt(streakEl.textContent || '0');
+    if (val > 0) {
+      gsap.from({ v: 0 }, {
+        v: val, duration: 1.1, ease: 'power2.out', delay: 0.35,
+        onUpdate: function() { streakEl.textContent = String(Math.round(this.targets()[0].v)); },
+      });
+    }
+  }
+
+  // Animate current day number
+  const dayEl = document.querySelector('.stat-card:nth-child(4) .stat-val') as HTMLElement;
+  if (dayEl) {
+    const val = parseInt(dayEl.textContent || '0');
+    if (val > 1) {
+      gsap.from({ v: 1 }, {
+        v: val, duration: 1.0, ease: 'power2.out', delay: 0.42,
+        onUpdate: function() { dayEl.textContent = String(Math.round(this.targets()[0].v)); },
+      });
+    }
+  }
+
+  // Animate sidebar cards on scroll into view (IntersectionObserver)
+  const cards = document.querySelectorAll('.card');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        gsap.from(entry.target, {
+          y: 14, opacity: 0, duration: 0.4, ease: 'power2.out',
+          clearProps: 'transform,opacity',
+        });
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  cards.forEach(c => observer.observe(c));
+})();
+</script>
+
+<!-- Embed weight data for ApexCharts (server → client) -->
+<script is:inline define:vars={{ weightLogsForChart: (weightLogs || []).map((w: any) => ({ w: w.weight, d: w.logged_date?.slice(5) || '' })).reverse(), wUnitForChart: (profile.preferred_units === 'imperial' ? 'lbs' : 'kg') }}>
+window.__weightData = weightLogsForChart;
+window.__wUnit      = wUnitForChart;
+</script>
+
+<AppTour userName={userName} />
+</body>
+</html>

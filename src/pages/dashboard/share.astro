@@ -1,6 +1,6 @@
 ---
 // src/pages/dashboard/share.astro
-import { supabase, getUserJourney, getMaxJourneyDays } from '../../lib/supabase';
+import { getUserJourney, getMaxJourneyDays } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import Share2   from 'lucide-astro/Share2';
@@ -13,12 +13,12 @@ import Zap      from 'lucide-astro/Zap';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'Keto Warrior';
 
-const journey = await getUserJourney(user.id);
+const journey = await getUserJourney(user.id, db);
 if (!journey) return Astro.redirect('/dashboard');
 
 const currentDay  = journey.current_day  || 1;
@@ -29,14 +29,14 @@ const maxDays     = getMaxJourneyDays(planType);
 const journeyPct  = Math.min(100, Math.round((currentDay / maxDays) * 100));
 
 // Weight data
-const { data: weightLogs } = await supabase
+const { data: weightLogs } = await db
   .from('weight_logs')
   .select('weight, logged_date')
   .eq('user_id', user.id)
   .order('logged_date', { ascending: true })
   .limit(30);
 
-const { data: onboarding } = await supabase
+const { data: onboarding } = await db
   .from('onboarding_data')
   .select('current_weight, target_weight')
   .eq('user_id', user.id)

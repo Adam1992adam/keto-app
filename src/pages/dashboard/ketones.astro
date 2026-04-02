@@ -1,6 +1,5 @@
 ---
 // src/pages/dashboard/ketones.astro
-import { supabase } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import Activity from 'lucide-astro/Activity';
@@ -14,14 +13,14 @@ import BarChart2 from 'lucide-astro/BarChart2';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const userName  = (profile as any).full_name || (profile as any).email?.split('@')[0] || 'User';
 
 // Fetch last 30 ketone logs newest-first
-const { data: logs } = await supabase
+const { data: logs } = await db
   .from('ketone_logs')
   .select('*')
   .eq('user_id', user.id)

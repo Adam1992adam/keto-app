@@ -1,0 +1,937 @@
+---
+import { supabase, getUserJourney, getMaxJourneyDays, getMealCycleDays } from '../../lib/supabase';
+import { requireAuth } from '../../lib/auth';
+import DashNav from '../../components/DashNav.astro';
+import ShoppingCart from 'lucide-astro/ShoppingCart';
+import CheckSquare from 'lucide-astro/CheckSquare';
+import Package from 'lucide-astro/Package';
+import Tag from 'lucide-astro/Tag';
+import Target from 'lucide-astro/Target';
+import AlertTriangle from 'lucide-astro/AlertTriangle';
+
+const auth = await requireAuth(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile } = auth;
+const planType  = profile.subscription_tier || 'basic_30';
+const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+
+const journey = await getUserJourney(user.id);
+if (!journey) return Astro.redirect('/dashboard');
+
+const currentDay  = journey.current_day || 1;
+const currentWeek = Math.ceil(currentDay / 7);
+const userName    = profile.full_name?.split(' ')[0] || 'there';
+
+// Week selector
+const maxDays   = getMaxJourneyDays(planType);
+const maxWeeks  = Math.ceil(maxDays / 7);
+const weekParam = Astro.url.searchParams.get('week');
+const viewWeek  = Math.min(Math.max(parseInt(weekParam || String(currentWeek)), 1), maxWeeks);
+const startDay  = (viewWeek - 1) * 7 + 1;
+const endDay    = Math.min(startDay + 6, maxDays);
+
+// Cycle days into meal plan window (30 days for basic, 60 for pro/elite)
+const mealCycleDays = getMealCycleDays(planType);
+const cycledDays = Array.from({ length: endDay - startDay + 1 }, (_, i) => ((startDay + i - 1) % mealCycleDays) + 1);
+
+// Meal plans for this week — select only existing recipe columns (no ingredients column in DB)
+const { data: mealPlansDirect } = await supabase
+  .from('meal_plans')
+  .select('day_number, meal_type, recipe:recipes(id, title, calories, protein, fat, net_carbs, tags)')
+  .eq('plan_type', planType)
+  .in('day_number', cycledDays)
+  .order('day_number');
+
+const { data: mealPlansFallback } = mealPlansDirect?.length ? { data: null } : await supabase
+  .from('meal_plans')
+  .select('day_number, meal_type, recipe:recipes(id, title, calories, protein, fat, net_carbs, tags)')
+  .eq('plan_type', 'basic_30')
+  .in('day_number', cycledDays)
+  .order('day_number');
+
+const mealPlans = mealPlansDirect?.length ? mealPlansDirect : (mealPlansFallback || []);
+
+// Personalization data
+const { data: onboarding } = await supabase
+  .from('onboarding_data')
+  .select('dietary_restrictions, goal, current_weight, target_weight')
+  .eq('user_id', user.id).maybeSingle();
+const restrictions = onboarding?.dietary_restrictions || [];
+const userGoal = onboarding?.goal || 'weight_loss';
+
+// Filter helper — removes meals that violate dietary restrictions
+const isAllowed = (recipe) => {
+  if (!recipe) return true;
+  const tags = recipe.tags || [];
+  const title = (recipe.title || '').toLowerCase();
+  if (restrictions.includes('no_pork') && (tags.includes('pork') || ['bacon','ham','prosciutto','chorizo','sausage'].some(w => title.includes(w)))) return false;
+  if (restrictions.includes('vegetarian') && ['chicken','beef','steak','lamb','duck','salmon','tuna','shrimp','cod'].some(w => title.includes(w))) return false;
+  if (restrictions.includes('no_seafood') && (tags.includes('seafood') || tags.includes('omega-3') || ['salmon','tuna','shrimp','cod','fish'].some(w => title.includes(w)))) return false;
+  return true;
+};
+
+const filteredMealPlans = mealPlans.filter(m => isAllowed(m.recipe));
+
+// Derive ingredient list from recipe title/tags (replaces missing DB column)
+const deriveIngredients = (recipe) => {
+  if (!recipe) return [];
+  const t = (recipe.title || '').toLowerCase();
+  const tags = recipe.tags || [];
+  const items = [];
+  if (t.includes('egg') || t.includes('omelette') || t.includes('frittata')) { items.push('Eggs'); items.push('Butter'); }
+  else if (t.includes('bacon')) { items.push('Bacon'); items.push('Eggs'); }
+  else if (t.includes('salmon')) { items.push('Salmon'); items.push('Lemon'); items.push('Butter'); items.push('Fresh herbs'); }
+  else if (t.includes('chicken')) { items.push('Chicken'); items.push('Olive oil'); items.push('Garlic'); }
+  else if (t.includes('beef') || t.includes('steak') || t.includes('meatloaf') || t.includes('chili')) { items.push('Ground beef/steak'); items.push('Onion'); items.push('Garlic'); }
+  else if (t.includes('shrimp')) { items.push('Shrimp'); items.push('Butter'); items.push('Garlic'); items.push('Lemon'); }
+  else if (t.includes('tuna')) { items.push('Canned tuna'); items.push('Mayonnaise'); items.push('Celery'); }
+  else if (t.includes('lamb')) { items.push('Lamb'); items.push('Garlic'); items.push('Rosemary'); items.push('Olive oil'); }
+  else if (t.includes('pork') || t.includes('sausage')) { items.push('Pork'); items.push('Garlic'); items.push('Herbs'); }
+  else if (t.includes('cod') || t.includes('fish')) { items.push('White fish'); items.push('Lemon'); items.push('Butter'); items.push('Herbs'); }
+  else if (t.includes('duck')) { items.push('Duck breast'); items.push('Orange/herbs'); items.push('Salt'); }
+  else if (t.includes('smoothie')) { items.push('Heavy cream'); items.push('Ice'); items.push('Protein powder'); }
+  else if (t.includes('pancake') || t.includes('waffle')) { items.push('Almond flour'); items.push('Eggs'); items.push('Baking powder'); }
+  if (t.includes('cauliflower')) { items.push('Cauliflower'); items.push('Butter'); items.push('Cream'); }
+  if (t.includes('zucchini')) { items.push('Zucchini'); items.push('Olive oil'); items.push('Garlic'); }
+  if (t.includes('avocado')) { items.push('Avocados'); items.push('Lemon'); }
+  if (t.includes('salad')) { items.push('Mixed greens'); items.push('Olive oil'); items.push('Vinegar'); }
+  if (t.includes('soup')) { items.push('Broth'); items.push('Cream'); items.push('Vegetables'); }
+  if (t.includes('broccoli')) { items.push('Broccoli'); items.push('Butter'); }
+  if (t.includes('asparagus')) { items.push('Asparagus'); items.push('Olive oil'); }
+  if (t.includes('mushroom')) { items.push('Mushrooms'); items.push('Butter'); items.push('Garlic'); }
+  if (t.includes('spinach')) { items.push('Spinach'); items.push('Olive oil'); }
+  if (t.includes('cheese') || t.includes('feta') || t.includes('parmesan') || t.includes('mozzarella')) { items.push('Cheese (per recipe type)'); }
+  if (t.includes('coconut')) { items.push('Coconut cream'); items.push('Coconut oil'); }
+  if (t.includes('almond')) { items.push('Almond flour'); items.push('Almonds'); }
+  if (t.includes('chia')) { items.push('Chia seeds'); items.push('Coconut milk'); }
+  if (t.includes('chocolate')) { items.push('Dark cocoa powder'); items.push('Butter'); }
+  if (tags.includes('baking') && !items.includes('Almond flour')) { items.push('Almond flour'); items.push('Eggs'); items.push('Baking powder'); }
+  // Staples
+  if (!items.includes('Salt & pepper')) items.push('Salt & pepper');
+  if (!items.includes('Olive oil')) items.push('Olive oil');
+  // Return 4–7 unique items
+  const unique = [...new Set(items)];
+  return unique.slice(0, 7);
+};
+
+// ── Budget alternatives ───────────────────────────────────
+const budgetAltsDb = {
+  'salmon':         { alt: 'canned tuna',        save: '60%', tip: 'Same omega-3, a fraction of the cost — great hot or cold' },
+  'ribeye':         { alt: 'chuck steak',         save: '50%', tip: 'Slow cook or marinate 2h for same tenderness' },
+  'lamb':           { alt: 'ground beef',         save: '45%', tip: 'Season identically — barely any taste difference' },
+  'shrimp':         { alt: 'canned sardines',     save: '55%', tip: 'Excellent protein source, rich in omega-3' },
+  'parmesan':       { alt: 'pecorino romano',     save: '30%', tip: 'Stronger taste — use less and save more' },
+  'macadamia':      { alt: 'sunflower seeds',     save: '70%', tip: 'Same healthy fats, toast for extra flavor' },
+  'pine nuts':      { alt: 'pumpkin seeds',       save: '65%', tip: 'Similar texture, even more nutrients' },
+  'almond flour':   { alt: 'coconut flour',       save: '40%', tip: 'Use ¼ the amount — absorbs 4x more liquid' },
+  'mozzarella':     { alt: 'string cheese',       save: '35%', tip: 'Same protein profile, easy to portion' },
+  'heavy cream':    { alt: 'coconut cream',       save: '25%', tip: 'Perfect dairy-free swap, same richness' },
+  'ghee':           { alt: 'unsalted butter',     save: '50%', tip: 'Make your own ghee by simmering butter 15min' },
+  'avocado oil':    { alt: 'olive oil',           save: '30%', tip: 'Both are perfect keto high-smoke oils' },
+  'grass-fed beef': { alt: 'regular ground beef', save: '40%', tip: 'Still excellent lean keto protein source' },
+  'fresh herbs':    { alt: 'dried herbs',         save: '80%', tip: 'Use ⅓ the amount — dried herbs are more concentrated' },
+  'cream cheese':   { alt: 'ricotta (strained)',  save: '35%', tip: 'Strain ricotta overnight for same thick texture' },
+  'bone broth':     { alt: 'regular beef broth',  save: '60%', tip: 'Add a splash of apple cider vinegar to boost nutrition' },
+};
+
+// ── Categories ────────────────────────────────────────────
+const catDefs = {
+  'Protein & Meat':   { icon:'🥩', color:'#ef4444', bg:'rgba(239,68,68,.1)',    keywords:['egg','chicken','beef','lamb','pork','salmon','tuna','shrimp','steak','bacon','sausage','ham','turkey','sardine','cod','fish','duck','venison'] },
+  'Dairy & Cheese':   { icon:'🧀', color:'#f59e0b', bg:'rgba(245,158,11,.1)',   keywords:['cheese','butter','cream','yogurt','feta','parmesan','mozzarella','cheddar','ricotta','ghee','milk','kefir','brie','gouda','manchego'] },
+  'Fresh Vegetables': { icon:'🥬', color:'#10b981', bg:'rgba(16,185,129,.1)',   keywords:['avocado','spinach','lettuce','broccoli','asparagus','cauliflower','zucchini','tomato','cucumber','pepper','mushroom','onion','celery','cabbage','kale','arugula','leek','artichoke','eggplant','fennel'] },
+  'Nuts & Seeds':     { icon:'🥜', color:'#8b5cf6', bg:'rgba(139,92,246,.1)',   keywords:['almond','macadamia','walnut','pecan','pine nut','chia','flax','pumpkin seed','sunflower','hazelnut','cashew','pistachio','hemp seed','sesame'] },
+  'Pantry & Oils':    { icon:'🏺', color:'#6b7280', bg:'rgba(107,114,128,.1)',  keywords:['olive oil','coconut oil','avocado oil','almond flour','coconut flour','soy sauce','mustard','mayo','vinegar','stock','broth','coconut milk','coconut cream','tomato paste','protein','tahini','hot sauce'] },
+  'Herbs & Spices':   { icon:'🌿', color:'#06b6d4', bg:'rgba(6,182,212,.1)',    keywords:['salt','pepper','garlic','paprika','thyme','basil','oregano','ginger','chives','dill','rosemary','cinnamon','cumin','turmeric','cayenne','bay leaf','mint','parsley','cilantro','coriander','cardamom','sumac'] },
+};
+
+// ── Merge ingredients derived from recipe titles ──────────
+const ingMap = new Map();
+
+filteredMealPlans.forEach(meal => {
+  const ings  = deriveIngredients(meal.recipe);
+  const label = 'Day ' + meal.day_number;
+  ings.forEach(ingItem => {
+    const key = ingItem.toLowerCase().trim();
+    if (!key) return;
+    if (ingMap.has(key)) {
+      const ex = ingMap.get(key);
+      ingMap.set(key, { ...ex, count: ex.count + 1, meals: [...new Set([...ex.meals, label])] });
+    } else {
+      ingMap.set(key, { item: ingItem, amount: 0, unit: '', count: 1, meals: [label] });
+    }
+  });
+});
+
+// ── Enrich with budget + dietary flags ───────────────────
+const allItems = Array.from(ingMap.values()).map(ing => {
+  const lower      = ing.item.toLowerCase();
+  const budgetKey  = Object.keys(budgetAltsDb).find(k => lower.includes(k));
+  const isPork     = ['bacon','pork','ham','sausage'].some(w => lower.includes(w));
+  const isMeat     = ['chicken','beef','lamb','fish','salmon','tuna','shrimp'].some(w => lower.includes(w));
+  const isSeafood  = ['salmon','tuna','shrimp','cod','fish','sardine'].some(w => lower.includes(w));
+  const flag = (
+    (restrictions.includes('no_pork') && isPork)      ? '⚠️ Pork'    :
+    (restrictions.includes('vegetarian') && isMeat)   ? '⚠️ Meat'    :
+    (restrictions.includes('no_seafood') && isSeafood)? '⚠️ Seafood' : ''
+  );
+  return { ...ing, budgetAlt: budgetKey ? budgetAltsDb[budgetKey] : undefined, flag };
+});
+
+// ── Categorize ────────────────────────────────────────────
+const catMap = {};
+Object.keys(catDefs).forEach(c => { catMap[c] = []; });
+catMap['Other'] = [];
+
+allItems.forEach(ing => {
+  const lower    = ing.item.toLowerCase();
+  const matchCat = Object.keys(catDefs).find(cat => catDefs[cat].keywords.some(kw => lower.includes(kw)));
+  if (matchCat) catMap[matchCat].push(ing);
+  else          catMap['Other'].push(ing);
+});
+
+const activeCats = Object.entries(catMap).filter(([, items]) => items.length > 0);
+
+// ── Load checked items from DB ────────────────────────────
+const { data: shoppingChecks } = await supabase
+  .from('shopping_checks')
+  .select('item_key')
+  .eq('user_id', user.id)
+  .eq('week_number', viewWeek);
+const checkedKeysArr = (shoppingChecks || []).map((r) => r.item_key);
+const checkedKeySet  = new Set(checkedKeysArr);
+
+// ── Summary ───────────────────────────────────────────────
+const totalItems    = allItems.length;
+const budgetCount   = allItems.filter(i => i.budgetAlt).length;
+const flaggedCount  = allItems.filter(i => i.flag).length;
+const sharedCount   = allItems.filter(i => i.count > 1).length;
+const uniqueMeals   = new Set((filteredMealPlans||[]).map(m => m.day_number)).size;
+
+// Week tab data
+const weekTabs = Array.from({length: maxWeeks}, (_, i) => i + 1).map(w => ({
+  w, label: `Week ${w}`, days: `Day ${(w-1)*7+1}–${Math.min(w*7, maxDays)}`,
+  active: w===viewWeek, current: w===currentWeek, past: w<currentWeek,
+}));
+
+// Custom items
+const { data: customItems } = await supabase
+  .from('custom_shopping_items')
+  .select('*')
+  .eq('user_id', user.id)
+  .order('created_at', { ascending: false });
+const myItems = customItems || [];
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Shopping List — Keto Journey</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
+  <script is:inline>(function(){const t=localStorage.getItem('keto-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
+  <style>
+    :root{--bg:#060c08;--card:#0d1a0f;--card2:#122014;--surface:#0a1209;--border:rgba(16,185,129,.11);--border2:rgba(16,185,129,.28);--text:#e0ede0;--soft:#4e724e;--muted:#1e2e1e;--green:#10b981;--green2:#34d399;--gold:#f59e0b;--red:#ef4444;--blue:#3b82f6;--purple:#8b5cf6;--cyan:#06b6d4;}
+    [data-theme="light"]{--bg:#ecf4ec;--card:#fff;--card2:#f2f8f2;--surface:#f8faf8;--border:rgba(0,0,0,.07);--border2:rgba(16,185,129,.25);--text:#071807;--soft:#3a6040;--muted:#b0cdb0;}
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html{scroll-behavior:smooth;}
+    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background .3s,color .3s;}
+    .bg-wrap{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+    .orb{position:absolute;border-radius:50%;filter:blur(130px);animation:drift ease-in-out infinite;}
+    [data-theme="light"] .orb{opacity:.06;}
+    .o1{width:700px;height:700px;background:rgba(16,185,129,.07);top:-180px;left:-150px;animation-duration:25s;opacity:.35;}
+    .o2{width:500px;height:500px;background:rgba(59,130,246,.05);bottom:-120px;right:-120px;animation-duration:32s;animation-delay:-14s;opacity:.3;}
+    @keyframes drift{0%,100%{transform:translate(0,0)scale(1);}40%{transform:translate(40px,-50px)scale(1.07);}70%{transform:translate(-35px,45px)scale(.93);}}
+    nav{position:sticky;top:0;z-index:100;height:64px;background:rgba(6,12,8,.9);border-bottom:1px solid var(--border);backdrop-filter:blur(22px);}
+    [data-theme="light"] nav{background:rgba(255,255,255,.92);}
+    .nav-inner{max-width:1260px;margin:0 auto;padding:0 1.5rem;height:100%;display:flex;align-items:center;gap:.75rem;}
+    .logo{font-family:'Fraunces',serif;font-weight:900;font-size:1.1rem;color:var(--text);text-decoration:none;}
+    .logo span{color:var(--green);}
+    .nav-back{display:flex;align-items:center;gap:.4rem;padding:.4rem .9rem;border-radius:10px;font-size:.8rem;font-weight:700;color:var(--soft);text-decoration:none;background:var(--card);border:1px solid var(--border);transition:all .2s;}
+    .nav-back:hover{border-color:var(--green);color:var(--green);}
+    .nav-sp{flex:1;}
+    .ibtn{width:35px;height:35px;border-radius:9px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.9rem;transition:all .2s;}
+    .ibtn:hover{border-color:var(--green);}
+    .av{width:33px;height:33px;border-radius:50%;background:linear-gradient(135deg,var(--green),#059669);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.82rem;color:#fff;text-decoration:none;}
+    .page{position:relative;z-index:1;max-width:1260px;margin:0 auto;padding:2rem 1.5rem 6rem;}
+    /* HEADER */
+    .pg-header{margin-bottom:1.75rem;animation:fadeUp .4s ease both;}
+    .pg-eyebrow{font-size:.72rem;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.4rem;}
+    .pg-title{font-family:'Fraunces',serif;font-size:clamp(1.9rem,4vw,2.6rem);font-weight:900;line-height:1.05;margin-bottom:.4rem;}
+    .pg-title em{font-style:italic;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .pg-sub{font-size:.83rem;color:var(--soft);line-height:1.6;}
+    /* STATS */
+    .stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:.9rem;margin-bottom:1.5rem;}
+    .sbar{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.1rem 1rem;text-align:center;animation:fadeUp .4s ease both;transition:all .25s;}
+    .sbar:hover{border-color:var(--border2);transform:translateY(-2px);}
+    .sbar-val{font-family:'Fraunces',serif;font-size:1.8rem;font-weight:900;line-height:1;margin-bottom:.2rem;}
+    .sbar-lbl{font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);}
+    /* WEEK TABS */
+    .week-tabs{display:flex;gap:.5rem;margin-bottom:1.5rem;overflow-x:auto;scrollbar-width:none;padding-bottom:.25rem;}
+    .week-tabs::-webkit-scrollbar{display:none;}
+    .wtab{display:flex;flex-direction:column;align-items:center;padding:.65rem 1.2rem;border-radius:13px;border:1.5px solid var(--border);background:var(--card);text-decoration:none;transition:all .22s;gap:.1rem;flex-shrink:0;}
+    .wtab:hover{border-color:var(--border2);}
+    .wtab.active{border-color:var(--green);background:rgba(16,185,129,.08);}
+    .wtab-label{font-size:.82rem;font-weight:800;}
+    .wtab.active .wtab-label{color:var(--green);}
+    .wtab-days{font-size:.62rem;color:var(--soft);}
+    .wtab-badge{font-size:.6rem;font-weight:800;padding:.1rem .42rem;border-radius:99px;background:rgba(16,185,129,.15);color:var(--green);}
+    .wtab.past .wtab-badge{background:rgba(107,114,128,.1);color:var(--soft);}
+    /* TOOLBAR */
+    .toolbar{display:flex;align-items:center;gap:.6rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+    .tool-search{flex:1;min-width:180px;display:flex;align-items:center;gap:.5rem;background:var(--card);border:1px solid var(--border);border-radius:11px;padding:.5rem .875rem;}
+    .tool-search input{background:none;border:none;outline:none;color:var(--text);font-size:.83rem;flex:1;font-family:'DM Sans',sans-serif;}
+    .tool-search input::placeholder{color:var(--soft);}
+    .tbtn{display:flex;align-items:center;gap:.35rem;padding:.5rem 1rem;border-radius:11px;font-size:.78rem;font-weight:800;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;transition:all .22s;white-space:nowrap;}
+    .tbtn:hover{border-color:var(--border2);}
+    .tbtn.g{background:linear-gradient(135deg,var(--green),var(--green2));border:none;color:#fff;box-shadow:0 4px 12px rgba(16,185,129,.3);}
+    .tbtn.g:hover{transform:translateY(-2px);}
+    .tbtn.gold{border-color:rgba(245,158,11,.3);color:var(--gold);}
+    .tbtn.gold:hover{background:rgba(245,158,11,.08);}
+    /* LAYOUT */
+    .main-layout{display:grid;grid-template-columns:1fr 300px;gap:1.5rem;align-items:start;}
+    @media(max-width:960px){.main-layout{grid-template-columns:1fr;}}
+    @media(max-width:640px){.stats-bar{grid-template-columns:1fr 1fr;}}
+    /* ALERT */
+    .alert{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:14px;padding:.875rem 1rem;margin-bottom:1rem;display:flex;gap:.75rem;}
+    .alert-icon{font-size:1.1rem;flex-shrink:0;}
+    .alert-title{font-size:.78rem;font-weight:900;color:var(--red);margin-bottom:.15rem;}
+    .alert-text{font-size:.7rem;color:var(--soft);line-height:1.5;}
+    /* CATEGORY CARD */
+    .cat-card{background:var(--card);border:1px solid var(--border);border-radius:20px;overflow:hidden;margin-bottom:1rem;transition:border-color .25s;}
+    .cat-card:hover{border-color:var(--border2);}
+    .cat-head{display:flex;align-items:center;gap:.875rem;padding:1rem 1.4rem;cursor:pointer;user-select:none;transition:background .2s;}
+    .cat-head:hover{background:rgba(255,255,255,.02);}
+    .cat-ico{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+    .cat-name{font-family:'Fraunces',serif;font-size:.97rem;font-weight:700;flex:1;}
+    .cat-count{font-size:.7rem;font-weight:800;padding:.2rem .6rem;border-radius:99px;}
+    .cat-arrow{font-size:.8rem;color:var(--soft);transition:transform .25s;}
+    .cat-card.collapsed .cat-arrow{transform:rotate(-90deg);}
+    .cat-body{border-top:1px solid var(--border);}
+    .cat-card.collapsed .cat-body{display:none;}
+    /* ITEM */
+    .shop-item{display:flex;align-items:center;gap:.875rem;padding:.8rem 1.4rem;border-bottom:1px solid var(--border);transition:all .2s;cursor:pointer;}
+    .shop-item:last-child{border-bottom:none;}
+    .shop-item:hover{background:rgba(255,255,255,.02);}
+    .shop-item.bought{opacity:.38;}
+    .shop-item.bought .item-name{text-decoration:line-through;}
+    .item-chk{width:22px;height:22px;border-radius:7px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.72rem;transition:all .22s;color:#fff;}
+    .shop-item.bought .item-chk{background:var(--green);border-color:var(--green);}
+    .item-info{flex:1;min-width:0;}
+    .item-name{font-size:.85rem;font-weight:700;margin-bottom:.08rem;}
+    .item-meta{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap;margin-top:.15rem;}
+    .item-qty{font-size:.72rem;font-weight:800;color:var(--green);background:rgba(16,185,129,.1);padding:.1rem .42rem;border-radius:6px;}
+    .item-uses{font-size:.65rem;color:var(--soft);}
+    .item-flag{font-size:.65rem;font-weight:700;color:var(--red);}
+    /* Budget badge */
+    .budget-wrap{position:relative;flex-shrink:0;}
+    .budget-badge{display:inline-flex;align-items:center;gap:.3rem;padding:.22rem .65rem;border-radius:8px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.22);font-size:.68rem;font-weight:800;color:var(--gold);cursor:pointer;transition:all .2s;white-space:nowrap;}
+    .budget-badge:hover{background:rgba(245,158,11,.18);}
+    /* Alt tooltip */
+    .alt-tt{display:none;position:absolute;z-index:200;background:var(--card2);border:1.5px solid rgba(245,158,11,.35);border-radius:14px;padding:1rem 1.1rem;box-shadow:0 16px 40px rgba(0,0,0,.45);width:250px;top:calc(100% + 6px);right:0;}
+    .alt-tt.show{display:block;animation:fadeUp .2s ease both;}
+    .alt-tt-lbl{font-size:.7rem;font-weight:800;color:var(--gold);margin-bottom:.45rem;}
+    .alt-name{font-size:.85rem;font-weight:700;margin-bottom:.2rem;}
+    .alt-save{font-size:.72rem;font-weight:800;color:var(--green);}
+    .alt-tip{font-size:.7rem;color:var(--soft);margin-top:.35rem;line-height:1.55;border-top:1px solid var(--border);padding-top:.35rem;}
+    /* Sidebar */
+    .sidebar{position:sticky;top:calc(64px + 1rem);display:flex;flex-direction:column;gap:1rem;}
+    .side-card{background:var(--card);border:1px solid var(--border);border-radius:18px;overflow:hidden;}
+    .side-head{padding:.875rem 1.25rem;border-bottom:1px solid var(--border);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);}
+    .side-body{padding:1rem 1.25rem;}
+    /* Progress ring */
+    .ring-wrap{position:relative;width:80px;height:80px;margin:0 auto .6rem;}
+    .rsvg{transform:rotate(-90deg);}
+    .r-trk{fill:none;stroke:var(--muted);stroke-width:7;}
+    .r-fill{fill:none;stroke:var(--green);stroke-width:7;stroke-linecap:round;stroke-dasharray:220;transition:stroke-dashoffset 1.2s ease;}
+    .ring-c{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;}
+    .ring-pct{font-family:'Fraunces',serif;font-size:1.1rem;font-weight:900;color:var(--green);line-height:1;}
+    .ring-lbl{font-size:.5rem;font-weight:700;color:var(--soft);}
+    /* Budget rows */
+    .brow{display:flex;align-items:center;justify-content:space-between;padding:.55rem 0;border-bottom:1px solid var(--border);}
+    .brow:last-child{border:none;}
+    .brow-lbl{font-size:.77rem;color:var(--soft);}
+    .brow-val{font-size:.77rem;font-weight:800;}
+    /* Category jumps */
+    .cat-jump{display:flex;align-items:center;gap:.6rem;padding:.55rem .75rem;border-radius:10px;text-decoration:none;font-size:.78rem;font-weight:700;transition:all .2s;margin-bottom:.3rem;}
+    .cat-jump:hover{opacity:.8;}
+    /* Print */
+    @media print{
+      nav,.toolbar,.sidebar,.week-tabs,.budget-badge,.tbtn,.alert{display:none!important;}
+      body{background:#fff!important;color:#000!important;}
+      .page{padding:0!important;max-width:100%!important;}
+      .main-layout{grid-template-columns:1fr!important;}
+      .cat-card.collapsed .cat-body{display:block!important;}
+      .shop-item.bought{opacity:1!important;}
+      .item-name{text-decoration:none!important;}
+    }
+    /* Empty */
+    .empty-state{text-align:center;padding:3rem 2rem;color:var(--soft);}
+    .es-icon{font-size:3.5rem;margin-bottom:1rem;}
+    .es-title{font-family:'Fraunces',serif;font-size:1.2rem;font-weight:700;margin-bottom:.5rem;color:var(--text);}
+    .es-sub{font-size:.82rem;line-height:1.6;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+    /* CUSTOM ITEMS */
+    .custom-section{margin-top:2rem;animation:fadeUp .4s ease both;}
+    .custom-header{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;}
+    .custom-title{font-family:'Fraunces',serif;font-size:1.2rem;font-weight:700;}
+    .custom-add-form{display:flex;gap:.5rem;flex-wrap:wrap;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1rem 1.25rem;margin-bottom:1rem;}
+    .custom-add-form input,.custom-add-form select{background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:.45rem .75rem;font-size:.82rem;color:var(--text);font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;}
+    .custom-add-form input:focus,.custom-add-form select:focus{border-color:var(--green);}
+    .custom-add-form input::placeholder{color:var(--soft);}
+    .inp-name{flex:2;min-width:140px;}
+    .inp-qty{flex:1;min-width:80px;}
+    .inp-cat{flex:1;min-width:110px;}
+    .btn-add{display:flex;align-items:center;gap:.35rem;padding:.45rem 1.1rem;border-radius:9px;font-size:.82rem;font-weight:800;background:linear-gradient(135deg,var(--green),var(--green2));border:none;color:#fff;cursor:pointer;transition:all .22s;white-space:nowrap;box-shadow:0 4px 12px rgba(16,185,129,.25);}
+    .btn-add:hover{transform:translateY(-1px);}
+    .custom-list{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+    .custom-item{display:flex;align-items:center;gap:.75rem;padding:.75rem 1.2rem;border-bottom:1px solid var(--border);transition:all .2s;}
+    .custom-item:last-child{border-bottom:none;}
+    .custom-item:hover{background:rgba(255,255,255,.02);}
+    .custom-item.ci-done .ci-name{text-decoration:line-through;opacity:.5;}
+    .ci-chk{width:22px;height:22px;border-radius:7px;border:2px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.72rem;cursor:pointer;transition:all .22s;color:#fff;}
+    .custom-item.ci-done .ci-chk{background:var(--green);border-color:var(--green);}
+    .ci-info{flex:1;min-width:0;}
+    .ci-name{font-size:.85rem;font-weight:700;}
+    .ci-qty{font-size:.72rem;color:var(--soft);margin-left:.35rem;}
+    .ci-cat{display:inline-block;font-size:.62rem;font-weight:800;padding:.1rem .45rem;border-radius:6px;margin-top:.15rem;text-transform:uppercase;letter-spacing:.05em;}
+    .ci-cat.cat-produce{background:rgba(16,185,129,.12);color:var(--green);}
+    .ci-cat.cat-meat{background:rgba(239,68,68,.1);color:var(--red);}
+    .ci-cat.cat-dairy{background:rgba(245,158,11,.1);color:var(--gold);}
+    .ci-cat.cat-pantry{background:rgba(107,114,128,.12);color:var(--soft);}
+    .ci-cat.cat-other{background:rgba(139,92,246,.1);color:var(--purple);}
+    .ci-del{width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--soft);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.9rem;transition:all .2s;flex-shrink:0;}
+    .ci-del:hover{border-color:var(--red);color:var(--red);background:rgba(239,68,68,.07);}
+    .custom-empty{text-align:center;padding:2rem 1rem;color:var(--soft);font-size:.82rem;}
+  </style>
+</head>
+<body>
+<div class="bg-wrap"><div class="orb o1"></div><div class="orb o2"></div></div>
+
+<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="shopping" />
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="pg-header">
+    <div class="pg-eyebrow"><ShoppingCart size={14} style="display:inline;vertical-align:middle;" /> Smart Shopping</div>
+    <h1 class="pg-title">Week {viewWeek} Groceries, <em>{userName}</em></h1>
+    <p class="pg-sub">
+      Auto-generated from your Week {viewWeek} meal plan (Day {startDay}–{endDay}) ·
+      {totalItems} items · {sharedCount} shared across recipes
+      {budgetCount > 0 && ` · ${budgetCount} budget swaps available`}
+      {restrictions.length > 0 && ` · Adjusted for your dietary preferences`}
+    </p>
+  </div>
+
+  <!-- STATS BAR -->
+  <div class="stats-bar">
+    <div class="sbar" style="animation-delay:.04s;"><div class="sbar-val" style="color:var(--green);">{totalItems}</div><div class="sbar-lbl">Total Items</div></div>
+    <div class="sbar" style="animation-delay:.08s;"><div class="sbar-val" style="color:var(--gold);">{budgetCount}</div><div class="sbar-lbl">Budget Swaps</div></div>
+    <div class="sbar" style="animation-delay:.12s;"><div class="sbar-val" style="color:var(--blue);">{uniqueMeals}</div><div class="sbar-lbl">Meals Covered</div></div>
+    <div class="sbar" style="animation-delay:.16s;"><div class="sbar-val" style="color:var(--purple);">{sharedCount}</div><div class="sbar-lbl">Shared Items</div></div>
+  </div>
+
+  <!-- WEEK TABS -->
+  <div class="week-tabs">
+    {weekTabs.map(w => (
+      <a href={`/dashboard/shopping?week=${w.w}`} class={`wtab ${w.active?'active':''} ${w.past?'past':''}`}>
+        <span class="wtab-label">{w.label}</span>
+        <span class="wtab-days">{w.days}</span>
+        {w.current && <span class="wtab-badge">now</span>}
+        {w.past    && <span class="wtab-badge">done</span>}
+      </a>
+    ))}
+    <button onclick="window.print()" class="wtab" style="border-style:dashed;cursor:pointer;background:none;border-color:var(--border);margin-left:auto;">
+      <span class="wtab-label">Print</span>
+      <span class="wtab-days">Full list</span>
+    </button>
+  </div>
+
+  <!-- PERSONALIZATION BANNER -->
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1rem 1.4rem;margin-bottom:1.25rem;display:flex;align-items:center;flex-wrap:wrap;gap:.75rem;">
+    <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0;">
+      {userGoal === 'weight_loss' && <span style="font-size:.8rem;font-weight:800;color:var(--green);background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);padding:.25rem .75rem;border-radius:99px;"><Target size={12} style="display:inline;vertical-align:middle;" /> Weight Loss Plan</span>}
+      {userGoal === 'muscle_gain' && <span style="font-size:.8rem;font-weight:800;color:var(--blue);background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);padding:.25rem .75rem;border-radius:99px;">Muscle Gain Plan</span>}
+      {userGoal === 'maintenance' && <span style="font-size:.8rem;font-weight:800;color:var(--purple);background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);padding:.25rem .75rem;border-radius:99px;">Maintenance</span>}
+      {userGoal !== 'weight_loss' && userGoal !== 'muscle_gain' && userGoal !== 'maintenance' && <span style="font-size:.8rem;font-weight:800;color:var(--green);background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);padding:.25rem .75rem;border-radius:99px;"><Target size={12} style="display:inline;vertical-align:middle;" /> Keto Plan</span>}
+    </div>
+    {restrictions.includes('no_pork') && <span style="font-size:.75rem;font-weight:800;color:var(--soft);background:var(--card2);border:1px solid var(--border);padding:.2rem .65rem;border-radius:99px;">🐷 No Pork</span>}
+    {restrictions.includes('vegetarian') && <span style="font-size:.75rem;font-weight:800;color:var(--soft);background:var(--card2);border:1px solid var(--border);padding:.2rem .65rem;border-radius:99px;">🌱 Vegetarian</span>}
+    {restrictions.includes('no_seafood') && <span style="font-size:.75rem;font-weight:800;color:var(--soft);background:var(--card2);border:1px solid var(--border);padding:.2rem .65rem;border-radius:99px;">🦐 No Seafood</span>}
+    <span style="margin-left:auto;font-size:.75rem;color:var(--soft);font-weight:600;">{filteredMealPlans.length} recipes · {totalItems} unique ingredients</span>
+  </div>
+
+  <!-- THIS WEEK'S MEALS SUMMARY -->
+  {filteredMealPlans.length > 0 && (
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1rem 1.4rem;margin-bottom:1.25rem;">
+      <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin-bottom:.875rem;">This Week's Meals</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
+        {filteredMealPlans.map((meal) => (
+          <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.4rem .75rem;flex-shrink:0;">
+            <span style="font-size:.65rem;font-weight:800;color:var(--green);text-transform:uppercase;margin-right:.35rem;">Day {meal.day_number}</span>
+            <span style="font-size:.72rem;color:var(--text);">{(meal.recipe && meal.recipe.title) ? meal.recipe.title : 'Meal'}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="tool-search">
+      <span style="color:var(--soft);">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search ingredient…" autocomplete="off"/>
+    </div>
+    <button class="tbtn gold" id="budgetBtn"><Tag size={13} style="display:inline;vertical-align:middle;" /> Budget Mode</button>
+    <button class="tbtn" id="clearBtn">↺ Reset</button>
+    <button class="tbtn" id="copyBtn"><CheckSquare size={13} style="display:inline;vertical-align:middle;" /> Copy</button>
+    <button class="tbtn g" onclick="window.print()">Print</button>
+  </div>
+
+  <!-- DIETARY CONFLICT ALERT -->
+  {flaggedCount > 0 && (
+    <div class="alert">
+      <div class="alert-icon"><AlertTriangle size={20} /></div>
+      <div>
+        <div class="alert-title">{flaggedCount} item{flaggedCount>1?'s':''} conflict with your dietary preferences</div>
+        <div class="alert-text">Flagged items appear in the list below. Use budget swaps or contact support to adjust your plan.</div>
+      </div>
+    </div>
+  )}
+
+  <!-- MAIN LAYOUT -->
+  <div class="main-layout">
+
+    <!-- CATEGORIES -->
+    <div id="shoppingList">
+      {totalItems === 0 ? (
+        <div class="empty-state">
+          <div class="es-icon"><ShoppingCart size={48} color="var(--soft)" /></div>
+          <div class="es-title">No meals found for Week {viewWeek}</div>
+          <div class="es-sub">Your meal plan doesn't have recipes for Day {startDay}–{endDay} yet.<br/>Check back once your plan is fully loaded.</div>
+        </div>
+      ) : (
+        activeCats.map(([catName, items]) => (
+            <div class="cat-card" id={`cat-${catName.replace(/[\s&]+/g,'-')}`}>
+              <div class="cat-head" onclick={`toggleCat('${catName.replace(/[\s&]+/g,'-')}')`}>
+                <div class="cat-ico" style={`background:${catDefs[catName]?.bg||'rgba(107,114,128,.1)'};`}>{catDefs[catName]?.icon||'📦'}</div>
+                <span class="cat-name">{catName}</span>
+                <span class="cat-count" style={`background:${catDefs[catName]?.bg||'rgba(107,114,128,.1)'};color:${catDefs[catName]?.color||'var(--soft)'};`}>{items.length}</span>
+                <span class="cat-arrow">▾</span>
+              </div>
+              <div class="cat-body">
+                {items.map((ing, idx) => (
+                    <div class={`shop-item${checkedKeySet.has(ing.item.toLowerCase().trim()) ? ' bought' : ''}`}
+                         id={`item-${catName.replace(/[\s&]+/g,'-')}-${idx}`}
+                         data-item-key={ing.item.toLowerCase().trim()}
+                         onclick={`toggleItem('${catName.replace(/[\s&]+/g,'-')}-${idx}')`}>
+                      <div class="item-chk" id={`chk-${catName.replace(/[\s&]+/g,'-')}-${idx}`}>{checkedKeySet.has(ing.item.toLowerCase().trim()) ? '✓' : ''}</div>
+                      <div class="item-info">
+                        <div class="item-name">{ing.item}</div>
+                        <div class="item-meta">
+                          {(ing.amount > 0 || ing.unit) && (
+                            <span class="item-qty">{ing.amount > 0 ? ing.amount : ''}{ing.unit ? ` ${ing.unit}` : ''}</span>
+                          )}
+                          {ing.count > 1 && <span class="item-uses">× {ing.count} recipes</span>}
+                          {ing.flag && <span class="item-flag">{ing.flag}</span>}
+                        </div>
+                      </div>
+                      {ing.budgetAlt && (
+                        <div class="budget-wrap">
+                          <div class="budget-badge" onclick={`event.stopPropagation();toggleAlt('alt-${catName.replace(/[\s&]+/g,'-')}-${idx}')`}>
+                            💰 -{ing.budgetAlt.save}
+                          </div>
+                          <div class="alt-tt" id={`alt-${catName.replace(/[\s&]+/g,'-')}-${idx}`}>
+                            <div class="alt-tt-lbl">💰 Budget Alternative</div>
+                            <div class="alt-name">→ {ing.budgetAlt.alt}</div>
+                            <div class="alt-save">Up to {ing.budgetAlt.save} cheaper</div>
+                            <div class="alt-tip">💡 {ing.budgetAlt.tip}</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                ))}
+              </div>
+            </div>
+        ))
+      )}
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+      <!-- PROGRESS RING -->
+      <div class="side-card">
+        <div class="side-head">Shopping Progress</div>
+        <div class="side-body" style="text-align:center;">
+          <div class="ring-wrap">
+            <svg class="rsvg" width="80" height="80" viewBox="0 0 80 80">
+              <circle class="r-trk" cx="40" cy="40" r="35"/>
+              <circle class="r-fill" id="progressRing" cx="40" cy="40" r="35" style="stroke-dashoffset:220;"/>
+            </svg>
+            <div class="ring-c">
+              <div class="ring-pct" id="progressPct">0%</div>
+              <div class="ring-lbl">bought</div>
+            </div>
+          </div>
+          <div style="font-size:.75rem;color:var(--soft);" id="progressText">0 / {totalItems} items</div>
+          <div style="margin-top:.875rem;font-size:.72rem;font-weight:700;color:var(--soft);" id="progressTip">Start checking off items as you shop!</div>
+        </div>
+      </div>
+
+      <!-- BUDGET SUMMARY -->
+      <div class="side-card">
+        <div class="side-head">💰 Budget Intelligence</div>
+        <div class="side-body">
+          <div style="background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.15);border-radius:12px;padding:.875rem;margin-bottom:.875rem;">
+            <div style="font-size:.73rem;font-weight:800;color:var(--green);margin-bottom:.25rem;">🧠 Smart Tip</div>
+            <div style="font-size:.71rem;color:var(--soft);line-height:1.6;">Buy proteins in bulk — freeze portions you won't use this week. Keto proteins repeat across your plan, so bulk buying cuts costs 30–50%.</div>
+          </div>
+          <div class="brow"><span class="brow-lbl">Budget swaps available</span><span class="brow-val" style="color:var(--gold);">{budgetCount}</span></div>
+          <div class="brow"><span class="brow-lbl">Shared ingredients</span><span class="brow-val" style="color:var(--blue);">{sharedCount}</span></div>
+          <div class="brow"><span class="brow-lbl">Potential savings</span><span class="brow-val" style="color:var(--green);">30–70%</span></div>
+        </div>
+      </div>
+
+      <!-- CATEGORY JUMPS -->
+      <div class="side-card">
+        <div class="side-head">Jump to Category</div>
+        <div class="side-body">
+          {activeCats.map(([catName]) => (
+              <a href={`#cat-${catName.replace(/[\s&]+/g,'-')}`} class="cat-jump" style={`background:${catDefs[catName]?.bg||'rgba(107,114,128,.07)'};color:${catDefs[catName]?.color||'var(--soft)'};`}>
+                <span>{catDefs[catName]?.icon||'📦'}</span>
+                <span style="color:var(--text);">{catName}</span>
+              </a>
+          ))}
+        </div>
+      </div>
+
+      <!-- DIETARY PROFILE -->
+      {restrictions.length > 0 && (
+        <div class="side-card">
+          <div class="side-head">Your Dietary Profile</div>
+          <div class="side-body">
+            <div style="display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem;">
+              {restrictions.map((r) => (
+                <span style="padding:.25rem .65rem;border-radius:99px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);font-size:.7rem;font-weight:800;color:var(--green);">✓ {r.replace(/_/g,' ')}</span>
+              ))}
+            </div>
+            <div style="font-size:.7rem;color:var(--soft);line-height:1.55;">Items conflicting with your preferences are flagged ⚠️ in the list.</div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  </div>
+
+  <!-- MY CUSTOM ITEMS -->
+  <div class="custom-section" id="customSection">
+    <div class="custom-header">
+      <span style="font-size:1.4rem;">📝</span>
+      <h2 class="custom-title">My Custom Items</h2>
+      <span style="font-size:.72rem;font-weight:700;color:var(--soft);background:var(--card);border:1px solid var(--border);padding:.15rem .55rem;border-radius:99px;" id="customCount">{myItems.length}</span>
+    </div>
+    <div class="custom-add-form">
+      <input type="text" id="ciName" class="inp-name" placeholder="Item name (e.g. Coconut oil)…" autocomplete="off"/>
+      <input type="text" id="ciQty" class="inp-qty" placeholder="Qty (e.g. 2 cups)"/>
+      <select id="ciCat" class="inp-cat">
+        <option value="produce">🥬 Produce</option>
+        <option value="meat">🥩 Meat</option>
+        <option value="dairy">🧀 Dairy</option>
+        <option value="pantry">🏺 Pantry</option>
+        <option value="other" selected>📦 Other</option>
+      </select>
+      <button class="btn-add" onclick="window.addCustomItem()">+ Add</button>
+    </div>
+    <div class="custom-list" id="customList">
+      {myItems.length === 0 ? (
+        <div class="custom-empty" id="customEmpty">Add your own items above</div>
+      ) : (
+        myItems.map((it) => (
+          <div class={`custom-item${it.is_checked ? ' ci-done' : ''}`} id={`ci-${it.id}`}>
+            <div class="ci-chk" onclick={`window.toggleCustomItem('${it.id}',this)`}>{it.is_checked ? '✓' : ''}</div>
+            <div class="ci-info">
+              <span class="ci-name">{it.name}</span>
+              {it.quantity && <span class="ci-qty">{it.quantity}</span>}
+              <div><span class={`ci-cat cat-${it.category || 'other'}`}>{it.category || 'other'}</span></div>
+            </div>
+            <button class="ci-del" onclick={`window.deleteCustomItem('${it.id}',this)`} title="Remove">×</button>
+          </div>
+        ))
+      )}
+    </div>
+  </div>
+
+</div>
+
+<script is:inline define:vars={{ totalCount: totalItems, weekNum: viewWeek, checkedKeysArr }}>
+/* CHECKED STATE — DB-backed, localStorage as fallback */
+var SK    = 'keto-shop-w' + weekNum;
+/* seed bought set from DB-loaded keys (by item-key attr) */
+var bought = new Set();
+/* map itemKey → elementId for fast lookup */
+var keyToId = {};
+document.querySelectorAll('.shop-item[data-item-key]').forEach(function(el) {
+  var k = el.getAttribute('data-item-key');
+  var id = el.id.replace('item-', '');
+  keyToId[k] = id;
+});
+/* initialize from server-rendered DB state */
+(checkedKeysArr || []).forEach(function(k) {
+  var id = keyToId[k];
+  if (id) bought.add(id);
+});
+/* also restore any localStorage keys not in DB (offline resilience) */
+var lsKeys = JSON.parse(localStorage.getItem(SK) || '[]');
+lsKeys.forEach(function(id) { bought.add(id); });
+updateRing();
+
+/* TOGGLE ITEM */
+function toggleItem(id) {
+  var el  = document.getElementById('item-' + id);
+  var chk = document.getElementById('chk-'  + id);
+  if (!el || !chk) return;
+  var itemKey = el.getAttribute('data-item-key') || id;
+  var isChecked = bought.has(id);
+  if (isChecked) {
+    bought.delete(id);
+    el.classList.remove('bought');
+    chk.textContent = '';
+  } else {
+    bought.add(id);
+    el.classList.add('bought');
+    chk.textContent = '✓';
+  }
+  localStorage.setItem(SK, JSON.stringify([...bought]));
+  updateRing();
+  if (!isChecked && bought.size === totalCount) showToast('🎉 All items checked — time to cook!', 'green');
+  /* Sync to DB */
+  fetch('/api/shopping/toggle', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ week_number: weekNum, item_key: itemKey, is_checked: !isChecked }),
+  }).catch(function() { /* silently fail — localStorage keeps state */ });
+}
+window.toggleItem = toggleItem;
+
+/* PROGRESS RING */
+function updateRing() {
+  const CIRC = 220;
+  const pct  = totalCount > 0 ? Math.round((bought.size / totalCount) * 100) : 0;
+  const ring = document.getElementById('progressRing');
+  const pEl  = document.getElementById('progressPct');
+  const tEl  = document.getElementById('progressText');
+  const tipEl= document.getElementById('progressTip');
+  if (ring) ring.style.strokeDashoffset = CIRC - (CIRC * pct / 100);
+  if (pEl)  pEl.textContent  = pct + '%';
+  if (tEl)  tEl.textContent  = bought.size + ' / ' + totalCount + ' items';
+  if (tipEl) {
+    const tips = ['Start checking off items!','Keep going!','Halfway there 💪','Almost done!','All done! 🎉'];
+    tipEl.textContent = pct === 100 ? '🎉 Shopping complete!' : tips[Math.floor(pct/25)] || tips[0];
+  }
+}
+
+/* CATEGORY TOGGLE */
+function toggleCat(id) {
+  const card = document.getElementById('cat-' + id);
+  if (card) card.classList.toggle('collapsed');
+}
+window.toggleCat = toggleCat;
+
+/* BUDGET ALT TOOLTIP */
+function toggleAlt(id) {
+  document.querySelectorAll('.alt-tt.show').forEach(el => { if (el.id !== id) el.classList.remove('show'); });
+  const tt = document.getElementById(id);
+  if (tt) tt.classList.toggle('show');
+}
+window.toggleAlt = toggleAlt;
+document.addEventListener('click', e => {
+  if (!e.target.closest('.budget-badge') && !e.target.closest('.alt-tt')) {
+    document.querySelectorAll('.alt-tt.show').forEach(el => el.classList.remove('show'));
+  }
+});
+
+/* SEARCH */
+document.getElementById('searchInput')?.addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  document.querySelectorAll('.shop-item').forEach(el => {
+    const name = el.querySelector('.item-name')?.textContent?.toLowerCase() || '';
+    el.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
+  document.querySelectorAll('.cat-card').forEach(card => {
+    const vis = [...card.querySelectorAll('.shop-item')].filter(el => el.style.display !== 'none');
+    card.style.display = (vis.length === 0 && q) ? 'none' : '';
+  });
+});
+
+/* BUDGET MODE — dim non-budget items */
+let budgetMode = false;
+document.getElementById('budgetBtn')?.addEventListener('click', function() {
+  budgetMode = !budgetMode;
+  document.querySelectorAll('.shop-item').forEach(el => {
+    el.style.opacity = (budgetMode && !el.querySelector('.budget-badge')) ? '.25' : '';
+  });
+  this.textContent = budgetMode ? '✕ All Items' : '💰 Budget Mode';
+  this.style.background = budgetMode ? 'rgba(245,158,11,.15)' : '';
+});
+
+/* RESET */
+document.getElementById('clearBtn')?.addEventListener('click', function() {
+  if (!confirm('Reset all checked items?')) return;
+  bought.clear();
+  localStorage.removeItem(SK);
+  document.querySelectorAll('.shop-item').forEach(function(el) { el.classList.remove('bought'); });
+  document.querySelectorAll('[id^="chk-"]').forEach(function(el) { el.textContent = ''; });
+  updateRing();
+  showToast('↺ List reset', 'blue');
+  /* Clear DB checks for this week */
+  (checkedKeysArr || []).forEach(function(k) {
+    fetch('/api/shopping/toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ week_number: weekNum, item_key: k, is_checked: false }),
+    }).catch(function() {});
+  });
+});
+
+/* COPY */
+document.getElementById('copyBtn')?.addEventListener('click', () => {
+  const lines = [`🛒 Keto Week ${weekNum} Shopping List\n`];
+  document.querySelectorAll('.cat-card').forEach(card => {
+    const catName = card.querySelector('.cat-name')?.textContent;
+    const items   = [...card.querySelectorAll('.shop-item')];
+    if (items.length > 0) {
+      lines.push(`── ${catName} ──`);
+      items.forEach(el => {
+        const name = el.querySelector('.item-name')?.textContent || '';
+        const qty  = el.querySelector('.item-qty')?.textContent  || '';
+        const alt  = el.querySelector('.alt-name')?.textContent  || '';
+        const done = el.classList.contains('bought') ? '✓' : '○';
+        lines.push(`${done} ${name}${qty ? '  ('+qty+')' : ''}${alt ? '  → budget: '+alt.replace('→ ','') : ''}`);
+      });
+      lines.push('');
+    }
+  });
+  navigator.clipboard?.writeText(lines.join('\n')).then(() => showToast('📋 Copied to clipboard!', 'green'));
+});
+
+/* TOAST */
+function showToast(msg, color) {
+  const colors = { green:'linear-gradient(135deg,#10b981,#34d399)', blue:'linear-gradient(135deg,#3b82f6,#60a5fa)', gold:'linear-gradient(135deg,#f59e0b,#fbbf24)' };
+  const t = document.createElement('div');
+  t.textContent = msg;
+  Object.assign(t.style, { position:'fixed', top:'5rem', right:'1.5rem', zIndex:'9999', background:colors[color]||colors.green, color:'#fff', padding:'.875rem 1.5rem', borderRadius:'12px', fontWeight:'700', fontSize:'.875rem', boxShadow:'0 10px 30px rgba(0,0,0,.3)', animation:'fadeUp .35s ease both' });
+  document.body.appendChild(t);
+  setTimeout(function() { t.remove(); }, 3200);
+}
+
+/* ─── CUSTOM ITEMS ─────────────────────────────────── */
+
+var catEmoji = { produce:'🥬', meat:'🥩', dairy:'🧀', pantry:'🏺', other:'📦' };
+
+function refreshCustomCount() {
+  var list = document.getElementById('customList');
+  var countEl = document.getElementById('customCount');
+  var emptyEl = document.getElementById('customEmpty');
+  if (!list) return;
+  var rows = list.querySelectorAll('.custom-item');
+  if (countEl) countEl.textContent = rows.length;
+  if (emptyEl) emptyEl.style.display = rows.length === 0 ? '' : 'none';
+}
+
+window.addCustomItem = function() {
+  var nameEl = document.getElementById('ciName');
+  var qtyEl  = document.getElementById('ciQty');
+  var catEl  = document.getElementById('ciCat');
+  if (!nameEl) return;
+  var name = nameEl.value.trim();
+  var qty  = qtyEl ? qtyEl.value.trim() : '';
+  var cat  = catEl ? catEl.value : 'other';
+  if (!name) { nameEl.focus(); return; }
+
+  var btn = document.querySelector('.btn-add');
+  if (btn) { btn.textContent = '…'; btn.disabled = true; }
+
+  fetch('/api/shopping/custom', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name, quantity: qty || null, category: cat }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(res) {
+    if (btn) { btn.textContent = '+ Add'; btn.disabled = false; }
+    if (res.error) { showToast('Error: ' + res.error, 'gold'); return; }
+    var item = res.item;
+    var list = document.getElementById('customList');
+    var emptyEl = document.getElementById('customEmpty');
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    var row = document.createElement('div');
+    row.className = 'custom-item';
+    row.id = 'ci-' + item.id;
+    row.innerHTML =
+      '<div class="ci-chk" onclick="window.toggleCustomItem(\'' + item.id + '\',this)"></div>' +
+      '<div class="ci-info">' +
+        '<span class="ci-name">' + item.name + '</span>' +
+        (item.quantity ? '<span class="ci-qty">' + item.quantity + '</span>' : '') +
+        '<div><span class="ci-cat cat-' + (item.category||'other') + '">' + (item.category||'other') + '</span></div>' +
+      '</div>' +
+      '<button class="ci-del" onclick="window.deleteCustomItem(\'' + item.id + '\',this)" title="Remove">×</button>';
+
+    if (list) list.appendChild(row);
+    nameEl.value = '';
+    if (qtyEl) qtyEl.value = '';
+    refreshCustomCount();
+    showToast('✓ ' + item.name + ' added', 'green');
+  })
+  .catch(function() {
+    if (btn) { btn.textContent = '+ Add'; btn.disabled = false; }
+    showToast('Failed to add item', 'gold');
+  });
+};
+
+window.toggleCustomItem = function(id, el) {
+  var row = document.getElementById('ci-' + id);
+  if (!row) return;
+  var isDone = row.classList.contains('ci-done');
+  var newState = !isDone;
+  row.classList.toggle('ci-done', newState);
+  if (el) el.textContent = newState ? '✓' : '';
+
+  fetch('/api/shopping/custom', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: id, is_checked: newState }),
+  }).catch(function() {
+    row.classList.toggle('ci-done', isDone);
+    if (el) el.textContent = isDone ? '✓' : '';
+  });
+};
+
+window.deleteCustomItem = function(id, el) {
+  var row = document.getElementById('ci-' + id);
+  if (!row) return;
+  row.style.opacity = '0.4';
+
+  fetch('/api/shopping/custom', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: id }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(res) {
+    if (res.error) { row.style.opacity = ''; showToast('Error: ' + res.error, 'gold'); return; }
+    row.remove();
+    refreshCustomCount();
+    showToast('Removed', 'blue');
+  })
+  .catch(function() {
+    row.style.opacity = '';
+    showToast('Failed to remove', 'gold');
+  });
+};
+
+refreshCustomCount();
+</script>
+</body>
+</html>

@@ -1,0 +1,1086 @@
+---
+import { supabase, getUserJourney, getDailyTasks } from '../../lib/supabase';
+import { requireAuth } from '../../lib/auth';
+import DashNav from '../../components/DashNav.astro';
+import Bell from 'lucide-astro/Bell';
+import Calendar from 'lucide-astro/Calendar';
+import Utensils from 'lucide-astro/Utensils';
+import Droplets from 'lucide-astro/Droplets';
+import Zap from 'lucide-astro/Zap';
+import Flame from 'lucide-astro/Flame';
+import TrendingUp from 'lucide-astro/TrendingUp';
+import CheckCircle from 'lucide-astro/CheckCircle';
+import Settings from 'lucide-astro/Settings';
+
+const auth = await requireAuth(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile } = auth;
+const planType  = profile.subscription_tier || 'basic_30';
+const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const userName  = profile.full_name?.split(' ')[0] || 'there';
+
+const journey = await getUserJourney(user.id);
+const currentDay = journey?.current_day || 1;
+const dailyTasks = await getDailyTasks(user.id, currentDay);
+const incompleteTasks = dailyTasks?.filter((t: any) =>
+  t.task_type !== 'reflection' && t.task_type !== 'weight' && !t.completed
+) || [];
+
+const { data: existingPrefs } = await supabase
+  .from('notification_preferences')
+  .select('*').eq('user_id', user.id).single();
+
+const p = existingPrefs || {
+  breakfast_enabled: true,  breakfast_time: '08:00',
+  lunch_enabled:     true,  lunch_time:     '13:00',
+  dinner_enabled:    true,  dinner_time:    '19:00',
+  snack_enabled:     true,  snack_time:     '16:00',
+  water_enabled:     true,  water_interval: 120,
+  water_start_time: '08:00', water_end_time: '22:00',
+  weight_enabled:    true,  weight_day:     1,  weight_time: '07:00',
+  streak_enabled:    true,  streak_time:    '21:00',
+};
+
+const enabledCount = [p.breakfast_enabled, p.lunch_enabled, p.dinner_enabled,
+  p.snack_enabled, p.water_enabled, p.weight_enabled, p.streak_enabled].filter(Boolean).length;
+
+const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Reminders — Keto Journey</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
+  <script is:inline>
+    (function(){ const t=localStorage.getItem('keto-theme')||'light'; document.documentElement.setAttribute('data-theme',t); })();
+  </script>
+  <style>
+    /* ─── TOKENS ─── */
+    :root {
+      --bg:#0c1117; --surface:#131b24; --card:#1a2535; --card2:#1e2d42;
+      --border:rgba(255,255,255,.07); --border2:rgba(255,255,255,.14);
+      --text:#e8edf5; --muted:#4a5a6e; --soft:#8a9ab0;
+      --green:#10b981; --green2:#34d399; --blue:#3b82f6; --blue2:#60a5fa;
+      --purple:#8b5cf6; --gold:#f59e0b; --red:#ef4444; --cyan:#06b6d4;
+      --orange:#f97316; --indigo:#6366f1;
+      --radius:20px; --nav-h:64px;
+    }
+    [data-theme="light"] {
+      --bg:#f0f4f8; --surface:#fff; --card:#fff; --card2:#f8fafc;
+      --border:rgba(0,0,0,.07); --border2:rgba(0,0,0,.14);
+      --text:#0f172a; --muted:#94a3b8; --soft:#64748b;
+    }
+
+    /* ─── RESET ─── */
+    *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body {
+      font-family:'DM Sans',sans-serif;
+      background:var(--bg); color:var(--text);
+      min-height:100vh; overflow-x:hidden;
+      transition:background .3s,color .3s;
+    }
+
+    /* ─── ANIMATED BG ─── */
+    .bg-mesh { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+    .orb { position:absolute; border-radius:50%; filter:blur(110px); animation:orbDrift ease-in-out infinite; }
+    [data-theme="light"] .orb { opacity:.12; }
+    .o1 { width:700px;height:700px;background:rgba(16,185,129,.07);top:-200px;left:-200px;animation-duration:26s;opacity:.45; }
+    .o2 { width:600px;height:600px;background:rgba(59,130,246,.05);bottom:-150px;right:-150px;animation-duration:32s;animation-delay:-16s;opacity:.38; }
+    .o3 { width:450px;height:450px;background:rgba(245,158,11,.05);top:38%;left:42%;animation-duration:22s;animation-delay:-9s;opacity:.3; }
+    @keyframes orbDrift {
+      0%,100% { transform:translate(0,0) scale(1); }
+      33%  { transform:translate(55px,-65px) scale(1.08); }
+      66%  { transform:translate(-45px,55px) scale(.93); }
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      position:sticky; top:0; z-index:100;
+      height:var(--nav-h);
+      background:rgba(12,17,23,.88);
+      border-bottom:1px solid var(--border);
+      backdrop-filter:blur(24px);
+      display:flex; align-items:center;
+      transition:background .3s;
+    }
+    [data-theme="light"] nav { background:rgba(255,255,255,.9); }
+    .nav-inner {
+      max-width:1200px; margin:0 auto; padding:0 1.5rem;
+      width:100%; display:flex; align-items:center; gap:1.25rem;
+    }
+    .nav-brand {
+      display:flex; align-items:center; gap:.6rem;
+      text-decoration:none;
+      font-family:'Fraunces',serif; font-weight:700; font-size:1.05rem;
+      color:var(--text); flex-shrink:0;
+    }
+    .nav-links { display:flex; align-items:center; gap:.2rem; flex:1; overflow-x:auto; }
+    .nav-links::-webkit-scrollbar { display:none; }
+    .nav-link {
+      display:flex; align-items:center; gap:.4rem;
+      padding:.42rem .85rem; border-radius:10px;
+      font-size:.8rem; font-weight:600; color:var(--soft);
+      text-decoration:none; white-space:nowrap; transition:all .2s;
+    }
+    .nav-link:hover,.nav-link.active { background:rgba(16,185,129,.1); color:var(--green); }
+    .nav-right { display:flex; align-items:center; gap:.7rem; flex-shrink:0; }
+    .icon-btn {
+      width:36px; height:36px; border-radius:10px;
+      background:var(--card); border:1px solid var(--border);
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; font-size:.95rem; transition:all .2s;
+    }
+    .icon-btn:hover { border-color:var(--green); transform:scale(1.05); }
+    .notif-wrap { position:relative; }
+    .notif-badge {
+      position:absolute; top:-5px; right:-5px;
+      background:var(--red); color:#fff;
+      width:17px; height:17px; border-radius:50%;
+      font-size:.6rem; font-weight:900;
+      display:flex; align-items:center; justify-content:center;
+      animation:ping 2s infinite;
+    }
+    @keyframes ping { 0%,100%{transform:scale(1);}50%{transform:scale(1.22);} }
+    .notif-drop {
+      position:absolute; top:calc(100% + .6rem); right:0;
+      width:330px; background:var(--card);
+      border:1px solid var(--border); border-radius:18px;
+      overflow:hidden; box-shadow:0 24px 64px rgba(0,0,0,.45);
+      display:none; z-index:200;
+    }
+    .notif-drop.open { display:block; animation:dropIn .22s ease; }
+    @keyframes dropIn { from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);} }
+    .nd-item {
+      display:flex; align-items:center; gap:.8rem;
+      padding:.8rem 1.2rem; border-bottom:1px solid var(--border);
+      transition:background .18s; cursor:pointer;
+    }
+    .nd-item:hover { background:rgba(16,185,129,.06); }
+    .nav-avatar {
+      width:36px; height:36px; border-radius:10px;
+      background:linear-gradient(135deg,var(--green),var(--blue));
+      display:flex; align-items:center; justify-content:center;
+      color:#fff; font-weight:900; font-size:.9rem;
+      text-decoration:none; transition:all .2s;
+    }
+    .nav-avatar:hover { transform:scale(1.06); }
+
+    /* ─── PAGE ─── */
+    .page {
+      position:relative; z-index:1;
+      max-width:860px; margin:0 auto;
+      padding:2.5rem 1.5rem 6rem;
+    }
+
+    /* ─── HERO CARD ─── */
+    .hero-card {
+      border-radius:var(--radius);
+      background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(6,182,212,.07),rgba(59,130,246,.08));
+      border:1px solid rgba(16,185,129,.22);
+      padding:2.25rem 2.5rem;
+      margin-bottom:1.75rem;
+      position:relative; overflow:hidden;
+      animation:fadeUp .5s ease both;
+    }
+    .hero-card::after {
+      content:'';
+      position:absolute; top:-100px; right:-100px;
+      width:340px; height:340px; border-radius:50%;
+      background:radial-gradient(circle,rgba(16,185,129,.1),transparent 65%);
+      animation:pulse3 7s ease-in-out infinite;
+      pointer-events:none;
+    }
+    @keyframes pulse3 { 0%,100%{transform:scale(1);}50%{transform:scale(1.25);} }
+    .hero-inner { position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:1.5rem; flex-wrap:wrap; }
+    .hero-badge {
+      display:inline-flex; align-items:center; gap:.4rem;
+      padding:.32rem .85rem; border-radius:99px;
+      background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.28);
+      font-size:.72rem; font-weight:800; color:var(--green);
+      text-transform:uppercase; letter-spacing:.08em; margin-bottom:.8rem;
+    }
+    .hero-title {
+      font-family:'Fraunces',serif;
+      font-size:clamp(1.65rem,3.5vw,2.35rem);
+      font-weight:900; line-height:1.12; margin-bottom:.45rem;
+    }
+    .hero-title .hl {
+      font-style:italic;
+      background:linear-gradient(135deg,var(--green),var(--green2),var(--cyan));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    }
+    .hero-sub { font-size:.85rem; color:var(--soft); line-height:1.6; max-width:440px; }
+    .hero-stats { display:flex; gap:.7rem; }
+    .hstat {
+      text-align:center; padding:.875rem 1.25rem;
+      background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
+      border-radius:14px; min-width:80px;
+      transition:all .25s;
+    }
+    [data-theme="light"] .hstat { background:rgba(0,0,0,.04); border-color:rgba(0,0,0,.08); }
+    .hstat:hover { border-color:var(--green); }
+    .hstat-val { font-family:'Fraunces',serif; font-size:1.9rem; font-weight:900; line-height:1; margin-bottom:.2rem; }
+    .hstat-lbl { font-size:.65rem; font-weight:800; color:var(--soft); text-transform:uppercase; letter-spacing:.06em; }
+
+    /* ─── PERMISSION BANNER ─── */
+    .perm-banner {
+      display:flex; align-items:center; justify-content:space-between; gap:1rem;
+      padding:1rem 1.4rem; border-radius:14px;
+      background:var(--card); border:1.5px solid var(--border);
+      margin-bottom:1.75rem; flex-wrap:wrap;
+      animation:fadeUp .4s .06s ease both;
+      transition:border-color .3s;
+    }
+    .perm-banner.granted { border-color:rgba(16,185,129,.3); }
+    .perm-banner.blocked { border-color:rgba(239,68,68,.3); }
+    .pb-left { display:flex; align-items:center; gap:.875rem; }
+    .pb-icon {
+      width:38px; height:38px; border-radius:11px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center; font-size:1.05rem;
+    }
+    .pb-title { font-weight:800; font-size:.875rem; margin-bottom:.15rem; }
+    .pb-sub { font-size:.73rem; color:var(--soft); line-height:1.45; }
+    .pb-btn {
+      display:inline-flex; align-items:center; gap:.4rem;
+      padding:.38rem .95rem; border-radius:99px;
+      font-size:.74rem; font-weight:800; border:1.5px solid; cursor:pointer;
+      background:transparent; transition:all .22s; white-space:nowrap;
+    }
+    .pb-btn:hover { transform:scale(1.04); }
+
+    /* ─── LIVE TIMELINE ─── */
+    .timeline-card {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--radius); overflow:hidden;
+      margin-bottom:1.75rem;
+      animation:fadeUp .4s .1s ease both;
+    }
+    .tc-head {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:1.15rem 1.5rem; border-bottom:1px solid var(--border);
+    }
+    .tc-title {
+      display:flex; align-items:center; gap:.6rem;
+      font-family:'Fraunces',serif; font-size:.98rem; font-weight:700;
+    }
+    .tc-sub { font-size:.72rem; color:var(--soft); }
+    .tc-scroll { overflow-x:auto; }
+    .tc-scroll::-webkit-scrollbar { display:none; }
+    .tc-row {
+      display:flex; gap:0; padding:.9rem 1.5rem; min-width:max-content;
+    }
+    .tc-item {
+      display:flex; flex-direction:column; align-items:center;
+      gap:.4rem; min-width:80px; position:relative;
+    }
+    .tc-item:not(:last-child)::after {
+      content:'';
+      position:absolute; top:18px; left:calc(50% + 14px);
+      width:calc(100% - 28px); height:2px;
+      background:var(--border);
+    }
+    .tc-item.active::after { background:linear-gradient(90deg,var(--green),transparent); }
+    .tc-bubble {
+      width:36px; height:36px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1rem; border:2px solid var(--border);
+      background:var(--surface); position:relative; z-index:1;
+      transition:all .25s;
+    }
+    .tc-item.active .tc-bubble { border-color:var(--green); box-shadow:0 0 0 4px rgba(16,185,129,.15); }
+    .tc-item.past .tc-bubble { background:rgba(16,185,129,.1); border-color:rgba(16,185,129,.3); }
+    .tc-item.off .tc-bubble { opacity:.3; }
+    .tc-time { font-size:.7rem; font-weight:800; }
+    .tc-name { font-size:.68rem; color:var(--soft); white-space:nowrap; }
+    .tc-now-line {
+      position:absolute; top:0; bottom:0; width:2px;
+      background:var(--red); pointer-events:none;
+      z-index:2;
+    }
+    .tc-now-dot {
+      position:absolute; top:-4px; left:-4px;
+      width:10px; height:10px; border-radius:50%;
+      background:var(--red);
+      animation:nowPulse 1.5s ease-in-out infinite;
+    }
+    @keyframes nowPulse { 0%,100%{opacity:1;}50%{opacity:.4;} }
+
+    /* ─── SECTION HEADER ─── */
+    .section-head {
+      display:flex; align-items:center; gap:.875rem;
+      padding:1.15rem 1.5rem; border-bottom:1px solid var(--border);
+    }
+    .sh-icon {
+      width:40px; height:40px; border-radius:11px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center; font-size:1.05rem;
+    }
+    .sh-title { font-family:'Fraunces',serif; font-size:1rem; font-weight:700; flex:1; }
+    .sh-chip {
+      font-size:.68rem; font-weight:800; padding:.22rem .65rem;
+      border-radius:99px; background:rgba(16,185,129,.1);
+      border:1px solid rgba(16,185,129,.2); color:var(--green);
+    }
+
+    /* ─── SECTION CARD ─── */
+    .section-card {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--radius); overflow:hidden;
+      margin-bottom:1.25rem; transition:border-color .25s;
+      animation:fadeUp .4s ease both;
+    }
+    .section-card:hover { border-color:var(--border2); }
+    .section-body { padding:1.25rem 1.5rem; display:flex; flex-direction:column; gap:.75rem; }
+
+    /* ─── REMINDER ROW ─── */
+    .r-row {
+      display:flex; align-items:center; gap:.875rem;
+      padding:1rem 1.1rem; border-radius:14px;
+      background:var(--surface); border:1.5px solid transparent;
+      transition:all .25s; position:relative; overflow:hidden;
+    }
+    .r-row::before {
+      content:''; position:absolute; left:0; top:0; bottom:0;
+      width:3px; border-radius:3px 0 0 3px;
+      opacity:0; transition:opacity .25s;
+    }
+    .r-row:hover { border-color:rgba(16,185,129,.18); }
+    .r-row:hover::before { opacity:1; }
+    .r-row.off { opacity:.45; }
+    .r-icon {
+      width:42px; height:42px; border-radius:12px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.2rem; transition:all .3s;
+    }
+    .r-row.off .r-icon { filter:grayscale(1) brightness(.7); }
+    .r-label { font-weight:800; font-size:.875rem; margin-bottom:.12rem; }
+    .r-desc { font-size:.72rem; color:var(--soft); }
+    .r-spacer { flex:1; }
+    .r-time-wrap { display:flex; align-items:center; gap:.6rem; }
+
+    /* ─── TIME INPUT ─── */
+    .t-input {
+      background:var(--card); border:1.5px solid var(--border);
+      border-radius:10px; padding:.42rem .7rem;
+      color:var(--text); font-size:.8rem; font-weight:800;
+      font-family:'DM Sans',sans-serif;
+      cursor:pointer; transition:all .22s; outline:none;
+      min-width:96px;
+    }
+    .t-input:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba(16,185,129,.12); }
+    .t-input:disabled { opacity:.3; cursor:not-allowed; pointer-events:none; }
+    [data-theme="light"] .t-input { background:#f8fafc; }
+
+    /* ─── TOGGLE ─── */
+    .tog {
+      position:relative; width:46px; height:25px; flex-shrink:0;
+      background:var(--muted); border-radius:99px;
+      cursor:pointer; transition:background .3s;
+      border:none; outline:none;
+    }
+    .tog.on { background:linear-gradient(135deg,var(--green),var(--green2)); }
+    .tog-thumb {
+      position:absolute; top:2.5px; left:2.5px;
+      width:20px; height:20px; border-radius:50%; background:#fff;
+      transition:transform .28s cubic-bezier(.4,0,.2,1);
+      box-shadow:0 2px 6px rgba(0,0,0,.22); pointer-events:none;
+    }
+    .tog.on .tog-thumb { transform:translateX(21px); }
+
+    /* ─── WATER CARD EXTRA ─── */
+    .sub-grid {
+      display:grid; grid-template-columns:repeat(3,1fr); gap:.7rem;
+      padding:.875rem 1.1rem; border-top:1px solid var(--border);
+    }
+    @media(max-width:520px) { .sub-grid { grid-template-columns:1fr 1fr; } }
+    .sg-label {
+      font-size:.68rem; font-weight:800; color:var(--soft);
+      text-transform:uppercase; letter-spacing:.06em;
+      display:block; margin-bottom:.38rem;
+    }
+    .sg-select {
+      width:100%; background:var(--card); border:1.5px solid var(--border);
+      border-radius:10px; padding:.42rem .7rem;
+      color:var(--text); font-size:.8rem; font-weight:700;
+      font-family:'DM Sans',sans-serif; outline:none;
+      cursor:pointer; transition:all .22s; appearance:none;
+    }
+    .sg-select:focus { border-color:var(--cyan); box-shadow:0 0 0 3px rgba(6,182,212,.1); }
+    .sg-select:disabled { opacity:.3; }
+    [data-theme="light"] .sg-select { background:#f8fafc; }
+
+    /* ─── SAVE BAR (sticky) ─── */
+    .save-bar {
+      position:sticky; bottom:1.5rem; z-index:50;
+      display:flex; align-items:center; gap:.875rem; flex-wrap:wrap;
+      padding:1rem 1.4rem;
+      background:rgba(26,37,53,.92);
+      border:1px solid var(--border2); border-radius:16px;
+      backdrop-filter:blur(24px);
+      box-shadow:0 16px 48px rgba(0,0,0,.35);
+      margin-top:1.5rem;
+      animation:fadeUp .5s .25s ease both;
+    }
+    [data-theme="light"] .save-bar { background:rgba(255,255,255,.92); }
+    .sb-info { flex:1; min-width:0; }
+    .sb-title { font-weight:800; font-size:.875rem; }
+    .sb-sub { font-size:.72rem; color:var(--soft); margin-top:.1rem; }
+    .sb-btns { display:flex; gap:.6rem; flex-wrap:wrap; }
+    .btn {
+      display:inline-flex; align-items:center; gap:.4rem;
+      padding:.65rem 1.3rem; border-radius:11px;
+      font-size:.82rem; font-weight:800; border:none;
+      cursor:pointer; transition:all .22s;
+      position:relative; overflow:hidden;
+    }
+    .btn::before {
+      content:''; position:absolute; inset:0;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);
+      transform:translateX(-100%); transition:transform .4s;
+    }
+    .btn:hover::before { transform:translateX(100%); }
+    .btn:hover { transform:translateY(-2px); }
+    .btn-save {
+      background:linear-gradient(135deg,var(--green),var(--green2));
+      color:#fff; box-shadow:0 4px 16px rgba(16,185,129,.35);
+    }
+    .btn-save:hover { box-shadow:0 8px 24px rgba(16,185,129,.48); }
+    .btn-test { background:var(--card); border:1.5px solid var(--border); color:var(--soft); }
+    .btn-test:hover { border-color:var(--blue); color:var(--blue2); }
+    .btn-reset { background:rgba(239,68,68,.07); border:1.5px solid rgba(239,68,68,.2); color:var(--red); }
+    .btn-reset:hover { background:rgba(239,68,68,.14); }
+
+    /* ─── TOAST ─── */
+    .toast {
+      position:fixed; top:5.25rem; right:1.5rem; z-index:9999;
+      padding:.8rem 1.4rem; border-radius:12px; font-weight:800; font-size:.82rem;
+      box-shadow:0 12px 32px rgba(0,0,0,.32); pointer-events:none;
+      transform:translateX(120px); opacity:0;
+      transition:all .35s cubic-bezier(.4,0,.2,1);
+      display:flex; align-items:center; gap:.55rem;
+    }
+    .toast.show { transform:translateX(0); opacity:1; }
+    .toast-success { background:linear-gradient(135deg,var(--green),var(--green2)); color:#fff; }
+    .toast-info    { background:linear-gradient(135deg,var(--blue),var(--indigo));   color:#fff; }
+    .toast-error   { background:linear-gradient(135deg,var(--red),#dc2626);          color:#fff; }
+
+    /* ─── NEXT ALARM BADGE ─── */
+    .next-alarm {
+      display:flex; align-items:center; gap:.5rem;
+      padding:.35rem .85rem; border-radius:99px;
+      background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.25);
+      font-size:.72rem; font-weight:800; color:var(--gold);
+    }
+
+    /* ─── UTILITIES ─── */
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
+
+    @media(max-width:640px) {
+      .hero-stats { flex-direction:row; gap:.5rem; }
+      .sb-btns { flex-direction:column; width:100%; }
+      .btn { justify-content:center; }
+      .tc-row { gap:0; }
+      .tc-item { min-width:70px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-mesh" aria-hidden="true">
+  <div class="orb o1"></div>
+  <div class="orb o2"></div>
+  <div class="orb o3"></div>
+</div>
+
+<!-- ─── NAV ─── -->
+<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="notifications" />
+
+<!-- ─── PAGE ─── -->
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero-card">
+    <div class="hero-inner">
+      <div>
+        <div class="hero-badge"><Bell size={14} style="vertical-align:middle;margin-right:.3rem;" /> Smart Reminders</div>
+        <h1 class="hero-title">
+          Never miss a <span class="hl">meal</span>,<br/>{userName}
+        </h1>
+        <p class="hero-sub">
+          Personalized notifications keep you consistent. Every reminder is one step closer to your goal.
+        </p>
+      </div>
+      <div class="hero-stats">
+        <div class="hstat">
+          <div class="hstat-val" id="heroActive" style="color:var(--green);">{enabledCount}</div>
+          <div class="hstat-lbl">Active</div>
+        </div>
+        <div class="hstat">
+          <div class="hstat-val" style="color:var(--blue);">7</div>
+          <div class="hstat-lbl">Total</div>
+        </div>
+        <div class="hstat" id="heroNext">
+          <div class="hstat-val" style="color:var(--gold);" id="heroNextVal">—</div>
+          <div class="hstat-lbl">Next in</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PERMISSION BANNER -->
+  <div class="perm-banner" id="permBanner">
+    <div class="pb-left">
+      <div class="pb-icon" id="permIcon" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 12px rgba(59,130,246,.3);display:flex;align-items:center;justify-content:center;"><Bell size={18} /></div>
+      <div>
+        <div class="pb-title" id="permTitle">Enable Browser Notifications</div>
+        <div class="pb-sub" id="permSub">Grant permission so your keto reminders arrive on time</div>
+      </div>
+    </div>
+    <button class="pb-btn" id="permBtn" style="background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.3);color:var(--blue2);">
+      <span id="permBtnIcon"><Bell size={16} /></span>
+      <span id="permBtnLabel">Enable Now</span>
+    </button>
+  </div>
+
+  <!-- LIVE TIMELINE -->
+  <div class="timeline-card">
+    <div class="tc-head">
+      <div class="tc-title">
+        <Calendar size={15} style="vertical-align:middle;margin-right:.35rem;" /> Today's Schedule
+      </div>
+      <div class="tc-sub" id="tlNextLabel">Loading…</div>
+    </div>
+    <div class="tc-scroll">
+      <div class="tc-row" id="tlRow">
+        <!-- JS renders -->
+      </div>
+    </div>
+  </div>
+
+  <!-- FORM -->
+  <form id="rForm" autocomplete="off">
+
+    <!-- ── MEALS ── -->
+    <div class="section-card" style="animation-delay:.05s;">
+      <div class="section-head">
+        <div class="sh-icon" style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 10px rgba(16,185,129,.28);display:flex;align-items:center;justify-content:center;"><Utensils size={18} /></div>
+        <div class="sh-title">Meal Reminders</div>
+        <span class="sh-chip">4 reminders</span>
+      </div>
+      <div class="section-body">
+
+        {[
+          { key:'breakfast', label:'Breakfast',  icon:'🍳', desc:'Morning fuel · Daily',  g:'linear-gradient(135deg,#f59e0b,#d97706)', glow:'rgba(245,158,11,.28)', enabled: p.breakfast_enabled, time: p.breakfast_time, accent:'#f59e0b' },
+          { key:'lunch',     label:'Lunch',       icon:'🥗', desc:'Midday meal · Daily',   g:'linear-gradient(135deg,#10b981,#059669)', glow:'rgba(16,185,129,.28)',  enabled: p.lunch_enabled,     time: p.lunch_time,     accent:'#10b981' },
+          { key:'dinner',    label:'Dinner',      icon:'🍽️', desc:'Evening meal · Daily', g:'linear-gradient(135deg,#3b82f6,#2563eb)', glow:'rgba(59,130,246,.28)',  enabled: p.dinner_enabled,    time: p.dinner_time,    accent:'#3b82f6' },
+          { key:'snack',     label:'Snack',       icon:'🍎', desc:'Healthy bite · Daily', g:'linear-gradient(135deg,#8b5cf6,#7c3aed)', glow:'rgba(139,92,246,.28)', enabled: p.snack_enabled,     time: p.snack_time,     accent:'#8b5cf6' },
+        ].map(row => (
+          <div class={`r-row ${!row.enabled ? 'off' : ''}`} id={`row-${row.key}`} style={`--rc:${row.accent};`}>
+            <div class="r-icon" style={`background:${row.g};box-shadow:0 4px 12px ${row.glow};`}>{row.icon}</div>
+            <div>
+              <div class="r-label">{row.label}</div>
+              <div class="r-desc">{row.desc}</div>
+            </div>
+            <div class="r-spacer"></div>
+            <div class="r-time-wrap">
+              <input
+                type="time" class="t-input" name={`${row.key}_time`}
+                value={row.time} id={`ti-${row.key}`}
+                disabled={!row.enabled}
+              />
+              <button type="button" class={`tog ${row.enabled ? 'on' : ''}`}
+                data-key={row.key} id={`tog-${row.key}`} aria-label={`Toggle ${row.label}`}>
+                <div class="tog-thumb"></div>
+              </button>
+            </div>
+          </div>
+        ))}
+
+      </div>
+    </div>
+
+    <!-- ── WATER ── -->
+    <div class="section-card" style="animation-delay:.1s;">
+      <div class="section-head">
+        <div class="sh-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2);box-shadow:0 4px 10px rgba(6,182,212,.28);display:flex;align-items:center;justify-content:center;"><Droplets size={18} /></div>
+        <div class="sh-title">Hydration Reminders</div>
+        <span class="sh-chip" style="background:rgba(6,182,212,.1);border-color:rgba(6,182,212,.2);color:var(--cyan);">Interval</span>
+      </div>
+      <div class="section-body" style="padding-bottom:0;">
+        <div class={`r-row ${!p.water_enabled ? 'off' : ''}`} id="row-water" style="--rc:#06b6d4;">
+          <div class="r-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2);box-shadow:0 4px 12px rgba(6,182,212,.28);display:flex;align-items:center;justify-content:center;"><Droplets size={18} /></div>
+          <div>
+            <div class="r-label">Drink Water</div>
+            <div class="r-desc">Stay hydrated throughout the day</div>
+          </div>
+          <div class="r-spacer"></div>
+          <button type="button" class={`tog ${p.water_enabled ? 'on' : ''}`}
+            data-key="water" id="tog-water" aria-label="Toggle water">
+            <div class="tog-thumb"></div>
+          </button>
+        </div>
+      </div>
+      <div class="sub-grid" id="waterSub">
+        <div>
+          <span class="sg-label">Interval</span>
+          <select class="sg-select" name="water_interval" id="si-water_interval" disabled={!p.water_enabled}>
+            <option value="60"  selected={p.water_interval===60} >Every 1 hr</option>
+            <option value="90"  selected={p.water_interval===90} >Every 1.5 hr</option>
+            <option value="120" selected={p.water_interval===120}>Every 2 hrs</option>
+            <option value="180" selected={p.water_interval===180}>Every 3 hrs</option>
+          </select>
+        </div>
+        <div>
+          <span class="sg-label">Start Time</span>
+          <input type="time" class="t-input" name="water_start_time"
+            id="si-water_start" value={p.water_start_time} disabled={!p.water_enabled} style="width:100%;"/>
+        </div>
+        <div>
+          <span class="sg-label">End Time</span>
+          <input type="time" class="t-input" name="water_end_time"
+            id="si-water_end" value={p.water_end_time} disabled={!p.water_enabled} style="width:100%;"/>
+        </div>
+      </div>
+      <div style="height:1.25rem;"></div>
+    </div>
+
+    <!-- ── OTHER ── -->
+    <div class="section-card" style="animation-delay:.15s;">
+      <div class="section-head">
+        <div class="sh-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 4px 10px rgba(139,92,246,.28);display:flex;align-items:center;justify-content:center;"><Zap size={18} /></div>
+        <div class="sh-title">Other Reminders</div>
+        <span class="sh-chip" style="background:rgba(139,92,246,.1);border-color:rgba(139,92,246,.2);color:var(--purple);">2 reminders</span>
+      </div>
+      <div class="section-body">
+
+        <!-- STREAK -->
+        <div class={`r-row ${!p.streak_enabled ? 'off' : ''}`} id="row-streak" style="--rc:#ef4444;">
+          <div class="r-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 12px rgba(239,68,68,.28);display:flex;align-items:center;justify-content:center;"><Flame size={18} /></div>
+          <div>
+            <div class="r-label">Streak Guard</div>
+            <div class="r-desc">Keep your streak alive · Daily</div>
+          </div>
+          <div class="r-spacer"></div>
+          <div class="r-time-wrap">
+            <input type="time" class="t-input" name="streak_time"
+              id="ti-streak" value={p.streak_time} disabled={!p.streak_enabled}/>
+            <button type="button" class={`tog ${p.streak_enabled ? 'on' : ''}`}
+              data-key="streak" id="tog-streak" aria-label="Toggle streak">
+              <div class="tog-thumb"></div>
+            </button>
+          </div>
+        </div>
+
+        <!-- WEIGHT -->
+        <div class={`r-row ${!p.weight_enabled ? 'off' : ''}`} id="row-weight" style="--rc:#6366f1;flex-direction:column;align-items:stretch;gap:.75rem;">
+          <div style="display:flex;align-items:center;gap:.875rem;">
+            <div class="r-icon" style="background:linear-gradient(135deg,#6366f1,#4f46e5);box-shadow:0 4px 12px rgba(99,102,241,.28);display:flex;align-items:center;justify-content:center;"><TrendingUp size={18} /></div>
+            <div>
+              <div class="r-label">Weekly Weigh-In</div>
+              <div class="r-desc">Track your progress · Weekly</div>
+            </div>
+            <div class="r-spacer"></div>
+            <button type="button" class={`tog ${p.weight_enabled ? 'on' : ''}`}
+              data-key="weight" id="tog-weight" aria-label="Toggle weight">
+              <div class="tog-thumb"></div>
+            </button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;padding-top:.2rem;" id="weightSub">
+            <div>
+              <span class="sg-label">Day of Week</span>
+              <select class="sg-select" name="weight_day" id="si-weight_day" disabled={!p.weight_enabled} style="width:100%;">
+                {weekDays.map((d, i) => (
+                  <option value={i} selected={p.weight_day === i}>{d}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <span class="sg-label">Time</span>
+              <input type="time" class="t-input" name="weight_time"
+                id="si-weight_time" value={p.weight_time} disabled={!p.weight_enabled} style="width:100%;"/>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SAVE BAR -->
+    <div class="save-bar">
+      <div class="sb-info">
+        <div class="sb-title" id="saveBarTitle">Ready to save</div>
+        <div class="sb-sub" id="saveBarSub">Unsaved changes will be lost</div>
+      </div>
+      <div class="sb-btns">
+        <button type="button" class="btn btn-reset" id="resetBtn">↺ Reset</button>
+        <button type="button" class="btn btn-test"  id="testBtn"><Zap size={14} style="vertical-align:middle;margin-right:.3rem;" /> Test</button>
+        <button type="submit" class="btn btn-save"  id="saveBtn"><CheckCircle size={14} style="vertical-align:middle;margin-right:.3rem;" /> Save Settings</button>
+      </div>
+    </div>
+
+  </form>
+
+</div><!-- /page -->
+
+<div class="toast" id="toast"></div>
+
+<!-- ─── SCRIPT ─── -->
+<script is:inline define:vars={{ savedPrefs: p, weekDays }}>
+
+/* ══════════════════ TOGGLE STATE ══════════════════ */
+const state = {
+  breakfast: savedPrefs.breakfast_enabled,
+  lunch:     savedPrefs.lunch_enabled,
+  dinner:    savedPrefs.dinner_enabled,
+  snack:     savedPrefs.snack_enabled,
+  water:     savedPrefs.water_enabled,
+  streak:    savedPrefs.streak_enabled,
+  weight:    savedPrefs.weight_enabled,
+};
+
+function setRowEnabled(key, enabled) {
+  const row = document.getElementById(`row-${key}`);
+  if (!row) return;
+  enabled ? row.classList.remove('off') : row.classList.add('off');
+
+  // standard time input
+  const ti = document.getElementById(`ti-${key}`);
+  if (ti) ti.disabled = !enabled;
+
+  // water sub-inputs
+  if (key === 'water') {
+    ['si-water_interval','si-water_start','si-water_end'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = !enabled;
+    });
+  }
+  // weight sub-inputs
+  if (key === 'weight') {
+    ['si-weight_day','si-weight_time'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = !enabled;
+    });
+  }
+}
+
+// Wire toggle buttons
+document.querySelectorAll('.tog').forEach(btn => {
+  const key = btn.dataset.key;
+  btn.addEventListener('click', () => {
+    state[key] = !state[key];
+    state[key] ? btn.classList.add('on') : btn.classList.remove('on');
+    setRowEnabled(key, state[key]);
+    updateHeroActive();
+    renderTimeline();
+    markDirty();
+  });
+});
+
+// Also update time inputs on change → re-render timeline
+document.querySelectorAll('.t-input, .sg-select').forEach(el => {
+  el.addEventListener('change', () => { renderTimeline(); markDirty(); });
+});
+
+/* ══════════════════ HERO ACTIVE COUNT ══════════════════ */
+function updateHeroActive() {
+  const count = Object.values(state).filter(Boolean).length;
+  const el = document.getElementById('heroActive');
+  if (el) el.textContent = count;
+}
+
+/* ══════════════════ LIVE TIMELINE ══════════════════ */
+const tlDefs = [
+  { key:'breakfast', label:'Breakfast', icon:'🍳', color:'#f59e0b' },
+  { key:'snack',     label:'Snack',     icon:'🍎', color:'#8b5cf6' },
+  { key:'lunch',     label:'Lunch',     icon:'🥗', color:'#10b981' },
+  { key:'dinner',    label:'Dinner',    icon:'🍽️', color:'#3b82f6' },
+  { key:'streak',    label:'Streak',    icon:'🔥', color:'#ef4444' },
+  { key:'water',     label:'Water',     icon:'💧', color:'#06b6d4' },
+  { key:'weight',    label:'Weigh-In',  icon:'⚖️', color:'#6366f1' },
+];
+
+function getTimeVal(key) {
+  const el = document.getElementById(`ti-${key}`) || document.getElementById(`si-${key}_time`);
+  return el?.value || savedPrefs[`${key}_time`] || '';
+}
+
+function timeToMins(str) {
+  if (!str) return -1;
+  const [h, m] = str.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function renderTimeline() {
+  const tlRow = document.getElementById('tlRow');
+  if (!tlRow) return;
+
+  const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+  const items = tlDefs
+    .map(d => ({ ...d, time: getTimeVal(d.key), mins: timeToMins(getTimeVal(d.key)), on: state[d.key] }))
+    .filter(d => d.time)
+    .sort((a, b) => a.mins - b.mins);
+
+  // Find next upcoming
+  const next = items.find(d => d.on && d.mins > nowMins);
+  const nextLabel = document.getElementById('tlNextLabel');
+  const heroNextVal = document.getElementById('heroNextVal');
+  if (next) {
+    const diff = next.mins - nowMins;
+    const h = Math.floor(diff / 60), m = diff % 60;
+    const txt = h > 0 ? `${h}h ${m}m` : `${m}m`;
+    if (nextLabel) nextLabel.textContent = `Next: ${next.icon} ${next.label} in ${txt}`;
+    if (heroNextVal) heroNextVal.textContent = txt;
+  } else {
+    if (nextLabel) nextLabel.textContent = 'All done for today 🎉';
+    if (heroNextVal) heroNextVal.textContent = '—';
+  }
+
+  tlRow.innerHTML = items.map(d => {
+    const past   = d.on && d.mins < nowMins;
+    const active = d.on && next && d.key === next.key;
+    const cls    = !d.on ? 'off' : active ? 'active' : past ? 'past' : '';
+    return `
+      <div class="tc-item ${cls}">
+        <div class="tc-bubble" style="${active ? `border-color:${d.color};box-shadow:0 0 0 4px ${d.color}22;` : past ? `background:${d.color}18;border-color:${d.color}44;` : ''}">
+          ${past && d.on ? '✓' : d.icon}
+        </div>
+        <div class="tc-time" style="color:${d.on ? (active ? d.color : past ? d.color : 'var(--text)') : 'var(--muted)'};">
+          ${d.time}
+        </div>
+        <div class="tc-name">${d.label}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ══════════════════ PERMISSION ══════════════════ */
+const permBanner   = document.getElementById('permBanner');
+const permIcon     = document.getElementById('permIcon');
+const permTitle    = document.getElementById('permTitle');
+const permSub      = document.getElementById('permSub');
+const permBtn      = document.getElementById('permBtn');
+const permBtnIcon  = document.getElementById('permBtnIcon');
+const permBtnLabel = document.getElementById('permBtnLabel');
+
+function refreshPermUI() {
+  if (!('Notification' in window)) {
+    if (permBanner) permBanner.style.display = 'none';
+    return;
+  }
+  const perm = Notification.permission;
+  permBanner?.classList.remove('granted','blocked');
+  if (perm === 'granted') {
+    permBanner?.classList.add('granted');
+    if (permIcon)  { permIcon.style.background = 'linear-gradient(135deg,#10b981,#059669)'; permIcon.textContent = '✅'; }
+    if (permTitle) permTitle.textContent = 'Notifications Enabled';
+    if (permSub)   permSub.textContent   = 'Your reminders will arrive on time';
+    if (permBtnIcon)  permBtnIcon.textContent = '✓';
+    if (permBtnLabel) permBtnLabel.textContent = 'Enabled';
+    if (permBtn) { permBtn.style.cssText = 'background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--green);cursor:default;'; }
+  } else if (perm === 'denied') {
+    permBanner?.classList.add('blocked');
+    if (permIcon)  { permIcon.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'; permIcon.textContent = '🚫'; }
+    if (permTitle) permTitle.textContent = 'Notifications Blocked';
+    if (permSub)   permSub.textContent   = 'Go to browser settings to re-enable notifications';
+    if (permBtnIcon)  permBtnIcon.textContent = '⚠️';
+    if (permBtnLabel) permBtnLabel.textContent = 'Blocked';
+    if (permBtn) { permBtn.style.cssText = 'background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.2);color:var(--red);cursor:default;'; }
+  }
+}
+refreshPermUI();
+
+permBtn?.addEventListener('click', async () => {
+  if (Notification.permission !== 'default') return;
+  const result = await Notification.requestPermission();
+  refreshPermUI();
+  if (result === 'granted') showToast('✅ Notifications enabled!', 'success');
+  else                      showToast('⚠️ Blocked in browser settings', 'error');
+});
+
+/* ══════════════════ DIRTY STATE (save bar) ══════════════════ */
+let isDirty = false;
+function markDirty() {
+  isDirty = true;
+  const t = document.getElementById('saveBarTitle');
+  const s = document.getElementById('saveBarSub');
+  if (t) t.textContent = 'Unsaved changes';
+  if (s) s.textContent = 'Click save to apply your settings';
+}
+function markClean() {
+  isDirty = false;
+  const t = document.getElementById('saveBarTitle');
+  const s = document.getElementById('saveBarSub');
+  if (t) t.textContent = 'All settings saved ✓';
+  if (s) s.textContent = 'Notifications scheduled successfully';
+}
+
+/* ══════════════════ SCHEDULE ENGINE ══════════════════ */
+let _timers = [];
+function clearAllTimers() { _timers.forEach(id => { clearTimeout(id); clearInterval(id); }); _timers = []; }
+
+function scheduleAll(prefs) {
+  clearAllTimers();
+  if (Notification.permission !== 'granted') return;
+  const now = new Date();
+
+  // Clear old schedule flags
+  Object.keys(localStorage).filter(k => k.startsWith('ks_')).forEach(k => localStorage.removeItem(k));
+
+  const scheduleOnce = (timeStr, title, body, enabled) => {
+    if (!enabled || !timeStr) return;
+    const [h, m] = timeStr.split(':').map(Number);
+    const target = new Date(); target.setHours(h, m, 0, 0);
+    if (target <= now) target.setDate(target.getDate() + 1);
+    const delay = target - now;
+    const id = setTimeout(function fire() {
+      new Notification(title, { body, icon: '/favicon.ico', tag: title, renotify: false });
+      const next = new Date(); next.setHours(h, m, 0, 0); next.setDate(next.getDate() + 1);
+      const nid = setTimeout(fire, next - new Date());
+      _timers.push(nid);
+    }, delay);
+    _timers.push(id);
+  };
+
+  scheduleOnce(prefs.breakfast_time, '🍳 Breakfast Time!',   'Time for your keto breakfast!',     prefs.breakfast_enabled);
+  scheduleOnce(prefs.lunch_time,     '🥗 Lunch Time!',       "Don't forget your keto lunch!",      prefs.lunch_enabled);
+  scheduleOnce(prefs.dinner_time,    '🍽️ Dinner Time!',      'Time for your keto dinner!',         prefs.dinner_enabled);
+  scheduleOnce(prefs.snack_time,     '🍎 Snack Time!',       'Grab your healthy keto snack!',      prefs.snack_enabled);
+  scheduleOnce(prefs.streak_time,    '🔥 Keep Your Streak!', "Complete today's tasks now!",        prefs.streak_enabled);
+
+  if (prefs.water_enabled) {
+    const [sh] = (prefs.water_start_time || '08:00').split(':').map(Number);
+    const [eh] = (prefs.water_end_time   || '22:00').split(':').map(Number);
+    const id = setInterval(() => {
+      const ch = new Date().getHours();
+      if (ch >= sh && ch < eh)
+        new Notification('💧 Hydration Check!', { body: 'Drink a glass of water!', icon: '/favicon.ico', tag: 'water', renotify: true });
+    }, (prefs.water_interval || 120) * 60000);
+    _timers.push(id);
+  }
+
+  if (prefs.weight_enabled) {
+    const [h2, m2] = (prefs.weight_time || '07:00').split(':').map(Number);
+    const target = new Date(); target.setHours(h2, m2, 0, 0);
+    let days = (prefs.weight_day ?? 1) - now.getDay();
+    if (days < 0) days += 7;
+    if (days === 0 && target <= now) days = 7;
+    target.setDate(target.getDate() + days);
+    const id = setTimeout(function fire() {
+      new Notification('⚖️ Weekly Weigh-In!', { body: 'Time to log your weight!', icon: '/favicon.ico', tag: 'weight' });
+      const nxt = new Date(); nxt.setDate(nxt.getDate() + 7);
+      const nid = setTimeout(fire, nxt - new Date());
+      _timers.push(nid);
+    }, target - now);
+    _timers.push(id);
+  }
+}
+
+/* ══════════════════ SAVE ══════════════════ */
+document.getElementById('rForm')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.innerHTML = '⏳ Saving…';
+
+  const fd = new FormData(e.target);
+  const data = {
+    breakfast_enabled: state.breakfast, breakfast_time: fd.get('breakfast_time'),
+    lunch_enabled:     state.lunch,     lunch_time:     fd.get('lunch_time'),
+    dinner_enabled:    state.dinner,    dinner_time:    fd.get('dinner_time'),
+    snack_enabled:     state.snack,     snack_time:     fd.get('snack_time'),
+    water_enabled:     state.water,
+    water_interval:    parseInt(fd.get('water_interval')),
+    water_start_time:  fd.get('water_start_time'),
+    water_end_time:    fd.get('water_end_time'),
+    weight_enabled:    state.weight,    weight_day:     parseInt(fd.get('weight_day')), weight_time: fd.get('weight_time'),
+    streak_enabled:    state.streak,    streak_time:    fd.get('streak_time'),
+  };
+
+  try {
+    const res = await fetch('/api/notifications/save', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error();
+
+    localStorage.setItem('keto_notif_prefs', JSON.stringify(data));
+
+    if (Notification.permission === 'granted') {
+      scheduleAll(data);
+    } else if (Notification.permission === 'default') {
+      const perm = await Notification.requestPermission();
+      refreshPermUI();
+      if (perm === 'granted') scheduleAll(data);
+    }
+
+    markClean();
+    showToast('✅ Settings saved!', 'success');
+  } catch {
+    showToast('❌ Failed to save. Try again.', 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '💾 Save Settings';
+  }
+});
+
+/* ══════════════════ TEST ══════════════════ */
+document.getElementById('testBtn')?.addEventListener('click', async () => {
+  if (Notification.permission !== 'granted') {
+    const p = await Notification.requestPermission();
+    refreshPermUI();
+    if (p !== 'granted') { showToast('⚠️ Enable notifications first', 'error'); return; }
+  }
+  new Notification('🥑 Keto Journey', {
+    body: `Everything's working! Your ${Object.values(state).filter(Boolean).length} reminders are set. 🎉`,
+    icon: '/favicon.ico', tag: 'test',
+  });
+  showToast('🧪 Test notification sent!', 'info');
+});
+
+/* ══════════════════ RESET ══════════════════ */
+document.getElementById('resetBtn')?.addEventListener('click', () => {
+  if (!confirm('Reset all settings to defaults?')) return;
+  const defaults = { breakfast:'08:00', lunch:'13:00', dinner:'19:00', snack:'16:00', streak:'21:00' };
+  Object.keys(state).forEach(k => {
+    state[k] = true;
+    const tog = document.getElementById(`tog-${k}`);
+    if (tog) tog.classList.add('on');
+    setRowEnabled(k, true);
+    const ti = document.getElementById(`ti-${k}`);
+    if (ti && defaults[k]) ti.value = defaults[k];
+  });
+  updateHeroActive();
+  renderTimeline();
+  markDirty();
+  showToast('↺ Reset to defaults', 'info');
+});
+
+/* ══════════════════ TOAST ══════════════════ */
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = `toast toast-${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3400);
+}
+
+/* ══════════════════ CLOCK (live "Next in" counter) ══════════════════ */
+function tickClock() {
+  renderTimeline();
+}
+const clockInterval = setInterval(tickClock, 30000); // refresh every 30s
+
+/* ══════════════════ BOOT ══════════════════ */
+(function boot() {
+  renderTimeline();
+
+  // Auto-schedule if permission already granted
+  const saved = localStorage.getItem('keto_notif_prefs');
+  if (saved && Notification.permission === 'granted') {
+    try { scheduleAll(JSON.parse(saved)); } catch {}
+  }
+})();
+</script>
+</body>
+</html>

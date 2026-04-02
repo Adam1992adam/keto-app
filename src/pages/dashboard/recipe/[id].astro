@@ -1,5 +1,5 @@
 ---
-import { supabase, getUserJourney } from '../../../lib/supabase';
+import { getUserJourney } from '../../../lib/supabase';
 import { requireAuth } from '../../../lib/auth';
 import DashNav from '../../../components/DashNav.astro';
 
@@ -7,27 +7,27 @@ const { id } = Astro.params;
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
 
-const journey = await getUserJourney(user.id);
+const journey = await getUserJourney(user.id, db);
 if (!journey) return Astro.redirect('/dashboard');
 
 const currentDay = journey?.current_day || 1;
 
-const { data: rawTasks } = await supabase
+const { data: rawTasks } = await db
   .from('daily_tasks')
   .select('id, task_title, task_type, completed, xp_earned')
   .eq('user_id', user.id)
   .eq('day_number', currentDay);
 const dailyTasks = rawTasks || [];
 
-const { data: recipe } = await supabase.from('recipes').select('*').eq('id', id).single();
+const { data: recipe } = await db.from('recipes').select('*').eq('id', id).single();
 if (!recipe) return Astro.redirect('/dashboard/recipes');
 
-const { data: mealPlan } = await supabase
+const { data: mealPlan } = await db
   .from('meal_plans').select('*')
   .eq('recipe_id', id).eq('day_number', currentDay)
   .eq('plan_type', planType).maybeSingle();
@@ -36,18 +36,18 @@ const task        = mealPlan ? dailyTasks.find(t => t.task_type === mealPlan.mea
 const isCompleted = task?.completed || false;
 const canComplete = !!mealPlan && !isCompleted;
 
-const { data: favRow } = await supabase
+const { data: favRow } = await db
   .from('recipe_favorites').select('id')
   .eq('user_id', user.id).eq('recipe_id', recipe.id).maybeSingle();
 const isFavorited = !!favRow;
 
 // Ratings
-const { data: userRatingRow } = await supabase
+const { data: userRatingRow } = await db
   .from('recipe_ratings').select('rating')
   .eq('user_id', user.id).eq('recipe_id', recipe.id).maybeSingle();
 const userRating = userRatingRow?.rating || 0;
 
-const { data: avgRow } = await supabase
+const { data: avgRow } = await db
   .from('recipe_avg_ratings').select('avg_rating, rating_count')
   .eq('recipe_id', recipe.id).maybeSingle();
 const avgRating   = parseFloat(avgRow?.avg_rating || '0');
@@ -60,7 +60,7 @@ const tags         = recipe.tags         || [];
 
 // Similar recipes (same tags, excluding current, with avg ratings)
 const similarRaw = tags.length > 0
-  ? await supabase.from('recipes').select('id, title, calories, net_carbs, protein, image_url, tags')
+  ? await db.from('recipes').select('id, title, calories, net_carbs, protein, image_url, tags')
       .contains('tags', [tags[0]])
       .neq('id', recipe.id)
       .limit(4)
@@ -68,7 +68,7 @@ const similarRaw = tags.length > 0
 
 const similarIds = (similarRaw.data || []).map((r: any) => r.id);
 const { data: simRatings } = similarIds.length
-  ? await supabase.from('recipe_avg_ratings').select('recipe_id, avg_rating, rating_count').in('recipe_id', similarIds)
+  ? await db.from('recipe_avg_ratings').select('recipe_id, avg_rating, rating_count').in('recipe_id', similarIds)
   : { data: [] };
 
 const simRatingMap: Record<number, { avg: number; count: number }> = {};

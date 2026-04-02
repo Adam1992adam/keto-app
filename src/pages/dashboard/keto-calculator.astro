@@ -1,6 +1,5 @@
 ---
 // src/pages/dashboard/keto-calculator.astro
-import { supabase } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import Calculator from 'lucide-astro/Calculator';
@@ -14,13 +13,13 @@ import Info from 'lucide-astro/Info';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
 
 // Pre-fill from onboarding
-const { data: onboarding } = await supabase
+const { data: onboarding } = await db
   .from('onboarding_data')
   .select('current_weight, target_weight, goal, fasting_protocol')
   .eq('user_id', user.id)

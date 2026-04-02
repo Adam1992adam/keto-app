@@ -1,5 +1,5 @@
 ---
-import { supabase, getUserJourney, getDailyTasks, getPlan } from '../../lib/supabase';
+import { getUserJourney, getDailyTasks, getPlan } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import UtensilsCrossed from 'lucide-astro/UtensilsCrossed';
@@ -16,13 +16,13 @@ import Layers from 'lucide-astro/Layers';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 
-const journey = await getUserJourney(user.id);
+const journey = await getUserJourney(user.id, db);
 const currentDay = journey?.current_day || 1;
-const dailyTasks = await getDailyTasks(user.id, currentDay);
+const dailyTasks = await getDailyTasks(user.id, currentDay, db);
 const incompleteTasks = dailyTasks?.filter(
   (t: any) => t.task_type !== 'reflection' && t.task_type !== 'weight' && !t.completed
 ) || [];

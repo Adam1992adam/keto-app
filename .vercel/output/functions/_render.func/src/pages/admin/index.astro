@@ -1,0 +1,610 @@
+---
+// src/pages/admin/index.astro
+// لوحة تحكم الأدمين — محمية بـ cookie
+
+// التحقق من الـ session
+const adminSession = Astro.cookies.get('admin-session')?.value;
+if (adminSession !== 'authenticated') {
+  return Astro.redirect('/admin-login?error=session');
+}
+
+// جلب البيانات من Supabase
+import { createClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const [
+  { data: profiles },
+  { data: pending },
+] = await Promise.all([
+  supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+  supabase.from('pending_activations').select('*').order('created_at', { ascending: false }),
+]);
+
+const users = profiles || [];
+const pendingList = pending || [];
+
+// إحصائيات
+const stats = {
+  total: users.length,
+  basic: users.filter(u => u.subscription_tier === 'basic_30').length,
+  pro:   users.filter(u => u.subscription_tier === 'pro_6').length,
+  elite: users.filter(u => u.subscription_tier === 'elite_12').length,
+  pending: pendingList.filter(p => !p.activated).length,
+  revenue: (
+    users.filter(u => u.subscription_tier === 'basic_30').length * 29.99 +
+    users.filter(u => u.subscription_tier === 'pro_6').length * 99.99 +
+    users.filter(u => u.subscription_tier === 'elite_12').length * 199.99
+  ).toFixed(2),
+};
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Panel — Keto Journey</title>
+  <style>
+    :root{
+      --bg:#0a0f1e; --surface:#111827; --card:#1a2235;
+      --border:rgba(255,255,255,0.08); --text:#f1f5f9;
+      --muted:#64748b; --accent:#6366f1;
+      --green:#10b981; --gold:#f59e0b; --red:#ef4444;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+    /* ── SIDEBAR ── */
+    .layout{display:flex;min-height:100vh;}
+    .sidebar{
+      width:240px;flex-shrink:0;
+      background:var(--surface);
+      border-right:1px solid var(--border);
+      padding:1.5rem 1rem;
+      position:sticky;top:0;height:100vh;overflow-y:auto;
+    }
+    .sidebar-logo{
+      display:flex;align-items:center;gap:.75rem;
+      padding:.75rem 1rem;margin-bottom:1.5rem;
+    }
+    .sidebar-logo-icon{font-size:1.5rem;}
+    .sidebar-logo-text{font-weight:800;font-size:1rem;color:var(--text);}
+    .sidebar-logo-sub{font-size:.7rem;color:var(--accent);font-weight:600;}
+    .nav-section{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:.5rem 1rem;margin-top:1rem;}
+    .nav-item{
+      display:flex;align-items:center;gap:.75rem;
+      padding:.7rem 1rem;border-radius:.75rem;
+      color:var(--muted);font-size:.875rem;font-weight:500;
+      cursor:pointer;transition:all .2s;margin-bottom:.25rem;
+      border:none;background:none;width:100%;text-align:left;
+    }
+    .nav-item:hover{background:rgba(255,255,255,0.05);color:var(--text);}
+    .nav-item.active{background:rgba(99,102,241,0.15);color:var(--accent);}
+    .nav-icon{width:20px;text-align:center;}
+    .nav-badge{
+      margin-left:auto;background:var(--red);color:#fff;
+      font-size:.65rem;font-weight:800;padding:.15rem .45rem;
+      border-radius:99px;
+    }
+    .sidebar-footer{margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);}
+
+    /* ── MAIN ── */
+    .main{flex:1;padding:2rem;overflow-x:hidden;}
+    .page{display:none;}
+    .page.active{display:block;}
+
+    /* ── HEADER ── */
+    .page-header{margin-bottom:2rem;}
+    .page-title{font-size:1.75rem;font-weight:900;margin-bottom:.25rem;}
+    .page-sub{color:var(--muted);font-size:.875rem;}
+
+    /* ── STATS GRID ── */
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:2rem;}
+    .stat-card{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:16px;padding:1.25rem;
+    }
+    .stat-icon{font-size:1.5rem;margin-bottom:.75rem;}
+    .stat-val{font-size:2rem;font-weight:900;line-height:1;}
+    .stat-label{font-size:.78rem;color:var(--muted);margin-top:.35rem;font-weight:500;}
+    .stat-card.green .stat-val{color:var(--green);}
+    .stat-card.purple .stat-val{color:var(--accent);}
+    .stat-card.gold .stat-val{color:var(--gold);}
+    .stat-card.red .stat-val{color:var(--red);}
+
+    /* ── TABLE ── */
+    .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+    .table-header{
+      padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;
+    }
+    .table-title{font-weight:700;font-size:1rem;}
+    .search-input{
+      padding:.6rem 1rem;background:rgba(255,255,255,0.05);
+      border:1px solid var(--border);border-radius:10px;
+      color:var(--text);font-size:.875rem;outline:none;width:220px;
+    }
+    .search-input:focus{border-color:var(--accent);}
+    .search-input::placeholder{color:var(--muted);}
+    table{width:100%;border-collapse:collapse;}
+    th{
+      padding:.875rem 1.25rem;text-align:left;
+      font-size:.75rem;font-weight:700;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.05em;
+      border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02);
+    }
+    td{
+      padding:.875rem 1.25rem;font-size:.875rem;
+      border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle;
+    }
+    tr:last-child td{border:none;}
+    tr:hover td{background:rgba(255,255,255,0.02);}
+
+    /* ── BADGES ── */
+    .badge{
+      display:inline-flex;align-items:center;gap:.3rem;
+      padding:.25rem .7rem;border-radius:99px;
+      font-size:.75rem;font-weight:700;
+    }
+    .badge-basic{background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.2);}
+    .badge-pro{background:rgba(99,102,241,0.1);color:#818cf8;border:1px solid rgba(99,102,241,0.2);}
+    .badge-elite{background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);}
+    .badge-active{background:rgba(16,185,129,0.1);color:#10b981;}
+    .badge-pending{background:rgba(245,158,11,0.1);color:#fbbf24;}
+    .badge-admin{background:rgba(239,68,68,0.1);color:#f87171;border:1px solid rgba(239,68,68,0.2);}
+
+    /* ── ACTIONS ── */
+    .btn-sm{
+      padding:.35rem .75rem;border-radius:.5rem;font-size:.75rem;
+      font-weight:600;border:none;cursor:pointer;transition:all .2s;
+    }
+    .btn-edit{background:rgba(99,102,241,0.15);color:#818cf8;}
+    .btn-edit:hover{background:rgba(99,102,241,0.3);}
+    .btn-delete{background:rgba(239,68,68,0.1);color:#f87171;}
+    .btn-delete:hover{background:rgba(239,68,68,0.25);}
+    .btn-activate{background:rgba(16,185,129,0.1);color:#10b981;}
+    .btn-activate:hover{background:rgba(16,185,129,0.25);}
+
+    /* ── MODAL ── */
+    .modal-overlay{
+      display:none;position:fixed;inset:0;
+      background:rgba(0,0,0,0.7);z-index:100;
+      align-items:center;justify-content:center;padding:1rem;
+      backdrop-filter:blur(4px);
+    }
+    .modal-overlay.show{display:flex;}
+    .modal{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:20px;padding:2rem;
+      max-width:480px;width:100%;
+      box-shadow:0 40px 80px rgba(0,0,0,0.5);
+      animation:popIn .3s ease;
+    }
+    @keyframes popIn{from{opacity:0;transform:scale(.9);}to{opacity:1;transform:scale(1);}}
+    .modal h3{font-size:1.2rem;font-weight:800;margin-bottom:1.5rem;}
+    .modal-field{margin-bottom:1rem;}
+    .modal-label{font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:.4rem;display:block;text-transform:uppercase;}
+    .modal-input,.modal-select{
+      width:100%;padding:.75rem 1rem;
+      background:rgba(255,255,255,0.05);
+      border:1px solid var(--border);border-radius:10px;
+      color:var(--text);font-size:.9rem;outline:none;
+    }
+    .modal-input:focus,.modal-select:focus{border-color:var(--accent);}
+    .modal-select option{background:var(--surface);}
+    .modal-btns{display:flex;gap:.75rem;margin-top:1.5rem;}
+    .btn-primary{
+      flex:1;padding:.875rem;background:linear-gradient(135deg,var(--accent),#8b5cf6);
+      color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;transition:all .2s;
+    }
+    .btn-primary:hover{opacity:.9;transform:translateY(-1px);}
+    .btn-cancel{
+      padding:.875rem 1.5rem;background:rgba(255,255,255,0.05);
+      border:1px solid var(--border);border-radius:10px;
+      color:var(--muted);font-weight:600;cursor:pointer;
+    }
+    .btn-logout{
+      width:100%;padding:.75rem;background:rgba(239,68,68,0.1);
+      border:1px solid rgba(239,68,68,0.2);border-radius:10px;
+      color:#f87171;font-weight:600;cursor:pointer;font-size:.875rem;
+      transition:all .2s;
+    }
+    .btn-logout:hover{background:rgba(239,68,68,0.2);}
+
+    .toast{
+      position:fixed;bottom:2rem;right:2rem;z-index:200;
+      background:var(--card);border:1px solid var(--border);
+      border-radius:12px;padding:1rem 1.5rem;
+      font-size:.875rem;font-weight:600;
+      box-shadow:0 20px 40px rgba(0,0,0,0.4);
+      transform:translateY(100px);opacity:0;
+      transition:all .3s;pointer-events:none;
+    }
+    .toast.show{transform:translateY(0);opacity:1;}
+    .toast.success{border-color:rgba(16,185,129,0.4);color:#10b981;}
+    .toast.error{border-color:rgba(239,68,68,0.4);color:#f87171;}
+
+    @media(max-width:768px){
+      .sidebar{display:none;}
+      .stats-grid{grid-template-columns:repeat(2,1fr);}
+      .search-input{width:100%;}
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="sidebar-logo-icon">🛡️</span>
+      <div>
+        <div class="sidebar-logo-text">Admin Panel</div>
+        <div class="sidebar-logo-sub">Keto Journey</div>
+      </div>
+    </div>
+
+    <div class="nav-section">Overview</div>
+    <button class="nav-item active" onclick="showPage('dashboard')">
+      <span class="nav-icon">📊</span> Dashboard
+    </button>
+
+    <div class="nav-section">Management</div>
+    <button class="nav-item" onclick="showPage('users')">
+      <span class="nav-icon">👥</span> Users
+    </button>
+    <button class="nav-item" onclick="showPage('pending')">
+      <span class="nav-icon">⏳</span> Pending
+      {pendingList.filter(p => !p.activated).length > 0 && (
+        <span class="nav-badge">{pendingList.filter(p => !p.activated).length}</span>
+      )}
+    </button>
+
+    <div class="sidebar-footer">
+      <button class="btn-logout" id="btnLogout">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+
+    <!-- ═══ DASHBOARD PAGE ═══ -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-sub">Welcome back, Admin. Here's what's happening.</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card purple">
+          <div class="stat-icon">👥</div>
+          <div class="stat-val">{stats.total}</div>
+          <div class="stat-label">Total Users</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">💰</div>
+          <div class="stat-val">${stats.revenue}</div>
+          <div class="stat-label">Est. Revenue</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🥑</div>
+          <div class="stat-val">{stats.basic}</div>
+          <div class="stat-label">Basic Plans</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-val">{stats.pro}</div>
+          <div class="stat-label">Pro Plans</div>
+        </div>
+        <div class="stat-card gold">
+          <div class="stat-icon">👑</div>
+          <div class="stat-val">{stats.elite}</div>
+          <div class="stat-label">Elite Plans</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-val">{stats.pending}</div>
+          <div class="stat-label">Pending</div>
+        </div>
+      </div>
+
+      <!-- Recent users -->
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">Recent Users</span>
+          <button class="btn-sm btn-edit" onclick="showPage('users')">View All →</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>User</th><th>Plan</th><th>Status</th><th>Joined</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.slice(0,5).map(u => (
+              <tr>
+                <td>
+                  <div style="font-weight:600;">{u.full_name}</div>
+                  <div style="font-size:.78rem;color:var(--muted);">{u.email}</div>
+                </td>
+                <td>
+                  <span class={`badge badge-${u.subscription_tier === 'basic_30' ? 'basic' : u.subscription_tier === 'pro_6' ? 'pro' : 'elite'}`}>
+                    {u.subscription_tier === 'basic_30' ? '🥑 Basic' : u.subscription_tier === 'pro_6' ? '⚡ Pro' : '👑 Elite'}
+                  </span>
+                </td>
+                <td><span class="badge badge-active">✓ Active</span></td>
+                <td style="color:var(--muted);font-size:.8rem;">{new Date(u.created_at).toLocaleDateString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ USERS PAGE ═══ -->
+    <div class="page" id="page-users">
+      <div class="page-header">
+        <h1 class="page-title">All Users</h1>
+        <p class="page-sub">{stats.total} registered users</p>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">Users</span>
+          <input class="search-input" id="userSearch" placeholder="🔍 Search by name or email..." oninput="filterUsers()"/>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>User</th><th>Plan</th><th>Status</th><th>End Date</th><th>Admin</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody">
+            {users.map(u => (
+              <tr class="user-row"
+                data-name={u.full_name?.toLowerCase()}
+                data-email={u.email?.toLowerCase()}
+                data-id={u.id}
+                data-fullname={u.full_name}
+                data-email-raw={u.email}
+                data-tier={u.subscription_tier}
+              >
+                <td>
+                  <div style="font-weight:600;">{u.full_name}</div>
+                  <div style="font-size:.78rem;color:var(--muted);">{u.email}</div>
+                </td>
+                <td>
+                  <span class={`badge badge-${u.subscription_tier === 'basic_30' ? 'basic' : u.subscription_tier === 'pro_6' ? 'pro' : 'elite'}`}>
+                    {u.subscription_tier === 'basic_30' ? '🥑 Basic' : u.subscription_tier === 'pro_6' ? '⚡ Pro' : '👑 Elite'}
+                  </span>
+                </td>
+                <td><span class={`badge ${u.subscription_status === 'active' ? 'badge-active' : 'badge-pending'}`}>{u.subscription_status}</span></td>
+                <td style="color:var(--muted);font-size:.8rem;">
+                  {u.subscription_end_date ? new Date(u.subscription_end_date).toLocaleDateString() : '—'}
+                </td>
+                <td>{u.is_admin ? <span class="badge badge-admin">Admin</span> : '—'}</td>
+                <td>
+                  <button class="btn-sm btn-edit"
+                    onclick={`openEditModal('${u.id}','${u.full_name?.replace(/'/g,"\\'")}','${u.email}','${u.subscription_tier}')`}>
+                    ✏️ Edit
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ PENDING PAGE ═══ -->
+    <div class="page" id="page-pending">
+      <div class="page-header">
+        <h1 class="page-title">Pending Activations</h1>
+        <p class="page-sub">{pendingList.filter(p => !p.activated).length} awaiting activation</p>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">Pending</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Email</th><th>Plan</th><th>Start</th><th>End</th><th>Status</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            {pendingList.map(p => (
+              <tr>
+                <td style="font-weight:500;">{p.email}</td>
+                <td>
+                  <span class={`badge badge-${p.subscription_tier === 'basic_30' ? 'basic' : p.subscription_tier === 'pro_6' ? 'pro' : 'elite'}`}>
+                    {p.subscription_tier === 'basic_30' ? '🥑 Basic' : p.subscription_tier === 'pro_6' ? '⚡ Pro' : '👑 Elite'}
+                  </span>
+                </td>
+                <td style="color:var(--muted);font-size:.8rem;">{new Date(p.subscription_start_date).toLocaleDateString()}</td>
+                <td style="color:var(--muted);font-size:.8rem;">{new Date(p.subscription_end_date).toLocaleDateString()}</td>
+                <td>
+                  <span class={`badge ${p.activated ? 'badge-active' : 'badge-pending'}`}>
+                    {p.activated ? '✓ Activated' : '⏳ Pending'}
+                  </span>
+                </td>
+                <td style="display:flex;gap:.5rem;flex-wrap:wrap;">
+                  {!p.activated && (
+                    <button class="btn-sm btn-activate" onclick={`activatePending('${p.id}','${p.email}','${p.subscription_tier}')`}>
+                      ✅ Force Activate
+                    </button>
+                  )}
+                  <button class="btn-sm btn-delete" onclick={`deletePending('${p.id}')`}>🗑️</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── EDIT USER MODAL ── -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3>✏️ Edit User</h3>
+    <div class="modal-field">
+      <label class="modal-label">Full Name</label>
+      <input class="modal-input" id="editName" placeholder="Full name"/>
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">Email</label>
+      <input class="modal-input" id="editEmail" placeholder="Email" readonly style="opacity:.6;cursor:not-allowed;"/>
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">Subscription Plan</label>
+      <select class="modal-select" id="editTier">
+        <option value="basic_30">🥑 Basic — 30 Days</option>
+        <option value="pro_6">⚡ Pro — 6 Months</option>
+        <option value="elite_12">👑 Elite — 12 Months</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="cancelEdit">Cancel</button>
+      <button class="btn-primary" id="saveEdit">💾 Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script is:inline define:vars={{
+  SUPABASE_URL: import.meta.env.PUBLIC_SUPABASE_URL,
+  SUPABASE_KEY: import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+}}>
+
+  // ── Navigation ──
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    event.currentTarget.classList.add('active');
+  }
+  window.showPage = showPage;
+
+  // ── Toast ──
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // ── Search users ──
+  function filterUsers() {
+    const q = document.getElementById('userSearch').value.toLowerCase();
+    document.querySelectorAll('.user-row').forEach(row => {
+      const name = row.dataset.name || '';
+      const email = row.dataset.email || '';
+      row.style.display = (name.includes(q) || email.includes(q)) ? '' : 'none';
+    });
+  }
+  window.filterUsers = filterUsers;
+
+  // ── Edit Modal ──
+  let editingUserId = null;
+
+  function openEditModal(id, name, email, tier) {
+    editingUserId = id;
+    document.getElementById('editName').value = name;
+    document.getElementById('editEmail').value = email;
+    document.getElementById('editTier').value = tier;
+    document.getElementById('editModal').classList.add('show');
+  }
+  window.openEditModal = openEditModal;
+
+  document.getElementById('cancelEdit').addEventListener('click', () => {
+    document.getElementById('editModal').classList.remove('show');
+  });
+
+  document.getElementById('saveEdit').addEventListener('click', async () => {
+    const tier = document.getElementById('editTier').value;
+    const name = document.getElementById('editName').value;
+
+    const days = tier === 'basic_30' ? 30 : tier === 'pro_6' ? 180 : 365;
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + days);
+
+    try {
+      const res = await fetch('/api/admin/update-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingUserId,
+          full_name: name,
+          subscription_tier: tier,
+          subscription_end_date: endDate.toISOString(),
+          subscription_status: 'active',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('✅ User updated successfully!');
+        document.getElementById('editModal').classList.remove('show');
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        showToast('❌ ' + (data.error || 'Update failed'), 'error');
+      }
+    } catch {
+      showToast('❌ Network error', 'error');
+    }
+  });
+
+  // ── Activate Pending ──
+  async function activatePending(id, email, tier) {
+    if (!confirm(`Force activate ${email} (${tier})?`)) return;
+    try {
+      const res = await fetch('/api/admin/activate-pending', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, email, tier }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('✅ Activated!');
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        showToast('❌ ' + (data.error || 'Failed'), 'error');
+      }
+    } catch {
+      showToast('❌ Network error', 'error');
+    }
+  }
+  window.activatePending = activatePending;
+
+  // ── Delete Pending ──
+  async function deletePending(id) {
+    if (!confirm('Delete this pending activation?')) return;
+    try {
+      const res = await fetch('/api/admin/delete-pending', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('🗑️ Deleted');
+        setTimeout(() => location.reload(), 1000);
+      }
+    } catch {
+      showToast('❌ Network error', 'error');
+    }
+  }
+  window.deletePending = deletePending;
+
+  // ── Logout ──
+  document.getElementById('btnLogout').addEventListener('click', async () => {
+    await fetch('/api/admin/verify', { method: 'DELETE' });
+    window.location.href = '/admin-login';
+  });
+</script>
+</body>
+</html>

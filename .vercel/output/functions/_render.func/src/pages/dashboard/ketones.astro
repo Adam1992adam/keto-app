@@ -1,0 +1,643 @@
+---
+// src/pages/dashboard/ketones.astro
+import { supabase } from '../../lib/supabase';
+import { requireAuth } from '../../lib/auth';
+import DashNav from '../../components/DashNav.astro';
+import Activity from 'lucide-astro/Activity';
+import TrendingUp from 'lucide-astro/TrendingUp';
+import Droplets from 'lucide-astro/Droplets';
+import Zap from 'lucide-astro/Zap';
+import Target from 'lucide-astro/Target';
+import Plus from 'lucide-astro/Plus';
+import Calendar from 'lucide-astro/Calendar';
+import BarChart2 from 'lucide-astro/BarChart2';
+
+const auth = await requireAuth(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile } = auth;
+
+const planType  = profile.subscription_tier || 'basic_30';
+const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const userName  = (profile as any).full_name || (profile as any).email?.split('@')[0] || 'User';
+
+// Fetch last 30 ketone logs newest-first
+const { data: logs } = await supabase
+  .from('ketone_logs')
+  .select('*')
+  .eq('user_id', user.id)
+  .order('logged_date', { ascending: false })
+  .limit(30);
+
+const entries = logs || [];
+const latest  = entries[0] || null;
+const latestVal: number | null = latest ? parseFloat(latest.ketone_mmol) : null;
+
+// 7-day average
+const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+const weekEntries = entries.filter((e: any) => new Date(e.logged_date) >= cutoff);
+const weekAvg: number | null = weekEntries.length > 0
+  ? Math.round((weekEntries.reduce((s: number, e: any) => s + parseFloat(e.ketone_mmol), 0) / weekEntries.length) * 10) / 10
+  : null;
+
+const bestVal: number | null = entries.length > 0
+  ? Math.max(...entries.map((e: any) => parseFloat(e.ketone_mmol)))
+  : null;
+
+// Zone classification (pre-computed to avoid JSX ternary with < NUMBER)
+const zone =
+  latestVal === null   ? 'none'        :
+  latestVal < 0.5      ? 'below'       :
+  latestVal < 1.5      ? 'light'       :
+  latestVal < 3.0      ? 'nutritional' :
+  latestVal < 5.0      ? 'deep'        : 'therapeutic';
+
+const zoneLabel =
+  zone === 'none'         ? 'No reading yet'      :
+  zone === 'below'        ? 'Below Ketosis'        :
+  zone === 'light'        ? 'Light Ketosis'        :
+  zone === 'nutritional'  ? 'Nutritional Ketosis'  :
+  zone === 'deep'         ? 'Deep Ketosis'         : 'Therapeutic Ketosis';
+
+const zoneColor =
+  zone === 'none'         ? '#4d7055' :
+  zone === 'below'        ? '#6b7280' :
+  zone === 'light'        ? '#3b82f6' :
+  zone === 'nutritional'  ? '#10b981' :
+  zone === 'deep'         ? '#8b5cf6' : '#f59e0b';
+
+const zoneTip =
+  zone === 'none'         ? 'Log your first reading to see your ketosis status.' :
+  zone === 'below'        ? 'You are not yet in ketosis. Keep carbs under 20g/day.' :
+  zone === 'light'        ? 'You are entering ketosis. Keep it up!' :
+  zone === 'nutritional'  ? 'Optimal fat-burning zone. Great work!' :
+  zone === 'deep'         ? 'Deep ketosis — excellent for mental clarity.' : 'Therapeutic range. Monitor closely.';
+
+// SVG chart — last 14 readings, oldest first
+const chartRaw = [...entries].slice(0, 14).reverse();
+const chartMax = Math.max(5, ...chartRaw.map((e: any) => parseFloat(e.ketone_mmol)));
+const CW = 560; const CH = 140;
+const chartPoints = chartRaw.map((e: any, i: number) => {
+  const x = chartRaw.length > 1 ? (i / (chartRaw.length - 1)) * CW : CW / 2;
+  const y = CH - (parseFloat(e.ketone_mmol) / chartMax) * CH * 0.9;
+  return `${x.toFixed(1)},${y.toFixed(1)}`;
+}).join(' ');
+const areaPoints = chartRaw.length > 0 ? `0,${CH} ${chartPoints} ${CW},${CH}` : '';
+
+// Zone bands for chart (y-positions, pre-computed)
+const y_05  = (CH - (0.5 / chartMax) * CH * 0.9).toFixed(1);
+const y_15  = (CH - (1.5 / chartMax) * CH * 0.9).toFixed(1);
+const y_30  = (CH - (3.0 / chartMax) * CH * 0.9).toFixed(1);
+
+const today = new Date().toISOString().split('T')[0];
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ketone Tracker · Keto Journey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;1,700&family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+<DashNav
+  userId={user.id}
+  userName={userName}
+  tierLabel={tierLabel}
+  planType={planType}
+  activePage="ketones"
+/>
+
+<main class="page">
+  <!-- Header -->
+  <div class="page-header" style="animation:fadeUp .5s ease both;">
+    <div>
+      <h1 class="page-title"><Activity size={26} style="vertical-align:middle;margin-right:.5rem;" /> Ketone Tracker</h1>
+      <p class="page-sub">Monitor your ketosis level and fat-burning zone</p>
+    </div>
+    <button class="log-btn" id="openModal">+ Log Reading</button>
+  </div>
+
+  <!-- Zone banner -->
+  <div class="zone-banner" style={`--zc:${zoneColor};animation:fadeUp .5s .08s ease both;`}>
+    <div class="zone-dot"></div>
+    <div class="zone-info">
+      <span class="zone-name">{zoneLabel}</span>
+      {latestVal !== null && (
+        <span class="zone-val">{latestVal.toFixed(1)} mmol/L</span>
+      )}
+    </div>
+    <p class="zone-tip">{zoneTip}</p>
+  </div>
+
+  <!-- Stats row -->
+  <div class="stats-row" style="animation:fadeUp .5s .12s ease both;">
+    <div class="stat-card">
+      <div class="stat-label">Latest</div>
+      <div class="stat-val" style={`color:${zoneColor}`}>
+        {latestVal !== null ? `${latestVal.toFixed(1)}` : '—'}
+      </div>
+      <div class="stat-unit">mmol/L</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">7-Day Avg</div>
+      <div class="stat-val" style="color:var(--blue)">
+        {weekAvg !== null ? weekAvg.toFixed(1) : '—'}
+      </div>
+      <div class="stat-unit">mmol/L</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Best</div>
+      <div class="stat-val" style="color:var(--purple)">
+        {bestVal !== null ? bestVal.toFixed(1) : '—'}
+      </div>
+      <div class="stat-unit">mmol/L</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Logs</div>
+      <div class="stat-val" style="color:var(--green)">{entries.length}</div>
+      <div class="stat-unit">readings</div>
+    </div>
+  </div>
+
+  <!-- Chart card -->
+  <div class="card chart-card" style="animation:fadeUp .5s .16s ease both;">
+    <div class="card-head">
+      <span class="card-title"><TrendingUp size={16} style="vertical-align:middle;margin-right:.35rem;" /> Ketone Trend</span>
+      <span class="card-sub">Last {Math.min(14, entries.length)} readings</span>
+    </div>
+
+    {entries.length === 0 && (
+      <div class="empty-chart">
+        <div class="empty-icon"><Activity size={32} /></div>
+        <p>Log your first ketone reading to see your trend chart.</p>
+      </div>
+    )}
+
+    {entries.length > 0 && (
+      <div class="chart-wrap">
+        <svg viewBox={`0 0 ${CW} ${CH}`} class="chart-svg" preserveAspectRatio="none">
+          <!-- Zone bands -->
+          <rect x="0" y={y_30} width={CW} height={parseFloat(y_15) - parseFloat(y_30)} fill="rgba(139,92,246,.07)" />
+          <rect x="0" y={y_15} width={CW} height={parseFloat(y_05) - parseFloat(y_15)} fill="rgba(16,185,129,.07)" />
+          <rect x="0" y={y_05} width={CW} height={CH - parseFloat(y_05)} fill="rgba(107,114,128,.05)" />
+          <!-- Zone lines -->
+          <line x1="0" y1={y_05} x2={CW} y2={y_05} stroke="rgba(16,185,129,.2)" stroke-width="1" stroke-dasharray="4 3" />
+          <line x1="0" y1={y_15} x2={CW} y2={y_15} stroke="rgba(16,185,129,.3)" stroke-width="1" stroke-dasharray="4 3" />
+          <line x1="0" y1={y_30} x2={CW} y2={y_30} stroke="rgba(139,92,246,.25)" stroke-width="1" stroke-dasharray="4 3" />
+          <!-- Area fill -->
+          {areaPoints && (
+            <polygon points={areaPoints} fill={`url(#kgrad)`} opacity="0.35" />
+          )}
+          <!-- Line -->
+          {chartRaw.length > 1 && (
+            <polyline points={chartPoints} fill="none" stroke={zoneColor} stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />
+          )}
+          <!-- Dots -->
+          {chartRaw.map((e: any, i: number) => {
+            const x = chartRaw.length > 1 ? (i / (chartRaw.length - 1)) * CW : CW / 2;
+            const y = CH - (parseFloat(e.ketone_mmol) / chartMax) * CH * 0.9;
+            return (
+              <circle cx={x.toFixed(1)} cy={y.toFixed(1)} r="4" fill={zoneColor} stroke="var(--bg)" stroke-width="2" />
+            );
+          })}
+          <defs>
+            <linearGradient id="kgrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color={zoneColor} stop-opacity="0.5" />
+              <stop offset="100%" stop-color={zoneColor} stop-opacity="0.02" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <!-- Zone labels -->
+        <div class="chart-zones">
+          <span class="cz-label cz-purple">Deep (3–5)</span>
+          <span class="cz-label cz-green">Optimal (1.5–3)</span>
+          <span class="cz-label cz-blue">Light (0.5–1.5)</span>
+        </div>
+      </div>
+    )}
+  </div>
+
+  <!-- Ketone zones guide -->
+  <div class="card" style="animation:fadeUp .5s .2s ease both;">
+    <div class="card-head">
+      <span class="card-title"><Target size={16} style="vertical-align:middle;margin-right:.35rem;" /> Ketone Zones Guide</span>
+    </div>
+    <div class="zones-grid">
+      <div class="zone-item zi-gray">
+        <div class="zi-range">Below 0.5</div>
+        <div class="zi-name">Not in Ketosis</div>
+        <div class="zi-desc">Glucose is still the primary fuel. Reduce carbs further.</div>
+      </div>
+      <div class="zone-item zi-blue">
+        <div class="zi-range">0.5 – 1.5</div>
+        <div class="zi-name">Light Ketosis</div>
+        <div class="zi-desc">Entering fat-burning mode. Good for weight loss beginners.</div>
+      </div>
+      <div class="zone-item zi-green">
+        <div class="zi-range">1.5 – 3.0</div>
+        <div class="zi-name">Nutritional Ketosis ✓</div>
+        <div class="zi-desc">Optimal zone — steady energy, fat burning, mental clarity.</div>
+      </div>
+      <div class="zone-item zi-purple">
+        <div class="zi-range">3.0 – 5.0</div>
+        <div class="zi-name">Deep Ketosis</div>
+        <div class="zi-desc">High fat burning, enhanced focus. Common during fasting.</div>
+      </div>
+      <div class="zone-item zi-gold">
+        <div class="zi-range">Above 5.0</div>
+        <div class="zi-name">Therapeutic Range</div>
+        <div class="zi-desc">Used in clinical protocols. Monitor under medical guidance.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="card" style="animation:fadeUp .5s .24s ease both;">
+    <div class="card-head">
+      <span class="card-title"><Calendar size={16} style="vertical-align:middle;margin-right:.35rem;" /> Reading History</span>
+      <span class="card-sub">{entries.length} total</span>
+    </div>
+
+    {entries.length === 0 && (
+      <div class="empty-state">
+        <div class="empty-icon"><BarChart2 size={32} /></div>
+        <p>No readings yet. Log your first measurement above.</p>
+      </div>
+    )}
+
+    {entries.length > 0 && (
+      <div class="history-list">
+        {entries.slice(0, 15).map((e: any) => {
+          const val = parseFloat(e.ketone_mmol);
+          const eZone =
+            val < 0.5  ? 'below' :
+            val < 1.5  ? 'light' :
+            val < 3.0  ? 'nutritional' :
+            val < 5.0  ? 'deep' : 'therapeutic';
+          const eColor =
+            eZone === 'below'       ? '#6b7280' :
+            eZone === 'light'       ? '#3b82f6' :
+            eZone === 'nutritional' ? '#10b981' :
+            eZone === 'deep'        ? '#8b5cf6' : '#f59e0b';
+          const eLabel =
+            eZone === 'below'       ? 'Below'        :
+            eZone === 'light'       ? 'Light'        :
+            eZone === 'nutritional' ? 'Nutritional'  :
+            eZone === 'deep'        ? 'Deep'         : 'Therapeutic';
+          const typeIsBlood  = e.measurement_type === 'blood';
+          const typeIsUrine  = e.measurement_type === 'urine';
+          const typeIsBreath = e.measurement_type === 'breath';
+          return (
+            <div class="hist-row">
+              <span class="hist-icon">
+                {typeIsBlood  && <Activity size={16} />}
+                {typeIsUrine  && <Droplets size={16} />}
+                {typeIsBreath && <Zap size={16} />}
+              </span>
+              <div class="hist-info">
+                <span class="hist-date">{new Date(e.logged_date + 'T12:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}</span>
+                {e.notes && <span class="hist-notes">{e.notes}</span>}
+              </div>
+              <div class="hist-right">
+                <span class="hist-val" style={`color:${eColor}`}>{val.toFixed(1)}</span>
+                <span class="hist-badge" style={`background:${eColor}18;color:${eColor};border-color:${eColor}30;`}>{eLabel}</span>
+                <button class="hist-del" onclick={`deleteEntry('${e.id}')`} title="Delete" aria-label="Delete entry">×</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+</main>
+
+<!-- Log Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3><Activity size={18} style="vertical-align:middle;margin-right:.4rem;" /> Log Ketone Reading</h3>
+      <button class="modal-close" id="closeModal">×</button>
+    </div>
+    <form id="ketoneForm" class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Ketone Level (mmol/L) *</label>
+        <input type="number" id="ketoneVal" class="form-input" step="0.1" min="0" max="30" placeholder="e.g. 1.8" required />
+        <div class="input-hint">Normal range: 0.5 – 5.0 mmol/L</div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Measurement Type</label>
+        <div class="type-btns" id="typeBtns">
+          <button type="button" class="type-btn active" data-type="blood"><Activity size={14} style="vertical-align:middle;margin-right:.3rem;" /> Blood</button>
+          <button type="button" class="type-btn" data-type="urine"><Droplets size={14} style="vertical-align:middle;margin-right:.3rem;" /> Urine</button>
+          <button type="button" class="type-btn" data-type="breath"><Zap size={14} style="vertical-align:middle;margin-right:.3rem;" /> Breath</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Date</label>
+        <input type="date" id="logDate" class="form-input" value={today} />
+      </div>
+      <div class="form-row">
+        <label class="form-label">Notes (optional)</label>
+        <input type="text" id="logNotes" class="form-input" placeholder="e.g. fasted 16h, post-workout…" maxlength="200" />
+      </div>
+
+      <!-- Live zone preview -->
+      <div class="zone-preview" id="zonePreview" style="display:none;">
+        <span id="previewDot" class="preview-dot"></span>
+        <span id="previewLabel">—</span>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn-save" id="saveBtn">Save Reading</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg,#060d09); color:var(--text,#dfeedd); min-height:100vh; padding-bottom:5rem; }
+
+  .page { max-width:780px; margin:0 auto; padding:2rem 1.25rem; }
+
+  /* Header */
+  .page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap; }
+  .page-title { font-family:'Fraunces',serif; font-size:1.7rem; font-weight:700; margin-bottom:.2rem; }
+  .page-sub { color:var(--soft,#4d7055); font-size:.85rem; }
+  .log-btn {
+    padding:.6rem 1.25rem; border-radius:12px; font-size:.82rem; font-weight:800;
+    background:var(--green,#10b981); color:#fff; border:none; cursor:pointer;
+    transition:all .2s; white-space:nowrap; flex-shrink:0;
+  }
+  .log-btn:hover { background:#059669; transform:translateY(-1px); }
+
+  /* Zone banner */
+  .zone-banner {
+    display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+    padding:1rem 1.25rem; border-radius:18px; margin-bottom:1.5rem;
+    background:color-mix(in srgb, var(--zc) 8%, transparent);
+    border:1px solid color-mix(in srgb, var(--zc) 25%, transparent);
+  }
+  .zone-dot { width:14px; height:14px; border-radius:50%; background:var(--zc); box-shadow:0 0 8px var(--zc); flex-shrink:0; }
+  .zone-info { display:flex; align-items:center; gap:.75rem; flex:1; }
+  .zone-name { font-weight:800; font-size:.95rem; color:var(--zc); }
+  .zone-val { font-size:.85rem; color:var(--soft,#4d7055); background:rgba(255,255,255,.05); padding:.15rem .5rem; border-radius:99px; }
+  .zone-tip { font-size:.78rem; color:var(--soft,#4d7055); flex-basis:100%; margin-top:-.25rem; }
+
+  /* Stats */
+  .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:.75rem; margin-bottom:1.5rem; }
+  @media(max-width:520px){ .stats-row { grid-template-columns:repeat(2,1fr); } }
+  .stat-card {
+    background:var(--card,#0d1a0f); border:1px solid var(--border,rgba(16,185,129,.1));
+    border-radius:16px; padding:1rem; text-align:center;
+  }
+  .stat-label { font-size:.68rem; font-weight:700; color:var(--soft,#4d7055); text-transform:uppercase; letter-spacing:.05em; margin-bottom:.4rem; }
+  .stat-val { font-family:'Fraunces',serif; font-size:1.6rem; font-weight:700; line-height:1; }
+  .stat-unit { font-size:.65rem; color:var(--soft,#4d7055); margin-top:.2rem; }
+
+  /* Card */
+  .card { background:var(--card,#0d1a0f); border:1px solid var(--border,rgba(16,185,129,.1)); border-radius:20px; padding:1.25rem; margin-bottom:1.5rem; }
+  .card-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
+  .card-title { font-weight:800; font-size:.92rem; }
+  .card-sub { font-size:.75rem; color:var(--soft,#4d7055); }
+
+  /* Chart */
+  .chart-wrap { position:relative; }
+  .chart-svg { width:100%; height:160px; display:block; overflow:visible; }
+  .chart-zones { display:flex; gap:1rem; margin-top:.5rem; flex-wrap:wrap; }
+  .cz-label { font-size:.65rem; font-weight:700; }
+  .cz-purple { color:#8b5cf6; }
+  .cz-green  { color:#10b981; }
+  .cz-blue   { color:#3b82f6; }
+  .empty-chart { text-align:center; padding:3rem 1rem; color:var(--soft,#4d7055); font-size:.85rem; }
+  .empty-chart .empty-icon { font-size:2.5rem; margin-bottom:.75rem; }
+
+  /* Zones guide */
+  .zones-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:.75rem; }
+  .zone-item { border-radius:14px; padding:.85rem; border:1px solid transparent; }
+  .zi-gray   { background:rgba(107,114,128,.07); border-color:rgba(107,114,128,.15); }
+  .zi-blue   { background:rgba(59,130,246,.07);  border-color:rgba(59,130,246,.15);  }
+  .zi-green  { background:rgba(16,185,129,.07);  border-color:rgba(16,185,129,.15);  }
+  .zi-purple { background:rgba(139,92,246,.07);  border-color:rgba(139,92,246,.15);  }
+  .zi-gold   { background:rgba(245,158,11,.07);  border-color:rgba(245,158,11,.15);  }
+  .zi-range  { font-size:.65rem; font-weight:800; opacity:.6; margin-bottom:.2rem; }
+  .zi-name   { font-size:.78rem; font-weight:800; margin-bottom:.3rem; }
+  .zi-desc   { font-size:.68rem; color:var(--soft,#4d7055); line-height:1.45; }
+
+  /* History */
+  .history-list { display:flex; flex-direction:column; gap:.5rem; }
+  .hist-row {
+    display:flex; align-items:center; gap:.85rem; padding:.75rem .9rem;
+    background:var(--card2,#111f13); border:1px solid var(--border,rgba(16,185,129,.1));
+    border-radius:14px; transition:border-color .2s;
+  }
+  .hist-row:hover { border-color:var(--border2,rgba(16,185,129,.22)); }
+  .hist-icon { font-size:1.1rem; flex-shrink:0; }
+  .hist-info { flex:1; min-width:0; }
+  .hist-date { font-size:.8rem; font-weight:700; display:block; }
+  .hist-notes { font-size:.7rem; color:var(--soft,#4d7055); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hist-right { display:flex; align-items:center; gap:.5rem; flex-shrink:0; }
+  .hist-val { font-family:'Fraunces',serif; font-size:1.15rem; font-weight:700; }
+  .hist-badge {
+    font-size:.63rem; font-weight:800; padding:.18rem .5rem; border-radius:99px;
+    border:1px solid; white-space:nowrap;
+  }
+  .hist-del {
+    width:22px; height:22px; border-radius:6px; border:1px solid rgba(239,68,68,.2);
+    background:rgba(239,68,68,.06); color:#f87171; font-size:.85rem; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    opacity:0; transition:opacity .15s, background .15s;
+  }
+  .hist-row:hover .hist-del { opacity:1; }
+  .hist-del:hover { background:rgba(239,68,68,.18); border-color:rgba(239,68,68,.4); }
+  .empty-state { text-align:center; padding:2.5rem 1rem; color:var(--soft,#4d7055); font-size:.85rem; }
+  .empty-state .empty-icon { font-size:2rem; margin-bottom:.5rem; }
+
+  /* Modal */
+  .modal-overlay {
+    display:none; position:fixed; inset:0; z-index:500;
+    background:rgba(0,0,0,.65); backdrop-filter:blur(6px);
+    align-items:center; justify-content:center; padding:1rem;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal {
+    background:var(--card,#0d1a0f); border:1px solid var(--border2,rgba(16,185,129,.22));
+    border-radius:22px; width:100%; max-width:440px;
+    box-shadow:0 32px 80px rgba(0,0,0,.6);
+    animation:modalPop .22s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes modalPop { from{opacity:0;transform:scale(.94)} to{opacity:1;transform:scale(1)} }
+  .modal-head {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:1.15rem 1.3rem .9rem;
+    border-bottom:1px solid var(--border,rgba(16,185,129,.1));
+  }
+  .modal-head h3 { font-size:1rem; font-weight:800; }
+  .modal-close {
+    width:28px; height:28px; border-radius:8px; border:1px solid var(--border,rgba(16,185,129,.1));
+    background:transparent; color:var(--soft,#4d7055); font-size:1.1rem;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;
+  }
+  .modal-close:hover { border-color:var(--red,#ef4444); color:var(--red,#ef4444); }
+  .modal-body { padding:1.15rem 1.3rem; display:flex; flex-direction:column; gap:1rem; }
+  .form-row { display:flex; flex-direction:column; gap:.4rem; }
+  .form-label { font-size:.78rem; font-weight:700; color:var(--soft,#4d7055); }
+  .form-input {
+    padding:.65rem .85rem; border-radius:11px; font-size:.88rem; font-family:'DM Sans',sans-serif;
+    background:var(--card2,#111f13); border:1px solid var(--border,rgba(16,185,129,.1));
+    color:var(--text,#dfeedd); outline:none; transition:border-color .2s; width:100%;
+  }
+  .form-input:focus { border-color:var(--green,#10b981); }
+  .input-hint { font-size:.68rem; color:var(--soft,#4d7055); }
+  .type-btns { display:flex; gap:.5rem; flex-wrap:wrap; }
+  .type-btn {
+    padding:.45rem .9rem; border-radius:10px; font-size:.78rem; font-weight:700;
+    background:var(--card2,#111f13); border:1px solid var(--border,rgba(16,185,129,.1));
+    color:var(--soft,#4d7055); cursor:pointer; transition:all .18s;
+  }
+  .type-btn.active, .type-btn:hover {
+    background:rgba(16,185,129,.1); border-color:rgba(16,185,129,.3); color:var(--green,#10b981);
+  }
+  .zone-preview {
+    display:flex; align-items:center; gap:.6rem; padding:.65rem .9rem; border-radius:12px;
+    background:rgba(16,185,129,.05); border:1px solid rgba(16,185,129,.15); font-size:.82rem; font-weight:700;
+  }
+  .preview-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .modal-actions { display:flex; gap:.75rem; margin-top:.25rem; }
+  .btn-cancel {
+    flex:1; padding:.7rem; border-radius:12px; font-size:.85rem; font-weight:700;
+    background:var(--card2,#111f13); border:1px solid var(--border,rgba(16,185,129,.1));
+    color:var(--soft,#4d7055); cursor:pointer; transition:all .18s;
+  }
+  .btn-cancel:hover { border-color:var(--border2,rgba(16,185,129,.22)); color:var(--text,#dfeedd); }
+  .btn-save {
+    flex:2; padding:.7rem; border-radius:12px; font-size:.85rem; font-weight:800;
+    background:var(--green,#10b981); border:none; color:#fff; cursor:pointer; transition:all .2s;
+  }
+  .btn-save:hover { background:#059669; }
+  .btn-save:disabled { opacity:.5; cursor:not-allowed; }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(14px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  @media(max-width:900px) { .page { padding-bottom:6rem; } }
+</style>
+
+<script is:inline>
+(function () {
+  var overlay    = document.getElementById('modalOverlay');
+  var openBtn    = document.getElementById('openModal');
+  var closeBtn   = document.getElementById('closeModal');
+  var cancelBtn  = document.getElementById('cancelBtn');
+  var form       = document.getElementById('ketoneForm');
+  var valInput   = document.getElementById('ketoneVal');
+  var dateInput  = document.getElementById('logDate');
+  var notesInput = document.getElementById('logNotes');
+  var saveBtn    = document.getElementById('saveBtn');
+  var preview    = document.getElementById('zonePreview');
+  var previewDot = document.getElementById('previewDot');
+  var previewLbl = document.getElementById('previewLabel');
+  var typeBtns   = document.getElementById('typeBtns');
+  var selectedType = 'blood';
+
+  // Open / close
+  openBtn && openBtn.addEventListener('click', function () { overlay && overlay.classList.add('open'); });
+  function closeModal() { overlay && overlay.classList.remove('open'); form && form.reset(); preview && (preview.style.display = 'none'); selectedType = 'blood'; resetTypeBtns(); }
+  closeBtn  && closeBtn.addEventListener('click',  closeModal);
+  cancelBtn && cancelBtn.addEventListener('click',  closeModal);
+  overlay   && overlay.addEventListener('click', function (e) { if (e.target === overlay) closeModal(); });
+
+  // Measurement type selector
+  function resetTypeBtns() {
+    var btns = document.querySelectorAll('.type-btn');
+    btns.forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-type') === 'blood');
+    });
+    selectedType = 'blood';
+  }
+  typeBtns && typeBtns.addEventListener('click', function (e) {
+    var btn = e.target.closest('.type-btn');
+    if (!btn) return;
+    document.querySelectorAll('.type-btn').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    selectedType = btn.getAttribute('data-type');
+  });
+
+  // Live zone preview
+  function getZone(val) {
+    if (val < 0.5)  return { label:'Below Ketosis',       color:'#6b7280' };
+    if (val < 1.5)  return { label:'Light Ketosis',        color:'#3b82f6' };
+    if (val < 3.0)  return { label:'Nutritional Ketosis',  color:'#10b981' };
+    if (val < 5.0)  return { label:'Deep Ketosis',         color:'#8b5cf6' };
+    return                  { label:'Therapeutic Range',   color:'#f59e0b' };
+  }
+  valInput && valInput.addEventListener('input', function () {
+    var val = parseFloat(valInput.value);
+    if (isNaN(val) || val < 0) { preview.style.display = 'none'; return; }
+    var z = getZone(val);
+    preview.style.display = 'flex';
+    preview.style.background = z.color + '12';
+    preview.style.borderColor = z.color + '30';
+    previewDot.style.background = z.color;
+    previewLbl.style.color = z.color;
+    previewLbl.textContent = val.toFixed(1) + ' mmol/L — ' + z.label;
+  });
+
+  // Submit
+  form && form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var val = parseFloat(valInput.value);
+    if (isNaN(val) || val < 0 || val > 30) { alert('Enter a value between 0 and 30 mmol/L'); return; }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
+    try {
+      var res = await fetch('/api/ketones/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ketone_mmol:      val,
+          measurement_type: selectedType,
+          logged_date:      dateInput.value,
+          notes:            notesInput.value.trim() || null,
+        }),
+      });
+      var data = await res.json();
+      if (data.success) {
+        window.location.reload();
+      } else {
+        alert(data.error || 'Failed to save. Please try again.');
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Reading';
+      }
+    } catch {
+      alert('Network error. Please try again.');
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Reading';
+    }
+  });
+  // ── Delete entry ─────────────────────────────────────────
+  window.deleteEntry = async function(id) {
+    if (!confirm('Delete this reading?')) return;
+    try {
+      var res = await fetch('/api/ketones/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      var data = await res.json();
+      if (data.success) window.location.reload();
+      else alert(data.error || 'Failed to delete.');
+    } catch { alert('Network error.'); }
+  };
+})();
+</script>
+
+</body>
+</html>

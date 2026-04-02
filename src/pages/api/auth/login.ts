@@ -27,8 +27,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   });
 
   if (error) {
-    const msg = encodeURIComponent(error.message);
-    return redirect(`/login?error=invalid&msg=${msg}`);
+    return redirect('/login?error=invalid');
   }
 
   if (data.session) {

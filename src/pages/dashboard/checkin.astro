@@ -1,6 +1,6 @@
 ---
 // src/pages/dashboard/checkin.astro
-import { supabase, getUserJourney, getDailyTasks } from '../../lib/supabase';
+import { getUserJourney, getDailyTasks } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import CheckCircle from 'lucide-astro/CheckCircle';
@@ -22,17 +22,17 @@ import Moon from 'lucide-astro/Moon';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 
-const journey = await getUserJourney(user.id);
+const journey = await getUserJourney(user.id, db);
 const currentDay = journey?.current_day || 1;
 const isFirstWeek = currentDay <= 7;
 
 // Check if already checked in today
 const today = new Date().toISOString().split('T')[0];
-const { data: existingCheckin } = await supabase
+const { data: existingCheckin } = await db
   .from('daily_checkins')
   .select('*')
   .eq('user_id', user.id)
@@ -40,21 +40,21 @@ const { data: existingCheckin } = await supabase
   .maybeSingle();
 
 // Get macro goals
-const { data: macroGoals } = await supabase
+const { data: macroGoals } = await db
   .from('macro_goals')
   .select('*')
   .eq('user_id', user.id)
   .maybeSingle();
 
 // Get onboarding data for fasting protocol
-const { data: onboarding } = await supabase
+const { data: onboarding } = await db
   .from('onboarding_data')
   .select('fasting_protocol, goal, feature_electrolytes')
   .eq('user_id', user.id)
   .maybeSingle();
 
 // Get last 7 check-ins for streak/trend
-const { data: recentCheckins } = await supabase
+const { data: recentCheckins } = await db
   .from('daily_checkins')
   .select('checkin_date, energy_level, mood_level, followed_meals')
   .eq('user_id', user.id)
