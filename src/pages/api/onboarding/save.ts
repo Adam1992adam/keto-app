@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { supabase, initializeUserJourney } from '../../../lib/supabase';
+import { supabase, getUserClient, initializeUserJourney } from '../../../lib/supabase';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -12,6 +12,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
+
+    // Use user-scoped client for all DB writes so RLS policies pass
+    const db = getUserClient(accessToken);
 
     const body = await request.json();
 
@@ -35,7 +38,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return new Response(JSON.stringify({ error: 'daily_calories must be between 500–10000' }), { status: 400 });
 
     // ── 1. Save onboarding data ──
-    const { error: onboardError } = await supabase
+    const { error: onboardError } = await db
       .from('onboarding_data')
       .upsert({
         user_id:               user.id,
@@ -91,7 +94,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     // ── Save macro goals ──
-    const { error: macroError } = await supabase
+    const { error: macroError } = await db
       .from('macro_goals')
       .upsert({
         user_id:        user.id,
@@ -114,7 +117,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       very:      'active',
       extreme:   'very_active',
     };
-    const { error: profileError } = await supabase
+    const { error: profileError } = await db
       .from('profiles')
       .update({
         weight_kg:            current_weight,
@@ -133,7 +136,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     // ── 4. Log initial weight entry ──
     const today = new Date().toISOString().split('T')[0];
-    await supabase
+    await db
       .from('weight_logs')
       .upsert({
         user_id:    user.id,
@@ -144,7 +147,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     // ── 5. Create/update notification preferences if enabled ──
     if (feature_reminders) {
-      await supabase
+      await db
         .from('notification_preferences')
         .upsert({
           user_id:          user.id,
