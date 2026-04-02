@@ -41,7 +41,8 @@ const completed = refList.filter(r => r.status === 'completed').length;
 const hasCode   = !!codeRow?.code;
 
 // Pre-compute for template
-const xpPerReferral  = 150;
+const xpPerReferral     = 150;
+const xpBonusReferred   = 50;
 const previewCode    = codeRow?.code || '—';
 const previewUses    = codeRow?.uses_count || 0;
 ---
@@ -69,7 +70,7 @@ const previewUses    = codeRow?.uses_count || 0;
     </div>
     <div>
       <h1 class="page-title">Refer Friends</h1>
-      <p class="page-sub">Earn <strong>{xpPerReferral} XP</strong> for every friend who joins KetoJourney</p>
+      <p class="page-sub">You earn <strong>{xpPerReferral} XP</strong> · your friend gets <strong>{xpBonusReferred} XP</strong> welcome bonus</p>
     </div>
   </header>
 
@@ -128,7 +129,7 @@ const previewUses    = codeRow?.uses_count || 0;
         )}
 
         <p class="code-note">
-          Share your link and earn <strong>{xpPerReferral} XP</strong> for each friend who signs up.
+          You earn <strong>{xpPerReferral} XP</strong> · your friend gets <strong>{xpBonusReferred} XP</strong> welcome bonus.
         </p>
       </div>
 
@@ -183,8 +184,8 @@ const previewUses    = codeRow?.uses_count || 0;
           <li class="how-item">
             <span class="how-num">3</span>
             <div>
-              <strong>You earn XP</strong>
-              <span>You instantly receive <strong>{xpPerReferral} XP</strong> — pushing you up the levels</span>
+              <strong>Both earn XP</strong>
+              <span>You get <strong>{xpPerReferral} XP</strong> instantly · your friend gets a <strong>{xpBonusReferred} XP</strong> welcome bonus</span>
             </div>
           </li>
         </ol>

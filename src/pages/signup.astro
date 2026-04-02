@@ -344,6 +344,15 @@ const allowedEmail = emailParam ? emailParam.toLowerCase().trim() : '';
 
 <!-- RIGHT PANEL -->
 <div class="panel-form">
+  <!-- Referral bonus banner — shown via JS when ?ref= is present -->
+  <div id="refBanner" style="display:none;align-items:center;gap:.75rem;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:14px;padding:.875rem 1.1rem;margin-bottom:1.5rem;">
+    <span style="font-size:1.3rem;">🎁</span>
+    <div>
+      <div style="font-weight:800;font-size:.85rem;color:#34d399;">You've been invited!</div>
+      <div style="font-size:.78rem;color:#6a8a6a;margin-top:.1rem;">You'll receive a <strong style="color:#10b981;">+50 XP</strong> welcome bonus when you complete signup.</div>
+    </div>
+  </div>
+
   <div class="form-top">
     <a href="/login" class="form-back">← Back to login</a>
     <div class="form-tag">🎉 Create Account</div>
@@ -684,6 +693,9 @@ const allowedEmail = emailParam ? emailParam.toLowerCase().trim() : '';
     var ref = params.get('ref');
     if (ref && ref.length >= 6) {
       localStorage.setItem('keto_ref', ref.toUpperCase());
+      // Show a banner so the referred user knows they'll get a bonus
+      var banner = document.getElementById('refBanner');
+      if (banner) { banner.style.display = 'flex'; }
     }
   })();
 

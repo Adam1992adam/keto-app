@@ -146,15 +146,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
             referred_user_id: userId,
             status:           'completed',
             xp_awarded:       150,
-          }).then(() =>
+          }).then(() => Promise.all([
+            // Referrer gets 150 XP
             supabase.rpc('award_xp', {
               user_id_param:     codeRow.user_id,
               action_type_param: 'referral',
               xp_amount_param:   150,
               description_param: 'Friend joined using your referral code',
               day_number_param:  1,
-            })
-          ).then(() =>
+            }),
+            // New user gets 50 XP welcome bonus for using a referral
+            supabase.rpc('award_xp', {
+              user_id_param:     userId,
+              action_type_param: 'referral_bonus',
+              xp_amount_param:   50,
+              description_param: 'Welcome bonus — joined via referral code',
+              day_number_param:  1,
+            }),
+          ])).then(() =>
             supabase.from('referral_codes')
               .update({ uses_count: supabase.rpc('increment', { x: 1 }) as any })
               .eq('code', code)
