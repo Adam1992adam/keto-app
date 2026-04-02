@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const formData = await request.formData();
@@ -10,13 +10,25 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     return redirect('/login?error=auth');
   }
 
+  // Use process.env so runtime values are always current (not baked-in at build time)
+  const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+  const SUPABASE_KEY = process.env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    console.error('Missing Supabase env vars in login API');
+    return redirect('/login?error=auth');
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (error) {
-    return redirect('/login?error=invalid');
+    const msg = encodeURIComponent(error.message);
+    return redirect(`/login?error=invalid&msg=${msg}`);
   }
 
   if (data.session) {

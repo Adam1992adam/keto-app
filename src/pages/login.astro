@@ -4,6 +4,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 const error   = Astro.url.searchParams.get('error');
 const message = Astro.url.searchParams.get('message');
+const debugMsg = Astro.url.searchParams.get('msg');
 ---
 
 <!DOCTYPE html>
@@ -271,6 +272,7 @@ const message = Astro.url.searchParams.get('message');
         {error === 'invalid' && 'Wrong email or password. Please try again.'}
         {error === 'auth'    && 'Authentication error. Please try again.'}
         {error !== 'invalid' && error !== 'auth' && 'Something went wrong. Please try again.'}
+        {debugMsg && <><br/><small style="opacity:.7">Debug: {debugMsg}</small></>}
       </span>
     </div>
   )}
