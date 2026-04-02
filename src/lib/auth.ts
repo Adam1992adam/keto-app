@@ -7,13 +7,15 @@
 //   if ('redirect' in auth) return Astro.redirect(auth.redirect);
 //   const { user, profile } = auth;
 
-import { supabase, getProfile, isSubscriptionActive, updateCurrentDay } from './supabase';
+import { supabase, getUserClient, getProfile, isSubscriptionActive, updateCurrentDay } from './supabase';
 import type { Profile } from './supabase';
-import type { User } from '@supabase/supabase-js';
+import type { User, SupabaseClient } from '@supabase/supabase-js';
 
 export interface AuthOk {
   user: User;
   profile: Profile;
+  accessToken: string;
+  db: SupabaseClient;
 }
 
 export interface AuthRedirect {
@@ -33,15 +35,18 @@ export async function requireAuth(Astro: any): Promise<AuthResult> {
   const { data: { user }, error } = await supabase.auth.getUser(accessToken);
   if (error || !user) return { redirect: '/login' };
 
-  const profile = await getProfile(user.id);
+  // Use user-scoped client for all DB operations so RLS passes
+  const db = getUserClient(accessToken);
+
+  const profile = await getProfile(user.id, db);
   if (!profile) return { redirect: '/login' };
 
   if (!isSubscriptionActive(profile)) return { redirect: '/dashboard/expired' };
 
   // Advance journey day + update streak on every protected page load
-  await updateCurrentDay(user.id);
+  await updateCurrentDay(user.id, db);
 
-  return { user, profile };
+  return { user, profile, accessToken, db };
 }
 
 /**
@@ -56,8 +61,9 @@ export async function requireLogin(Astro: any): Promise<AuthResult> {
   const { data: { user }, error } = await supabase.auth.getUser(accessToken);
   if (error || !user) return { redirect: '/login' };
 
-  const profile = await getProfile(user.id);
+  const db = getUserClient(accessToken);
+  const profile = await getProfile(user.id, db);
   if (!profile) return { redirect: '/login' };
 
-  return { user, profile };
+  return { user, profile, accessToken, db };
 }

@@ -1,6 +1,6 @@
 ---
 // src/pages/dashboard/index.astro
-import { supabase, getUserClient, getUserJourney, getMaxJourneyDays, getMealCycleDays } from '../../lib/supabase';
+import { getUserJourney, getMaxJourneyDays, getMealCycleDays } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import UpsellModal from '../../components/UpsellModal.astro';
@@ -28,19 +28,17 @@ import AppTour      from '../../components/AppTour.astro';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 
 const planType  = profile.subscription_tier || 'basic_30';
 const maxDays   = getMaxJourneyDays(planType);
 const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 
-const _accessToken = Astro.cookies.get('sb-access-token')?.value;
-const _userClient = getUserClient(_accessToken!);
-const { data: onboarding } = await _userClient
+const { data: onboarding } = await db
   .from('onboarding_data').select('*').eq('user_id', user.id).maybeSingle();
 if (!onboarding) return Astro.redirect('/dashboard/onboarding');
 
-const journey     = await getUserJourney(user.id);
+const journey     = await getUserJourney(user.id, db);
 const currentDay  = journey?.current_day  || 1;
 const currentWeek = Math.ceil(currentDay / 7);
 const totalXP     = journey?.total_xp     || 0;
@@ -48,11 +46,11 @@ const xpLevel     = journey?.level        || 1;
 const streakDays  = journey?.streak_days  || 0;
 const today       = new Date().toISOString().split('T')[0];
 
-const { data: rawTasksCurrent } = await supabase
+const { data: rawTasksCurrent } = await db
   .from('daily_tasks').select('id, task_title, task_type, completed, xp_earned')
   .eq('user_id', user.id).eq('day_number', currentDay).order('created_at');
 
-const { data: rawTasksDay1 } = await supabase
+const { data: rawTasksDay1 } = await db
   .from('daily_tasks').select('id, task_title, task_type, completed, xp_earned')
   .eq('user_id', user.id).eq('day_number', 1).order('created_at');
 
@@ -62,37 +60,37 @@ const totalTasks     = tasks.length;
 const completedTasks = tasks.filter((t) => t.completed).length;
 const taskPct        = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-const { data: todayCheckin } = await supabase
+const { data: todayCheckin } = await db
   .from('daily_checkins').select('*')
   .eq('user_id', user.id).eq('checkin_date', today).maybeSingle();
 
-const { data: weightLogs } = await supabase
+const { data: weightLogs } = await db
   .from('weight_logs').select('weight, logged_date')
   .eq('user_id', user.id).order('logged_date', { ascending: false }).limit(8);
 
-const { data: activeFast } = await supabase
+const { data: activeFast } = await db
   .from('fasting_sessions').select('*').eq('user_id', user.id)
   .is('ended_at', null).order('started_at', { ascending: false }).limit(1).maybeSingle();
 
-const { data: recentCheckins } = await supabase
+const { data: recentCheckins } = await db
   .from('daily_checkins').select('checkin_date, energy_level, followed_meals, water_glasses')
   .eq('user_id', user.id).order('checkin_date', { ascending: false }).limit(7);
 
-const { data: weekReport } = await supabase
+const { data: weekReport } = await db
   .from('weekly_reports').select('id')
   .eq('user_id', user.id).eq('week_number', currentWeek).maybeSingle();
 
 // Try the user's plan first, fall back to basic_30 if no meals exist for this tier in the DB
 const mealCycleDays = getMealCycleDays(planType);
 const mealDayTarget = ((currentDay - 1) % mealCycleDays) + 1; // cycle within available days
-const { data: rawMealsDirect } = await supabase
+const { data: rawMealsDirect } = await db
   .from('meal_plans')
   .select('*, recipe:recipes(id, title, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, tags)')
   .eq('plan_type', planType).eq('day_number', mealDayTarget).order('meal_type');
 
 const rawMeals = (rawMealsDirect && rawMealsDirect.length > 0)
   ? rawMealsDirect
-  : await supabase
+  : await db
       .from('meal_plans')
       .select('*, recipe:recipes(id, title, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, tags)')
       .eq('plan_type', 'basic_30').eq('day_number', mealDayTarget).order('meal_type')
@@ -102,7 +100,7 @@ const rawMeals = (rawMealsDirect && rawMealsDirect.length > 0)
 const restrictions = onboarding?.dietary_restrictions || [];
 const userGoal     = onboarding?.goal || 'weight_loss';
 const twoWeeksAgo  = new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0];
-const { data: recentSwaps } = await supabase
+const { data: recentSwaps } = await db
   .from('meal_swaps').select('original_recipe_id')
   .eq('user_id', user.id).gte('swap_date', twoWeeksAgo);
 const rejectedIds = recentSwaps?.map((s) => s.original_recipe_id) || [];

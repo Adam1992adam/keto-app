@@ -414,8 +414,8 @@ export function getMealCycleDays(tier: string | null | undefined): number {
 // PROFILE FUNCTIONS
 // ═══════════════════════════════════════
 
-export async function getProfile(userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase
+export async function getProfile(userId: string, client = supabase): Promise<Profile | null> {
+  const { data, error } = await client
     .from('profiles')
     .select('*')
     .eq('id', userId)
@@ -434,8 +434,8 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   return data;
 }
 
-export async function updateProfile(userId: string, updates: Partial<Profile>) {
-  const { data, error } = await supabase
+export async function updateProfile(userId: string, updates: Partial<Profile>, client = supabase) {
+  const { data, error } = await client
     .from('profiles')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', userId)
@@ -484,8 +484,8 @@ export async function calculateCalorieTarget(profile: Profile): Promise<number> 
 // WEIGHT & ACHIEVEMENTS
 // ═══════════════════════════════════════
 
-export async function getWeightLogs(userId: string, limit = 30) {
-  const { data } = await supabase
+export async function getWeightLogs(userId: string, limit = 30, client = supabase) {
+  const { data } = await client
     .from('weight_logs')
     .select('*')
     .eq('user_id', userId)
@@ -495,8 +495,8 @@ export async function getWeightLogs(userId: string, limit = 30) {
   return data || [];
 }
 
-export async function getAchievements(userId: string) {
-  const { data } = await supabase
+export async function getAchievements(userId: string, client = supabase) {
+  const { data } = await client
     .from('achievements')
     .select('*')
     .eq('user_id', userId)
@@ -505,8 +505,8 @@ export async function getAchievements(userId: string) {
   return data || [];
 }
 
-export async function getDailyProgress(userId: string, dayNumber: number) {
-  const { data } = await supabase
+export async function getDailyProgress(userId: string, dayNumber: number, client = supabase) {
+  const { data } = await client
     .from('daily_progress')
     .select('*')
     .eq('user_id', userId)
@@ -520,8 +520,8 @@ export async function getDailyProgress(userId: string, dayNumber: number) {
 // JOURNEY FUNCTIONS
 // ═══════════════════════════════════════
 
-export async function getUserJourney(userId: string): Promise<UserJourney | null> {
-  const { data, error } = await supabase
+export async function getUserJourney(userId: string, client = supabase): Promise<UserJourney | null> {
+  const { data, error } = await client
     .from('user_journey')
     .select('*')
     .eq('user_id', userId)
@@ -535,11 +535,11 @@ export async function getUserJourney(userId: string): Promise<UserJourney | null
   return data;
 }
 
-export async function initializeUserJourney(userId: string): Promise<UserJourney | null> {
-  const existing = await getUserJourney(userId);
+export async function initializeUserJourney(userId: string, client = supabase): Promise<UserJourney | null> {
+  const existing = await getUserJourney(userId, client);
   if (existing) return existing;
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from('user_journey')
     .insert({
       user_id: userId,
@@ -560,7 +560,7 @@ export async function initializeUserJourney(userId: string): Promise<UserJourney
     return null;
   }
 
-  await supabase.rpc('initialize_daily_tasks', {
+  await client.rpc('initialize_daily_tasks', {
     user_id_param: userId,
     day_number_param: 1,
   });
@@ -572,8 +572,8 @@ export async function initializeUserJourney(userId: string): Promise<UserJourney
 // DAILY TASKS & WATER
 // ═══════════════════════════════════════
 
-export async function getDailyTasks(userId: string, dayNumber: number): Promise<DailyTask[]> {
-  const { data } = await supabase
+export async function getDailyTasks(userId: string, dayNumber: number, client = supabase): Promise<DailyTask[]> {
+  const { data } = await client
     .from('daily_tasks')
     .select('*')
     .eq('user_id', userId)
@@ -583,8 +583,8 @@ export async function getDailyTasks(userId: string, dayNumber: number): Promise<
   return data || [];
 }
 
-export async function getWaterIntake(userId: string, dayNumber: number): Promise<WaterIntake | null> {
-  const { data } = await supabase
+export async function getWaterIntake(userId: string, dayNumber: number, client = supabase): Promise<WaterIntake | null> {
+  const { data } = await client
     .from('water_intake')
     .select('*')
     .eq('user_id', userId)
@@ -594,8 +594,8 @@ export async function getWaterIntake(userId: string, dayNumber: number): Promise
   return data;
 }
 
-export async function updateWaterIntake(userId: string, dayNumber: number, glasses: number) {
-  const { data } = await supabase
+export async function updateWaterIntake(userId: string, dayNumber: number, glasses: number, client = supabase) {
+  const { data } = await client
     .from('water_intake')
     .update({ glasses_count: glasses, updated_at: new Date().toISOString() })
     .eq('user_id', userId)
@@ -604,7 +604,7 @@ export async function updateWaterIntake(userId: string, dayNumber: number, glass
     .single();
 
   if (data && glasses >= data.target_glasses) {
-    await supabase.rpc('award_xp', {
+    await client.rpc('award_xp', {
       user_id_param: userId,
       action_type_param: 'water_goal',
       xp_amount_param: 20,
@@ -616,8 +616,8 @@ export async function updateWaterIntake(userId: string, dayNumber: number, glass
   return data;
 }
 
-export async function completeTask(userId: string, dayNumber: number, taskType: string) {
-  const { data, error } = await supabase.rpc('complete_task', {
+export async function completeTask(userId: string, dayNumber: number, taskType: string, client = supabase) {
+  const { data, error } = await client.rpc('complete_task', {
     user_id_param: userId,
     day_number_param: dayNumber,
     task_type_param: taskType,
@@ -635,8 +635,8 @@ export async function completeTask(userId: string, dayNumber: number, taskType: 
 // XP & STATS
 // ═══════════════════════════════════════
 
-export async function getXPTransactions(userId: string, limit = 10) {
-  const { data } = await supabase
+export async function getXPTransactions(userId: string, limit = 10, client = supabase) {
+  const { data } = await client
     .from('xp_transactions')
     .select('*')
     .eq('user_id', userId)
@@ -646,16 +646,16 @@ export async function getXPTransactions(userId: string, limit = 10) {
   return data || [];
 }
 
-export async function getDayCompletionRate(userId: string, dayNumber: number): Promise<number> {
-  const tasks = await getDailyTasks(userId, dayNumber);
+export async function getDayCompletionRate(userId: string, dayNumber: number, client = supabase): Promise<number> {
+  const tasks = await getDailyTasks(userId, dayNumber, client);
   if (tasks.length === 0) return 0;
   const completed = tasks.filter(t => t.completed).length;
   return Math.round((completed / tasks.length) * 100);
 }
 
-export async function updateCurrentDay(userId: string) {
+export async function updateCurrentDay(userId: string, client = supabase) {
   try {
-    const { data, error } = await supabase.rpc('update_current_day', {
+    const { data, error } = await client.rpc('update_current_day', {
       user_id_param: userId,
     });
     if (error) throw error;
