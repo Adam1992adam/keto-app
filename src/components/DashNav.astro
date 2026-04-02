@@ -30,10 +30,11 @@ interface Props {
 const { userId, userName, tierLabel, planType, activePage = '' } = Astro.props;
 
 const initials  = (userName[0] || 'U').toUpperCase();
-const tierText  = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
+const tierText  = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const tierCss   = planType === 'elite_12' ? 'dn-tier dn-tier--elite' : planType === 'pro_6' ? 'dn-tier dn-tier--pro' : 'dn-tier dn-tier--basic';
 
 const progressPages = ['progress', 'photos', 'checkin', 'reflections', 'ketones', 'share'];
-const mealPages     = ['recipes', 'food-log', 'favorites', 'meal-prep'];
+const mealPages     = ['browse', 'recipes', 'food-log', 'favorites', 'meal-prep'];
 const planPages     = ['shopping', 'habits', 'weekly', 'fasting', 'keto-calculator'];
 const morePages     = ['learn', 'notifications', 'export', 'referrals'];
 
@@ -63,6 +64,7 @@ const groups = [
   {
     key: 'meals', label: 'Meals',
     links: [
+      { href: '/dashboard/browse',    key: 'browse',    label: 'Browse Recipes' },
       { href: '/dashboard/recipes',   key: 'recipes',   label: 'Recipes'   },
       { href: '/dashboard/food-log',  key: 'food-log',  label: 'Food Log'  },
       { href: '/dashboard/favorites', key: 'favorites', label: 'Favorites' },
@@ -193,12 +195,21 @@ const groups = [
     )}
 
     <!-- Upgrade (non-Elite) -->
-    {planType !== 'elite_12' && (
+    {planType === 'basic_30' && (
       <li>
         <a href="/dashboard/upgrade"
           class={`dn-tab dn-upgrade${activePage === 'upgrade' ? ' active' : ''}`}>
           <Zap size={13} />
-          Upgrade
+          Upgrade to Pro
+        </a>
+      </li>
+    )}
+    {planType === 'pro_6' && (
+      <li>
+        <a href="/dashboard/upgrade"
+          class={`dn-tab dn-upgrade dn-upgrade--elite${activePage === 'upgrade' ? ' active' : ''}`}>
+          <Zap size={13} />
+          Upgrade to Elite
         </a>
       </li>
     )}
@@ -208,7 +219,7 @@ const groups = [
 
   <!-- ── Right controls ─────────────────────────────────── -->
   <div class="dn-right">
-    <span class="dn-tier">{tierText}</span>
+    <span class={tierCss}>{tierText}</span>
 
     <button class="dn-icon-btn" id="dnThemeBtn" title="Toggle theme" aria-label="Toggle theme">
       <Moon size={15} class="icon-moon" />
@@ -444,6 +455,15 @@ body {
 }
 .dn-tab.dn-upgrade:hover { background: var(--green-bg); }
 .dn-tab.dn-upgrade.active { background: var(--green); color: #fff; border-color: var(--green); }
+.dn-tab.dn-upgrade--elite {
+  color: #fbbf24;
+  border-color: rgba(245,158,11,.4);
+  background: rgba(245,158,11,.06);
+}
+.dn-tab.dn-upgrade--elite:hover {
+  background: rgba(245,158,11,.12);
+  box-shadow: 0 0 12px rgba(245,158,11,.15);
+}
 
 /* Caret — targets the svg with class="dn-caret" from lucide-astro */
 .dn-caret { flex-shrink: 0; transition: transform .2s; }
@@ -493,10 +513,24 @@ body {
 .dn-tier {
   font-size: .68rem; font-weight: 800; letter-spacing: .02em;
   text-transform: uppercase;
-  padding: .22rem .68rem; border-radius: var(--r-full);
-  background: var(--green-bg);
-  border: 1.5px solid var(--border2);
-  color: var(--green); white-space: nowrap; flex-shrink: 0;
+  padding: .22rem .72rem; border-radius: var(--r-full);
+  white-space: nowrap; flex-shrink: 0;
+}
+.dn-tier--basic {
+  background: rgba(16,185,129,.12);
+  border: 1.5px solid rgba(16,185,129,.3);
+  color: #10b981;
+}
+.dn-tier--pro {
+  background: rgba(99,102,241,.15);
+  border: 1.5px solid rgba(99,102,241,.4);
+  color: #818cf8;
+}
+.dn-tier--elite {
+  background: linear-gradient(135deg,rgba(245,158,11,.18),rgba(239,68,68,.12));
+  border: 1.5px solid rgba(245,158,11,.5);
+  color: #fbbf24;
+  box-shadow: 0 0 10px rgba(245,158,11,.15);
 }
 
 /* Icon button */

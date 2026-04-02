@@ -235,6 +235,9 @@ const dispLatest = latestWeight ? (units === 'imperial' ? Math.round(latestWeigh
 const weekNum    = currentWeek;
 const streak     = streakDays;
 const level      = xpLevel;
+const levelTitles = ['Keto Beginner','Keto Learner','Fat Burner','Keto Warrior','Ketosis Master','Keto Champion','Elite Keto','Keto Legend','Keto Immortal','Grand Keto'];
+const levelTitle  = levelTitles[Math.min(Math.floor((xpLevel - 1) / 2), levelTitles.length - 1)];
+const xpToNext    = 500 - xpInLevel;
 
 const checkinDone    = !!todayCheckin;
 const weeklyDone     = !!weekReport;
@@ -332,6 +335,21 @@ const dailyTip = (() => {
     return { icon:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', color:'#8b5cf6', title:'Fasting + keto: the ultimate combo', body:'While you fast, your already-low glycogen burns away in hours instead of days. You\'ll reach deep fat-burning mode today faster than any non-keto faster. Stay strong — the hardest part is hour 10–14.' };
   return tipPool[(currentDay - 1) % tipPool.length];
 })();
+
+// ── Daily Focus CTA — one clear priority action ────────────────────────────
+const pendingTasks   = totalTasks - completedTasks;
+const focusIconKey   = !checkinDone ? 'checkin' : (pendingTasks > 0 ? 'tasks' : 'done');
+const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
+  ? { label: "You're all caught up today!", sub: 'Great consistency — keep the streak alive', href: null,
+      color: '#10b981', bg: 'rgba(16,185,129,.12)', border: 'rgba(16,185,129,.28)', btnLabel: 'View Progress', btnHref: '/dashboard/progress' }
+  : !checkinDone
+  ? { label: "Check in now — protect your streak", sub: `${streakDays > 0 ? `${streakDays}-day streak at risk` : 'Start your streak today'} · Earn 30 XP`,
+      href: '/dashboard/checkin', color: '#f59e0b', bg: 'rgba(245,158,11,.1)', border: 'rgba(245,158,11,.3)', btnLabel: 'Check In Now →', btnHref: '/dashboard/checkin' }
+  : pendingTasks > 0
+  ? { label: `Complete today's tasks`, sub: `${completedTasks}/${totalTasks} tasks done · ${pendingTasks} remaining`,
+      href: '#tour-tasks', color: '#3b82f6', bg: 'rgba(59,130,246,.1)', border: 'rgba(59,130,246,.28)', btnLabel: 'View Tasks →', btnHref: '#tour-tasks' }
+  : { label: "Log your weight to track progress", sub: 'Weight tracking shows your true results',
+      href: '#weight-card', color: '#10b981', bg: 'rgba(16,185,129,.1)', border: 'rgba(16,185,129,.25)', btnLabel: 'Log Weight →', btnHref: '#weight-card' };
 
 ---
 <!DOCTYPE html>
@@ -810,6 +828,16 @@ const dailyTip = (() => {
     @keyframes tIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
     @keyframes tOut{from{opacity:1;}to{opacity:0;}}
 
+    /* DAILY FOCUS BANNER */
+    .focus-banner{display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-radius:16px;border:1.5px solid;margin-bottom:1.25rem;transition:all .2s;}
+    .focus-banner:hover{transform:translateY(-1px);}
+    .fb-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.2rem;}
+    .fb-text{flex:1;min-width:0;}
+    .fb-label{font-size:.88rem;font-weight:800;color:var(--text);line-height:1.2;margin-bottom:.15rem;}
+    .fb-sub{font-size:.75rem;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .fb-btn{padding:.45rem .9rem;border-radius:10px;font-size:.75rem;font-weight:800;border:none;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;}
+    @media(max-width:480px){.fb-btn{display:none;}.focus-banner{cursor:pointer;}}
+
     /* DASH HERO */
     .dash-hero{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:1.75rem 2rem;margin-bottom:1.5rem;position:relative;overflow:hidden;box-shadow:var(--shadow-sm);}
     .dash-hero::before{content:'';position:absolute;top:0;right:0;width:220px;height:100%;background:linear-gradient(135deg,transparent 40%,var(--green-bg) 100%);pointer-events:none;border-radius:inherit;}
@@ -893,6 +921,35 @@ const dailyTip = (() => {
     <button class="dt-close" onclick="this.closest('.daily-tip').style.display='none'" title="Dismiss">×</button>
   </div>
 
+  <!-- DAILY FOCUS BANNER -->
+  <div class="focus-banner" style={`background:${focusCTA.bg};border-color:${focusCTA.border};`}
+       onclick={focusCTA.href ? `window.location.href='${focusCTA.btnHref}'` : undefined}>
+    <div class="fb-icon" style={`background:${focusCTA.bg};border:1px solid ${focusCTA.border};`}>
+      {focusIconKey === 'checkin' && (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={focusCTA.color} stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      )}
+      {focusIconKey === 'tasks' && (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={focusCTA.color} stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 11 12 14 22 4"/>
+          <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+        </svg>
+      )}
+      {focusIconKey === 'done' && (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={focusCTA.color} stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      )}
+    </div>
+    <div class="fb-text">
+      <div class="fb-label" style={`color:${focusCTA.color}`}>{focusCTA.label}</div>
+      <div class="fb-sub">{focusCTA.sub}</div>
+    </div>
+    <a href={focusCTA.btnHref} class="fb-btn" style={`background:${focusCTA.color};color:#fff;`}>{focusCTA.btnLabel}</a>
+  </div>
+
   <!-- STATS -->
   <div class="stats-row" id="tour-stats">
     <div class="stat-card" style="--glow:rgba(16,185,129,.09);--glow-color:rgba(16,185,129,.6);--icon-bg:rgba(16,185,129,.1);animation-delay:.04s">
@@ -919,8 +976,8 @@ const dailyTip = (() => {
       <div class="sc-shimmer"></div>
       <div class="stat-icon" style="color:var(--purple)"><Zap size={20} /></div>
       <div class="stat-val" style="color:var(--purple2)" id="xpLevelDisplay">Lv.{xpLevel}</div>
-      <div class="stat-lbl" id="xpTotalDisplay">{totalXP.toLocaleString()} XP</div>
-      <span class="stat-badge bg-b" id="xpInLevelDisplay">→ {xpInLevel}/500</span>
+      <div class="stat-lbl" id="xpTotalDisplay">{levelTitle}</div>
+      <span class="stat-badge bg-b" id="xpInLevelDisplay" title={`${xpToNext} XP to Level ${xpLevel + 1}`}>→ {xpInLevel}/500</span>
       <div class="stat-mini-bar"><div class="stat-mini-fill" id="xpMiniBar" style={`width:${xpPct}%;background:linear-gradient(90deg,#8b5cf6,#a78bfa);`}></div></div>
     </div>
     <div class="stat-card" style="--glow:rgba(59,130,246,.09);--glow-color:rgba(59,130,246,.6);--icon-bg:rgba(59,130,246,.1);animation-delay:.16s">
@@ -1545,6 +1602,7 @@ function updateTaskUI() {
 }
 
 function updateXPDisplay(newTotal, newInLvl, newLevel, newPct) {
+  var _lvlTitles = ['Keto Beginner','Keto Learner','Fat Burner','Keto Warrior','Ketosis Master','Keto Champion','Elite Keto','Keto Legend','Keto Immortal','Grand Keto'];
   var lvDisp = document.getElementById('xpLevelDisplay');
   var ttDisp = document.getElementById('xpTotalDisplay');
   var ilDisp = document.getElementById('xpInLevelDisplay');
@@ -1554,9 +1612,10 @@ function updateXPDisplay(newTotal, newInLvl, newLevel, newPct) {
   var nxt    = document.getElementById('xpNextText');
 
   var mini = document.getElementById('xpMiniBar');
+  var newTitle = _lvlTitles[Math.min(Math.floor((newLevel - 1) / 2), _lvlTitles.length - 1)];
   if (lvDisp) lvDisp.textContent = 'Lv.' + newLevel;
-  if (ttDisp) ttDisp.textContent = newTotal.toLocaleString() + ' XP';
-  if (ilDisp) ilDisp.textContent = '→ ' + newInLvl + '/500';
+  if (ttDisp) ttDisp.textContent = newTitle;
+  if (ilDisp) { ilDisp.textContent = '→ ' + newInLvl + '/500'; ilDisp.title = (500 - newInLvl) + ' XP to Level ' + (newLevel + 1); }
   if (badge)  badge.textContent  = String(newLevel);
   if (lvTxt)  lvTxt.textContent  = 'Level ' + newLevel + ' — ' + newInLvl + '/500 XP';
   if (bar)    bar.style.width    = newPct + '%';
@@ -1595,13 +1654,8 @@ function showXP(msg, isLevelUp, newLevel) {
 
   // Level-up overlay if leveled up
   if (isLevelUp && newLevel) {
-    setTimeout(function() {
-      var ov = document.createElement('div');
-      ov.className = 'lvlup-overlay';
-      ov.innerHTML = '<div class="lvlup-ring"><div class="lvlup-num">' + newLevel + '</div><div class="lvlup-lbl">Level</div></div><div class="lvlup-title">Level Up!</div><div class="lvlup-sub">You reached Level ' + newLevel + '</div>';
-      document.body.appendChild(ov);
-      setTimeout(function() { ov.remove(); }, 3400);
-    }, 300);
+    localStorage.setItem('keto_last_level', String(newLevel));
+    setTimeout(function() { showLevelUpModal(newLevel, 1); }, 300);
   }
 }
 
@@ -1951,6 +2005,124 @@ document.getElementById('welcomeStartBtn')?.addEventListener('click', function()
   document.getElementById('welcomeModal').style.display = 'none';
 });
 
+/* ── LEVEL-UP PAGE LOAD DETECTION ── */
+(function checkLevelUp() {
+  var KEY = 'keto_last_level';
+  var stored = parseInt(localStorage.getItem(KEY) || '0', 10);
+  var current = xpLevel;
+
+  // Always keep stored in sync
+  localStorage.setItem(KEY, String(current));
+
+  // First ever visit — don't celebrate
+  if (!stored || stored <= 0) return;
+
+  // Level increased since last visit
+  if (current > stored) {
+    var diff = current - stored;
+    setTimeout(function() { showLevelUpModal(current, diff); }, 600);
+  }
+})();
+
+function showLevelUpModal(newLvl, levelsGained) {
+  var modal = document.getElementById('levelUpModal');
+  if (!modal) return;
+
+  var lvlEl   = document.getElementById('lumLevel');
+  var titleEl = document.getElementById('lumTitle');
+  var subEl   = document.getElementById('lumSub');
+  var rewardEl= document.getElementById('lumReward');
+
+  if (lvlEl) lvlEl.textContent = String(newLvl);
+
+  var titles = ['Keto Beginner','Keto Learner','Fat Burner','Keto Warrior','Ketosis Master','Keto Champion','Elite Keto','Keto Legend','Keto Immortal','Grand Keto'];
+  var title  = titles[Math.min(Math.floor((newLvl - 1) / 2), titles.length - 1)];
+  if (titleEl) titleEl.textContent = levelsGained > 1 ? ('+' + levelsGained + ' Levels!') : 'Level Up!';
+  if (subEl)   subEl.textContent   = 'You reached Level ' + newLvl + ' — ' + title;
+
+  // Milestone rewards at every 5 levels
+  var rewards = {
+    5:  'Unlocked: Streak Shield (1 grace day per month)',
+    10: 'Unlocked: Bonus Recipe Pack',
+    15: 'Unlocked: Custom Goal Settings',
+    20: 'Unlocked: VIP Community Badge',
+    25: 'Unlocked: Personal AI Coach session',
+  };
+  var milestone = Math.floor(newLvl / 5) * 5;
+  if (rewardEl) {
+    if (rewards[milestone] && newLvl % 5 === 0) {
+      rewardEl.textContent = rewards[milestone];
+      rewardEl.style.display = 'block';
+    } else {
+      rewardEl.style.display = 'none';
+    }
+  }
+
+  modal.style.display = 'flex';
+
+  // Auto-dismiss after 6s
+  var autoClose = setTimeout(function() { closeLevelUpModal(); }, 6000);
+  modal._autoClose = autoClose;
+
+  // Spawn confetti bursts
+  spawnConfetti();
+}
+
+function closeLevelUpModal() {
+  var modal = document.getElementById('levelUpModal');
+  if (!modal) return;
+  if (modal._autoClose) clearTimeout(modal._autoClose);
+  modal.style.opacity = '0';
+  modal.style.transform = 'scale(.95)';
+  setTimeout(function() {
+    modal.style.display = 'none';
+    modal.style.opacity = '';
+    modal.style.transform = '';
+  }, 280);
+}
+
+function spawnConfetti() {
+  var colors = ['#f59e0b','#fcd34d','#10b981','#34d399','#8b5cf6','#a78bfa','#f87171','#60a5fa'];
+  for (var i = 0; i < 30; i++) {
+    (function(idx) {
+      setTimeout(function() {
+        var c = document.createElement('div');
+        var color = colors[idx % colors.length];
+        var startX = 20 + Math.random() * 60; // % across screen
+        var size   = 6 + Math.random() * 8;
+        var dur    = 1.2 + Math.random() * 1.4;
+        var delay  = Math.random() * 0.4;
+        c.style.cssText = [
+          'position:fixed;top:-10px;left:' + startX + '%;',
+          'width:' + size + 'px;height:' + size + 'px;',
+          'background:' + color + ';border-radius:' + (Math.random() > 0.5 ? '50%' : '2px') + ';',
+          'pointer-events:none;z-index:9998;',
+          'animation:confettiFall ' + dur + 's ' + delay + 's ease-in forwards;',
+          '--rx:' + (Math.random() * 720 - 360) + 'deg;',
+          '--tx:' + (Math.random() * 100 - 50) + 'px;',
+        ].join('');
+        document.body.appendChild(c);
+        setTimeout(function() { c.remove(); }, (dur + delay + 0.2) * 1000);
+      }, idx * 30);
+    })(i);
+  }
+}
+
+// Inject confetti keyframes once
+if (!document.getElementById('lumStyle')) {
+  var lumS = document.createElement('style');
+  lumS.id = 'lumStyle';
+  lumS.textContent = [
+    '@keyframes confettiFall{0%{opacity:1;transform:translateY(0) translateX(0) rotate(0)}',
+    '100%{opacity:0;transform:translateY(110vh) translateX(var(--tx)) rotate(var(--rx))}}',
+    '@keyframes lumPop{0%{opacity:0;transform:scale(.7) translateY(20px)}',
+    '70%{transform:scale(1.05) translateY(-4px)}',
+    '100%{opacity:1;transform:scale(1) translateY(0)}}',
+    '@keyframes lumRing{0%{transform:scale(1)}50%{transform:scale(1.12)}100%{transform:scale(1)}}',
+  ].join('');
+  document.head.appendChild(lumS);
+}
+
 /* ── WEIGHT LOG WIDGET ── */
 window.logWeight = function logWeight() {
   var weightInput = document.getElementById('wlWeightInput');
@@ -2082,6 +2254,33 @@ window.dashToggleHabit = function(habitId, el) {
       </div>
     </div>
     <button id="welcomeStartBtn" style="width:100%;padding:1rem;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;border:none;border-radius:14px;font-weight:900;font-size:.95rem;cursor:pointer;box-shadow:0 6px 20px rgba(16,185,129,.35);">Start Day 1 →</button>
+  </div>
+</div>
+
+<!-- LEVEL-UP MODAL -->
+<div id="levelUpModal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:1.5rem;transition:opacity .28s,transform .28s;">
+  <div style="background:linear-gradient(145deg,#0d1a0f,#1a0a2e);border:2px solid rgba(139,92,246,.5);border-radius:28px;padding:2.5rem 2rem 2rem;max-width:380px;width:100%;text-align:center;position:relative;box-shadow:0 0 80px rgba(139,92,246,.25),0 32px 80px rgba(0,0,0,.6);animation:lumPop .5s cubic-bezier(.34,1.56,.64,1) both;">
+    <button onclick="closeLevelUpModal()" style="position:absolute;top:1rem;right:1rem;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:var(--soft);font-size:1rem;cursor:pointer;line-height:1;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;">×</button>
+    <!-- Ring -->
+    <div style="position:relative;width:100px;height:100px;margin:0 auto 1.25rem;animation:lumRing 1.6s ease-in-out infinite;">
+      <svg width="100" height="100" viewBox="0 0 100 100" style="position:absolute;inset:0;">
+        <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(139,92,246,.15)" stroke-width="8"/>
+        <circle cx="50" cy="50" r="44" fill="none" stroke="url(#lumGrad)" stroke-width="8" stroke-linecap="round" stroke-dasharray="276" stroke-dashoffset="0" transform="rotate(-90 50 50)"/>
+        <defs><linearGradient id="lumGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#f59e0b"/></linearGradient></defs>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+        <div id="lumLevel" style="font-family:'Fraunces',serif;font-size:2rem;font-weight:900;background:linear-gradient(135deg,#a78bfa,#fcd34d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;">1</div>
+        <div style="font-size:.6rem;color:var(--soft);letter-spacing:.08em;text-transform:uppercase;">Level</div>
+      </div>
+    </div>
+    <!-- Text -->
+    <div id="lumTitle" style="font-family:'Fraunces',serif;font-size:1.75rem;font-weight:900;background:linear-gradient(135deg,#a78bfa,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.4rem;">Level Up!</div>
+    <div id="lumSub" style="font-size:.88rem;color:var(--soft);margin-bottom:1.25rem;line-height:1.5;"></div>
+    <!-- Reward badge (hidden if no milestone) -->
+    <div id="lumReward" style="display:none;background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(139,92,246,.1));border:1px solid rgba(245,158,11,.35);border-radius:12px;padding:.65rem 1rem;font-size:.78rem;color:#fcd34d;margin-bottom:1.25rem;"></div>
+    <!-- XP to next level -->
+    <div style="font-size:.75rem;color:var(--soft);margin-bottom:1.5rem;">Keep going — every 500 XP = 1 level</div>
+    <button onclick="closeLevelUpModal()" style="width:100%;padding:.875rem;background:linear-gradient(135deg,#8b5cf6,#a78bfa);color:#fff;border:none;border-radius:14px;font-weight:900;font-size:.9rem;cursor:pointer;box-shadow:0 6px 24px rgba(139,92,246,.4);">Keep Crushing It!</button>
   </div>
 </div>
 

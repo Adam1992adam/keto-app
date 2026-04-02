@@ -151,36 +151,73 @@ export async function sendWeeklySummaryEmail(to: string, name: string, stats: {
   level: number;
   weightLost: number;
   avgEnergy: number;
+  tasksCompleted?: number;
+  tasksTotal?: number;
+  waterAvg?: number;
 }) {
   const firstName = name.split(' ')[0];
-  const { weekNum, currentDay, streak, checkins, xpEarned, totalXp, level, weightLost, avgEnergy } = stats;
+  const { weekNum, currentDay, streak, checkins, xpEarned, totalXp, level, weightLost, avgEnergy,
+          tasksCompleted = 0, tasksTotal = 0, waterAvg = 0 } = stats;
 
-  const energyLabel = avgEnergy >= 4 ? '🔥 High' : avgEnergy >= 3 ? '⚡ Good' : avgEnergy >= 2 ? '😐 Moderate' : '😴 Low';
+  const levelTitles = ['Keto Beginner','Keto Learner','Fat Burner','Keto Warrior','Ketosis Master','Keto Champion','Elite Keto','Keto Legend','Keto Immortal','Grand Keto'];
+  const levelTitle  = levelTitles[Math.min(Math.floor((level - 1) / 2), levelTitles.length - 1)];
+
+  const energyLabel   = avgEnergy >= 4 ? '🔥 High' : avgEnergy >= 3 ? '⚡ Good' : avgEnergy >= 2 ? '😐 Moderate' : '😴 Low';
   const checkinsLabel = checkins >= 7 ? '7/7 Perfect!' : `${checkins}/7`;
-  const nextWeek = weekNum + 1;
+  const nextWeek      = weekNum + 1;
+  const taskPct       = tasksTotal > 0 ? Math.round((tasksCompleted / tasksTotal) * 100) : 0;
+
+  // Personalised performance summary based on real stats
+  const score = (checkins >= 6 ? 2 : checkins >= 4 ? 1 : 0) +
+                (streak >= 7 ? 2 : streak >= 3 ? 1 : 0) +
+                (avgEnergy >= 4 ? 1 : 0) +
+                (taskPct >= 80 ? 1 : 0);
+  const performanceMsg =
+    score >= 5 ? `🏆 <strong style="color:#10b981;">Incredible week, ${firstName}!</strong> You're firing on all cylinders — your consistency is what separates you from people who give up.` :
+    score >= 3 ? `💪 <strong style="color:#dfeedd;">Solid effort this week, ${firstName}!</strong> A few more check-ins next week and you'll be unstoppable.` :
+                 `🌱 <strong style="color:#dfeedd;">Every journey has tough weeks, ${firstName}.</strong> The important thing is you're still here. Reset, refocus, and let's make next week count.`;
 
   const content = `
     ${h1(`Week ${weekNum} Summary 📊`)}
-    ${p(`Great work this week, <strong style="color:#dfeedd;">${firstName}</strong>! Here's how you did:`)}
+    <div style="padding:14px 16px;background:rgba(16,185,129,.07);border-radius:12px;border:1px solid rgba(16,185,129,.14);margin-bottom:20px;">
+      <p style="margin:0;font-size:14px;color:#4d7055;line-height:1.7;">${performanceMsg}</p>
+    </div>
 
     <!-- Stats grid -->
     <table width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;">
       <tr>
         ${statCell('🔥', streak > 0 ? `${streak}-Day` : '0', 'Current Streak', '#f59e0b')}
         ${statCell('✏️', checkinsLabel, 'Check-ins', '#10b981')}
-        ${statCell('⭐', `+${xpEarned}`, 'XP Earned', '#8b5cf6')}
+        ${statCell('⭐', xpEarned > 0 ? `+${xpEarned}` : '0', 'XP This Week', '#8b5cf6')}
         ${statCell('⚡', energyLabel, 'Avg Energy', '#3b82f6')}
       </tr>
     </table>
 
-    ${weightLost > 0 ? `<div style="padding:14px 16px;background:rgba(16,185,129,.08);border-radius:12px;border:1px solid rgba(16,185,129,.15);margin-bottom:20px;">
-      <p style="margin:0;font-size:14px;color:#10b981;font-weight:700;">🎯 ${(weightLost * 2.20462).toFixed(1)} lbs lost so far — keep going!</p>
+    ${tasksTotal > 0 ? `<!-- Task completion bar -->
+    <div style="padding:14px 16px;background:rgba(16,185,129,.06);border-radius:12px;border:1px solid rgba(16,185,129,.12);margin-bottom:16px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td><p style="margin:0;font-size:13px;font-weight:700;color:#dfeedd;">✅ Tasks completed this week</p></td>
+          <td style="text-align:right;white-space:nowrap;"><p style="margin:0;font-size:13px;font-weight:900;color:#10b981;">${tasksCompleted}/${tasksTotal} (${taskPct}%)</p></td>
+        </tr>
+      </table>
+      <div style="height:6px;background:rgba(255,255,255,.06);border-radius:3px;margin-top:8px;">
+        <div style="height:6px;width:${taskPct}%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:3px;"></div>
+      </div>
     </div>` : ''}
 
-    ${p(`You're on <strong style="color:#dfeedd;">Day ${currentDay}</strong> of your journey and <strong style="color:#8b5cf6;">Level ${level}</strong> with ${totalXp.toLocaleString()} total XP. Week ${nextWeek} starts now — make it count!`)}
+    ${waterAvg >= 1 ? `<div style="padding:12px 16px;background:rgba(59,130,246,.07);border-radius:12px;border:1px solid rgba(59,130,246,.15);margin-bottom:16px;">
+      <p style="margin:0;font-size:13px;color:#60a5fa;">💧 Average hydration: <strong>${waterAvg.toFixed(1)} glasses/day</strong>${waterAvg >= 8 ? ' — excellent hydration!' : waterAvg >= 6 ? ' — good, aim for 8+' : ' — try to drink more water!'}</p>
+    </div>` : ''}
+
+    ${weightLost > 0 ? `<div style="padding:14px 16px;background:rgba(16,185,129,.08);border-radius:12px;border:1px solid rgba(16,185,129,.15);margin-bottom:16px;">
+      <p style="margin:0;font-size:14px;color:#10b981;font-weight:700;">🎯 ${(weightLost * 2.20462).toFixed(1)} lbs lost since you started — incredible progress!</p>
+    </div>` : ''}
+
+    ${p(`You're on <strong style="color:#dfeedd;">Day ${currentDay}</strong> · <strong style="color:#8b5cf6;">Level ${level} — ${levelTitle}</strong> · <strong style="color:#f59e0b;">${totalXp.toLocaleString()} total XP</strong>. Week ${nextWeek} starts now — make it count!`)}
 
     <div style="text-align:center;margin:24px 0;">
-      ${btn(`${APP_URL}/dashboard/weekly`, `View Week ${weekNum} Report →`)}
+      ${btn(`${APP_URL}/dashboard/weekly`, `View Week ${weekNum} Full Report →`)}
     </div>
 
     <div style="padding:16px;background:rgba(16,185,129,.06);border-radius:12px;border:1px solid rgba(16,185,129,.12);">
@@ -189,13 +226,17 @@ export async function sendWeeklySummaryEmail(to: string, name: string, stats: {
       </p>
     </div>`;
 
-  const html = layout(content, `Your Week ${weekNum} keto summary is ready — ${streak} day streak!`);
+  const html = layout(content, `Your Week ${weekNum} keto summary — ${streak > 0 ? `${streak}-day streak!` : 'keep going!'}`);
 
   const resend = getResend();
   return resend.emails.send({
     from: FROM,
     to,
-    subject: `Week ${weekNum} complete — ${streak > 0 ? `${streak}-day streak! 🔥` : 'keep going! 💪'}`,
+    subject: streak >= 7
+      ? `🔥 ${streak}-day streak — Week ${weekNum} summary, ${firstName}!`
+      : checkins >= 6
+      ? `✅ Strong week, ${firstName}! Your Week ${weekNum} summary`
+      : `📊 Week ${weekNum} summary — let's crush Week ${nextWeek}, ${firstName}!`,
     html,
   });
 }
@@ -212,12 +253,23 @@ function statCell(icon: string, value: string, label: string, color: string) {
 
 function weekFocus(weekNum: number) {
   const tips: Record<number, string> = {
-    1: 'Survive the keto flu! Drink plenty of water, add salt to your meals, and focus on hitting your fat macros.',
-    2: 'Your body is adapting. Push through any cravings — your fat-burning engine is firing up!',
-    3: 'You should be feeling the "keto glow" — more energy, clearer thinking, better sleep. Log everything!',
-    4: 'Final week! Focus on consistency and celebrate how far you\'ve come. You\'re almost a keto master!',
+    1:  'Survive the keto flu! Drink plenty of water, add salt to meals, and focus on hitting your fat macros.',
+    2:  'Your body is adapting. Push through any cravings — your fat-burning engine is firing up!',
+    3:  'You should be feeling the "keto glow" — more energy, clearer thinking, better sleep. Log everything!',
+    4:  'You\'ve built a strong foundation. Focus on your protein targets and try one new recipe this week.',
+    5:  'Week 5 is where long-term habits solidify. If you\'ve slipped, reset — no judgment. Consistency wins.',
+    6:  'Halfway through your first month-and-a-half! Your metabolic adaptation should be complete. Keep fuelling right.',
+    7:  'Introduce intermittent fasting if you haven\'t — even a 16:8 window can accelerate fat loss.',
+    8:  'Body measurements time! Progress isn\'t always on the scale. Measure waist, hips and arms.',
+    10: 'You\'re in the top 10% of people who make it this far. Celebrate every win, no matter how small.',
+    12: 'Three months of keto! Consider cycling your macros or trying a targeted keto protocol this week.',
+    16: 'Four months in — you\'re a keto veteran now. Help others just starting by sharing your tips.',
+    20: 'Five months of fat-fuelled living. Your body composition changes are real — take progress photos!',
+    24: 'Six-month mark approaching. Review your goals: adjust your macros and set new targets for the next phase.',
   };
-  return tips[weekNum] || `Stay consistent with your meals, hit your macros, and keep that streak alive!`;
+  return tips[weekNum] || (weekNum <= 4
+    ? tips[Math.min(weekNum, 4)]
+    : `Stay consistent with your meals, hit your macros, and keep that streak alive! You\'re building an incredible habit.`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

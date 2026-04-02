@@ -41,18 +41,21 @@ export const GET: APIRoute = async ({ request }) => {
       if (!profile.email) { skipped++; continue; }
 
       // Fetch user stats for the past week in parallel
+      const weekAgoIso = new Date(Date.now() - 7 * 86400000).toISOString();
       const [
         { data: journey },
         { data: weekCheckins },
         { data: weekXp },
         { data: latestWeight },
         { data: startData },
+        { data: weekTasks },
       ] = await Promise.all([
         db.from('user_journey').select('current_day, streak_days, total_xp, level').eq('user_id', profile.id).maybeSingle(),
-        db.from('daily_checkins').select('energy_level').eq('user_id', profile.id).gte('checkin_date', weekAgo).lte('checkin_date', today),
-        db.from('xp_transactions').select('xp_amount').eq('user_id', profile.id).gte('created_at', new Date(Date.now() - 7 * 86400000).toISOString()),
+        db.from('daily_checkins').select('energy_level, water_glasses').eq('user_id', profile.id).gte('checkin_date', weekAgo).lte('checkin_date', today),
+        db.from('xp_transactions').select('xp_amount').eq('user_id', profile.id).gte('created_at', weekAgoIso),
         db.from('weight_logs').select('weight').eq('user_id', profile.id).order('logged_date', { ascending: false }).limit(1).maybeSingle(),
         db.from('onboarding_data').select('current_weight').eq('user_id', profile.id).maybeSingle(),
+        db.from('daily_tasks').select('completed').eq('user_id', profile.id).gte('created_at', weekAgoIso),
       ]);
 
       const currentDay = journey?.current_day || 1;
@@ -71,12 +74,20 @@ export const GET: APIRoute = async ({ request }) => {
         ? (weekCheckins || []).reduce((s: number, c: any) => s + (c.energy_level || 3), 0) / checkins
         : 0;
 
-      const startWeight = startData?.current_weight || 0;
+      const waterAvg = checkins > 0
+        ? (weekCheckins || []).reduce((s: number, c: any) => s + (c.water_glasses || 0), 0) / checkins
+        : 0;
+
+      const startWeight   = startData?.current_weight || 0;
       const currentWeight = latestWeight?.weight || startWeight;
-      const weightLost = Math.max(0, startWeight - currentWeight);
+      const weightLost    = Math.max(0, startWeight - currentWeight);
+
+      const tasksTotal     = weekTasks?.length || 0;
+      const tasksCompleted = (weekTasks || []).filter((t: any) => t.completed).length;
 
       await sendWeeklySummaryEmail(profile.email, profile.full_name || 'there', {
         weekNum, currentDay, streak, checkins, xpEarned, totalXp, level, weightLost, avgEnergy,
+        tasksCompleted, tasksTotal, waterAvg,
       });
 
       sent++;
