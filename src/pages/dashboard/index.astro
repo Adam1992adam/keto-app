@@ -157,7 +157,7 @@ const totalCalToday     = todayMeals.reduce((s, m) => s + (m.recipe?.calories ||
 const totalProteinToday = todayMeals.reduce((s, m) => s + parseFloat(m.recipe?.protein || '0'), 0);
 
 // Today's meal completions
-const { data: mealCompletions } = await supabase
+const { data: mealCompletions } = await db
   .from('meal_completions')
   .select('meal_type, recipe_id')
   .eq('user_id', user.id)
@@ -176,7 +176,7 @@ const consumedMacros = todayMeals
   }), { calories: 0, protein: 0, fat: 0, net_carbs: 0 });
 
 // Macro goals
-const { data: macroGoals } = await supabase
+const { data: macroGoals } = await db
   .from('macro_goals')
   .select('daily_calories, protein_g, fat_g, carbs_g')
   .eq('user_id', user.id)
@@ -187,7 +187,7 @@ const goalFat  = macroGoals?.fat_g          || 120;
 const goalCarb = macroGoals?.carbs_g        || 25;
 
 // Today's custom food log entries
-const { data: foodLogs } = await supabase
+const { data: foodLogs } = await db
   .from('food_logs').select('*')
   .eq('user_id', user.id).eq('logged_date', today)
   .order('created_at', { ascending: true });
@@ -307,13 +307,13 @@ const week3Tips = [
 // Pick the right tip pool and rotate by currentDay
 const tipPool = weekPhase === 'adapt' ? week1Tips : (weekPhase === 'burn' ? week2Tips : week3Tips);
 // Today's habits
-const { data: habitsRaw } = await supabase
+const { data: habitsRaw } = await db
   .from('habits').select('id, title, icon, category')
   .eq('user_id', user.id).eq('is_active', true)
   .order('sort_order').order('created_at').limit(6);
 const dashHabits = habitsRaw || [];
 
-const { data: habitDoneRaw } = await supabase
+const { data: habitDoneRaw } = await db
   .from('habit_completions').select('habit_id')
   .eq('user_id', user.id).eq('completed_date', today);
 const habitDoneIds = new Set((habitDoneRaw || []).map(h => h.habit_id));
