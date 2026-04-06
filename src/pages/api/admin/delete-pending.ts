@@ -16,7 +16,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const { error } = await supabase.from('pending_activations').delete().eq('id', id);
-    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    if (error) return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
 
     return new Response(JSON.stringify({ success: true }), { status: 200 });
   } catch {

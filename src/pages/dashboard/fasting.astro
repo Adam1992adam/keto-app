@@ -31,7 +31,7 @@ const { data: onboarding } = await db
   .from('onboarding_data')
   .select('fasting_protocol, goal')
   .eq('user_id', user.id)
-  .single();
+  .maybeSingle();
 
 // Get active fasting session (not ended)
 const { data: activeSession } = await db
@@ -96,6 +96,8 @@ const hasHistory = historyRows.length > 0;
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Fasting Timer — Keto Journey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
   <script is:inline>
     (function(){ var t=localStorage.getItem('keto-theme')||'light'; document.documentElement.setAttribute('data-theme',t); })();

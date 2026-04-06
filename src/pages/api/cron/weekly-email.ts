@@ -10,7 +10,11 @@ export const GET: APIRoute = async ({ request }) => {
   // ── Auth ─────────────────────────────────────────────────────
   const authHeader = request.headers.get('authorization');
   const CRON_SECRET = import.meta.env.CRON_SECRET;
-  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
+  if (!CRON_SECRET) {
+    console.error('CRON_SECRET env var is not set — cron job cannot run');
+    return json({ error: 'Forbidden' }, 403);
+  }
+  if (authHeader !== `Bearer ${CRON_SECRET}`) {
     return json({ error: 'Forbidden' }, 403);
   }
 
@@ -30,6 +34,8 @@ export const GET: APIRoute = async ({ request }) => {
 
   const today = new Date().toISOString().split('T')[0];
   const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+  // Idempotency: don't send to users who already got a weekly email in the last 5 days
+  const fiveDaysAgo = new Date(Date.now() - 5 * 86400000).toISOString();
 
   let sent = 0;
   let skipped = 0;
@@ -39,6 +45,16 @@ export const GET: APIRoute = async ({ request }) => {
     try {
       // Skip if email missing
       if (!profile.email) { skipped++; continue; }
+
+      // Idempotency: skip if we already sent a weekly email to this user in the last 5 days
+      const { data: recentEmail } = await db
+        .from('xp_transactions')
+        .select('id')
+        .eq('user_id', profile.id)
+        .eq('action_type', 'weekly_email_sent')
+        .gte('created_at', fiveDaysAgo)
+        .maybeSingle();
+      if (recentEmail) { skipped++; continue; }
 
       // Fetch user stats for the past week in parallel
       const weekAgoIso = new Date(Date.now() - 7 * 86400000).toISOString();
@@ -91,6 +107,14 @@ export const GET: APIRoute = async ({ request }) => {
       });
 
       sent++;
+
+      // Log send so we don't double-send this week
+      await db.from('xp_transactions').insert({
+        user_id:     profile.id,
+        action_type: 'weekly_email_sent',
+        xp_amount:   0,
+        description: `Weekly summary email — Week ${weekNum}`,
+      }).catch(() => {});
 
       // Small delay to stay within Resend rate limits
       await new Promise(r => setTimeout(r, 100));

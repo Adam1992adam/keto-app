@@ -1,23 +1,11 @@
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const accessToken = cookies.get('sb-access-token')?.value;
-    if (!accessToken) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken);
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db: supabase } = auth;
 
     const { units } = await request.json();
 

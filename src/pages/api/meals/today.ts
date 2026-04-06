@@ -4,20 +4,14 @@
 // GET /api/meals/today
 // ═══════════════════════════════════════════════════════
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 import { getAdaptedMeals } from '../../../lib/smartMeals';
 
 export const GET: APIRoute = async ({ cookies }) => {
   try {
-    const accessToken = cookies.get('sb-access-token')?.value;
-    if (!accessToken) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-    }
-
-    const { data: { user } } = await supabase.auth.getUser(accessToken);
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-    }
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user } = auth;
 
     const result = await getAdaptedMeals(user.id);
 
@@ -27,6 +21,6 @@ export const GET: APIRoute = async ({ cookies }) => {
     });
 
   } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
   }
 };

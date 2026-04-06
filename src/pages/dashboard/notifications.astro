@@ -28,7 +28,7 @@ const incompleteTasks = dailyTasks?.filter((t: any) =>
 
 const { data: existingPrefs } = await db
   .from('notification_preferences')
-  .select('*').eq('user_id', user.id).single();
+  .select('*').eq('user_id', user.id).maybeSingle();
 
 const p = existingPrefs || {
   breakfast_enabled: true,  breakfast_time: '08:00',
@@ -53,6 +53,8 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Smart Reminders — Keto Journey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
   <script is:inline>
     (function(){ const t=localStorage.getItem('keto-theme')||'light'; document.documentElement.setAttribute('data-theme',t); })();

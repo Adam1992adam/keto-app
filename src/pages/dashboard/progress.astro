@@ -31,17 +31,74 @@ const mUnit  = units === 'imperial' ? 'in'  : 'cm';
 const toW    = (kg) => units === 'imperial' ? kgToLbs(kg)    : Math.round(kg * 10) / 10;
 const toM    = (cm) => units === 'imperial' ? cmToInches(cm) : Math.round(cm * 10) / 10;
 
-// Weight logs
-const { data: weightLogs } = await db
-  .from('weight_logs')
-  .select('weight, logged_date')
-  .eq('user_id', user.id)
-  .order('logged_date', { ascending: true })
-  .limit(30);
+// Pre-compute date ranges needed by parallel queries
+const fourteenAgo  = new Date(Date.now() - 13 * 86400000).toISOString().split('T')[0];
+const ninetyDaysAgo = new Date(Date.now() - 89 * 86400000).toISOString().split('T')[0];
 
-// Onboarding for start weight / target
-const { data: onboarding } = await db
-  .from('onboarding_data').select('*').eq('user_id', user.id).single();
+// ── PARALLEL batch: all 12 independent DB queries ─────────────────────────────
+const [
+  { data: weightLogs },
+  { data: onboarding },
+  { data: checkins },
+  { data: xpTxnsRaw },
+  { data: completedTasksData },
+  { data: ketoneLogs },
+  { data: macroGoals },
+  { data: foodLogTrend },
+  achievements,
+  { data: measurements },
+  { data: checkin90 },
+  { data: progressPhotos },
+] = await Promise.all([
+  db.from('weight_logs')
+    .select('weight, logged_date')
+    .eq('user_id', user.id)
+    .order('logged_date', { ascending: true })
+    .limit(30),
+  db.from('onboarding_data').select('*').eq('user_id', user.id).maybeSingle(),
+  db.from('daily_checkins')
+    .select('checkin_date, energy_level, followed_meals, water_glasses, mood_level, sleep_hours, sleep_quality')
+    .eq('user_id', user.id)
+    .order('checkin_date', { ascending: false })
+    .limit(14),
+  db.from('xp_transactions')
+    .select('action_type, xp_amount, description, created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(10),
+  db.from('daily_tasks').select('id').eq('user_id', user.id).eq('completed', true),
+  db.from('ketone_logs')
+    .select('id, ketone_mmol, measurement_type, logged_date, notes')
+    .eq('user_id', user.id)
+    .order('logged_date', { ascending: false })
+    .limit(14),
+  db.from('macro_goals').select('daily_calories, protein_g, fat_g, carbs_g').eq('user_id', user.id).maybeSingle(),
+  db.from('food_logs')
+    .select('logged_date, calories, protein_g, fat_g, carbs_g')
+    .eq('user_id', user.id)
+    .gte('logged_date', fourteenAgo)
+    .order('logged_date', { ascending: true }),
+  getAchievements(user.id, db),
+  db.from('body_measurements')
+    .select('logged_date, neck_cm, waist_cm, hips_cm, chest_cm, arm_cm, thigh_cm')
+    .eq('user_id', user.id)
+    .order('logged_date', { ascending: false })
+    .limit(2),
+  db.from('daily_checkins')
+    .select('checkin_date, energy_level')
+    .eq('user_id', user.id)
+    .gte('checkin_date', ninetyDaysAgo)
+    .order('checkin_date', { ascending: true }),
+  db.from('progress_photos')
+    .select('id, photo_data, taken_date, notes')
+    .eq('user_id', user.id)
+    .order('taken_date', { ascending: false })
+    .limit(4),
+]);
+
+// Post-batch derivations
+const xpTxns = xpTxnsRaw || [];
+const totalCompletedTasks = completedTasksData?.length || 0;
 
 const startWeight  = onboarding?.current_weight || profile.weight_kg || 0;
 const targetWeight = onboarding?.target_weight  || profile.target_weight_kg || 0;
@@ -49,30 +106,6 @@ const latestWeight = weightLogs?.[weightLogs.length - 1]?.weight || startWeight;
 const weightLost   = Math.max(0, startWeight - latestWeight);
 const weightGoalPct = targetWeight && startWeight > targetWeight
   ? Math.min(100, Math.round((weightLost / (startWeight - targetWeight)) * 100)) : 0;
-
-// Recent check-ins for energy / compliance chart
-const { data: checkins } = await db
-  .from('daily_checkins')
-  .select('checkin_date, energy_level, followed_meals, water_glasses, mood_level, sleep_hours, sleep_quality')
-  .eq('user_id', user.id)
-  .order('checkin_date', { ascending: false })
-  .limit(14);
-
-// XP transactions
-const { data: xpTxns } = await db
-  .from('xp_transactions')
-  .select('action_type, xp_amount, description, created_at')
-  .eq('user_id', user.id)
-  .order('created_at', { ascending: false })
-  .limit(10);
-
-// Completed tasks count
-const { data: completedTasksData } = await db
-  .from('daily_tasks')
-  .select('id')
-  .eq('user_id', user.id)
-  .eq('completed', true);
-const totalCompletedTasks = completedTasksData?.length || 0;
 
 // Stats
 const avgEnergy   = checkins?.length
@@ -107,14 +140,6 @@ const bcKgToHealthy = (bcWeight && bcHealthyMax && bcWeight > bcHealthyMax)
   ? Math.round((bcWeight - bcHealthyMax) * 10) / 10 : 0;
 // BMI gauge pct (scale: 15=0%, 40=100% for visual)
 const bcGaugePct = bcBMI ? Math.min(100, Math.max(0, ((bcBMI - 15) / 25) * 100)) : 0;
-
-// Ketone logs
-const { data: ketoneLogs } = await db
-  .from('ketone_logs')
-  .select('id, ketone_mmol, measurement_type, logged_date, notes')
-  .eq('user_id', user.id)
-  .order('logged_date', { ascending: false })
-  .limit(14);
 
 const latestKetone = ketoneLogs?.[0] ?? null;
 const ketoneStatus = !latestKetone ? null
@@ -248,19 +273,6 @@ const avgSleepHours = sleepChart.length
   ? (sleepChart.reduce((s,c) => s + c.hours, 0) / sleepChart.length).toFixed(1)
   : null;
 
-// Macro goals
-const { data: macroGoals } = await db
-  .from('macro_goals').select('daily_calories, protein_g, fat_g, carbs_g')
-  .eq('user_id', user.id).maybeSingle();
-
-// Last 14 days of food_logs for macro trend
-const fourteenAgo = new Date(Date.now() - 13 * 86400000).toISOString().split('T')[0];
-const { data: foodLogTrend } = await db
-  .from('food_logs').select('logged_date, calories, protein_g, fat_g, carbs_g')
-  .eq('user_id', user.id)
-  .gte('logged_date', fourteenAgo)
-  .order('logged_date', { ascending: true });
-
 // Aggregate by day
 const macroByDay = {};
 for (const f of (foodLogTrend || [])) {
@@ -319,27 +331,8 @@ const milestones = [
 const tier      = planType;
 const planLabel = tierLabel;
 
-// Achievements
-const achievements = await getAchievements(user.id, db);
-
-// Body measurements (latest + previous for trend)
-const { data: measurements } = await db
-  .from('body_measurements')
-  .select('logged_date, neck_cm, waist_cm, hips_cm, chest_cm, arm_cm, thigh_cm')
-  .eq('user_id', user.id)
-  .order('logged_date', { ascending: false })
-  .limit(2);
 const latestMeasurements = measurements?.[0] || null;
 const prevMeasurements   = measurements?.[1] || null;
-
-// Activity heatmap — past 90 days of check-ins
-const ninetyDaysAgo = new Date(Date.now() - 89 * 86400000).toISOString().split('T')[0];
-const { data: checkin90 } = await db
-  .from('daily_checkins')
-  .select('checkin_date, energy_level')
-  .eq('user_id', user.id)
-  .gte('checkin_date', ninetyDaysAgo)
-  .order('checkin_date', { ascending: true });
 
 const checkinMap = {};
 for (const c of (checkin90 || [])) {
@@ -445,13 +438,6 @@ const achievementsDisplay = achievements.map(a => ({
   isGreen:    a.type === 'streak' || a.type === 'journey' || a.type === 'compliance',
 }));
 
-// Progress photos (last 4, server-side)
-const { data: progressPhotos } = await db
-  .from('progress_photos')
-  .select('id, photo_data, taken_date, notes')
-  .eq('user_id', user.id)
-  .order('taken_date', { ascending: false })
-  .limit(4);
 const initialPhotos = progressPhotos || [];
 ---
 <!DOCTYPE html>
@@ -460,6 +446,8 @@ const initialPhotos = progressPhotos || [];
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>My Progress — Keto Journey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
   <script is:inline>(function(){const t=localStorage.getItem('keto-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
   <style>

@@ -2,23 +2,13 @@
 // GET  /api/habits        → list habits + today's completions
 // POST /api/habits        → create habit
 import type { APIRoute } from 'astro';
-import { createClient } from '@supabase/supabase-js';
-
-function db(token: string) {
-  return createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-    { global: { headers: { Authorization: `Bearer ${token}` } } }
-  );
-}
+import { requireApiAuth } from '../../../lib/auth';
 
 export const GET: APIRoute = async ({ cookies, url }) => {
   try {
-    const token = cookies.get('sb-access-token')?.value;
-    if (!token) return json({ error: 'Unauthorized' }, 401);
-    const supabase = db(token);
-    const { data: { user }, error: ae } = await supabase.auth.getUser();
-    if (ae || !user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db: supabase } = auth;
 
     const dateParam = url.searchParams.get('date') || new Date().toISOString().split('T')[0];
 
@@ -34,17 +24,15 @@ export const GET: APIRoute = async ({ cookies, url }) => {
 
     return json({ habits: habits || [], completions: completions || [], date: dateParam });
   } catch (e: any) {
-    return json({ error: e.message }, 500);
+    return json({ error: 'Server error' }, 500);
   }
 };
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const token = cookies.get('sb-access-token')?.value;
-    if (!token) return json({ error: 'Unauthorized' }, 401);
-    const supabase = db(token);
-    const { data: { user }, error: ae } = await supabase.auth.getUser();
-    if (ae || !user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db: supabase } = auth;
 
     const { title, icon, category, frequency, target_streak } = await request.json();
     if (!title?.trim()) return json({ error: 'Title required' }, 400);
@@ -56,12 +44,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       category: category || 'general',
       frequency: frequency || 'daily',
       target_streak: target_streak || 7,
-    }).select().single();
+    }).select().maybeSingle();
 
     if (error) throw error;
     return json({ success: true, habit: data });
   } catch (e: any) {
-    return json({ error: e.message }, 500);
+    return json({ error: 'Server error' }, 500);
   }
 };
 

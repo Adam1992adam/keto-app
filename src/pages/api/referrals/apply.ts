@@ -3,7 +3,7 @@
 // Body: { referral_code: string }
 // Looks up the referrer, records the referral, awards 150 XP to referrer.
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 
 const REFERRAL_XP = 150;
 
@@ -15,19 +15,17 @@ function json(data: any, status = 200) {
 }
 
 export const POST: APIRoute = async ({ request, cookies }) => {
-  const accessToken = cookies.get('sb-access-token')?.value;
-  if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-  const { data: { user }, error: authErr } = await supabase.auth.getUser(accessToken);
-  if (authErr || !user) return json({ error: 'Unauthorized' }, 401);
+  const auth = await requireApiAuth(cookies);
+  if (!auth.ok) return auth.response;
+  const { user, db } = auth;
 
   const { referral_code } = await request.json();
   if (!referral_code) return json({ error: 'Missing referral_code' }, 400);
 
   const code = String(referral_code).trim().toUpperCase();
 
-  // Look up the referral code
-  const { data: codeRow } = await supabase
+  // Look up the referral code — SELECT policy allows any authenticated user to read codes
+  const { data: codeRow } = await db
     .from('referral_codes')
     .select('user_id')
     .eq('code', code)
@@ -39,7 +37,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   if (codeRow.user_id === user.id) return json({ error: 'Cannot use your own code' }, 400);
 
   // Check if this user was already referred
-  const { data: existing } = await supabase
+  const { data: existing } = await db
     .from('referrals')
     .select('id')
     .eq('referred_user_id', user.id)
@@ -47,8 +45,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   if (existing) return json({ error: 'Already applied a referral code' }, 409);
 
-  // Record the referral
-  const { error: insertErr } = await supabase
+  // Record the referral — INSERT policy requires auth.uid() = referred_user_id
+  const { error: insertErr } = await db
     .from('referrals')
     .insert({
       referrer_id:      codeRow.user_id,
@@ -57,19 +55,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       xp_awarded:       REFERRAL_XP,
     });
 
-  if (insertErr) return json({ error: 'Failed to record referral' }, 500);
+  if (insertErr) return json({ error: 'Server error' }, 500);
 
-  // Increment uses_count on the code
-  await supabase.rpc('increment_referral_count', { code_val: code }).catch(() => {
-    // Fallback: direct update if RPC doesn't exist
-    supabase
-      .from('referral_codes')
-      .update({ uses_count: (codeRow as any).uses_count + 1 })
-      .eq('code', code);
-  });
+  // Increment uses_count via SECURITY DEFINER RPC — bypasses RLS to update another user's code
+  await db.rpc('increment_referral_count', { code_val: code });
 
   // Award XP to referrer via the existing award_xp RPC
-  await supabase.rpc('award_xp', {
+  await db.rpc('award_xp', {
     user_id_param:     codeRow.user_id,
     action_type_param: 'referral',
     xp_amount_param:   REFERRAL_XP,

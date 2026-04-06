@@ -1,14 +1,13 @@
 // src/pages/api/chat/gemini.ts
 import type { APIRoute } from 'astro';
-import { supabase, getMealCycleDays } from '../../../lib/supabase';
+import { getMealCycleDays } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const accessToken = cookies.get('sb-access-token')?.value;
-    if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(accessToken);
-    if (authErr || !user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db: supabase } = auth;
 
     const { data: profile } = await supabase
       .from('profiles')

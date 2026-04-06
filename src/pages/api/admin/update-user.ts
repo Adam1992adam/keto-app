@@ -25,7 +25,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       updated_at: new Date().toISOString(),
     }).eq('id', id);
 
-    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    if (error) return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
 
     return new Response(JSON.stringify({ success: true }), { status: 200 });
   } catch (err) {

@@ -3,15 +3,12 @@
 // Saves a browser's Web Push subscription to the database
 
 import type { APIRoute } from 'astro';
-import { getUserClient } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
-  const accessToken = cookies.get('sb-access-token')?.value;
-  if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-  const db = getUserClient(accessToken);
-  const { data: { user } } = await db.auth.getUser(accessToken);
-  if (!user) return json({ error: 'Unauthorized' }, 401);
+  const auth = await requireApiAuth(cookies);
+  if (!auth.ok) return auth.response;
+  const { user, db } = auth;
 
   let body: any;
   try {

@@ -1,45 +1,40 @@
 // src/pages/api/meals/swap.ts
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const accessToken = cookies.get('sb-access-token')?.value;
-    if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-    const { data: { user } } = await supabase.auth.getUser(accessToken);
-    if (!user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db } = auth;
 
     const { original_recipe_id, reason } = await request.json();
     if (!original_recipe_id) return json({ error: 'original_recipe_id required' }, 400);
 
-    // Get original recipe
-    const { data: original } = await supabase
-      .from('recipes')
-      .select('id, calories, protein, fat, net_carbs, tags')
-      .eq('id', original_recipe_id)
-      .single();
+    // Fetch original recipe, user restrictions, and recent swaps in parallel
+    const [originalRes, onboardingRes, recentSwapsRes] = await Promise.all([
+      db.from('recipes')
+        .select('id, calories, protein, fat, net_carbs, tags')
+        .eq('id', original_recipe_id)
+        .maybeSingle(),
+      db.from('onboarding_data')
+        .select('dietary_restrictions')
+        .eq('user_id', user.id)
+        .maybeSingle(),
+      db.from('meal_swaps')
+        .select('original_recipe_id')
+        .eq('user_id', user.id)
+        .gte('swap_date', new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]),
+    ]);
 
+    const original = originalRes.data;
     if (!original) return json({ error: 'Recipe not found' }, 404);
 
-    // Get user dietary restrictions
-    const { data: onboarding } = await supabase
-      .from('onboarding_data')
-      .select('dietary_restrictions')
-      .eq('user_id', user.id)
-      .single();
-
-    const restrictions: string[] = onboarding?.dietary_restrictions || [];
-
-    // Recently swapped IDs (last 7 days) — avoid repeating
-    const { data: recentSwaps } = await supabase
-      .from('meal_swaps')
-      .select('original_recipe_id')
-      .eq('user_id', user.id)
-      .gte('swap_date', new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]);
+    const restrictions: string[] = onboardingRes.data?.dietary_restrictions || [];
 
     const recentIds = [
       original_recipe_id,
-      ...(recentSwaps?.map(s => s.original_recipe_id) || []),
+      ...(recentSwapsRes.data?.map((s: any) => s.original_recipe_id) || []),
     ];
 
     // Find meal category from original tags
@@ -47,7 +42,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const category = original.tags?.find((t: string) => mealCategories.includes(t)) || 'lunch';
 
     // Query candidates — same meal category, ±25% calories
-    const { data: candidates } = await supabase
+    const { data: candidates } = await db
       .from('recipes')
       .select('id, title, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, tags')
       .contains('tags', [category])
@@ -86,19 +81,20 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     )[0];
 
     // Record swap
-    await supabase.from('meal_swaps').insert({
+    const { error: insertErr } = await db.from('meal_swaps').insert({
       user_id:           user.id,
       original_recipe_id,
       swap_recipe_id:    best.id,
       reason:            reason || 'flagged',
       swap_date:         new Date().toISOString().split('T')[0],
     });
+    if (insertErr) console.warn('meal_swaps insert warn:', insertErr.message);
 
     return json({ success: true, new_recipe: best });
 
   } catch (err: any) {
     console.error('Swap error:', err);
-    return json({ error: err.message }, 500);
+    return json({ error: 'Server error' }, 500);
   }
 };
 

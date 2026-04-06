@@ -1,14 +1,12 @@
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 import { autoCompleteTask, checkAchievements } from '../../../lib/autoTask';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const accessToken = cookies.get('sb-access-token')?.value;
-    if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-    const { data: { user } } = await supabase.auth.getUser(accessToken);
-    if (!user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db: supabase, accessToken } = auth;
 
     const body = await request.json();
     // Accept both field name variants: weight/weight_kg, logged_date/date
@@ -40,7 +38,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .from('weight_logs')
       .select('weight')
       .eq('user_id', user.id)
-      .order('logged_date', { ascending: true });
+      .order('logged_date', { ascending: true })
+      .limit(2);
 
     if (logs && logs.length >= 2) {
       const weightLost = logs[0].weight - weight;
@@ -59,8 +58,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     // Auto-complete the 'weight' daily task
-    const { data: uj } = await supabase.from('user_journey').select('current_day').eq('user_id', user.id).single();
-    if (uj) await autoCompleteTask(user.id, 'weight', uj.current_day);
+    const { data: uj } = await supabase.from('user_journey').select('current_day').eq('user_id', user.id).maybeSingle();
+    if (uj) await autoCompleteTask(user.id, 'weight', uj.current_day, accessToken);
 
     checkAchievements(user.id, accessToken); // fire-and-forget
     return json({ success: true });

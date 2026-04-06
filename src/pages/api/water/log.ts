@@ -4,22 +4,14 @@
 // Also updates water_intake table for history.
 
 import type { APIRoute } from 'astro';
-import { createClient } from '@supabase/supabase-js';
+import { requireApiAuth } from '../../../lib/auth';
 import { autoCompleteTask } from '../../../lib/autoTask';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const accessToken = cookies.get('sb-access-token')?.value;
-    if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-    const db = createClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-      { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
-    );
-
-    const { data: { user }, error: authErr } = await db.auth.getUser();
-    if (authErr || !user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db, accessToken } = auth;
 
     const body = await request.json();
     const delta: number = body.delta === -1 ? -1 : 1;
@@ -45,7 +37,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     // Also update water_intake table for the journey day
     const { data: journey } = await db
-      .from('user_journey').select('current_day').eq('user_id', user.id).single();
+      .from('user_journey').select('current_day').eq('user_id', user.id).maybeSingle();
     const dayNumber = journey?.current_day || 1;
 
     await db.from('water_intake').upsert({
@@ -59,7 +51,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     // Auto-complete 'water' task when 8 glasses reached
     if (newCount >= 8) {
-      await autoCompleteTask(user.id, 'water', dayNumber);
+      await autoCompleteTask(user.id, 'water', dayNumber, accessToken);
     }
 
     return json({ success: true, glasses: newCount });

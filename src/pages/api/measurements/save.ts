@@ -1,14 +1,12 @@
 // src/pages/api/measurements/save.ts
 // POST /api/measurements/save
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
-  const accessToken = cookies.get('sb-access-token')?.value;
-  if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-  const { data: { user }, error: authErr } = await supabase.auth.getUser(accessToken);
-  if (authErr || !user) return json({ error: 'Unauthorized' }, 401);
+  const auth = await requireApiAuth(cookies);
+  if (!auth.ok) return auth.response;
+  const { user, db: supabase } = auth;
 
   let body: any;
   try { body = await request.json(); }
@@ -36,7 +34,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   if (error) {
     console.error('Measurements save error:', error);
-    return json({ error: error.message }, 500);
+    return json({ error: 'Server error' }, 500);
   }
 
   return json({ success: true });

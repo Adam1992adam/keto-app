@@ -419,7 +419,7 @@ export async function getProfile(userId: string, client = supabase): Promise<Pro
     .from('profiles')
     .select('*')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('Error fetching profile:', error);
@@ -440,7 +440,7 @@ export async function updateProfile(userId: string, updates: Partial<Profile>, c
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', userId)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('Error updating profile:', error);
@@ -511,7 +511,7 @@ export async function getDailyProgress(userId: string, dayNumber: number, client
     .select('*')
     .eq('user_id', userId)
     .eq('day_number', dayNumber)
-    .single();
+    .maybeSingle();
 
   return data;
 }
@@ -525,11 +525,16 @@ export async function getUserJourney(userId: string, client = supabase): Promise
     .from('user_journey')
     .select('*')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('Error fetching journey:', error);
     return null;
+  }
+
+  // Auto-initialize if missing — prevents 500 errors for new users
+  if (!data) {
+    return initializeUserJourney(userId, client);
   }
 
   return data;
@@ -553,7 +558,7 @@ export async function initializeUserJourney(userId: string, client = supabase): 
       perfect_days: 0,
     })
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('Error creating journey:', error);
@@ -589,7 +594,7 @@ export async function getWaterIntake(userId: string, dayNumber: number, client =
     .select('*')
     .eq('user_id', userId)
     .eq('day_number', dayNumber)
-    .single();
+    .maybeSingle();
 
   return data;
 }
@@ -601,7 +606,7 @@ export async function updateWaterIntake(userId: string, dayNumber: number, glass
     .eq('user_id', userId)
     .eq('day_number', dayNumber)
     .select()
-    .single();
+    .maybeSingle();
 
   if (data && glasses >= data.target_glasses) {
     await client.rpc('award_xp', {

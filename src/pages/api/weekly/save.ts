@@ -1,14 +1,14 @@
 // src/pages/api/weekly/save.ts
 import type { APIRoute } from 'astro';
-import { supabase, getMaxJourneyDays } from '../../../lib/supabase';
+import { getMaxJourneyDays } from '../../../lib/supabase';
 import { autoCompleteTask, checkAchievements } from '../../../lib/autoTask';
+import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const accessToken = cookies.get('sb-access-token')?.value;
-    if (!accessToken) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-    const { data: { user } } = await supabase.auth.getUser(accessToken);
-    if (!user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db: supabase, accessToken } = auth;
 
     const body = await request.json();
     const {
@@ -28,6 +28,16 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (!week_number || week_number < 1 || week_number > maxWeeks) {
       return new Response(JSON.stringify({ error: `Week number must be between 1 and ${maxWeeks} for your plan.` }), { status: 400 });
     }
+
+    // Check if this week's report already exists — award_xp must only fire once per week
+    const { data: existingReport } = await supabase
+      .from('weekly_reports')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('week_number', week_number)
+      .maybeSingle();
+
+    const isNewReport = !existingReport;
 
     const now = new Date();
     const weekStart = new Date(now);
@@ -76,6 +86,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     if (error) throw error;
 
+    // Award XP only on first submission — not on re-saves of the same week
+    if (!isNewReport) {
+      return new Response(JSON.stringify({ success: true, ai_recommendation, ai_adjustment, xp_earned: 0 }), {
+        status: 200, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     // Award XP via RPC → updates user_journey.total_xp
     const { error: xpRpcErr } = await supabase.rpc('award_xp', {
       user_id_param:     user.id,
@@ -111,7 +128,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const { data: journey } = await supabase
       .from('user_journey').select('current_day').eq('user_id', user.id).maybeSingle();
     if (journey?.current_day) {
-      await autoCompleteTask(user.id, 'weekly_review', journey.current_day);
+      await autoCompleteTask(user.id, 'weekly_review', journey.current_day, accessToken);
     }
 
     checkAchievements(user.id, accessToken); // fire-and-forget
@@ -120,6 +137,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     });
 
   } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
   }
 };

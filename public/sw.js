@@ -8,7 +8,7 @@
      Network Only + BG Sync → mutating API calls
    ═══════════════════════════════════════════════════════════════ */
 
-const CACHE_VERSION  = 'v3';
+const CACHE_VERSION  = 'v4';
 const STATIC_CACHE   = 'keto-static-'  + CACHE_VERSION;
 const PAGES_CACHE    = 'keto-pages-'   + CACHE_VERSION;
 const DATA_CACHE     = 'keto-data-'    + CACHE_VERSION;
@@ -185,7 +185,7 @@ async function staleWhileRevalidate(req, cacheName) {
 async function networkFirstPage(req) {
   const cache = await caches.open(PAGES_CACHE);
   try {
-    const res = await fetchWithTimeout(req, 4000);
+    const res = await fetchWithTimeout(req, 12000);
     if (res.ok) {
       /* Only cache cacheable pages (not user-specific API responses) */
       const path = new URL(req.url).pathname;

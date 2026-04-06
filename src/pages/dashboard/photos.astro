@@ -1,7 +1,7 @@
 ---
 // src/pages/dashboard/photos.astro
 // Progress Photo Gallery — full-featured with upload, compare, timeline
-import { supabase, getUserJourney } from '../../lib/supabase';
+import { getUserJourney } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import Camera from 'lucide-astro/Camera';
@@ -15,18 +15,18 @@ import BarChart2 from 'lucide-astro/BarChart2';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
 
-const journey = await getUserJourney(user.id);
+const journey = await getUserJourney(user.id, db);
 const startDate   = journey?.start_date  ? new Date(journey.start_date)  : new Date();
 const currentDay  = journey?.current_day || 1;
 
 // Fetch photos sorted ASC (for timeline), then reverse for grid
-const { data: photosAsc } = await supabase
+const { data: photosAsc } = await db
   .from('progress_photos')
   .select('id, photo_data, taken_date, notes, created_at')
   .eq('user_id', user.id)

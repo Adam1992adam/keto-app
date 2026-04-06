@@ -2,24 +2,16 @@
 // GET  /api/community/posts?category=all&page=1  → paginated posts
 // POST /api/community/posts  { content, category } → create post
 import type { APIRoute } from 'astro';
-import { createClient } from '@supabase/supabase-js';
+import { requireApiAuth } from '../../../lib/auth';
 
 const PAGE_SIZE = 20;
 const ALLOWED_CATEGORIES = ['progress', 'recipes', 'tips', 'motivation', 'general'];
 
 export const GET: APIRoute = async ({ request, cookies }) => {
   try {
-    const token = cookies.get('sb-access-token')?.value;
-    if (!token) return json({ error: 'Unauthorized' }, 401);
-
-    const db = createClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
-    );
-
-    const { data: { user }, error: ae } = await db.auth.getUser();
-    if (ae || !user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db } = auth;
 
     const url = new URL(request.url);
     const category = url.searchParams.get('category') || 'all';
@@ -39,7 +31,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
     }
 
     const { data: posts, error } = await query;
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: 'Server error' }, 500);
 
     const postIds = (posts || []).map((p: any) => p.id);
     const authorIds = [...new Set((posts || []).map((p: any) => p.user_id))];
@@ -81,23 +73,15 @@ export const GET: APIRoute = async ({ request, cookies }) => {
 
     return json({ posts: enriched, page, has_more: (posts || []).length === PAGE_SIZE });
   } catch (e: any) {
-    return json({ error: e.message }, 500);
+    return json({ error: 'Server error' }, 500);
   }
 };
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const token = cookies.get('sb-access-token')?.value;
-    if (!token) return json({ error: 'Unauthorized' }, 401);
-
-    const db = createClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
-    );
-
-    const { data: { user }, error: ae } = await db.auth.getUser();
-    if (ae || !user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db } = auth;
 
     const body = await request.json();
     const { content, category = 'general' } = body;
@@ -123,12 +107,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .from('community_posts')
       .insert({ user_id: user.id, content: content.trim(), category })
       .select('id, content, category, like_count, fire_count, clap_count, comment_count, created_at')
-      .single();
+      .maybeSingle();
 
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: 'Server error' }, 500);
     return json({ success: true, post }, 201);
   } catch (e: any) {
-    return json({ error: e.message }, 500);
+    return json({ error: 'Server error' }, 500);
   }
 };
 

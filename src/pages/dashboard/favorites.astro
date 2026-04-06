@@ -1,5 +1,4 @@
 ---
-import { supabase } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import Heart from 'lucide-astro/Heart';
@@ -12,13 +11,13 @@ import Search from 'lucide-astro/Search';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'Friend';
 
-const { data: favs } = await supabase
+const { data: favs } = await db
   .from('recipe_favorites')
   .select('recipe_id, recipes(id, title, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, tags)')
   .eq('user_id', user.id)

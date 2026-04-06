@@ -35,7 +35,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       path: '/',
       httpOnly: true,
       secure: true,
-      sameSite: 'lax',
+      sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 7,
     });
 
@@ -43,7 +43,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
       path: '/',
       httpOnly: true,
       secure: true,
-      sameSite: 'lax',
+      sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 30,
     });
   }

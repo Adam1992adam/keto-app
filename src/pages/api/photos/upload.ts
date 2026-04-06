@@ -1,14 +1,28 @@
 // src/pages/api/photos/upload.ts
 // POST /api/photos/upload
+//
+// REQUIRED SETUP (one-time, in Supabase dashboard → Storage):
+//   1. Create bucket: "progress-photos" (public: false)
+//   2. Add RLS policies on storage.objects for the bucket:
+//      INSERT: bucket_id = 'progress-photos' AND (storage.foldername(name))[1] = auth.uid()::text
+//      SELECT: bucket_id = 'progress-photos' AND (storage.foldername(name))[1] = auth.uid()::text
+//      DELETE: bucket_id = 'progress-photos' AND (storage.foldername(name))[1] = auth.uid()::text
+
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
+
+const ALLOWED_MIME_TYPES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png':  'png',
+  'image/webp': 'webp',
+};
+
+const BUCKET = 'progress-photos';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
-  const accessToken = cookies.get('sb-access-token')?.value;
-  if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-  const { data: { user }, error: authErr } = await supabase.auth.getUser(accessToken);
-  if (authErr || !user) return json({ error: 'Unauthorized' }, 401);
+  const auth = await requireApiAuth(cookies);
+  if (!auth.ok) return auth.response;
+  const { user, db } = auth;
 
   let body: any;
   try { body = await request.json(); }
@@ -20,32 +34,94 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return json({ error: 'photo_data is required' }, 400);
   }
 
-  // Rough size check: base64 string length * 0.75 ≈ bytes
-  const approxBytes = photo_data.length * 0.75;
-  if (approxBytes > 500 * 1024) {
-    return json({ error: 'Image too large. Maximum size is 500KB after compression.' }, 400);
+  // Validate it's a proper image data URL and extract MIME type
+  const dataUrlMatch = photo_data.match(/^data:(image\/[a-z]+);base64,/);
+  if (!dataUrlMatch) {
+    return json({ error: 'photo_data must be a base64 image data URL' }, 400);
+  }
+
+  const mimeType = dataUrlMatch[1];
+  const ext = ALLOWED_MIME_TYPES[mimeType];
+  if (!ext) {
+    return json({ error: 'Only JPEG, PNG, and WebP images are allowed' }, 400);
+  }
+
+  // Decode base64 to binary — using Web APIs (atob) for edge compatibility
+  const base64Payload = photo_data.slice(dataUrlMatch[0].length);
+  let bytes: Uint8Array;
+  try {
+    const binary = atob(base64Payload);
+    bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+  } catch {
+    return json({ error: 'Invalid base64 data' }, 400);
+  }
+
+  // Size check on the actual decoded bytes
+  if (bytes.length > 500 * 1024) {
+    return json({ error: 'Image too large. Maximum size is 500KB.' }, 400);
+  }
+
+  // Per-user photo count cap (prevent storage abuse)
+  const { count } = await db
+    .from('progress_photos')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id);
+
+  if ((count ?? 0) >= 50) {
+    return json({ error: 'Maximum of 50 photos allowed. Delete older photos to upload new ones.' }, 400);
   }
 
   const today = new Date().toISOString().split('T')[0];
-  const takenDate = taken_date || today;
+  const takenDate = (taken_date && /^\d{4}-\d{2}-\d{2}$/.test(taken_date)) ? taken_date : today;
 
-  const { data, error } = await supabase
+  // Upload to Supabase Storage — path scoped to user_id so Storage RLS can enforce ownership
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const storagePath = `${user.id}/${filename}`;
+
+  const { error: storageErr } = await db.storage
+    .from(BUCKET)
+    .upload(storagePath, bytes, { contentType: mimeType, upsert: false });
+
+  if (storageErr) {
+    console.error('Storage upload error:', storageErr);
+    return json({ error: 'Server error' }, 500);
+  }
+
+  // Get a long-lived signed URL (1 year) — avoids exposing public bucket
+  const { data: signedData, error: signedErr } = await db.storage
+    .from(BUCKET)
+    .createSignedUrl(storagePath, 60 * 60 * 24 * 365);
+
+  if (signedErr || !signedData?.signedUrl) {
+    // Clean up the orphaned storage object
+    await db.storage.from(BUCKET).remove([storagePath]);
+    console.error('Signed URL error:', signedErr);
+    return json({ error: 'Server error' }, 500);
+  }
+
+  // Store the storage path (not base64) in photo_data — URL reconstructed on read
+  const { data, error: dbErr } = await db
     .from('progress_photos')
     .insert({
       user_id:    user.id,
-      photo_data: photo_data,
+      photo_data: storagePath,   // storage path replaces raw base64
       taken_date: takenDate,
       notes:      notes || null,
     })
     .select('id, taken_date, notes, created_at')
-    .single();
+    .maybeSingle();
 
-  if (error) {
-    console.error('Photo upload error:', error);
-    return json({ error: error.message }, 500);
+  if (dbErr) {
+    // Clean up the orphaned storage object
+    await db.storage.from(BUCKET).remove([storagePath]);
+    console.error('Photo DB insert error:', dbErr);
+    return json({ error: 'Server error' }, 500);
   }
 
-  return json({ success: true, photo: data });
+  return json({ success: true, photo: { ...data, photo_url: signedData.signedUrl } });
 };
 
 function json(data: any, status = 200) {

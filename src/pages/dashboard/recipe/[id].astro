@@ -24,8 +24,10 @@ const { data: rawTasks } = await db
   .eq('day_number', currentDay);
 const dailyTasks = rawTasks || [];
 
-const { data: recipe } = await db.from('recipes').select('*').eq('id', id).single();
-if (!recipe) return Astro.redirect('/dashboard/recipes');
+// Use maybeSingle() — .single() throws a hard error when 0 rows are returned
+const { data: recipe, error: recipeErr } = await db.from('recipes').select('*').eq('id', id).maybeSingle();
+if (recipeErr) console.error('Recipe fetch error:', recipeErr.message);
+if (!recipe) return Astro.redirect('/dashboard/browse');
 
 const { data: mealPlan } = await db
   .from('meal_plans').select('*')
@@ -71,7 +73,7 @@ const { data: simRatings } = similarIds.length
   ? await db.from('recipe_avg_ratings').select('recipe_id, avg_rating, rating_count').in('recipe_id', similarIds)
   : { data: [] };
 
-const simRatingMap: Record<number, { avg: number; count: number }> = {};
+const simRatingMap = {} as Record<string, { avg: number; count: number }>;
 for (const r of (simRatings || [])) {
   simRatingMap[r.recipe_id] = { avg: parseFloat(r.avg_rating), count: r.rating_count };
 }
@@ -100,6 +102,8 @@ const diffColor = recipe.difficulty === 'Easy' ? '#10b981' : recipe.difficulty =
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{recipe.title} — Keto Journey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
   <script is:inline>(function(){ const t=localStorage.getItem('keto-theme')||'light'; document.documentElement.setAttribute('data-theme',t); })();</script>
   <style>

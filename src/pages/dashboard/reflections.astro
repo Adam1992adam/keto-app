@@ -1,5 +1,4 @@
 ---
-import { supabase } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import BookOpen from 'lucide-astro/BookOpen';
@@ -15,13 +14,13 @@ import Moon from 'lucide-astro/Moon';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'Friend';
 
-const { data: reflections } = await supabase
+const { data: reflections } = await db
   .from('daily_reflections')
   .select('*')
   .eq('user_id', user.id)
@@ -30,7 +29,7 @@ const { data: reflections } = await supabase
 
 const thirtyAgo = new Date(Date.now() - 29 * 86400000).toISOString().split('T')[0];
 
-const { data: checkins } = await supabase
+const { data: checkins } = await db
   .from('daily_checkins')
   .select('checkin_date, energy_level, mood_level, water_glasses, followed_meals, note, sleep_hours, sleep_quality')
   .eq('user_id', user.id)

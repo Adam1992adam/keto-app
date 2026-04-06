@@ -58,12 +58,12 @@ export async function checkAchievements(userId: string, accessToken: string): Pr
     const today = new Date().toISOString().split('T')[0];
     const [journeyRes, checkinsRes, weightRes, fastingRes, mealCompRes, onboardingRes, todayCheckinRes] =
       await Promise.all([
-        db.from('user_journey').select('current_day,streak_days,total_xp,level').eq('user_id', userId).single(),
+        db.from('user_journey').select('current_day,streak_days,total_xp,level').eq('user_id', userId).maybeSingle(),
         db.from('daily_checkins').select('id', { count: 'exact', head: true }).eq('user_id', userId),
         db.from('weight_logs').select('weight,logged_date').eq('user_id', userId).order('logged_date', { ascending: false }).limit(2),
         db.from('fasting_sessions').select('id', { count: 'exact', head: true }).eq('user_id', userId).not('ended_at', 'is', null),
         db.from('meal_completions').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-        db.from('onboarding_data').select('current_weight,target_weight').eq('user_id', userId).single(),
+        db.from('onboarding_data').select('current_weight,target_weight').eq('user_id', userId).maybeSingle(),
         db.from('daily_checkins').select('water_glasses').eq('user_id', userId).eq('checkin_date', today).maybeSingle(),
       ]);
 
@@ -131,8 +131,8 @@ export async function checkAchievements(userId: string, accessToken: string): Pr
         }))
       );
     }
-  } catch {
-    // Silent — never block the caller
+  } catch (err: any) {
+    console.error('checkAchievements error:', err);
   }
 }
 
@@ -144,10 +144,20 @@ export async function autoCompleteTask(
   userId: string,
   taskType: string,
   dayNumber: number,
+  accessToken?: string,
 ): Promise<void> {
   try {
+    // Use user-scoped client when token available (bypasses RLS with user context)
+    const db = accessToken
+      ? createClient(
+          import.meta.env.PUBLIC_SUPABASE_URL,
+          import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+          { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
+        )
+      : supabase;
+
     // Get the task (if it exists and isn't already done)
-    const { data: task } = await supabase
+    const { data: task } = await db
       .from('daily_tasks')
       .select('id, xp_earned, completed')
       .eq('user_id', userId)
@@ -158,14 +168,14 @@ export async function autoCompleteTask(
     if (!task || task.completed) return; // already done or doesn't exist
 
     // Mark complete
-    await supabase
+    await db
       .from('daily_tasks')
       .update({ completed: true, completed_at: new Date().toISOString() })
       .eq('id', task.id);
 
     // Award XP
     if (task.xp_earned) {
-      await supabase.rpc('award_xp', {
+      await db.rpc('award_xp', {
         user_id_param:     userId,
         action_type_param: `task_${taskType}`,
         xp_amount_param:   task.xp_earned,
@@ -173,7 +183,7 @@ export async function autoCompleteTask(
         day_number_param:  dayNumber,
       });
     }
-  } catch {
-    // Silent — never block the caller
+  } catch (err: any) {
+    console.warn('autoCompleteTask error:', err?.message);
   }
 }

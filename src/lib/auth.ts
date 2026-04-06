@@ -9,7 +9,65 @@
 
 import { supabase, getUserClient, getProfile, isSubscriptionActive, updateCurrentDay } from './supabase';
 import type { Profile } from './supabase';
+import type { AstroCookies } from 'astro';
 import type { User, SupabaseClient } from '@supabase/supabase-js';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// API route auth helper
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ApiAuthOk {
+  ok: true;
+  user: User;
+  db: SupabaseClient;
+  accessToken: string;
+}
+
+export interface ApiAuthFail {
+  ok: false;
+  response: Response;
+}
+
+export type ApiAuthResult = ApiAuthOk | ApiAuthFail;
+
+/**
+ * Auth helper for API routes. Validates the session cookie and returns a
+ * user-scoped Supabase client (so RLS auth.uid() resolves correctly).
+ *
+ * Usage:
+ *   const auth = await requireApiAuth(cookies);
+ *   if (!auth.ok) return auth.response;
+ *   const { user, db } = auth;
+ */
+export async function requireApiAuth(cookies: AstroCookies): Promise<ApiAuthResult> {
+  const accessToken = cookies.get('sb-access-token')?.value;
+  if (!accessToken) {
+    return {
+      ok: false,
+      response: new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    };
+  }
+
+  const { data: { user }, error } = await supabase.auth.getUser(accessToken);
+  if (error || !user) {
+    return {
+      ok: false,
+      response: new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    };
+  }
+
+  return { ok: true, user, db: getUserClient(accessToken), accessToken };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dashboard page auth helpers
+// ─────────────────────────────────────────────────────────────────────────────
 
 export interface AuthOk {
   user: User;

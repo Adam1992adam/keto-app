@@ -3,25 +3,23 @@
 // Smart notifications — generates based on user data, no time restrictions
 
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ cookies }) => {
-  const accessToken = cookies.get('sb-access-token')?.value;
-  if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-  const { data: { user } } = await supabase.auth.getUser(accessToken);
-  if (!user) return json({ error: 'Unauthorized' }, 401);
+  const auth = await requireApiAuth(cookies);
+  if (!auth.ok) return auth.response;
+  const { user, db } = auth;
 
   try {
-    const count = await generate(user.id);
+    const count = await generate(user.id, db);
     return json({ success: true, generated: count });
   } catch (e: any) {
     console.error('Generate error:', e?.message || e);
-    return json({ error: 'Failed', detail: e?.message }, 500);
+    return json({ error: 'Server error' }, 500);
   }
 };
 
-async function generate(userId: string): Promise<number> {
+async function generate(userId: string, db: any): Promise<number> {
   const today = new Date().toISOString().split('T')[0];
   const now   = new Date();
 
@@ -44,25 +42,25 @@ async function generate(userId: string): Promise<number> {
     { data: profileForPlan },
     { data: userPrefs },
   ] = await Promise.all([
-    supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
-    supabase.from('user_journey').select('*').eq('user_id', userId).maybeSingle(),
-    supabase.from('daily_checkins').select('*').eq('user_id', userId).eq('checkin_date', today).maybeSingle(),
-    supabase.from('daily_checkins').select('checkin_date,energy_level,water_glasses')
+    db.from('profiles').select('*').eq('id', userId).maybeSingle(),
+    db.from('user_journey').select('*').eq('user_id', userId).maybeSingle(),
+    db.from('daily_checkins').select('*').eq('user_id', userId).eq('checkin_date', today).maybeSingle(),
+    db.from('daily_checkins').select('checkin_date,energy_level,water_glasses')
       .eq('user_id', userId).order('checkin_date', { ascending: false }).limit(7),
-    supabase.from('daily_tasks').select('*').eq('user_id', userId)
+    db.from('daily_tasks').select('*').eq('user_id', userId)
       .eq('day_number', currentDayFirst),
-    supabase.from('weight_logs').select('weight,logged_date')
+    db.from('weight_logs').select('weight,logged_date')
       .eq('user_id', userId).order('logged_date', { ascending: false }).limit(5),
-    supabase.from('fasting_sessions').select('*').eq('user_id', userId)
+    db.from('fasting_sessions').select('*').eq('user_id', userId)
       .is('ended_at', null).order('started_at', { ascending: false }).limit(1).maybeSingle(),
-    supabase.from('onboarding_data').select('*').eq('user_id', userId).maybeSingle(),
-    supabase.from('notifications').select('type').eq('user_id', userId)
+    db.from('onboarding_data').select('*').eq('user_id', userId).maybeSingle(),
+    db.from('notifications').select('type').eq('user_id', userId)
       .eq('is_dismissed', false)
       .gte('created_at', new Date(Date.now() - 12 * 3600000).toISOString()),
-    supabase.from('meal_completions').select('meal_type')
+    db.from('meal_completions').select('meal_type')
       .eq('user_id', userId).eq('day_number', currentDayFirst),
-    supabase.from('profiles').select('subscription_tier').eq('id', userId).maybeSingle(),
-    supabase.from('notification_preferences').select('*').eq('user_id', userId).maybeSingle(),
+    db.from('profiles').select('subscription_tier').eq('id', userId).maybeSingle(),
+    db.from('notification_preferences').select('*').eq('user_id', userId).maybeSingle(),
   ]);
 
   // Notification preference defaults (all on if no record found)
@@ -101,7 +99,7 @@ async function generate(userId: string): Promise<number> {
     'meal_breakfast', 'meal_lunch', 'meal_snack', 'meal_dinner',
     'task_water', 'task_weight', 'task_reflection', 'task_checkin',
   ];
-  await supabase
+  await db
     .from('notifications')
     .delete()
     .eq('user_id', userId)
@@ -418,7 +416,7 @@ async function generate(userId: string): Promise<number> {
   }
 
   // ── WELCOME: always add if no notifications exist at all
-  const { count: totalNotifs } = await supabase
+  const { count: totalNotifs } = await db
     .from('notifications').select('id', { count: 'exact', head: true })
     .eq('user_id', userId);
 
@@ -445,7 +443,7 @@ async function generate(userId: string): Promise<number> {
 
   if (notifs.length === 0) return 0;
 
-  const { error } = await supabase.from('notifications').insert(notifs);
+  const { error } = await db.from('notifications').insert(notifs);
   if (error) {
     console.error('Insert error:', JSON.stringify(error));
     return 0;

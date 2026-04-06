@@ -1,20 +1,11 @@
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const accessToken = cookies.get('sb-access-token')?.value;
-    const refreshToken = cookies.get('sb-refresh-token')?.value;
-
-    if (!accessToken) return json({ error: 'Session expired. Please login again.' }, 401);
-
-    // Set session manually to avoid ECONNRESET issues
-    if (refreshToken) {
-      await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken);
-    if (authError || !user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db: supabase } = auth;
 
     const body = await request.json();
     const { full_name, weight_kg, height_cm, target_weight_kg } = body;
@@ -30,9 +21,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .update(updateData)
       .eq('id', user.id)
       .select()
-      .single();
+      .maybeSingle();
 
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: 'Server error' }, 500);
 
     // Also log weight if changed (upsert to avoid duplicates on same day)
     if (weight_kg !== undefined) {

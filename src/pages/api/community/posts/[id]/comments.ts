@@ -2,21 +2,13 @@
 // GET  /api/community/posts/[id]/comments  → list comments for post
 // POST /api/community/posts/[id]/comments  { content } → add comment
 import type { APIRoute } from 'astro';
-import { createClient } from '@supabase/supabase-js';
+import { requireApiAuth } from '../../../../../lib/auth';
 
 export const GET: APIRoute = async ({ cookies, params }) => {
   try {
-    const token = cookies.get('sb-access-token')?.value;
-    if (!token) return json({ error: 'Unauthorized' }, 401);
-
-    const db = createClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
-    );
-
-    const { data: { user }, error: ae } = await db.auth.getUser();
-    if (ae || !user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db } = auth;
 
     const post_id = params.id;
     if (!post_id) return json({ error: 'Post ID required' }, 400);
@@ -29,7 +21,7 @@ export const GET: APIRoute = async ({ cookies, params }) => {
       .order('created_at', { ascending: true })
       .limit(100);
 
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: 'Server error' }, 500);
 
     const authorIds = [...new Set((comments || []).map((c: any) => c.user_id))];
     const profileMap: Record<string, any> = {};
@@ -48,23 +40,15 @@ export const GET: APIRoute = async ({ cookies, params }) => {
 
     return json({ comments: result });
   } catch (e: any) {
-    return json({ error: e.message }, 500);
+    return json({ error: 'Server error' }, 500);
   }
 };
 
 export const POST: APIRoute = async ({ request, cookies, params }) => {
   try {
-    const token = cookies.get('sb-access-token')?.value;
-    if (!token) return json({ error: 'Unauthorized' }, 401);
-
-    const db = createClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
-    );
-
-    const { data: { user }, error: ae } = await db.auth.getUser();
-    if (ae || !user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db } = auth;
 
     const post_id = params.id;
     if (!post_id) return json({ error: 'Post ID required' }, 400);
@@ -81,12 +65,12 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
       .from('community_comments')
       .insert({ post_id, user_id: user.id, content: content.trim() })
       .select('id, content, created_at')
-      .single();
+      .maybeSingle();
 
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: 'Server error' }, 500);
     return json({ success: true, comment }, 201);
   } catch (e: any) {
-    return json({ error: e.message }, 500);
+    return json({ error: 'Server error' }, 500);
   }
 };
 

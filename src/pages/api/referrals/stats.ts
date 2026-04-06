@@ -1,7 +1,7 @@
 // GET /api/referrals/stats
 // Returns the user's referral code, total invites, XP earned, and referral history.
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 
 function json(data: any, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -11,19 +11,17 @@ function json(data: any, status = 200) {
 }
 
 export const GET: APIRoute = async ({ cookies }) => {
-  const accessToken = cookies.get('sb-access-token')?.value;
-  if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-  const { data: { user }, error } = await supabase.auth.getUser(accessToken);
-  if (error || !user) return json({ error: 'Unauthorized' }, 401);
+  const auth = await requireApiAuth(cookies);
+  if (!auth.ok) return auth.response;
+  const { user, db } = auth;
 
   const [codeRes, referralsRes] = await Promise.all([
-    supabase
+    db
       .from('referral_codes')
       .select('code, uses_count, created_at')
       .eq('user_id', user.id)
       .maybeSingle(),
-    supabase
+    db
       .from('referrals')
       .select('status, xp_awarded, created_at')
       .eq('referrer_id', user.id)

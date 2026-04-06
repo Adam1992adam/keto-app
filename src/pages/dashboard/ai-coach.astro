@@ -46,12 +46,12 @@ const cycledDay  = ((currentDay - 1) % getMealCycleDays(planType)) + 1;
 
 // Parallel data fetch
 const results = await Promise.all([
-  db.from('onboarding_data').select('current_weight,target_weight,dietary_restrictions,fasting_protocol').eq('user_id', user.id).single(),
+  db.from('onboarding_data').select('current_weight,target_weight,dietary_restrictions,fasting_protocol').eq('user_id', user.id).maybeSingle(),
   db.from('daily_checkins').select('energy_level,water_glasses,had_headache,had_fatigue').eq('user_id', user.id).eq('checkin_date', today).maybeSingle(),
   db.from('daily_tasks').select('task_title,completed').eq('user_id', user.id).eq('day_number', currentDay),
   db.from('weight_logs').select('weight,logged_date').eq('user_id', user.id).order('logged_date', { ascending: false }).limit(3),
   db.from('fasting_sessions').select('started_at,target_hours').eq('user_id', user.id).is('ended_at', null).order('started_at', { ascending: false }).limit(1).maybeSingle(),
-  db.from('macro_goals').select('daily_calories,protein_g,fat_g,carbs_g').eq('user_id', user.id).single(),
+  db.from('macro_goals').select('daily_calories,protein_g,fat_g,carbs_g').eq('user_id', user.id).maybeSingle(),
   db.from('meal_completions').select('meal_type').eq('user_id', user.id).eq('day_number', currentDay),
   db.from('chat_messages').select('role,content,created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(40),
 ]);
@@ -66,14 +66,14 @@ const mealComps     = results[6].data || [];
 const chatHistory   = (results[7].data || []).reverse();
 
 // Meal plan for today
-const { data: mealPlanDirect } = await supabase
+const { data: mealPlanDirect } = await db
   .from('meal_plans')
   .select('meal_type, recipe:recipes(id,title,calories,protein,fat,net_carbs)')
   .eq('plan_type', planType)
   .eq('day_number', cycledDay)
   .order('meal_type');
 
-const { data: mealPlanFallback } = mealPlanDirect?.length ? { data: null } : await supabase
+const { data: mealPlanFallback } = mealPlanDirect?.length ? { data: null } : await db
   .from('meal_plans')
   .select('meal_type, recipe:recipes(id,title,calories,protein,fat,net_carbs)')
   .eq('plan_type', 'basic_30')
@@ -132,6 +132,8 @@ const showSnack      = nowHour >= 15 && nowHour < 19;
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>AI Coach — Keto Journey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,900;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
   <script is:inline>(function(){const t=localStorage.getItem('keto-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
   <style>

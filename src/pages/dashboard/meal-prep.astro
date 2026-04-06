@@ -5,7 +5,6 @@
 // ──────────────────────────────────────────────────────────────────
 
 import { requireAuth } from '../../lib/auth';
-import { supabase } from '../../lib/supabase';
 import DashNav from '../../components/DashNav.astro';
 import UtensilsCrossed from 'lucide-astro/UtensilsCrossed';
 import Clock from 'lucide-astro/Clock';
@@ -17,14 +16,14 @@ import Plus from 'lucide-astro/Plus';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
 
 // ── Load last saved plan ─────────────────────────────────────────
-const { data: savedPlan, error: loadError } = await supabase
+const { data: savedPlan, error: loadError } = await db
   .from('meal_prep_plans')
   .select('id, week_start_date, plan_data, created_at')
   .eq('user_id', user.id)

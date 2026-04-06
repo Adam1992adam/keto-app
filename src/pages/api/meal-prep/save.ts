@@ -13,21 +13,13 @@
 //   );
 
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
-
-// ── Auth helper ─────────────────────────────────────────────────────────────
-async function getAuthUser(cookies: any) {
-  const token = cookies.get('sb-access-token')?.value;
-  if (!token) return null;
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) return null;
-  return user;
-}
+import { requireApiAuth } from '../../../lib/auth';
 
 // ── GET — return latest saved plan ──────────────────────────────────────────
 export const GET: APIRoute = async ({ cookies }) => {
-  const user = await getAuthUser(cookies);
-  if (!user) return json({ error: 'Unauthorized' }, 401);
+  const auth = await requireApiAuth(cookies);
+  if (!auth.ok) return auth.response;
+  const { user, db: supabase } = auth;
 
   const { data, error } = await supabase
     .from('meal_prep_plans')
@@ -40,7 +32,7 @@ export const GET: APIRoute = async ({ cookies }) => {
   if (error) {
     // Table may not exist yet — return empty gracefully
     console.error('meal-prep GET error:', error.message);
-    return json({ error: error.message }, 500);
+    return json({ error: 'Server error' }, 500);
   }
 
   return json({ success: true, plan: data });
@@ -48,8 +40,9 @@ export const GET: APIRoute = async ({ cookies }) => {
 
 // ── POST — upsert plan ───────────────────────────────────────────────────────
 export const POST: APIRoute = async ({ request, cookies }) => {
-  const user = await getAuthUser(cookies);
-  if (!user) return json({ error: 'Unauthorized' }, 401);
+  const auth = await requireApiAuth(cookies);
+  if (!auth.ok) return auth.response;
+  const { user, db: supabase } = auth;
 
   let body: any;
   try {
@@ -86,7 +79,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   if (error) {
     console.error('meal-prep POST error:', error.message);
-    return json({ error: error.message }, 500);
+    return json({ error: 'Server error' }, 500);
   }
 
   return json({ success: true, plan: data });

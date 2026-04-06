@@ -1,13 +1,11 @@
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const accessToken = cookies.get('sb-access-token')?.value;
-    if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-    const { data: { user } } = await supabase.auth.getUser(accessToken);
-    if (!user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db: supabase } = auth;
 
     const { week_number, item_key, is_checked } = await request.json();
     if (!week_number || !item_key) return json({ error: 'week_number and item_key are required' }, 400);

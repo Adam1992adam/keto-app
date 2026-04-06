@@ -38,9 +38,9 @@ export async function getUserMealContext(userId: string): Promise<MealContext> {
 
   // 1. بيانات الـ profile و onboarding
   const [{ data: profile }, { data: onboarding }, { data: journey }] = await Promise.all([
-    supabase.from('profiles').select('subscription_tier, xp_total').eq('id', userId).single(),
-    supabase.from('onboarding_data').select('dietary_restrictions, fasting_protocol').eq('user_id', userId).single(),
-    supabase.from('user_journey').select('current_day').eq('user_id', userId).single(),
+    supabase.from('profiles').select('subscription_tier, xp_total').eq('id', userId).maybeSingle(),
+    supabase.from('onboarding_data').select('dietary_restrictions, fasting_protocol').eq('user_id', userId).maybeSingle(),
+    supabase.from('user_journey').select('current_day').eq('user_id', userId).maybeSingle(),
   ]);
 
   const planType  = profile?.subscription_tier || 'basic_30';

@@ -1,20 +1,12 @@
 import type { APIRoute } from 'astro';
-import { supabase, getUserClient, initializeUserJourney } from '../../../lib/supabase';
+import { initializeUserJourney } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const accessToken = cookies.get('sb-access-token')?.value;
-    if (!accessToken) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken);
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-    }
-
-    // Use user-scoped client for all DB writes so RLS policies pass
-    const db = getUserClient(accessToken);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db } = auth;
 
     const body = await request.json();
 
@@ -172,7 +164,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   } catch (error: any) {
     console.error('Onboarding save error:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Failed to save' }), {
+    return new Response(JSON.stringify({ error: 'Server error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

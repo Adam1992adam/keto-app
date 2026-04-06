@@ -1,0 +1,509 @@
+---
+// src/pages/dashboard/guide.astro
+// /dashboard/guide — Interactive new-user feature guide
+import { requireAuth } from '../../lib/auth';
+import { getMaxJourneyDays, getUserJourney } from '../../lib/supabase';
+import DashNav from '../../components/DashNav.astro';
+
+const auth = await requireAuth(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile, db } = auth;
+
+const planType  = profile.subscription_tier || 'basic_30';
+const maxDays   = getMaxJourneyDays(planType);
+const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
+const tierColor = planType === 'elite_12' ? '#f59e0b' : planType === 'pro_6' ? '#6366f1' : '#10b981';
+const firstName = profile.full_name?.split(' ')[0] || 'there';
+
+const journey    = await getUserJourney(user.id, db);
+const currentDay = journey?.current_day || 1;
+const totalXP    = journey?.total_xp    || 0;
+const level      = journey?.level       || 1;
+const streak     = journey?.streak_days || 0;
+
+// What the user has already done — to personalize the guide
+const { data: onboarding } = await db.from('onboarding_data').select('goal').eq('user_id', user.id).maybeSingle();
+const { data: todayCheckin } = await db.from('daily_checkins')
+  .select('id').eq('user_id', user.id)
+  .eq('checkin_date', new Date().toISOString().split('T')[0]).maybeSingle();
+const { data: weightLogs } = await db.from('weight_logs').select('id').eq('user_id', user.id).limit(1);
+const { data: fastingSessions } = await db.from('fasting_sessions').select('id').eq('user_id', user.id).limit(1);
+
+const hasOnboarded  = !!onboarding;
+const hasCheckedIn  = !!todayCheckin;
+const hasLoggedWeight = (weightLogs?.length || 0) > 0;
+const hasFasted     = (fastingSessions?.length || 0) > 0;
+
+const isElite = planType === 'elite_12';
+const isPro   = planType === 'pro_6' || isElite;
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>App Guide · Keto Journey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
+  <script is:inline>(function(){const t=localStorage.getItem('keto-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
+  <style>
+    :root{
+      --bg:#060d09;--card:#0d1a0f;--card2:#111f13;
+      --border:rgba(16,185,129,.1);--border2:rgba(16,185,129,.22);
+      --text:#dfeedd;--soft:#4d7055;--muted:#233328;
+      --green:#10b981;--green2:#34d399;--amber:#f59e0b;
+      --purple:#8b5cf6;--blue:#3b82f6;--red:#ef4444;
+    }
+    [data-theme="light"]{
+      --bg:#f0fdf4;--card:#fff;--card2:#f6fef9;
+      --border:rgba(16,185,129,.15);--border2:rgba(16,185,129,.3);
+      --text:#0f2e1a;--soft:#3d6b4a;--muted:#c8e6d0;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
+    .page{max-width:760px;margin:0 auto;padding:5.5rem 1.25rem 6rem;}
+
+    /* HERO */
+    .guide-hero{text-align:center;padding:2.5rem 1.5rem 2rem;margin-bottom:2rem;}
+    .gh-badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.72rem;font-weight:800;padding:.3rem .9rem;border-radius:99px;border:1px solid;margin-bottom:1rem;}
+    .gh-title{font-family:'Fraunces',serif;font-size:2.2rem;font-weight:900;line-height:1.15;margin-bottom:.6rem;}
+    .gh-title em{font-style:italic;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .gh-sub{font-size:.95rem;color:var(--soft);max-width:500px;margin:0 auto 1.5rem;line-height:1.7;}
+    .gh-stats{display:inline-flex;gap:.75rem;flex-wrap:wrap;justify-content:center;}
+    .ghs-pill{font-size:.75rem;font-weight:700;padding:.35rem .8rem;border-radius:99px;background:var(--card);border:1px solid var(--border);}
+
+    /* PROGRESS TRACKER */
+    .guide-progress{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:1.25rem 1.5rem;margin-bottom:2rem;}
+    .gp-title{font-size:.8rem;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.9rem;}
+    .gp-steps{display:flex;align-items:center;gap:0;}
+    .gp-step{display:flex;flex-direction:column;align-items:center;gap:.3rem;flex:1;}
+    .gp-dot{width:32px;height:32px;border-radius:50%;border:2px solid;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:900;transition:all .3s;position:relative;z-index:1;}
+    .gp-dot.done{background:var(--green);border-color:var(--green);color:#fff;}
+    .gp-dot.active{background:rgba(16,185,129,.15);border-color:var(--green);color:var(--green);}
+    .gp-dot.pending{background:var(--card2);border-color:var(--muted);color:var(--muted);}
+    .gp-lbl{font-size:.6rem;font-weight:700;color:var(--soft);text-align:center;max-width:60px;}
+    .gp-line{flex:1;height:2px;background:var(--border);margin-bottom:1.1rem;}
+    .gp-line.done{background:var(--green);}
+
+    /* SECTION */
+    .guide-section{margin-bottom:2.5rem;}
+    .gs-header{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;}
+    .gs-num{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:900;color:#fff;flex-shrink:0;}
+    .gs-title{font-family:'Fraunces',serif;font-size:1.25rem;font-weight:900;}
+    .gs-badge{font-size:.65rem;font-weight:800;padding:.2rem .55rem;border-radius:6px;text-transform:uppercase;letter-spacing:.05em;}
+
+    /* FEATURE CARDS */
+    .feat-grid{display:grid;gap:.75rem;}
+    .feat-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.1rem 1.25rem;display:flex;gap:1rem;align-items:flex-start;transition:all .2s;text-decoration:none;color:inherit;position:relative;overflow:hidden;}
+    .feat-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.25);}
+    .feat-card.done-card{opacity:.75;}
+    .feat-card.done-card::after{content:'✓ Done';position:absolute;top:.6rem;right:.75rem;font-size:.65rem;font-weight:800;color:var(--green);background:rgba(16,185,129,.12);padding:.15rem .45rem;border-radius:6px;}
+    .fc-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.3rem;}
+    .fc-body{flex:1;min-width:0;}
+    .fc-title{font-size:.9rem;font-weight:800;margin-bottom:.2rem;display:flex;align-items:center;gap:.4rem;}
+    .fc-desc{font-size:.8rem;color:var(--soft);line-height:1.6;}
+    .fc-action{margin-top:.6rem;display:inline-flex;align-items:center;gap:.3rem;font-size:.75rem;font-weight:800;padding:.3rem .7rem;border-radius:8px;text-decoration:none;border:none;cursor:pointer;}
+    .fc-xp{font-size:.65rem;font-weight:800;padding:.15rem .45rem;border-radius:6px;background:rgba(139,92,246,.12);color:#a78bfa;white-space:nowrap;}
+
+    /* TIP BOXES */
+    .tip-box{display:flex;gap:.75rem;padding:.9rem 1rem;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.18);border-radius:12px;margin-top:.6rem;}
+    .tip-icon{font-size:1.1rem;flex-shrink:0;margin-top:.05rem;}
+    .tip-text{font-size:.78rem;color:var(--soft);line-height:1.65;}
+    .tip-text strong{color:var(--text);}
+
+    /* TIER LOCK */
+    .locked-card{opacity:.5;pointer-events:none;position:relative;}
+    .locked-card::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 8px,rgba(0,0,0,.04) 8px,rgba(0,0,0,.04) 9px);border-radius:inherit;z-index:1;}
+    .lock-badge{position:absolute;top:.7rem;right:.75rem;font-size:.65rem;font-weight:800;padding:.2rem .55rem;border-radius:6px;background:rgba(245,158,11,.15);color:#f59e0b;z-index:2;}
+
+    /* XP OVERVIEW */
+    .xp-table{width:100%;border-collapse:collapse;font-size:.8rem;}
+    .xp-table th{text-align:left;padding:.5rem .75rem;color:var(--soft);font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);}
+    .xp-table td{padding:.6rem .75rem;border-bottom:1px solid rgba(16,185,129,.06);}
+    .xp-table tr:last-child td{border-bottom:none;}
+    .xp-amt{font-weight:800;color:#a78bfa;}
+
+    /* CTA */
+    .guide-cta{background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(52,211,153,.07));border:1.5px solid rgba(16,185,129,.28);border-radius:20px;padding:2rem;text-align:center;margin-top:2rem;}
+    .gc-title{font-family:'Fraunces',serif;font-size:1.4rem;font-weight:900;margin-bottom:.4rem;}
+    .gc-sub{font-size:.85rem;color:var(--soft);margin-bottom:1.25rem;line-height:1.6;}
+    .gc-btn{display:inline-block;padding:.875rem 2rem;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;font-weight:900;font-size:.95rem;border-radius:14px;text-decoration:none;box-shadow:0 6px 20px rgba(16,185,129,.35);}
+
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
+    .guide-section{animation:fadeUp .4s ease both;}
+    .guide-section:nth-child(2){animation-delay:.05s;}
+    .guide-section:nth-child(3){animation-delay:.1s;}
+    .guide-section:nth-child(4){animation-delay:.15s;}
+    .guide-section:nth-child(5){animation-delay:.2s;}
+    .guide-section:nth-child(6){animation-delay:.25s;}
+
+    @media(max-width:600px){
+      .gh-title{font-size:1.7rem;}
+      .gp-steps{gap:0;}
+      .gp-lbl{font-size:.55rem;max-width:48px;}
+    }
+  </style>
+</head>
+<body>
+<DashNav userId={user.id} userName={firstName} tierLabel={tierLabel} planType={planType} activePage="guide" />
+
+<div class="page">
+
+  <!-- HERO -->
+  <div class="guide-hero">
+    <div class="gh-badge" style={`background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.25);color:var(--green);`}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      App Guide
+    </div>
+    <div class="gh-title">Your <em>Keto Journey</em> <br/>App Manual</div>
+    <div class="gh-sub">
+      Everything you need to know to get results — explained simply.
+      You're on the <strong style={`color:${tierColor}`}>{tierLabel} plan</strong> ({maxDays} days).
+    </div>
+    <div class="gh-stats">
+      <span class="ghs-pill" style="color:var(--amber);">🔥 {streak}-day streak</span>
+      <span class="ghs-pill" style="color:#a78bfa;">⭐ {totalXP} XP · Level {level}</span>
+      <span class="ghs-pill" style="color:var(--blue);">📅 Day {currentDay}</span>
+    </div>
+  </div>
+
+  <!-- QUICK-START PROGRESS TRACKER -->
+  <div class="guide-progress">
+    <div class="gp-title">Your Quick-Start Checklist</div>
+    <div class="gp-steps">
+      <div class="gp-step">
+        <div class={`gp-dot ${hasOnboarded ? 'done' : 'active'}`}>{hasOnboarded ? '✓' : '1'}</div>
+        <div class="gp-lbl">Set up profile</div>
+      </div>
+      <div class={`gp-line ${hasOnboarded ? 'done' : ''}`}></div>
+      <div class="gp-step">
+        <div class={`gp-dot ${hasCheckedIn ? 'done' : (hasOnboarded ? 'active' : 'pending')}`}>{hasCheckedIn ? '✓' : '2'}</div>
+        <div class="gp-lbl">First check-in</div>
+      </div>
+      <div class={`gp-line ${hasCheckedIn ? 'done' : ''}`}></div>
+      <div class="gp-step">
+        <div class={`gp-dot ${hasLoggedWeight ? 'done' : (hasCheckedIn ? 'active' : 'pending')}`}>{hasLoggedWeight ? '✓' : '3'}</div>
+        <div class="gp-lbl">Log weight</div>
+      </div>
+      <div class={`gp-line ${hasLoggedWeight ? 'done' : ''}`}></div>
+      <div class="gp-step">
+        <div class={`gp-dot ${hasFasted ? 'done' : (hasLoggedWeight ? 'active' : 'pending')}`}>{hasFasted ? '✓' : '4'}</div>
+        <div class="gp-lbl">Try fasting</div>
+      </div>
+      <div class={`gp-line ${hasFasted ? 'done' : ''}`}></div>
+      <div class="gp-step">
+        <div class={`gp-dot ${streak >= 3 ? 'done' : (hasFasted ? 'active' : 'pending')}`}>{streak >= 3 ? '✓' : '5'}</div>
+        <div class="gp-lbl">3-day streak</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: DAILY ROUTINE -->
+  <div class="guide-section">
+    <div class="gs-header">
+      <div class="gs-num" style="background:linear-gradient(135deg,#10b981,#34d399);">1</div>
+      <div class="gs-title">Your Daily Routine</div>
+      <span class="gs-badge" style="background:rgba(16,185,129,.12);color:var(--green);">Do This Every Day</span>
+    </div>
+    <div class="feat-grid">
+
+      <a href="/dashboard/checkin" class={`feat-card ${hasCheckedIn ? 'done-card' : ''}`}>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(52,211,153,.1));border:1px solid rgba(16,185,129,.25);">✏️</div>
+        <div class="fc-body">
+          <div class="fc-title">Daily Check-in <span class="fc-xp">+30 XP</span></div>
+          <div class="fc-desc">Every day, log your energy level (1–5), mood, water glasses, and whether you followed your meal plan. This builds your streak and gives the AI Coach data to personalise your advice. Takes under 2 minutes.</div>
+          <div class="tip-box">
+            <span class="tip-icon">💡</span>
+            <div class="tip-text"><strong>Best time:</strong> Do your check-in right after dinner — you'll have all the day's data fresh in your mind. Set a phone alarm for 8 pm.</div>
+          </div>
+          <a href="/dashboard/checkin" class="fc-action" style="background:rgba(16,185,129,.12);color:var(--green);">Check In Now →</a>
+        </div>
+      </a>
+
+      <a href="/dashboard#tour-tasks" class="feat-card">
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(59,130,246,.2),rgba(96,165,250,.1));border:1px solid rgba(59,130,246,.25);">✅</div>
+        <div class="fc-body">
+          <div class="fc-title">Daily Tasks <span class="fc-xp">+20–50 XP each</span></div>
+          <div class="fc-desc">Each day you get 3–5 tasks tailored to your plan (e.g. "Drink 2L water", "Eat a high-fat breakfast", "Do 20 min of movement"). Completing all tasks earns bonus XP and marks it as a "Perfect Day".</div>
+          <div class="tip-box">
+            <span class="tip-icon">⚡</span>
+            <div class="tip-text"><strong>Pro tip:</strong> Tasks reset each day at midnight. You can't complete yesterday's tasks, so don't miss a day — even one incomplete task means you lose that XP forever.</div>
+          </div>
+        </div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- SECTION 2: TRACK YOUR PROGRESS -->
+  <div class="guide-section">
+    <div class="gs-header">
+      <div class="gs-num" style="background:linear-gradient(135deg,#3b82f6,#60a5fa);">2</div>
+      <div class="gs-title">Track Your Progress</div>
+      <span class="gs-badge" style="background:rgba(59,130,246,.12);color:var(--blue);">Weekly Habit</span>
+    </div>
+    <div class="feat-grid">
+
+      <a href="/dashboard/progress" class={`feat-card ${hasLoggedWeight ? '' : ''}`}>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(52,211,153,.1));border:1px solid rgba(16,185,129,.25);">⚖️</div>
+        <div class="fc-body">
+          <div class="fc-title">Weight Log <span class="fc-xp">+10 XP</span></div>
+          <div class="fc-desc">Log your weight 1–2× per week (same time of day, same conditions). The app tracks your loss curve over time and calculates % progress toward your goal weight. You can also log body measurements.</div>
+          <div class="tip-box">
+            <span class="tip-icon">📅</span>
+            <div class="tip-text"><strong>Best time:</strong> Weigh yourself on Monday morning, before eating, after using the bathroom. This gives the most consistent readings and avoids weekend food variation.</div>
+          </div>
+          <a href="/dashboard/progress" class="fc-action" style="background:rgba(16,185,129,.12);color:var(--green);">Go to Progress →</a>
+        </div>
+      </a>
+
+      <a href="/dashboard/weekly" class="feat-card">
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(167,139,250,.1));border:1px solid rgba(139,92,246,.25);">📊</div>
+        <div class="fc-body">
+          <div class="fc-title">Weekly Report <span class="fc-xp">+50 XP</span></div>
+          <div class="fc-desc">Every 7 days, complete your Weekly Report — a short reflection on energy trends, what worked, what didn't, and your goals for next week. The app emails you a personalised summary every Monday.</div>
+          <div class="tip-box">
+            <span class="tip-icon">📬</span>
+            <div class="tip-text">Check your email every Monday morning — your weekly summary includes your streak, XP earned, energy trends, and a personalised focus for the week ahead.</div>
+          </div>
+        </div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- SECTION 3: MEALS & RECIPES -->
+  <div class="guide-section">
+    <div class="gs-header">
+      <div class="gs-num" style="background:linear-gradient(135deg,#f59e0b,#fcd34d);">3</div>
+      <div class="gs-title">Meals & Recipes</div>
+      <span class="gs-badge" style="background:rgba(245,158,11,.12);color:var(--amber);">Eat Right</span>
+    </div>
+    <div class="feat-grid">
+
+      <a href="/dashboard/recipes" class="feat-card">
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(252,211,77,.1));border:1px solid rgba(245,158,11,.25);">🍽️</div>
+        <div class="fc-body">
+          <div class="fc-title">Daily Meal Plan</div>
+          <div class="fc-desc">Your dashboard shows today's 4 meals (Breakfast, Lunch, Dinner, Snack). Each meal is a keto-optimised recipe from your plan's library. Click any meal to see the full recipe with macros, ingredients, and instructions.</div>
+          <div class="tip-box">
+            <span class="tip-icon">🔄</span>
+            <div class="tip-text"><strong>Not feeling a meal?</strong> Hit the "Swap" button on any meal card to get an alternative that fits your dietary preferences and similar macros. Swaps are unlimited.</div>
+          </div>
+          <a href="/dashboard/recipes" class="fc-action" style="background:rgba(245,158,11,.12);color:var(--amber);">View Meal Plan →</a>
+        </div>
+      </a>
+
+      <a href="/dashboard/browse" class="feat-card">
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(252,211,77,.1));border:1px solid rgba(245,158,11,.25);">🔍</div>
+        <div class="fc-body">
+          <div class="fc-title">Browse All Recipes</div>
+          <div class="fc-desc">
+            {planType === 'basic_30' ? 'Access all 30 keto recipes in your library. Filter by meal type, dietary needs, and sort by macros or rating.' :
+             planType === 'pro_6'    ? 'Access 87+ keto recipes. Search, filter by meal type or dietary needs, sort by calories, protein, or rating.' :
+             'Unlimited access to the full recipe library. Search, filter, rate, and save favorites.'}
+          </div>
+          <a href="/dashboard/browse" class="fc-action" style="background:rgba(245,158,11,.12);color:var(--amber);">Browse Recipes →</a>
+        </div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- SECTION 4: XP & GAMIFICATION -->
+  <div class="guide-section">
+    <div class="gs-header">
+      <div class="gs-num" style="background:linear-gradient(135deg,#8b5cf6,#a78bfa);">4</div>
+      <div class="gs-title">XP, Levels & Streaks</div>
+      <span class="gs-badge" style="background:rgba(139,92,246,.12);color:#a78bfa;">How It Works</span>
+    </div>
+
+    <div class="feat-card" style="margin-bottom:.75rem;cursor:default;">
+      <div class="fc-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(167,139,250,.1));border:1px solid rgba(139,92,246,.25);">⭐</div>
+      <div class="fc-body">
+        <div class="fc-title">How You Earn XP</div>
+        <div class="fc-desc">Every action earns you XP. XP fills your level bar — every 500 XP = 1 level up. There's no cap: the more consistent you are, the higher your level climbs.</div>
+      </div>
+    </div>
+
+    <div class="feat-card" style="margin-bottom:.75rem;cursor:default;">
+      <div class="fc-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(252,211,77,.1));border:1px solid rgba(245,158,11,.25);">🔥</div>
+      <div class="fc-body">
+        <div class="fc-title">Streak Rules</div>
+        <div class="fc-desc">Your streak increases by 1 every day you complete a check-in before midnight. <strong style="color:var(--text);">Miss one day = streak resets to 0.</strong> If you have a streak going, the app emails you a warning at 6 pm if you haven't checked in yet.</div>
+      </div>
+    </div>
+
+    <table class="xp-table" style="background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+      <thead>
+        <tr style="background:var(--card2);">
+          <th>Action</th>
+          <th>XP Earned</th>
+          <th>Frequency</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Daily Check-in</td><td class="xp-amt">+30 XP</td><td>Once per day</td></tr>
+        <tr><td>Complete a Task</td><td class="xp-amt">+20–50 XP</td><td>Per task</td></tr>
+        <tr><td>End a Fast</td><td class="xp-amt">+40 XP</td><td>Per session</td></tr>
+        <tr><td>Weekly Report</td><td class="xp-amt">+50 XP</td><td>Once per week</td></tr>
+        <tr><td>Referral (friend joins)</td><td class="xp-amt">+150 XP</td><td>Per referral</td></tr>
+        <tr><td>Welcome bonus (used referral code)</td><td class="xp-amt">+50 XP</td><td>Once</td></tr>
+        <tr><td>Milestone reached</td><td class="xp-amt">+100 XP</td><td>Day 7, 14, 21, 30…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SECTION 5: FASTING -->
+  <div class="guide-section">
+    <div class="gs-header">
+      <div class="gs-num" style="background:linear-gradient(135deg,#8b5cf6,#6366f1);">5</div>
+      <div class="gs-title">Intermittent Fasting</div>
+      <span class="gs-badge" style="background:rgba(139,92,246,.12);color:#a78bfa;">Optional but Powerful</span>
+    </div>
+    <div class="feat-grid">
+
+      <a href="/dashboard/fasting" class={`feat-card ${hasFasted ? '' : ''}`}>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(167,139,250,.1));border:1px solid rgba(139,92,246,.25);">⏱️</div>
+        <div class="fc-body">
+          <div class="fc-title">Fasting Timer <span class="fc-xp">+40 XP</span></div>
+          <div class="fc-desc">Fasting + keto is the most powerful fat-loss combination. The app includes a built-in timer for 16:8, 18:6, 20:4, and 24h protocols. Start a fast, and the timer counts up in real time — you can close the app and it keeps running.</div>
+          <div class="tip-box">
+            <span class="tip-icon">🌙</span>
+            <div class="tip-text"><strong>Beginner tip:</strong> Start with 16:8 — stop eating at 8 pm, eat again at noon the next day. You sleep through most of the fast so it barely feels like fasting.</div>
+          </div>
+          <a href="/dashboard/fasting" class="fc-action" style="background:rgba(139,92,246,.12);color:#a78bfa;">Start Fasting →</a>
+        </div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- SECTION 6: ADVANCED TOOLS -->
+  <div class="guide-section">
+    <div class="gs-header">
+      <div class="gs-num" style="background:linear-gradient(135deg,#3b82f6,#60a5fa);">6</div>
+      <div class="gs-title">Advanced Tools</div>
+    </div>
+    <div class="feat-grid">
+
+      <a href="/dashboard/keto-calculator" class="feat-card">
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(59,130,246,.2),rgba(96,165,250,.1));border:1px solid rgba(59,130,246,.25);">🧮</div>
+        <div class="fc-body">
+          <div class="fc-title">Keto Calculator</div>
+          <div class="fc-desc">Enter your body stats to get your personalised TDEE (Total Daily Energy Expenditure) and exact macro targets in grams: calories, protein, fat, and net carbs. Updates your dashboard macro rings.</div>
+        </div>
+      </a>
+
+      <a href="/dashboard/shopping" class="feat-card">
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(52,211,153,.1));border:1px solid rgba(16,185,129,.25);">🛒</div>
+        <div class="fc-body">
+          <div class="fc-title">Shopping List</div>
+          <div class="fc-desc">Auto-generated weekly shopping list based on your meal plan. Organised by food category. Print or screenshot before heading to the supermarket — everything you need for the week is already listed.</div>
+        </div>
+      </a>
+
+      <a href="/dashboard/ketones" class="feat-card">
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(252,211,77,.1));border:1px solid rgba(245,158,11,.25);">🩸</div>
+        <div class="fc-body">
+          <div class="fc-title">Ketone Tracker</div>
+          <div class="fc-desc">Log your ketone readings (blood, urine, or breath meter) and see your ketosis zone trend over time. Green zone (0.5–3.0 mmol/L) is optimal fat-burning. The chart shows your ketosis consistency.</div>
+        </div>
+      </a>
+
+      <a href="/dashboard/photos" class="feat-card">
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(239,68,68,.15),rgba(248,113,113,.1));border:1px solid rgba(239,68,68,.2);">📸</div>
+        <div class="fc-body">
+          <div class="fc-title">Before / After Photos</div>
+          <div class="fc-desc">Upload progress photos and compare them side-by-side with a draggable slider. The visual difference motivates you more than any number on the scale. Upload one photo per week for best results.</div>
+        </div>
+      </a>
+
+      <a href="/dashboard/share" class="feat-card">
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(167,139,250,.1));border:1px solid rgba(139,92,246,.25);">🎨</div>
+        <div class="fc-body">
+          <div class="fc-title">Share Your Milestones</div>
+          <div class="fc-desc">Generate beautiful shareable cards for Instagram and Stories when you hit milestones (Day 7, 14, 30). 4 design templates, 4 themes, square and story formats. Show your results to the world.</div>
+        </div>
+      </a>
+
+      <a href="/dashboard/referrals" class="feat-card">
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(52,211,153,.1));border:1px solid rgba(16,185,129,.25);">🤝</div>
+        <div class="fc-body">
+          <div class="fc-title">Referral Program <span class="fc-xp">+150 XP per friend</span></div>
+          <div class="fc-desc">Share your unique referral code with friends. When they sign up and use your code, you earn 150 XP and they get a 50 XP welcome bonus. No limit — refer as many people as you like.</div>
+          <a href="/dashboard/referrals" class="fc-action" style="background:rgba(16,185,129,.12);color:var(--green);">Get Your Code →</a>
+        </div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- SECTION 7: AI COACH (Elite/teaser) -->
+  {isElite
+    ? (
+      <div class="guide-section">
+        <div class="gs-header">
+          <div class="gs-num" style="background:linear-gradient(135deg,#f59e0b,#fcd34d);">7</div>
+          <div class="gs-title">AI Coach</div>
+          <span class="gs-badge" style="background:rgba(245,158,11,.15);color:#f59e0b;">👑 Elite Exclusive</span>
+        </div>
+        <a href="/dashboard/ai-coach" class="feat-card">
+          <div class="fc-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(252,211,77,.1));border:1px solid rgba(245,158,11,.3);">🤖</div>
+          <div class="fc-body">
+            <div class="fc-title">Chat with Your AI Coach</div>
+            <div class="fc-desc">Your Elite plan includes an AI coach powered by Gemini. Ask anything — "Why am I not losing weight?", "What should I eat before a workout?", "How do I break a plateau?" — and get personalised answers based on your actual data: your check-ins, weight trends, and current day.</div>
+            <a href="/dashboard/ai-coach" class="fc-action" style="background:rgba(245,158,11,.15);color:#f59e0b;">Open AI Coach →</a>
+          </div>
+        </a>
+      </div>
+    )
+    : (
+      <div class="guide-section">
+        <div class="gs-header">
+          <div class="gs-num" style="background:linear-gradient(135deg,#4b5563,#6b7280);">7</div>
+          <div class="gs-title">AI Coach</div>
+          <span class="gs-badge" style="background:rgba(245,158,11,.1);color:#f59e0b;">👑 Elite Only</span>
+        </div>
+        <div class="feat-card locked-card" style="cursor:default;">
+          <div class="lock-badge">Elite Only</div>
+          <div class="fc-icon" style="background:var(--card2);border:1px solid var(--border);">🤖</div>
+          <div class="fc-body">
+            <div class="fc-title">Personal AI Coach</div>
+            <div class="fc-desc">Get a personal AI coach that knows your data — check-ins, weight, energy, meals — and answers your keto questions with context. Available on the Elite 365-day plan.</div>
+            <a href="/dashboard/upgrade" class="fc-action" style="background:rgba(245,158,11,.12);color:#f59e0b;pointer-events:all;">Upgrade to Elite →</a>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  <!-- FINAL CTA -->
+  <div class="guide-cta">
+    <div class="gc-title">Ready to crush Day {currentDay}?</div>
+    <div class="gc-sub">
+      {!hasCheckedIn
+        ? `You haven't checked in today yet. Start there — it only takes 2 minutes and keeps your streak alive.`
+        : `You've already checked in today — great work! Complete your tasks and log a meal to earn more XP.`}
+    </div>
+    <a href={hasCheckedIn ? '/dashboard' : '/dashboard/checkin'} class="gc-btn">
+      {hasCheckedIn ? 'Back to Dashboard →' : 'Check In Now → +30 XP'}
+    </a>
+  </div>
+
+</div>
+
+<script is:inline>
+// Mark sections as seen using IntersectionObserver
+if ('IntersectionObserver' in window) {
+  var seen = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+      if (e.isIntersecting) e.target.style.opacity = '1';
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.guide-section').forEach(function(s) { seen.observe(s); });
+}
+</script>
+</body>
+</html>

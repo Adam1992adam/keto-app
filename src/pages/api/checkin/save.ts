@@ -1,18 +1,15 @@
 // src/pages/api/checkin/save.ts
 // POST /api/checkin/save
-// FIX: Uses award_xp RPC to update user_journey.total_xp (not profiles.xp_total)
 
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 import { autoCompleteTask, checkAchievements } from '../../../lib/autoTask';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const accessToken = cookies.get('sb-access-token')?.value;
-    if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken);
-    if (authError || !user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db, accessToken } = auth;
 
     const body = await request.json();
 
@@ -39,8 +36,19 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (sleep_hours !== undefined && sleep_hours !== null && (sleep_hours < 0 || sleep_hours > 24)) return json({ error: 'sleep_hours must be 0–24' }, 400);
     if (sleep_quality !== undefined && sleep_quality !== null && (sleep_quality < 1 || sleep_quality > 5)) return json({ error: 'sleep_quality must be 1–5' }, 400);
 
-    // ── 1. Save daily check-in ──
-    const { error: checkinError } = await supabase
+    // ── 1. Pre-compute electrolyte note so it's included in the initial upsert
+    //       (eliminates a second daily_checkins UPDATE round-trip later)
+    let finalNote = note || '';
+    if (electrolytes && (electrolytes.sodium || electrolytes.potassium || electrolytes.magnesium)) {
+      const elecNote = `[Electrolytes: Na=${electrolytes.sodium}, K=${electrolytes.potassium}, Mg=${electrolytes.magnesium}]`;
+      finalNote = finalNote ? `${finalNote}\n${elecNote}` : elecNote;
+    }
+
+    // ── 2. Save daily check-in ──
+    // ignoreDuplicates: true means a conflicting row is left untouched and the
+    // returned data array will be empty — that empty result is our atomic signal
+    // that this checkin already existed, with no separate SELECT round-trip.
+    const { data: insertedRows, error: checkinError } = await db
       .from('daily_checkins')
       .upsert({
         user_id:        user.id,
@@ -55,89 +63,68 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         followed_meals: followed_meals  ?? true,
         water_glasses:  water_glasses   || 0,
         fasted_today:   fasted_today    || false,
-        note:           note            || '',
+        note:           finalNote,
         xp_earned:      xp_earned       || 30,
         sleep_hours:    sleep_hours     || null,
         sleep_quality:  sleep_quality   || null,
         took_sodium:    took_sodium     || false,
         took_potassium: took_potassium  || false,
         took_magnesium: took_magnesium  || false,
-      }, { onConflict: 'user_id,checkin_date' });
+      }, { onConflict: 'user_id,checkin_date', ignoreDuplicates: true })
+      .select('id');
 
     if (checkinError) throw checkinError;
 
-    // ── 2. Award XP via RPC → updates user_journey.total_xp + level ──
-    // FIX: Use award_xp RPC (not profiles.xp_total which dashboard doesn't read)
-    const { error: xpRpcErr } = await supabase.rpc('award_xp', {
-      user_id_param:     user.id,
-      action_type_param: 'daily_checkin',
-      xp_amount_param:   xp_earned || 30,
-      description_param: `Daily check-in — ${today}`,
-      day_number_param:  null,
-    });
+    // insertedRows is non-empty only when the row was freshly inserted.
+    // An existing checkin returns [] — the DB enforces this atomically.
+    const isNewCheckin = Array.isArray(insertedRows) && insertedRows.length > 0;
 
-    if (xpRpcErr) {
-      // Fallback: update user_journey directly
-      console.warn('award_xp RPC failed, updating user_journey directly:', xpRpcErr.message);
-      const { data: journey } = await supabase
-        .from('user_journey')
-        .select('total_xp, level')
-        .eq('user_id', user.id)
-        .maybeSingle();
+    // ── 3. Award XP only on the FIRST check-in of the day ──
+    if (!isNewCheckin) {
+      return json({ success: true, xp_earned: 0, alreadyCheckedIn: true });
+    }
 
+    // ── 4. Parallel: award XP + log transaction + advance streak day ──
+    // These three operations are fully independent — run them concurrently.
+    const xpAmount = xp_earned || 30;
+    const [xpResult, , dayResult] = await Promise.all([
+      db.rpc('award_xp', {
+        user_id_param:     user.id,
+        action_type_param: 'daily_checkin',
+        xp_amount_param:   xpAmount,
+        description_param: `Daily check-in — ${today}`,
+        day_number_param:  null,
+      }),
+      db.from('xp_transactions').insert({
+        user_id:     user.id,
+        action_type: 'daily_checkin',
+        xp_amount:   xpAmount,
+        description: `Daily check-in — ${today}`,
+      }),
+      db.rpc('update_current_day', { user_id_param: user.id }),
+    ]);
+
+    // XP fallback if RPC failed — direct update to user_journey
+    if (xpResult.error) {
+      console.warn('award_xp RPC failed, updating user_journey directly:', xpResult.error.message);
+      const { data: journey } = await db
+        .from('user_journey').select('total_xp, level').eq('user_id', user.id).maybeSingle();
       if (journey) {
-        const newXP  = (journey.total_xp || 0) + (xp_earned || 30);
-        const newLvl = Math.floor(newXP / 500) + 1;
-        await supabase
-          .from('user_journey')
-          .update({ total_xp: newXP, level: newLvl })
+        const newXP  = (journey.total_xp || 0) + xpAmount;
+        await db.from('user_journey')
+          .update({ total_xp: newXP, level: Math.floor(newXP / 500) + 1 })
           .eq('user_id', user.id);
       }
     }
 
-    // ── 3. Also log to xp_transactions for history ──
-    try {
-      await supabase.from('xp_transactions').insert({
-        user_id:     user.id,
-        action_type: 'daily_checkin',
-        xp_amount:   xp_earned || 30,
-        description: `Daily check-in — ${today}`,
-      });
-    } catch (err: any) {
-      console.warn('xp_transactions insert warn:', err?.message);
-    }
+    // currentDay from update_current_day RPC — default to 1 if unavailable
+    // (avoids an extra user_journey SELECT on RPC failure)
+    const currentDay: number = dayResult.data ?? 1;
 
-    // ── 4. Update streak via update_current_day RPC ──
-    let currentDay = 1;
-    try {
-      const newDay = await supabase.rpc('update_current_day', { user_id_param: user.id });
-      if (newDay.data) currentDay = newDay.data;
-      else {
-        const { data: uj } = await supabase.from('user_journey').select('current_day').eq('user_id', user.id).maybeSingle();
-        if (uj) currentDay = uj.current_day;
-      }
-    } catch (e: any) { console.warn('update_current_day warn:', e?.message); }
-
-    // ── 4b. Auto-complete task entries for what was logged ──
-    // Checkin task: completing check-in marks it done
-    await autoCompleteTask(user.id, 'checkin', currentDay);
-    // Water task: if they logged 8+ glasses
+    // ── 5. Auto-complete task entries for what was logged ──
+    await autoCompleteTask(user.id, 'checkin', currentDay, accessToken);
     if ((water_glasses || 0) >= 8) {
-      await autoCompleteTask(user.id, 'water', currentDay);
-    }
-
-    // ── 5. Log electrolytes in note if provided ──
-    if (electrolytes && (electrolytes.sodium || electrolytes.potassium || electrolytes.magnesium)) {
-      const elecNote = `[Electrolytes: Na=${electrolytes.sodium}, K=${electrolytes.potassium}, Mg=${electrolytes.magnesium}]`;
-      try {
-        await supabase
-          .from('daily_checkins')
-          .update({ note: (note ? note + '\n' : '') + elecNote })
-          .eq('user_id', user.id)
-          .eq('checkin_date', today);
-      } catch (err: any) {
-        console.warn('Electrolyte note update warn:', err?.message);
-      }
+      await autoCompleteTask(user.id, 'water', currentDay, accessToken);
     }
 
     // ── 6. Keto flu detection ──
@@ -147,11 +134,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const autoAdvice = dangerSymptoms.length >= 2 ? 'KETO_FLU_ALERT' : null;
 
     checkAchievements(user.id, accessToken); // fire-and-forget
-    return json({ success: true, xp_earned: xp_earned || 30, autoAdvice });
+    return json({ success: true, xp_earned: xpAmount, autoAdvice });
 
   } catch (error: any) {
     console.error('Checkin save error:', error);
-    return json({ error: error.message || 'Failed to save' }, 500);
+    return json({ error: 'Server error' }, 500);
   }
 };
 

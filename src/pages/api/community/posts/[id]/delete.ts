@@ -1,21 +1,13 @@
 // src/pages/api/community/posts/[id]/delete.ts
 // DELETE /api/community/posts/[id]/delete  → soft-delete post (owner only)
 import type { APIRoute } from 'astro';
-import { createClient } from '@supabase/supabase-js';
+import { requireApiAuth } from '../../../../../lib/auth';
 
 export const POST: APIRoute = async ({ cookies, params }) => {
   try {
-    const token = cookies.get('sb-access-token')?.value;
-    if (!token) return json({ error: 'Unauthorized' }, 401);
-
-    const db = createClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
-    );
-
-    const { data: { user }, error: ae } = await db.auth.getUser();
-    if (ae || !user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db } = auth;
 
     const post_id = params.id;
     if (!post_id) return json({ error: 'Post ID required' }, 400);
@@ -35,10 +27,10 @@ export const POST: APIRoute = async ({ cookies, params }) => {
       .update({ is_deleted: true })
       .eq('id', post_id);
 
-    if (error) return json({ error: error.message }, 500);
+    if (error) return json({ error: 'Server error' }, 500);
     return json({ success: true });
   } catch (e: any) {
-    return json({ error: e.message }, 500);
+    return json({ error: 'Server error' }, 500);
   }
 };
 

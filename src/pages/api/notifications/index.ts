@@ -3,14 +3,12 @@
 // POST /api/notifications      — mark as read / dismiss
 
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 
 export const GET: APIRoute = async ({ cookies, url }) => {
-  const accessToken = cookies.get('sb-access-token')?.value;
-  if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-  const { data: { user } } = await supabase.auth.getUser(accessToken);
-  if (!user) return json({ error: 'Unauthorized' }, 401);
+  const auth = await requireApiAuth(cookies);
+  if (!auth.ok) return auth.response;
+  const { user, db: supabase } = auth;
 
   const limit = parseInt(url.searchParams.get('limit') || '20');
 
@@ -29,11 +27,9 @@ export const GET: APIRoute = async ({ cookies, url }) => {
 };
 
 export const POST: APIRoute = async ({ cookies, request }) => {
-  const accessToken = cookies.get('sb-access-token')?.value;
-  if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-  const { data: { user } } = await supabase.auth.getUser(accessToken);
-  if (!user) return json({ error: 'Unauthorized' }, 401);
+  const auth = await requireApiAuth(cookies);
+  if (!auth.ok) return auth.response;
+  const { user, db: supabase } = auth;
 
   const body = await request.json();
   const { action, notificationId, all } = body;

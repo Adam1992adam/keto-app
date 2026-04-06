@@ -1,26 +1,39 @@
 import type { APIRoute } from 'astro';
-import { createClient } from '@supabase/supabase-js';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const accessToken = cookies.get('sb-access-token')?.value;
-    if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-    const { data: { user } } = await supabase.auth.getUser(accessToken);
-    if (!user) return json({ error: 'Unauthorized' }, 401);
-
-    // User-scoped client so RLS auth.uid() resolves correctly
-    const db = createClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-      { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
-    );
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db } = auth;
 
     const body = await request.json();
     const { meal_type, recipe_id, day_number, action = 'complete', client_date } = body;
 
     if (!meal_type || !day_number) return json({ error: 'meal_type and day_number are required' }, 400);
+
+    const VALID_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
+    if (!VALID_MEAL_TYPES.includes(meal_type)) {
+      return json({ error: 'Invalid meal_type' }, 400);
+    }
+
+    const parsedDay = parseInt(day_number, 10);
+    if (!Number.isInteger(parsedDay) || parsedDay < 1) {
+      return json({ error: 'day_number must be a positive integer' }, 400);
+    }
+
+    // Validate day_number against the user's actual progress — prevents marking
+    // future days complete before they're reached
+    const { data: journey } = await db
+      .from('user_journey')
+      .select('current_day')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    const currentDay = journey?.current_day ?? 1;
+    if (parsedDay > currentDay) {
+      return json({ error: 'Cannot complete meals for a future day' }, 403);
+    }
 
     if (action === 'uncomplete') {
       await db
@@ -33,6 +46,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return json({ success: true, xp_earned: 0, action: 'uncomplete' });
     }
 
+    // Check if already completed before upserting — award_xp must only fire once per meal
+    const { data: existing } = await db
+      .from('meal_completions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('day_number', day_number)
+      .eq('meal_type', meal_type)
+      .maybeSingle();
+
+    const isNew = !existing;
+
     // Upsert completion
     const { error: upsertErr } = await db
       .from('meal_completions')
@@ -43,21 +67,31 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     if (upsertErr) return json({ error: upsertErr.message }, 500);
 
-    // Award XP (10 per meal)
-    await db.rpc('award_xp', {
-      user_id_param:     user.id,
-      action_type_param: 'meal_complete',
-      xp_amount_param:   10,
-      description_param: `Ate ${meal_type}`,
-      day_number_param:  day_number,
-    });
+    // Award XP only on first completion — not on duplicate calls
+    if (isNew) {
+      await db.rpc('award_xp', {
+        user_id_param:     user.id,
+        action_type_param: 'meal_complete',
+        xp_amount_param:   10,
+        description_param: `Ate ${meal_type}`,
+        day_number_param:  day_number,
+      });
+    }
 
-    // Mark the meal task as complete so the task list updates
-    await db.rpc('complete_task', {
+    // Mark the specific meal task (breakfast/lunch/dinner/snack) as complete
+    const { error: rpcErr } = await db.rpc('complete_task', {
       user_id_param:    user.id,
       day_number_param: day_number,
-      task_type_param:  'meal',
+      task_type_param:  meal_type,
     });
+    if (rpcErr) {
+      // Fallback: direct update if RPC fails or task type doesn't match
+      await db.from('daily_tasks')
+        .update({ completed: true, completed_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .eq('day_number', day_number)
+        .eq('task_type', meal_type);
+    }
 
     // Count how many meals completed today
     const { data: completions } = await db
@@ -101,7 +135,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }), macros);
     }
 
-    return json({ success: true, xp_earned: 10, meals_today: mealsToday, followed, macros });
+    return json({ success: true, xp_earned: isNew ? 10 : 0, meals_today: mealsToday, followed, macros });
 
   } catch (err: any) {
     console.error('Meal complete error:', err);

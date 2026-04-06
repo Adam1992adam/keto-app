@@ -1,17 +1,33 @@
 // src/pages/api/fasting/end.ts
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 import { autoCompleteTask, checkAchievements } from '../../../lib/autoTask';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const accessToken = cookies.get('sb-access-token')?.value;
-    if (!accessToken) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(accessToken);
-    if (authErr || !user) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db: supabase, accessToken } = auth;
 
     const { session_id, ended_at, actual_hours, completed } = await request.json();
+
+    // Guard: fetch session and verify it belongs to this user and hasn't already ended
+    const { data: session } = await supabase
+      .from('fasting_sessions')
+      .select('id, ended_at, xp_earned')
+      .eq('id', session_id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (!session) return new Response(JSON.stringify({ error: 'Session not found' }), { status: 404 });
+
+    // Already ended — return the previously awarded XP without re-processing
+    if (session.ended_at !== null) {
+      return new Response(JSON.stringify({ success: true, xp_earned: session.xp_earned ?? 0, already_ended: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     // Calculate XP — reward longer fasts more
     const xp = completed
@@ -44,6 +60,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     if (xpRpcErr) {
       // Fallback: update user_journey directly
+      // Note: only runs if RPC fails entirely — not a double-award since RPC did not succeed
       console.warn('award_xp RPC failed:', xpRpcErr.message);
       const { data: journey } = await supabase
         .from('user_journey').select('total_xp, level').eq('user_id', user.id).maybeSingle();
@@ -59,7 +76,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const { data: journey } = await supabase
       .from('user_journey').select('current_day').eq('user_id', user.id).maybeSingle();
     if (journey?.current_day) {
-      await autoCompleteTask(user.id, 'fasting', journey.current_day);
+      await autoCompleteTask(user.id, 'fasting', journey.current_day, accessToken);
     }
 
     checkAchievements(user.id, accessToken); // fire-and-forget
@@ -70,6 +87,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   } catch (error: any) {
     console.error('Fasting end error:', error);
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
   }
 };

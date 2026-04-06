@@ -1,20 +1,13 @@
 // src/pages/api/habits/toggle.ts
 // POST /api/habits/toggle  { habit_id, date }  → toggle completion for that day
 import type { APIRoute } from 'astro';
-import { createClient } from '@supabase/supabase-js';
+import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const token = cookies.get('sb-access-token')?.value;
-    if (!token) return json({ error: 'Unauthorized' }, 401);
-
-    const supabase = createClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
-    );
-    const { data: { user }, error: ae } = await supabase.auth.getUser();
-    if (ae || !user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db: supabase } = auth;
 
     const { habit_id, date, day_number } = await request.json();
     if (!habit_id) return json({ error: 'habit_id required' }, 400);
@@ -50,7 +43,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return json({ success: true, completed: true, xp_earned: 5 });
     }
   } catch (e: any) {
-    return json({ error: e.message }, 500);
+    return json({ error: 'Server error' }, 500);
   }
 };
 

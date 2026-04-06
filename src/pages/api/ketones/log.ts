@@ -1,21 +1,13 @@
 // src/pages/api/ketones/log.ts
 // POST /api/ketones/log  { ketone_mmol, measurement_type, logged_date, notes }
 import type { APIRoute } from 'astro';
-import { createClient } from '@supabase/supabase-js';
+import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const accessToken = cookies.get('sb-access-token')?.value;
-    if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-    const db = createClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-      { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
-    );
-
-    const { data: { user }, error: authErr } = await db.auth.getUser();
-    if (authErr || !user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db } = auth;
 
     const { ketone_mmol, measurement_type, logged_date, notes } = await request.json();
 
@@ -30,13 +22,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       measurement_type: measurement_type || 'blood',
       logged_date:      logged_date || today,
       notes:            notes || null,
-    }).select().single();
+    }).select().maybeSingle();
 
     if (error) throw error;
     return json({ success: true, entry: data });
 
   } catch (err: any) {
-    return json({ error: err.message || 'Server error' }, 500);
+    return json({ error: 'Server error' }, 500);
   }
 };
 

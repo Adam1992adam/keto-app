@@ -3,7 +3,7 @@
 // POST /api/notifications/preferences — upsert user notification preferences
 
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 
 const DEFAULTS = {
   checkin_reminder:  true,
@@ -17,11 +17,9 @@ const DEFAULTS = {
 };
 
 export const GET: APIRoute = async ({ cookies }) => {
-  const accessToken = cookies.get('sb-access-token')?.value;
-  if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-  const { data: { user } } = await supabase.auth.getUser(accessToken);
-  if (!user) return json({ error: 'Unauthorized' }, 401);
+  const auth = await requireApiAuth(cookies);
+  if (!auth.ok) return auth.response;
+  const { user, db: supabase } = auth;
 
   const { data: prefs } = await supabase
     .from('notification_preferences')
@@ -33,11 +31,9 @@ export const GET: APIRoute = async ({ cookies }) => {
 };
 
 export const POST: APIRoute = async ({ cookies, request }) => {
-  const accessToken = cookies.get('sb-access-token')?.value;
-  if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-  const { data: { user } } = await supabase.auth.getUser(accessToken);
-  if (!user) return json({ error: 'Unauthorized' }, 401);
+  const auth = await requireApiAuth(cookies);
+  if (!auth.ok) return auth.response;
+  const { user, db: supabase } = auth;
 
   let body: any;
   try {
@@ -63,7 +59,7 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     .from('notification_preferences')
     .upsert(row, { onConflict: 'user_id' });
 
-  if (error) return json({ error: error.message }, 500);
+  if (error) return json({ error: 'Server error' }, 500);
 
   return json({ success: true, preferences: row });
 };

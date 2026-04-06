@@ -11,11 +11,11 @@ export const POST: APIRoute = async ({ cookies }) => {
   if (error || !data.session) return json({ error: 'Session expired. Please log in again.' }, 401);
 
   cookies.set('sb-access-token', data.session.access_token, {
-    path: '/', httpOnly: true, secure: true, sameSite: 'lax',
+    path: '/', httpOnly: true, secure: true, sameSite: 'strict',
     maxAge: 60 * 60 * 24 * 7,
   });
   cookies.set('sb-refresh-token', data.session.refresh_token, {
-    path: '/', httpOnly: true, secure: true, sameSite: 'lax',
+    path: '/', httpOnly: true, secure: true, sameSite: 'strict',
     maxAge: 60 * 60 * 24 * 30,
   });
 

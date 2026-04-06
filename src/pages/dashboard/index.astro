@@ -34,60 +34,74 @@ const planType  = profile.subscription_tier || 'basic_30';
 const maxDays   = getMaxJourneyDays(planType);
 const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 
-const { data: onboarding } = await db
-  .from('onboarding_data').select('*').eq('user_id', user.id).maybeSingle();
+// ── Batch 1: onboarding + journey in parallel (both need only user.id) ──────
+const [{ data: onboarding }, journey] = await Promise.all([
+  db.from('onboarding_data').select('*').eq('user_id', user.id).maybeSingle(),
+  getUserJourney(user.id, db),
+]);
 if (!onboarding) return Astro.redirect('/dashboard/onboarding');
 
-const journey     = await getUserJourney(user.id, db);
 const currentDay  = journey?.current_day  || 1;
 const currentWeek = Math.ceil(currentDay / 7);
 const totalXP     = journey?.total_xp     || 0;
 const xpLevel     = journey?.level        || 1;
 const streakDays  = journey?.streak_days  || 0;
 const today       = new Date().toISOString().split('T')[0];
+const twoWeeksAgo = new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0];
 
-const { data: rawTasksCurrent } = await db
-  .from('daily_tasks').select('id, task_title, task_type, completed, xp_earned')
-  .eq('user_id', user.id).eq('day_number', currentDay).order('created_at');
-
-const { data: rawTasksDay1 } = await db
-  .from('daily_tasks').select('id, task_title, task_type, completed, xp_earned')
-  .eq('user_id', user.id).eq('day_number', 1).order('created_at');
-
-const usingFallback  = !(rawTasksCurrent && rawTasksCurrent.length > 0);
-const tasks          = !usingFallback ? rawTasksCurrent : (rawTasksDay1 || []);
-const totalTasks     = tasks.length;
-const completedTasks = tasks.filter((t) => t.completed).length;
-const taskPct        = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-const { data: todayCheckin } = await db
-  .from('daily_checkins').select('*')
-  .eq('user_id', user.id).eq('checkin_date', today).maybeSingle();
-
-const { data: weightLogs } = await db
-  .from('weight_logs').select('weight, logged_date')
-  .eq('user_id', user.id).order('logged_date', { ascending: false }).limit(8);
-
-const { data: activeFast } = await db
-  .from('fasting_sessions').select('*').eq('user_id', user.id)
-  .is('ended_at', null).order('started_at', { ascending: false }).limit(1).maybeSingle();
-
-const { data: recentCheckins } = await db
-  .from('daily_checkins').select('checkin_date, energy_level, followed_meals, water_glasses')
-  .eq('user_id', user.id).order('checkin_date', { ascending: false }).limit(7);
-
-const { data: weekReport } = await db
-  .from('weekly_reports').select('id')
-  .eq('user_id', user.id).eq('week_number', currentWeek).maybeSingle();
-
-// Try the user's plan first, fall back to basic_30 if no meals exist for this tier in the DB
+// Pre-compute values needed for batch 2 queries
 const mealCycleDays = getMealCycleDays(planType);
-const mealDayTarget = ((currentDay - 1) % mealCycleDays) + 1; // cycle within available days
-const { data: rawMealsDirect } = await db
-  .from('meal_plans')
-  .select('*, recipe:recipes(id, title, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, tags)')
-  .eq('plan_type', planType).eq('day_number', mealDayTarget).order('meal_type');
+const mealDayTarget = ((currentDay - 1) % mealCycleDays) + 1;
 
+// ── Batch 2: all remaining queries fire in parallel ───────────────────────
+const [
+  { data: rawTasksCurrent },
+  { data: rawTasksDay1 },
+  { data: todayCheckin },
+  { data: weightLogs },
+  { data: activeFast },
+  { data: recentCheckins },
+  { data: weekReport },
+  { data: rawMealsDirect },
+  { data: recentSwaps },
+  { data: mealCompletions },
+  { data: macroGoals },
+  { data: foodLogs },
+  { data: habitsRaw },
+  { data: habitDoneRaw },
+] = await Promise.all([
+  db.from('daily_tasks').select('id, task_title, task_type, completed, xp_earned')
+    .eq('user_id', user.id).eq('day_number', currentDay).order('created_at'),
+  db.from('daily_tasks').select('id, task_title, task_type, completed, xp_earned')
+    .eq('user_id', user.id).eq('day_number', 1).order('created_at'),
+  db.from('daily_checkins').select('*')
+    .eq('user_id', user.id).eq('checkin_date', today).maybeSingle(),
+  db.from('weight_logs').select('weight, logged_date')
+    .eq('user_id', user.id).order('logged_date', { ascending: false }).limit(8),
+  db.from('fasting_sessions').select('*').eq('user_id', user.id)
+    .is('ended_at', null).order('started_at', { ascending: false }).limit(1).maybeSingle(),
+  db.from('daily_checkins').select('checkin_date, energy_level, followed_meals, water_glasses')
+    .eq('user_id', user.id).order('checkin_date', { ascending: false }).limit(7),
+  db.from('weekly_reports').select('id')
+    .eq('user_id', user.id).eq('week_number', currentWeek).maybeSingle(),
+  db.from('meal_plans')
+    .select('*, recipe:recipes(id, title, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, tags)')
+    .eq('plan_type', planType).eq('day_number', mealDayTarget).order('meal_type'),
+  db.from('meal_swaps').select('original_recipe_id')
+    .eq('user_id', user.id).gte('swap_date', twoWeeksAgo),
+  db.from('meal_completions').select('meal_type, recipe_id')
+    .eq('user_id', user.id).eq('day_number', currentDay),
+  db.from('macro_goals').select('daily_calories, protein_g, fat_g, carbs_g')
+    .eq('user_id', user.id).maybeSingle(),
+  db.from('food_logs').select('*')
+    .eq('user_id', user.id).eq('logged_date', today).order('created_at', { ascending: true }),
+  db.from('habits').select('id, title, icon, category')
+    .eq('user_id', user.id).eq('is_active', true).order('sort_order').order('created_at').limit(6),
+  db.from('habit_completions').select('habit_id')
+    .eq('user_id', user.id).eq('completed_date', today),
+]);
+
+// Meal plan fallback: if no meals for this tier, try basic_30
 const rawMeals = (rawMealsDirect && rawMealsDirect.length > 0)
   ? rawMealsDirect
   : await db
@@ -96,13 +110,14 @@ const rawMeals = (rawMealsDirect && rawMealsDirect.length > 0)
       .eq('plan_type', 'basic_30').eq('day_number', mealDayTarget).order('meal_type')
       .then(({ data }) => data || []);
 
+const usingFallback  = !(rawTasksCurrent && rawTasksCurrent.length > 0);
+const tasks          = !usingFallback ? rawTasksCurrent : (rawTasksDay1 || []);
+const totalTasks     = tasks.length;
+const completedTasks = tasks.filter((t) => t.completed).length;
+const taskPct        = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
 const restrictions = onboarding?.dietary_restrictions || [];
 const userGoal     = onboarding?.goal || 'weight_loss';
-const twoWeeksAgo  = new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0];
-const { data: recentSwaps } = await db
-  .from('meal_swaps').select('original_recipe_id')
-  .eq('user_id', user.id).gte('swap_date', twoWeeksAgo);
 const rejectedIds = recentSwaps?.map((s) => s.original_recipe_id) || [];
 const avgEnergy   = recentCheckins?.length
   ? recentCheckins.reduce((s, c) => s + (c.energy_level || 3), 0) / recentCheckins.length : 3;
@@ -156,12 +171,7 @@ const cycleWeek = Math.ceil(((((currentDay - 1) % mealCycleDays) + 1)) / 7);
 const totalCalToday     = todayMeals.reduce((s, m) => s + (m.recipe?.calories || 0), 0);
 const totalProteinToday = todayMeals.reduce((s, m) => s + parseFloat(m.recipe?.protein || '0'), 0);
 
-// Today's meal completions
-const { data: mealCompletions } = await db
-  .from('meal_completions')
-  .select('meal_type, recipe_id')
-  .eq('user_id', user.id)
-  .eq('day_number', currentDay);
+// Today's meal completions (fetched in parallel batch above)
 const completedMealTypesArr = (mealCompletions || []).map((c: any) => c.meal_type);
 const completedMealSet = new Set(completedMealTypesArr);
 
@@ -175,22 +185,13 @@ const consumedMacros = todayMeals
     net_carbs: acc.net_carbs + parseFloat(m.recipe.net_carbs || '0'),
   }), { calories: 0, protein: 0, fat: 0, net_carbs: 0 });
 
-// Macro goals
-const { data: macroGoals } = await db
-  .from('macro_goals')
-  .select('daily_calories, protein_g, fat_g, carbs_g')
-  .eq('user_id', user.id)
-  .maybeSingle();
+// Macro goals (fetched in parallel batch above)
 const goalCal  = macroGoals?.daily_calories || 1800;
 const goalProt = macroGoals?.protein_g      || 120;
 const goalFat  = macroGoals?.fat_g          || 120;
 const goalCarb = macroGoals?.carbs_g        || 25;
 
-// Today's custom food log entries
-const { data: foodLogs } = await db
-  .from('food_logs').select('*')
-  .eq('user_id', user.id).eq('logged_date', today)
-  .order('created_at', { ascending: true });
+// Today's custom food log entries (fetched in parallel batch above)
 const todayFoodLogs = foodLogs || [];
 const foodLogMacros = todayFoodLogs.reduce((acc, f) => ({
   calories:  acc.calories  + (f.calories  || 0),
@@ -229,9 +230,13 @@ const greetIcon = '';
 const daysToGo   = Math.max(0, maxDays - currentDay);
 const xpDisplay  = totalXP >= 1000 ? (totalXP / 1000).toFixed(1) + 'k' : String(totalXP);
 
-const units      = (profile.preferred_units as string) || 'imperial';
-const wUnit      = units === 'imperial' ? 'lbs' : 'kg';
-const dispLatest = latestWeight ? (units === 'imperial' ? Math.round(latestWeight * 2.20462 * 10) / 10 : latestWeight) : 0;
+const units       = (profile.preferred_units as string) || 'imperial';
+const wUnit       = units === 'imperial' ? 'lbs' : 'kg';
+const dispLatest  = latestWeight ? (units === 'imperial' ? Math.round(latestWeight * 2.20462 * 10) / 10 : Math.round(latestWeight * 10) / 10) : 0;
+// Weight lost in display units (lbs or kg)
+const dispWeightLost = units === 'imperial'
+  ? Math.round(weightLost * 2.20462 * 10) / 10
+  : Math.round(weightLost * 10) / 10;
 const weekNum    = currentWeek;
 const streak     = streakDays;
 const level      = xpLevel;
@@ -309,17 +314,9 @@ const week3Tips = [
 
 // Pick the right tip pool and rotate by currentDay
 const tipPool = weekPhase === 'adapt' ? week1Tips : (weekPhase === 'burn' ? week2Tips : week3Tips);
-// Today's habits
-const { data: habitsRaw } = await db
-  .from('habits').select('id, title, icon, category')
-  .eq('user_id', user.id).eq('is_active', true)
-  .order('sort_order').order('created_at').limit(6);
+// Today's habits (fetched in parallel batch above)
 const dashHabits = habitsRaw || [];
-
-const { data: habitDoneRaw } = await db
-  .from('habit_completions').select('habit_id')
-  .eq('user_id', user.id).eq('completed_date', today);
-const habitDoneIds = new Set((habitDoneRaw || []).map(h => h.habit_id));
+const habitDoneIds = new Set((habitDoneRaw || []).map((h: any) => h.habit_id));
 const habitsDoneCount = dashHabits.filter(h => habitDoneIds.has(h.id)).length;
 
 const dailyTip = (() => {
@@ -335,6 +332,28 @@ const dailyTip = (() => {
     return { icon:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', color:'#8b5cf6', title:'Fasting + keto: the ultimate combo', body:'While you fast, your already-low glycogen burns away in hours instead of days. You\'ll reach deep fat-burning mode today faster than any non-keto faster. Stay strong — the hardest part is hour 10–14.' };
   return tipPool[(currentDay - 1) % tipPool.length];
 })();
+
+// ── Lapsed-user detection ─────────────────────────────────────────────────
+// Calculate how many days since the last check-in
+const lastCheckinDate = recentCheckins?.[0]?.checkin_date;
+const daysSinceCheckin = lastCheckinDate
+  ? Math.floor((new Date(today).getTime() - new Date(lastCheckinDate).getTime()) / 86400000)
+  : currentDay > 1 ? 99 : 0; // never checked in + not day 1 → treat as very lapsed
+// Only show lapse banner when 1+ day gap AND they actually had a streak to lose
+const isLapsed    = daysSinceCheckin >= 1 && currentDay > 1;
+const lapseLevel  = daysSinceCheckin >= 4 ? 'critical' : daysSinceCheckin >= 2 ? 'warning' : 'gentle';
+const lapseTips: Record<string, { icon: string; title: string; body: string; color: string; bg: string; border: string }> = {
+  gentle:   { icon: '💛', color: '#f59e0b', bg: 'rgba(245,158,11,.09)', border: 'rgba(245,158,11,.28)',
+    title: 'You missed yesterday — no problem!',
+    body: 'Missing one day doesn\'t break your keto progress. Your body is still adapting. Check in today to restart your streak and get back on track.' },
+  warning:  { icon: '🔁', color: '#f87171', bg: 'rgba(239,68,68,.09)', border: 'rgba(239,68,68,.28)',
+    title: `${daysSinceCheckin} days without a check-in`,
+    body: 'Your streak has reset, but your keto adaptation isn\'t lost — the fat-burning pathways you built remain. A single check-in today gets you back on the board.' },
+  critical: { icon: '🚀', color: '#8b5cf6', bg: 'rgba(139,92,246,.09)', border: 'rgba(139,92,246,.28)',
+    title: 'Welcome back! Let\'s restart strong.',
+    body: `It's been ${daysSinceCheckin} days. Life happens. The best keto journeys aren't perfect — they're persistent. Take 2 minutes to check in today and your streak starts fresh.` },
+};
+const lapseBanner = isLapsed ? lapseTips[lapseLevel] : null;
 
 // ── Daily Focus CTA — one clear priority action ────────────────────────────
 const pendingTasks   = totalTasks - completedTasks;
@@ -358,6 +377,8 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dashboard · Day {currentDay} · Keto</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
   <script is:inline>(function(){const t=localStorage.getItem('keto-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
   <style>
@@ -405,14 +426,15 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
     .journey-meta span{font-size:.67rem;color:var(--soft);}
     .journey-meta strong{color:var(--text);font-weight:700;}
 
-    /* DAILY TIP */
-    .daily-tip{display:flex;align-items:flex-start;gap:.9rem;padding:1rem 1.1rem;border-radius:16px;margin-bottom:1.25rem;border:1px solid rgba(255,255,255,.08);background:var(--card);position:relative;animation:fadeUp .4s .15s ease both;}
-    .dt-icon{font-size:1.5rem;flex-shrink:0;margin-top:.05rem;}
-    .dt-body{flex:1;}
-    .dt-title{font-weight:800;font-size:.86rem;color:var(--tip-color);margin-bottom:.25rem;}
-    .dt-text{font-size:.78rem;color:var(--soft);line-height:1.6;}
-    .dt-close{position:absolute;top:.6rem;right:.7rem;background:none;border:none;color:var(--soft);font-size:1.1rem;cursor:pointer;line-height:1;padding:.1rem .3rem;border-radius:4px;transition:color .15s;}
-    .dt-close:hover{color:var(--text);}
+    /* DAILY TIP — compact, subordinate to focus banner */
+    .daily-tip{display:flex;align-items:center;gap:.65rem;padding:.6rem .9rem;border-radius:12px;margin-bottom:1rem;border:1px solid;background:transparent;position:relative;animation:fadeUp .4s .25s ease both;}
+    .dt-icon{flex-shrink:0;opacity:.75;}
+    .dt-body{flex:1;min-width:0;}
+    .dt-title{font-weight:700;font-size:.78rem;color:var(--text);display:inline;}
+    .dt-text{font-size:.75rem;color:var(--soft);line-height:1.55;display:inline;}
+    .dt-title::after{content:' — ';}
+    .dt-close{flex-shrink:0;background:none;border:none;color:var(--soft);font-size:1rem;cursor:pointer;line-height:1;padding:.1rem .25rem;border-radius:4px;opacity:.6;}
+    .dt-close:hover{opacity:1;}
 
     /* ═══════════════════════════════════════
        STAT CARDS — uiverse-grade glass cards
@@ -732,7 +754,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
     .mb-prot{background:var(--blue);}
     .mb-fat{background:var(--purple);}
     .mb-carb{background:var(--green);}
-    .no-meals{text-align:center;padding:2rem;color:var(--soft);font-size:.83rem;}
+    .no-meals{display:flex;flex-direction:column;align-items:center;gap:.5rem;padding:2.25rem 1rem;text-align:center;color:var(--soft);font-size:.83rem;}
     .empty-state{display:flex;flex-direction:column;align-items:center;gap:.6rem;padding:2.25rem 1rem;text-align:center;}
     .empty-icon{width:56px;height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:1.75rem;background:var(--card2);border:1px solid var(--border);margin-bottom:.25rem;}
     .empty-title{font-family:'Fraunces',serif;font-size:.95rem;font-weight:700;color:var(--text);}
@@ -828,6 +850,14 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
     @keyframes tIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
     @keyframes tOut{from{opacity:1;}to{opacity:0;}}
 
+    /* LAPSE RECOVERY BANNER */
+    .lapse-banner{display:flex;align-items:flex-start;gap:.9rem;padding:1rem 1.25rem;border-radius:16px;border:1.5px solid;margin-bottom:1rem;animation:fadeUp .4s ease both;}
+    .lb-icon{font-size:1.5rem;flex-shrink:0;margin-top:.05rem;}
+    .lb-body{flex:1;min-width:0;}
+    .lb-title{font-size:.88rem;font-weight:800;color:var(--text);margin-bottom:.2rem;}
+    .lb-text{font-size:.78rem;color:var(--soft);line-height:1.6;}
+    .lb-btn{display:inline-flex;align-items:center;margin-top:.6rem;padding:.4rem .85rem;border-radius:9px;font-size:.75rem;font-weight:800;text-decoration:none;color:#fff;}
+
     /* DAILY FOCUS BANNER */
     .focus-banner{display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-radius:16px;border:1.5px solid;margin-bottom:1.25rem;transition:all .2s;}
     .focus-banner:hover{transform:translateY(-1px);}
@@ -911,15 +941,18 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
     </div>
   </div>
 
-  <!-- DAILY TIP -->
-  <div class="daily-tip" style={`border-left:3px solid ${dailyTip.color};`}>
-    <div class="dt-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={dailyTip.color} stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={dailyTip.icon}></svg></div>
-    <div class="dt-body">
-      <div class="dt-title">{dailyTip.title}</div>
-      <div class="dt-text">{dailyTip.body}</div>
+  <!-- LAPSE RECOVERY BANNER — shown when user missed 1+ days -->
+  {lapseBanner && (
+    <div class="lapse-banner" style={`background:${lapseBanner.bg};border-color:${lapseBanner.border};`}>
+      <div class="lb-icon">{lapseBanner.icon}</div>
+      <div class="lb-body">
+        <div class="lb-title" style={`color:${lapseBanner.color}`}>{lapseBanner.title}</div>
+        <div class="lb-text">{lapseBanner.body}</div>
+        <a href="/dashboard/checkin" class="lb-btn" style={`background:${lapseBanner.color};`}>Check In Now — Restart Streak →</a>
+      </div>
+      <button onclick="this.closest('.lapse-banner').style.display='none'" style="background:none;border:none;color:var(--soft);font-size:1.1rem;cursor:pointer;padding:.1rem .3rem;flex-shrink:0;">×</button>
     </div>
-    <button class="dt-close" onclick="this.closest('.daily-tip').style.display='none'" title="Dismiss">×</button>
-  </div>
+  )}
 
   <!-- DAILY FOCUS BANNER -->
   <div class="focus-banner" style={`background:${focusCTA.bg};border-color:${focusCTA.border};`}
@@ -955,11 +988,11 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
     <div class="stat-card" style="--glow:rgba(16,185,129,.09);--glow-color:rgba(16,185,129,.6);--icon-bg:rgba(16,185,129,.1);animation-delay:.04s">
       <div class="sc-shimmer"></div>
       <div class="stat-icon" style="color:var(--green)"><Scale size={20} /></div>
-      <div class="stat-val" style="color:var(--green)">{weightLost > 0 ? `-${weightLost.toFixed(1)}kg` : '—'}</div>
-      <div class="stat-lbl">Weight Lost</div>
+      <div class="stat-val" style="color:var(--green)">{dispWeightLost > 0 ? `-${dispWeightLost}` : '0'}</div>
+      <div class="stat-lbl">{wUnit} lost so far</div>
       {weightLost > 0
         ? <span class="stat-badge bg-g">{progressPct}% to goal</span>
-        : <span class="stat-badge bg-a">Log your weight</span>}
+        : <span class="stat-badge bg-a" style="cursor:pointer;" onclick="document.getElementById('weight-card')?.scrollIntoView({behavior:'smooth'})">Tap to log weight ↓</span>}
       <div class="stat-mini-bar"><div class="stat-mini-fill" style={`width:${progressPct}%;background:linear-gradient(90deg,#10b981,#34d399);`}></div></div>
     </div>
     <div class="stat-card" style="--glow:rgba(245,158,11,.09);--glow-color:rgba(245,158,11,.6);--icon-bg:rgba(245,158,11,.1);animation-delay:.08s">
@@ -977,8 +1010,9 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
       <div class="stat-icon" style="color:var(--purple)"><Zap size={20} /></div>
       <div class="stat-val" style="color:var(--purple2)" id="xpLevelDisplay">Lv.{xpLevel}</div>
       <div class="stat-lbl" id="xpTotalDisplay">{levelTitle}</div>
-      <span class="stat-badge bg-b" id="xpInLevelDisplay" title={`${xpToNext} XP to Level ${xpLevel + 1}`}>→ {xpInLevel}/500</span>
+      <span class="stat-badge bg-b" id="xpInLevelDisplay">{xpInLevel}/500 XP</span>
       <div class="stat-mini-bar"><div class="stat-mini-fill" id="xpMiniBar" style={`width:${xpPct}%;background:linear-gradient(90deg,#8b5cf6,#a78bfa);`}></div></div>
+      <div id="xpNextText" style="font-size:.6rem;color:var(--muted);margin-top:.3rem;">{xpToNext} XP to Level {xpLevel + 1}</div>
     </div>
     <div class="stat-card" style="--glow:rgba(59,130,246,.09);--glow-color:rgba(59,130,246,.6);--icon-bg:rgba(59,130,246,.1);animation-delay:.16s">
       <div class="sc-shimmer"></div>
@@ -990,6 +1024,16 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
       {weekPhase === 'thrive'&& <span class="stat-badge bg-g">Week 3+ · Thrive</span>}
       <div class="stat-mini-bar"><div class="stat-mini-fill" style={`width:${journeyPct}%;background:var(--blue);`}></div></div>
     </div>
+  </div>
+
+  <!-- DAILY TIP — compact inline, below stats -->
+  <div class="daily-tip" style={`border-color:${dailyTip.color}22;background:${dailyTip.color}08;`}>
+    <div class="dt-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={dailyTip.color} stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" set:html={dailyTip.icon}></svg></div>
+    <div class="dt-body">
+      <span class="dt-title">{dailyTip.title}</span>
+      <span class="dt-text">{dailyTip.body}</span>
+    </div>
+    <button class="dt-close" onclick="this.closest('.daily-tip').style.display='none'" title="Dismiss">×</button>
   </div>
 
   <!-- QUICK ACTIONS -->
@@ -1024,6 +1068,13 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
       <span class="qa-lbl">Shopping</span>
       <span class="qa-sub">Week {currentWeek}</span>
     </a>
+    {currentDay <= 7 && (
+      <a href="/dashboard/guide" class="qa-btn" style="border-color:rgba(59,130,246,.3);background:rgba(59,130,246,.06);">
+        <div class="qa-icon-wrap" style="background:rgba(59,130,246,.12);"><Compass size={18} /></div>
+        <span class="qa-lbl" style="color:var(--blue);">Guide</span>
+        <span class="qa-sub">How it works</span>
+      </a>
+    )}
   </div>
 
   <!-- MAIN GRID -->
@@ -1433,7 +1484,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
           <div class="wt-stat">
             <span class="wt-val">{dispLatest} {wUnit}</span>
             {weightLost > 0
-              ? <span class="wt-tag bg-g">-{units === 'imperial' ? Math.round(weightLost * 2.20462 * 10) / 10 : weightLost.toFixed(1)} {wUnit}</span>
+              ? <span class="wt-tag bg-g">-{dispWeightLost} {wUnit}</span>
               : <span class="wt-tag bg-a">Log weight</span>}
           </div>
         </div>

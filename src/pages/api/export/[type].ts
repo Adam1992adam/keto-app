@@ -2,41 +2,38 @@
 // GET /api/export/[type]  — streams CSV data for the authenticated user
 // type: weight | checkins | food | measurements
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 
 export const GET: APIRoute = async ({ params, cookies }) => {
-  // ── Auth ──────────────────────────────────────────────────────────────────
-  const accessToken = cookies.get('sb-access-token')?.value;
-  if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-  const { data: { user }, error: authErr } = await supabase.auth.getUser(accessToken);
-  if (authErr || !user) return json({ error: 'Unauthorized' }, 401);
+  const auth = await requireApiAuth(cookies);
+  if (!auth.ok) return auth.response;
+  const { user, db } = auth;
 
   // ── Read unit preference ──────────────────────────────────────────────────
-  const { data: profile } = await supabase
-    .from('profiles').select('preferred_units').eq('id', user.id).single();
+  const { data: profile } = await db
+    .from('profiles').select('preferred_units').eq('id', user.id).maybeSingle();
   const imperial = (profile?.preferred_units || 'imperial') === 'imperial';
 
   const type = params.type;
 
   // ── Route to correct export handler ──────────────────────────────────────
-  if (type === 'weight')       return exportWeight(user.id, imperial);
-  if (type === 'checkins')     return exportCheckins(user.id);
-  if (type === 'food')         return exportFood(user.id);
-  if (type === 'measurements') return exportMeasurements(user.id, imperial);
+  if (type === 'weight')       return exportWeight(db, user.id, imperial);
+  if (type === 'checkins')     return exportCheckins(db, user.id);
+  if (type === 'food')         return exportFood(db, user.id);
+  if (type === 'measurements') return exportMeasurements(db, user.id, imperial);
 
   return json({ error: 'Unknown export type' }, 400);
 };
 
 // ── Weight Log ───────────────────────────────────────────────────────────────
-async function exportWeight(userId: string, imperial: boolean) {
-  const { data, error } = await supabase
+async function exportWeight(db: any, userId: string, imperial: boolean) {
+  const { data, error } = await db
     .from('weight_logs')
     .select('logged_date, weight')
     .eq('user_id', userId)
     .order('logged_date', { ascending: true });
 
-  if (error) return json({ error: error.message }, 500);
+  if (error) return json({ error: 'Server error' }, 500);
 
   const unit = imperial ? 'lbs' : 'kg';
   const headers = ['Date', `Weight (${unit})`];
@@ -48,8 +45,8 @@ async function exportWeight(userId: string, imperial: boolean) {
 }
 
 // ── Daily Check-ins ──────────────────────────────────────────────────────────
-async function exportCheckins(userId: string) {
-  const { data, error } = await supabase
+async function exportCheckins(db: any, userId: string) {
+  const { data, error } = await db
     .from('daily_checkins')
     .select(
       'checkin_date, energy_level, mood_level, hunger_level, water_glasses, ' +
@@ -59,7 +56,7 @@ async function exportCheckins(userId: string) {
     .eq('user_id', userId)
     .order('checkin_date', { ascending: true });
 
-  if (error) return json({ error: error.message }, 500);
+  if (error) return json({ error: 'Server error' }, 500);
 
   const headers = [
     'Date', 'Energy (1-10)', 'Mood (1-10)', 'Hunger (1-10)', 'Water Glasses',
@@ -85,14 +82,14 @@ async function exportCheckins(userId: string) {
 }
 
 // ── Food Log ─────────────────────────────────────────────────────────────────
-async function exportFood(userId: string) {
-  const { data, error } = await supabase
+async function exportFood(db: any, userId: string) {
+  const { data, error } = await db
     .from('food_logs')
     .select('logged_date, food_name, calories, protein_g, carbs_g, fat_g, meal_type, serving_size, serving_unit')
     .eq('user_id', userId)
     .order('logged_date', { ascending: true });
 
-  if (error) return json({ error: error.message }, 500);
+  if (error) return json({ error: 'Server error' }, 500);
 
   const headers = [
     'Date', 'Food Name', 'Meal Type',
@@ -114,14 +111,14 @@ async function exportFood(userId: string) {
 }
 
 // ── Body Measurements ────────────────────────────────────────────────────────
-async function exportMeasurements(userId: string, imperial: boolean) {
-  const { data, error } = await supabase
+async function exportMeasurements(db: any, userId: string, imperial: boolean) {
+  const { data, error } = await db
     .from('body_measurements')
     .select('logged_date, neck_cm, waist_cm, hips_cm, chest_cm, arm_cm, thigh_cm, notes')
     .eq('user_id', userId)
     .order('logged_date', { ascending: true });
 
-  if (error) return json({ error: error.message }, 500);
+  if (error) return json({ error: 'Server error' }, 500);
 
   const unit = imperial ? 'in' : 'cm';
   const conv = (v: number | null) => {

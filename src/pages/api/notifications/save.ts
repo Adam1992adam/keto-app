@@ -1,13 +1,11 @@
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../lib/supabase';
+import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const accessToken = cookies.get('sb-access-token')?.value;
-    if (!accessToken) return json({ error: 'Unauthorized' }, 401);
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken);
-    if (authError || !user) return json({ error: 'Unauthorized' }, 401);
+    const auth = await requireApiAuth(cookies);
+    if (!auth.ok) return auth.response;
+    const { user, db: supabase } = auth;
 
     const body = await request.json();
 
@@ -37,7 +35,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     if (error) {
       console.error('Notification prefs save error:', error);
-      return json({ error: error.message }, 500);
+      return json({ error: 'Server error' }, 500);
     }
 
     return json({ success: true });
