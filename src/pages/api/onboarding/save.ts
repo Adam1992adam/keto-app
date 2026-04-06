@@ -119,7 +119,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         gender,
         goal,
         activity_level:       activityMap[activity_level] || activity_level,
-        onboarding_completed: true,
         updated_at:           new Date().toISOString(),
       })
       .eq('id', user.id);
