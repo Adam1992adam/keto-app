@@ -119,6 +119,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         gender,
         goal,
         activity_level:       activityMap[activity_level] || activity_level,
+        preferred_units:      'imperial',   // onboarding form collects lbs — display lbs in dashboard
+        onboarding_done:      true,
         updated_at:           new Date().toISOString(),
       })
       .eq('id', user.id);
@@ -153,8 +155,27 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         }, { onConflict: 'user_id' });
     }
 
-    // ── 6. Initialize user journey + day 1 tasks (idempotent — safe to call twice) ──
+    // ── 6. Initialize user journey + day 1 tasks ──
+    // initializeUserJourney is a no-op if journey already exists (e.g. auto-created
+    // from a prior dashboard visit before onboarding completed). We always reset
+    // start_date to today and current_day to 1 so the journey begins correctly.
     await initializeUserJourney(user.id);
+    await db
+      .from('user_journey')
+      .update({
+        start_date:   today,
+        current_day:  1,
+        streak_days:  0,
+        status:       'active',
+        updated_at:   new Date().toISOString(),
+      })
+      .eq('user_id', user.id);
+
+    // Ensure day 1 tasks exist after journey reset
+    await db.rpc('initialize_daily_tasks', {
+      user_id_param:    user.id,
+      day_number_param: 1,
+    });
 
     return new Response(JSON.stringify({ success: true, redirect: '/dashboard/welcome' }), {
       status: 200,
