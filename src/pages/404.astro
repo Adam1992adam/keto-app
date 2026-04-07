@@ -1,0 +1,234 @@
+---
+// src/pages/404.astro — Custom Not Found page
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Page Not Found — Keto Journey</title>
+  <meta name="robots" content="noindex"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+
+  <script is:inline>
+    (function(){
+      var t = localStorage.getItem('keto-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    /* ── TOKENS ── */
+    html:not([data-theme="dark"]) {
+      --bg:     #f5f7fa;
+      --card:   #ffffff;
+      --border: rgba(0,0,0,.07);
+      --text:   #0f172a;
+      --soft:   #64748b;
+      --muted:  #e2e8f0;
+      --green:  #16a34a;
+      --green2: #22c55e;
+    }
+    [data-theme="dark"] {
+      --bg:     #060d09;
+      --card:   #0d1a0f;
+      --border: rgba(16,185,129,.1);
+      --text:   #dfeedd;
+      --soft:   #4d7055;
+      --muted:  #233328;
+      --green:  #10b981;
+      --green2: #34d399;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      transition: background .3s, color .3s;
+    }
+
+    /* ── BACKGROUND ORB ── */
+    .orb {
+      position: fixed;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(16,185,129,.07) 0%, transparent 70%);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 0;
+      animation: pulse 6s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: translate(-50%,-50%) scale(1); opacity: .7; }
+      50%       { transform: translate(-50%,-50%) scale(1.12); opacity: 1; }
+    }
+
+    /* ── CARD ── */
+    .card {
+      position: relative; z-index: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 3.5rem 3rem 3rem;
+      max-width: 500px; width: 100%;
+      text-align: center;
+      box-shadow: 0 24px 80px rgba(0,0,0,.12);
+      animation: slideUp .5s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(24px) scale(.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ── AVOCADO ICON ── */
+    .icon-wrap {
+      width: 90px; height: 90px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(16,185,129,.12), rgba(52,211,153,.06));
+      border: 1px solid rgba(16,185,129,.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.8rem;
+      margin: 0 auto 1.75rem;
+      animation: wobble 3s ease-in-out infinite;
+    }
+    @keyframes wobble {
+      0%, 100% { transform: rotate(0deg); }
+      20%       { transform: rotate(-8deg); }
+      40%       { transform: rotate(8deg); }
+      60%       { transform: rotate(-4deg); }
+      80%       { transform: rotate(4deg); }
+    }
+
+    /* ── CODE ── */
+    .code {
+      font-family: 'Fraunces', serif;
+      font-size: clamp(4rem, 12vw, 6rem);
+      font-weight: 900;
+      line-height: 1;
+      background: linear-gradient(135deg, var(--green), var(--green2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: .75rem;
+    }
+
+    /* ── TITLE / SUB ── */
+    .title {
+      font-family: 'Fraunces', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: .6rem;
+    }
+    .sub {
+      font-size: .9rem;
+      color: var(--soft);
+      line-height: 1.6;
+      max-width: 340px;
+      margin: 0 auto 2rem;
+    }
+
+    /* ── ACTIONS ── */
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+    }
+    .btn-primary {
+      display: flex; align-items: center; justify-content: center; gap: .5rem;
+      padding: .875rem 1.5rem;
+      background: linear-gradient(135deg, var(--green), var(--green2));
+      color: #fff;
+      border: none; border-radius: 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: .9rem; font-weight: 700;
+      text-decoration: none; cursor: pointer;
+      transition: opacity .15s, transform .15s;
+      box-shadow: 0 4px 20px rgba(16,185,129,.25);
+    }
+    .btn-primary:hover { opacity: .9; transform: translateY(-2px); }
+
+    .btn-secondary {
+      display: flex; align-items: center; justify-content: center; gap: .5rem;
+      padding: .875rem 1.5rem;
+      background: transparent;
+      color: var(--soft);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: .9rem; font-weight: 600;
+      text-decoration: none; cursor: pointer;
+      transition: border-color .15s, color .15s;
+    }
+    .btn-secondary:hover { border-color: var(--green); color: var(--green); }
+
+    /* ── DIVIDER ── */
+    .divider {
+      display: flex; align-items: center; gap: .75rem;
+      margin: .25rem 0;
+      color: var(--muted);
+      font-size: .75rem;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      position: relative; z-index: 1;
+      margin-top: 2rem;
+      font-size: .75rem;
+      color: var(--soft);
+      text-align: center;
+    }
+    .footer a { color: var(--green); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<div class="orb" aria-hidden="true"></div>
+
+<div class="card">
+  <div class="icon-wrap" aria-hidden="true">🥑</div>
+  <div class="code">404</div>
+  <h1 class="title">This page went off-keto</h1>
+  <p class="sub">The page you're looking for doesn't exist or may have been moved. Let's get you back on track.</p>
+
+  <div class="actions">
+    <a href="/dashboard" class="btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Go to Dashboard
+    </a>
+
+    <div class="divider">or</div>
+
+    <a href="/" class="btn-secondary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to Home
+    </a>
+  </div>
+</div>
+
+<p class="footer">
+  Lost? <a href="mailto:abdeba980@gmail.com">Contact support</a> &nbsp;·&nbsp;
+  <a href="/privacy-policy">Privacy</a> &nbsp;·&nbsp;
+  <a href="/disclaimer">Disclaimer</a>
+</p>
+
+</body>
+</html>
