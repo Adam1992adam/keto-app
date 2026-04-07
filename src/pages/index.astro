@@ -15,6 +15,7 @@ if (accessToken) {
 }
 
 const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.app').replace(/\/$/, '');
+const accountDeleted = Astro.url.searchParams.get('deleted') === '1';
 const PAGE_TITLE       = 'Keto Journey — Transform Your Body With Intelligent Keto';
 const PAGE_DESCRIPTION = 'AI-powered keto meal plans, daily coaching, and smart progress tracking — personalized to YOUR goals. Start your 30, 90, or 360-day keto journey today.';
 const OG_IMAGE         = `${SITE_URL}/og-image.png`;
@@ -1071,6 +1072,14 @@ const OG_IMAGE         = `${SITE_URL}/og-image.png`;
 </head>
 
 <body>
+
+{accountDeleted && (
+  <div id="deletedToast" style="position:fixed;top:1.25rem;left:50%;transform:translateX(-50%);z-index:9999;background:#1a0a0a;border:1px solid rgba(239,68,68,.4);border-radius:12px;padding:.75rem 1.25rem;color:#fca5a5;font-size:.85rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.4);display:flex;align-items:center;gap:.6rem;">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    Your account has been permanently deleted. We're sorry to see you go.
+  </div>
+  <script>setTimeout(function(){var t=document.getElementById('deletedToast');if(t)t.style.display='none';},6000);</script>
+)}
 
 <!-- Animated background orbs -->
 <div class="bg-orbs">
