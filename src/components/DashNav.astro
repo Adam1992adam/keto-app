@@ -926,4 +926,36 @@ body {
   });
 
 })();
+
+// ─── Session auto-refresh ────────────────────────────────────────────────────
+// Intercepts any 401 from dashboard API calls, silently refreshes the session
+// via /api/auth/refresh (which rotates both cookies server-side), then retries
+// the original request once. If the refresh itself fails, redirects to /login.
+(function() {
+  var _origFetch = window.fetch;
+  var _refreshPromise = null;
+
+  window.fetch = function(input, init) {
+    return _origFetch.call(this, input, init).then(function(res) {
+      if (res.status !== 401) return res;
+
+      // Never intercept the refresh or login endpoints themselves
+      var url = typeof input === 'string' ? input : (input && input.url) || '';
+      if (url.indexOf('/api/auth/refresh') !== -1 || url.indexOf('/api/auth/login') !== -1) return res;
+
+      // Deduplicate: only one refresh request in-flight at a time
+      if (!_refreshPromise) {
+        _refreshPromise = _origFetch('/api/auth/refresh', { method: 'POST' })
+          .then(function(r) { _refreshPromise = null; return r.ok; })
+          .catch(function()  { _refreshPromise = null; return false; });
+      }
+
+      return _refreshPromise.then(function(refreshed) {
+        if (!refreshed) { window.location.href = '/login'; return res; }
+        // Retry with freshly rotated cookies
+        return _origFetch.call(window, input, init);
+      });
+    });
+  };
+})();
 </script>
