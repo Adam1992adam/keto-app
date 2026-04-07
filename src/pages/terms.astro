@@ -1,6 +1,7 @@
 ---
 // src/pages/terms.astro — Terms of Service
 const lastUpdated = 'April 8, 2026';
+const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.app').replace(/\/$/, '');
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -8,7 +9,19 @@ const lastUpdated = 'April 8, 2026';
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Terms of Service · KetoJourney</title>
+  <meta name="description" content="Read the Terms of Service for KetoJourney. Understand your rights, subscription terms, refund policy, and acceptable use guidelines."/>
   <meta name="robots" content="index, follow"/>
+  <link rel="canonical" href={SITE_URL + '/terms'}/>
+  <meta property="og:type"        content="website"/>
+  <meta property="og:url"         content={SITE_URL + '/terms'}/>
+  <meta property="og:site_name"   content="KetoJourney"/>
+  <meta property="og:title"       content="Terms of Service · KetoJourney"/>
+  <meta property="og:description" content="Read the Terms of Service for KetoJourney. Understand your rights, subscription terms, refund policy, and acceptable use guidelines."/>
+  <meta property="og:image"       content={SITE_URL + '/og-image.png'}/>
+  <meta name="twitter:card"       content="summary"/>
+  <meta name="twitter:title"      content="Terms of Service · KetoJourney"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="/icon-72.png"/>
+  <meta name="theme-color" content="#10b981"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
   <style>

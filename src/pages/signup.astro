@@ -2,6 +2,7 @@
 // signup.astro
 const emailParam = Astro.url.searchParams.get('email');
 const allowedEmail = emailParam ? emailParam.toLowerCase().trim() : '';
+const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.app').replace(/\/$/, '');
 ---
 
 <!DOCTYPE html>
@@ -10,6 +11,20 @@ const allowedEmail = emailParam ? emailParam.toLowerCase().trim() : '';
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Create Account — Keto Journey</title>
+  <meta name="robots" content="noindex, nofollow"/>
+  <link rel="canonical" href={SITE_URL + '/signup'}/>
+  <meta property="og:type"        content="website"/>
+  <meta property="og:url"         content={SITE_URL + '/signup'}/>
+  <meta property="og:site_name"   content="KetoJourney"/>
+  <meta property="og:title"       content="Start Your Keto Journey Today"/>
+  <meta property="og:description" content="Create your KetoJourney account and begin your personalized 30, 90, or 360-day keto transformation."/>
+  <meta property="og:image"       content={SITE_URL + '/og-image.png'}/>
+  <meta name="twitter:card"       content="summary_large_image"/>
+  <meta name="twitter:title"      content="Start Your Keto Journey Today"/>
+  <meta name="twitter:image"      content={SITE_URL + '/og-image.png'}/>
+  <link rel="icon" type="image/png" sizes="32x32" href="/icon-72.png"/>
+  <link rel="manifest" href="/manifest.webmanifest"/>
+  <meta name="theme-color" content="#10b981"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
