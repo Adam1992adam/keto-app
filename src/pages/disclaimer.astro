@@ -1,5 +1,6 @@
 ---
 // src/pages/disclaimer.astro
+import CookieConsent from '../components/CookieConsent.astro';
 const title = 'Disclaimer · KetoJourney';
 const lastUpdated = 'April 7, 2026';
 const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.app').replace(/\/$/, '');
@@ -137,5 +138,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.app').r
   <a href="/disclaimer">Disclaimer</a>
 </footer>
 
+<CookieConsent />
 </body>
 </html>

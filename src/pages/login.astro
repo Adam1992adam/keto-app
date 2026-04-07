@@ -1,6 +1,7 @@
 ---
 // login.astro
 import BaseLayout from '../layouts/BaseLayout.astro';
+import CookieConsent from '../components/CookieConsent.astro';
 
 const error   = Astro.url.searchParams.get('error');
 const message = Astro.url.searchParams.get('message');
@@ -374,5 +375,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.app').r
     });
   }
 </script>
+<CookieConsent />
 </body>
 </html>

@@ -1,0 +1,371 @@
+---
+// src/components/CookieConsent.astro
+// GDPR / CCPA cookie consent banner.
+// Stores consent in localStorage — no additional cookie needed.
+// Essential auth cookies are always active (no consent required — legitimate interest).
+---
+
+<!-- Cookie Consent Banner -->
+<div id="cc-banner" aria-live="polite" aria-label="Cookie consent" role="dialog">
+  <div class="cc-inner">
+    <div class="cc-left">
+      <span class="cc-icon">🍪</span>
+      <div>
+        <p class="cc-title">We use cookies</p>
+        <p class="cc-desc">
+          This site uses essential cookies for secure login and session management.
+          We don't sell your data or run ad tracking.
+          <a href="/privacy-policy" class="cc-link">Privacy Policy</a>
+        </p>
+      </div>
+    </div>
+    <div class="cc-right">
+      <button id="cc-manage-btn" class="cc-btn-ghost">Manage</button>
+      <button id="cc-essential-btn" class="cc-btn-outline">Essential Only</button>
+      <button id="cc-accept-btn" class="cc-btn-accept">Accept All</button>
+    </div>
+  </div>
+</div>
+
+<!-- Manage Preferences Panel (shown above banner) -->
+<div id="cc-panel" aria-label="Cookie preferences" role="dialog" aria-modal="true">
+  <div class="cc-panel-head">
+    <span class="cc-panel-title">Cookie Preferences</span>
+    <button id="cc-panel-close" class="cc-panel-close" aria-label="Close">✕</button>
+  </div>
+
+  <div class="cc-panel-body">
+    <!-- Essential -->
+    <div class="cc-row">
+      <div class="cc-row-info">
+        <span class="cc-row-name">Essential Cookies</span>
+        <span class="cc-row-desc">Required for login, session management, and app security. Cannot be disabled.</span>
+      </div>
+      <div class="cc-toggle cc-toggle--locked" aria-label="Always active" title="Always active">
+        <div class="cc-track cc-track--on"></div>
+      </div>
+    </div>
+
+    <!-- Functional -->
+    <div class="cc-row">
+      <div class="cc-row-info">
+        <span class="cc-row-name">Functional Cookies</span>
+        <span class="cc-row-desc">Remember your preferences like dark/light mode, units, and language settings.</span>
+      </div>
+      <button id="cc-func-toggle" class="cc-toggle" role="switch" aria-checked="true">
+        <div class="cc-track cc-track--on" id="cc-func-track"></div>
+      </button>
+    </div>
+
+    <!-- Analytics -->
+    <div class="cc-row">
+      <div class="cc-row-info">
+        <span class="cc-row-name">Analytics Cookies</span>
+        <span class="cc-row-desc">Help us understand how the app is used so we can improve it. No personal data is sold.</span>
+      </div>
+      <button id="cc-analytics-toggle" class="cc-toggle" role="switch" aria-checked="false">
+        <div class="cc-track" id="cc-analytics-track"></div>
+      </button>
+    </div>
+  </div>
+
+  <div class="cc-panel-foot">
+    <button id="cc-save-prefs" class="cc-btn-accept" style="width:100%;justify-content:center;">Save Preferences</button>
+  </div>
+</div>
+
+<style>
+  /* ── Banner ──────────────────────────────────────────────── */
+  #cc-banner {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 9990;
+    background: rgba(6, 13, 9, 0.97);
+    border-top: 1px solid rgba(16,185,129,.2);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: .875rem 1.5rem;
+    transform: translateY(100%);
+    transition: transform .35s cubic-bezier(.4,0,.2,1);
+    display: none;
+  }
+  #cc-banner.cc-visible { transform: translateY(0); }
+
+  .cc-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+  }
+  .cc-left {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    flex: 1;
+    min-width: 220px;
+  }
+  .cc-icon { font-size: 1.25rem; flex-shrink: 0; margin-top: .05rem; }
+  .cc-title {
+    font-weight: 700;
+    font-size: .84rem;
+    color: #dfeedd;
+    margin: 0 0 .2rem;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .cc-desc {
+    font-size: .75rem;
+    color: #4d7055;
+    margin: 0;
+    line-height: 1.55;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .cc-link {
+    color: #10b981;
+    text-decoration: none;
+    margin-left: .25rem;
+  }
+  .cc-link:hover { text-decoration: underline; }
+
+  .cc-right {
+    display: flex;
+    gap: .6rem;
+    align-items: center;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  /* Buttons */
+  .cc-btn-ghost {
+    padding: .45rem .9rem;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #4d7055;
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: color .15s;
+  }
+  .cc-btn-ghost:hover { color: #dfeedd; }
+
+  .cc-btn-outline {
+    padding: .45rem .9rem;
+    border-radius: 8px;
+    border: 1px solid rgba(16,185,129,.3);
+    background: transparent;
+    color: #34d399;
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all .15s;
+  }
+  .cc-btn-outline:hover { background: rgba(16,185,129,.08); border-color: rgba(16,185,129,.6); }
+
+  .cc-btn-accept {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .45rem 1rem;
+    border-radius: 8px;
+    border: none;
+    background: #10b981;
+    color: #fff;
+    font-size: .78rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: background .15s;
+  }
+  .cc-btn-accept:hover { background: #059669; }
+
+  /* ── Manage Panel ────────────────────────────────────────── */
+  #cc-panel {
+    position: fixed;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%) translateY(calc(100% + 8px));
+    z-index: 9991;
+    width: min(480px, 96vw);
+    background: #0d1a0f;
+    border: 1px solid rgba(16,185,129,.2);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -16px 48px rgba(0,0,0,.5);
+    transition: transform .35s cubic-bezier(.4,0,.2,1);
+    display: none;
+  }
+  #cc-panel.cc-panel-open { transform: translateX(-50%) translateY(0); }
+
+  .cc-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem .75rem;
+    border-bottom: 1px solid rgba(16,185,129,.1);
+  }
+  .cc-panel-title { font-weight: 700; font-size: .9rem; color: #dfeedd; font-family: 'DM Sans', sans-serif; }
+  .cc-panel-close {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    border: 1px solid rgba(16,185,129,.15);
+    background: rgba(16,185,129,.06);
+    color: #4d7055;
+    font-size: .8rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .cc-panel-close:hover { color: #dfeedd; background: rgba(16,185,129,.12); }
+
+  .cc-panel-body { padding: .75rem 1.25rem; display: flex; flex-direction: column; gap: .875rem; }
+
+  .cc-row {
+    display: flex;
+    align-items: center;
+    gap: .875rem;
+    padding: .75rem;
+    background: rgba(16,185,129,.04);
+    border-radius: 12px;
+    border: 1px solid rgba(16,185,129,.08);
+  }
+  .cc-row-info { flex: 1; }
+  .cc-row-name { display: block; font-weight: 600; font-size: .8rem; color: #dfeedd; margin-bottom: .2rem; font-family: 'DM Sans', sans-serif; }
+  .cc-row-desc { display: block; font-size: .72rem; color: #4d7055; line-height: 1.5; font-family: 'DM Sans', sans-serif; }
+
+  /* Toggle switch */
+  .cc-toggle {
+    flex-shrink: 0;
+    width: 40px; height: 22px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 99px;
+    position: relative;
+  }
+  .cc-toggle--locked { cursor: not-allowed; opacity: .65; }
+
+  .cc-track {
+    width: 40px; height: 22px;
+    border-radius: 99px;
+    background: rgba(255,255,255,.12);
+    position: relative;
+    transition: background .2s;
+  }
+  .cc-track::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform .2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  }
+  .cc-track--on { background: #10b981; }
+  .cc-track--on::after { transform: translateX(18px); }
+
+  .cc-panel-foot { padding: .75rem 1.25rem 1.25rem; }
+
+  /* Mobile */
+  @media (max-width: 600px) {
+    #cc-banner { padding: .875rem 1rem; }
+    .cc-inner { gap: .875rem; }
+    .cc-right { width: 100%; justify-content: flex-end; }
+    .cc-btn-ghost { display: none; }
+  }
+</style>
+
+<script is:inline>
+(function() {
+  var KEY = 'kj_cookie_consent';
+
+  // Already consented — nothing to do
+  try { if (localStorage.getItem(KEY)) return; } catch(e) {}
+
+  var banner  = document.getElementById('cc-banner');
+  var panel   = document.getElementById('cc-panel');
+  var funcOn  = true;
+  var analyticsOn = false;
+
+  // ── Show banner on load ───────────────────────────────────
+  function showBanner() {
+    if (!banner) return;
+    banner.style.display = 'block';
+    // Force reflow so transition fires
+    banner.getBoundingClientRect();
+    banner.classList.add('cc-visible');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(showBanner, 600); });
+  } else {
+    setTimeout(showBanner, 600);
+  }
+
+  // ── Save & hide ───────────────────────────────────────────
+  function saveConsent(all) {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({
+        essential:  true,
+        functional: all ? true : funcOn,
+        analytics:  all ? true : analyticsOn,
+        ts: Date.now(),
+      }));
+    } catch(e) {}
+    hideBanner();
+    hidePanel();
+  }
+
+  function hideBanner() {
+    if (!banner) return;
+    banner.classList.remove('cc-visible');
+    setTimeout(function() { banner.style.display = 'none'; }, 380);
+  }
+
+  function hidePanel() {
+    if (!panel) return;
+    panel.classList.remove('cc-panel-open');
+    setTimeout(function() { panel.style.display = 'none'; }, 380);
+  }
+
+  function showPanel() {
+    if (!panel) return;
+    panel.style.display = 'block';
+    panel.getBoundingClientRect();
+    panel.classList.add('cc-panel-open');
+  }
+
+  // ── Banner buttons ────────────────────────────────────────
+  document.getElementById('cc-accept-btn')?.addEventListener('click', function() { saveConsent(true); });
+  document.getElementById('cc-essential-btn')?.addEventListener('click', function() { saveConsent(false); });
+  document.getElementById('cc-manage-btn')?.addEventListener('click', showPanel);
+
+  // ── Panel buttons ─────────────────────────────────────────
+  document.getElementById('cc-panel-close')?.addEventListener('click', hidePanel);
+  document.getElementById('cc-save-prefs')?.addEventListener('click', function() { saveConsent(false); });
+
+  // ── Toggle: Functional ────────────────────────────────────
+  document.getElementById('cc-func-toggle')?.addEventListener('click', function() {
+    funcOn = !funcOn;
+    var track = document.getElementById('cc-func-track');
+    if (track) { track.classList.toggle('cc-track--on', funcOn); }
+    this.setAttribute('aria-checked', funcOn ? 'true' : 'false');
+  });
+
+  // ── Toggle: Analytics ────────────────────────────────────
+  document.getElementById('cc-analytics-toggle')?.addEventListener('click', function() {
+    analyticsOn = !analyticsOn;
+    var track = document.getElementById('cc-analytics-track');
+    if (track) { track.classList.toggle('cc-track--on', analyticsOn); }
+    this.setAttribute('aria-checked', analyticsOn ? 'true' : 'false');
+  });
+
+  // ── Keyboard: Escape closes panel ────────────────────────
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') hidePanel();
+  });
+})();
+</script>
