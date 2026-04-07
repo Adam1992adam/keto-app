@@ -76,15 +76,22 @@ const daysLeft = maxDays - currentDay;
 <style>
 .upsell-overlay {
   position: fixed; inset: 0; z-index: 8000;
-  background: rgba(0,0,0,.65);
-  backdrop-filter: blur(6px);
   display: flex; align-items: center; justify-content: center;
   padding: 1.5rem;
+  /* Keep background + backdrop-filter OFF until .visible — Chrome applies
+     backdrop-filter even at opacity:0, which permanently dims the page */
+  background: transparent;
+  backdrop-filter: none;
+  visibility: hidden;
   opacity: 0; pointer-events: none;
-  transition: opacity .25s ease;
+  transition: opacity .25s ease, visibility 0s linear .25s;
 }
 .upsell-overlay.visible {
+  background: rgba(0,0,0,.65);
+  backdrop-filter: blur(6px);
+  visibility: visible;
   opacity: 1; pointer-events: auto;
+  transition: opacity .25s ease, visibility 0s linear 0s;
 }
 .upsell-modal {
   position: relative;
