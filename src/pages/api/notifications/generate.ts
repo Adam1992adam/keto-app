@@ -24,7 +24,7 @@ async function generate(userId: string, db: any): Promise<number> {
   const now   = new Date();
 
   // Fetch journey first to get current_day for meal queries
-  const { data: journeyFirst } = await supabase
+  const { data: journeyFirst } = await db
     .from('user_journey').select('current_day').eq('user_id', userId).maybeSingle();
   const currentDayFirst = journeyFirst?.current_day || 1;
 
@@ -393,7 +393,7 @@ async function generate(userId: string, db: any): Promise<number> {
     ];
 
     // Check if this meal type exists in today's plan
-    const { data: todayPlan } = await supabase
+    const { data: todayPlan } = await db
       .from('meal_plans')
       .select('meal_type')
       .eq('plan_type', planType)
@@ -471,7 +471,7 @@ async function generate(userId: string, db: any): Promise<number> {
     if (milestoneNotif) {
       const day = parseInt(milestoneNotif.type.split('_')[1] || '0', 10);
       if ([7, 14, 21, 30, 60, 90].includes(day)) {
-        const { data: userProfile } = await supabase
+        const { data: userProfile } = await db
           .from('profiles').select('email, full_name').eq('id', userId).maybeSingle();
         if (userProfile?.email) {
           const { sendMilestoneEmail } = await import('../../../lib/email');

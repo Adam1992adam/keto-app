@@ -241,8 +241,8 @@ if (!isSubscriptionActive(profile)) return Astro.redirect('/dashboard/upgrade');
 | Tier | ID | Days | Features |
 |------|----|------|---------|
 | Basic | `basic_30` | 30 | 30 recipes, basic tracking |
-| Pro | `pro_6` | 180 | 87+ recipes, analytics |
-| Elite | `elite_12` | 365 | All + AI Coach |
+| Pro | `pro_6` | 90 | 87+ recipes, analytics |
+| Elite | `elite_12` | 360 | All + AI Coach |
 
 Check: `isSubscriptionActive(profile)` from `supabase.ts`
 Tier: `profile.subscription_tier` → `'basic_30' | 'pro_6' | 'elite_12'`

@@ -1,0 +1,127 @@
+---
+// src/pages/disclaimer.astro
+const title = 'Disclaimer · KetoJourney';
+const lastUpdated = 'April 7, 2026';
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{title}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #060d09; --card: #0d1a0f; --border: rgba(16,185,129,.12);
+      --text: #dfeedd; --soft: #4d7055; --green: #10b981; --green2: #34d399;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); line-height:1.7; }
+    a { color:var(--green); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+
+    .nav { display:flex; align-items:center; justify-content:space-between; padding:1rem 2rem; border-bottom:1px solid var(--border); }
+    .nav-logo { font-family:'Fraunces',serif; font-weight:900; font-size:1.2rem; color:var(--green2); display:flex; align-items:center; gap:.5rem; }
+    .nav-back { font-size:.83rem; font-weight:700; color:var(--soft); border:1px solid var(--border); padding:.4rem .9rem; border-radius:8px; transition:all .2s; }
+    .nav-back:hover { color:var(--text); border-color:var(--green); text-decoration:none; }
+
+    .page { max-width:760px; margin:0 auto; padding:3rem 1.5rem 5rem; }
+    .page-label { font-size:.7rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--green); margin-bottom:.75rem; }
+    h1 { font-family:'Fraunces',serif; font-weight:900; font-size:clamp(2rem,4vw,2.8rem); line-height:1.1; margin-bottom:.5rem; }
+    .meta { font-size:.78rem; color:var(--soft); margin-bottom:2.5rem; }
+
+    .section { margin-bottom:2rem; padding:1.5rem; background:var(--card); border:1px solid var(--border); border-radius:16px; }
+    .section.warning { border-color:rgba(245,158,11,.3); background:rgba(245,158,11,.04); }
+    h2 { font-family:'Fraunces',serif; font-size:1.15rem; font-weight:700; color:var(--green2); margin-bottom:.75rem; }
+    .section.warning h2 { color:#fbbf24; }
+    p { font-size:.9rem; color:rgba(223,238,221,.8); margin-bottom:.75rem; }
+    p:last-child { margin-bottom:0; }
+    ul { padding-left:1.25rem; margin:.5rem 0; }
+    li { font-size:.9rem; color:rgba(223,238,221,.8); margin-bottom:.35rem; }
+    strong { color:var(--text); }
+
+    .footer { text-align:center; padding:2rem; border-top:1px solid var(--border); font-size:.78rem; color:var(--soft); }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">🥑 KetoJourney</a>
+  <a href="/" class="nav-back">← Back to Home</a>
+</nav>
+
+<div class="page">
+  <div class="page-label">Legal</div>
+  <h1>Disclaimer</h1>
+  <p class="meta">Last updated: {lastUpdated}</p>
+
+  <div class="section warning">
+    <h2>Important Notice</h2>
+    <p><strong>KetoJourney is not a medical service.</strong> The content, meal plans, coaching tips, and AI-generated advice provided through this application are for informational and educational purposes only. They are not intended to diagnose, treat, cure, or prevent any disease or health condition.</p>
+  </div>
+
+  <div class="section">
+    <h2>1. Not Medical Advice</h2>
+    <p>The information provided on KetoJourney — including meal plans, macro calculations, fasting protocols, and AI Coach responses — does not constitute medical advice. Always consult a qualified healthcare professional before starting any new diet, nutrition program, or fasting regimen, especially if you have or suspect you may have a medical condition.</p>
+    <p>KetoJourney does not employ licensed physicians, dietitians, or nutritionists to review individual user data. The personalization features are algorithmic and based on general population data.</p>
+  </div>
+
+  <div class="section">
+    <h2>2. Individual Results Vary</h2>
+    <p>Results shown in testimonials, marketing materials, or user dashboards are individual and not typical. Weight loss, energy improvements, and health outcomes depend on numerous factors including starting weight, age, genetics, adherence to the program, sleep, stress, and medical history.</p>
+    <p>KetoJourney makes no guarantee that you will achieve any specific result by following our plans.</p>
+  </div>
+
+  <div class="section">
+    <h2>3. Dietary Restrictions & Allergies</h2>
+    <p>While KetoJourney attempts to accommodate common dietary restrictions (vegetarian, no pork, no seafood), it is your responsibility to review all meal ingredients for potential allergens or dietary conflicts. We cannot guarantee that all recipes are free from allergens including but not limited to: nuts, dairy, gluten, eggs, or shellfish.</p>
+    <p>If you have a known food allergy or intolerance, always verify ingredient lists before consuming any suggested meal.</p>
+  </div>
+
+  <div class="section">
+    <h2>4. Ketogenic Diet Risks</h2>
+    <p>The ketogenic diet may not be appropriate for everyone. Individuals with the following conditions should consult a physician before starting:</p>
+    <ul>
+      <li>Type 1 or Type 2 Diabetes</li>
+      <li>Kidney disease or kidney stones</li>
+      <li>Liver disease</li>
+      <li>Pancreatitis</li>
+      <li>Fat metabolism disorders</li>
+      <li>Pregnancy or breastfeeding</li>
+      <li>History of eating disorders</li>
+    </ul>
+    <p>Side effects such as "keto flu" (headaches, fatigue, irritability) are common in the first 1–2 weeks. Serious side effects are rare but possible. Stop the program and seek medical attention if you experience severe symptoms.</p>
+  </div>
+
+  <div class="section">
+    <h2>5. Fasting Protocols</h2>
+    <p>Intermittent fasting features within KetoJourney are optional and for general wellness purposes only. Extended fasting may be inappropriate for individuals with certain medical conditions, those on medication, or those with a history of disordered eating. Always consult your doctor before attempting fasting protocols.</p>
+  </div>
+
+  <div class="section">
+    <h2>6. AI Coach Limitations</h2>
+    <p>The AI Coach feature (Elite plan) uses a large language model to provide general keto and wellness guidance. AI responses may occasionally be inaccurate, incomplete, or not applicable to your individual situation. AI Coach responses do not constitute medical, legal, or professional advice of any kind. Do not rely solely on AI Coach output for health decisions.</p>
+  </div>
+
+  <div class="section">
+    <h2>7. Limitation of Liability</h2>
+    <p>To the fullest extent permitted by applicable law, KetoJourney and its owners, employees, and affiliates shall not be liable for any direct, indirect, incidental, special, or consequential damages arising from your use of the service, including but not limited to health complications, personal injury, or financial loss.</p>
+    <p>Your use of KetoJourney is at your own risk.</p>
+  </div>
+
+  <div class="section">
+    <h2>8. Contact</h2>
+    <p>If you have questions about this Disclaimer, contact us at:<br/>
+    <a href="mailto:support@ketojourney.app">support@ketojourney.app</a></p>
+  </div>
+</div>
+
+<footer class="footer">
+  © 2026 KetoJourney. All rights reserved. &nbsp;·&nbsp;
+  <a href="/privacy-policy">Privacy Policy</a> &nbsp;·&nbsp;
+  <a href="/disclaimer">Disclaimer</a>
+</footer>
+
+</body>
+</html>

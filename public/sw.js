@@ -8,7 +8,7 @@
      Network Only + BG Sync → mutating API calls
    ═══════════════════════════════════════════════════════════════ */
 
-const CACHE_VERSION  = 'v4';
+const CACHE_VERSION  = 'v6';
 const STATIC_CACHE   = 'keto-static-'  + CACHE_VERSION;
 const PAGES_CACHE    = 'keto-pages-'   + CACHE_VERSION;
 const DATA_CACHE     = 'keto-data-'    + CACHE_VERSION;
@@ -125,6 +125,11 @@ self.addEventListener('fetch', (event) => {
   /* ── Mutating APIs — network only (already handled above) */
   if (isMutationAPI(path)) return;
 
+  /* ── Payment/upgrade pages: bypass SW entirely ───────── */
+  if (path === '/dashboard/upgrade') {
+    return; /* let browser fetch directly — no SW interference */
+  }
+
   /* ── Dashboard pages: Network First ───────────────────── */
   if (path.startsWith('/dashboard') || path === '/') {
     event.respondWith(networkFirstPage(req));
@@ -183,12 +188,12 @@ async function staleWhileRevalidate(req, cacheName) {
 
 /* Network First with page cache fallback */
 async function networkFirstPage(req) {
+  const path = new URL(req.url).pathname;
   const cache = await caches.open(PAGES_CACHE);
   try {
     const res = await fetchWithTimeout(req, 12000);
     if (res.ok) {
       /* Only cache cacheable pages (not user-specific API responses) */
-      const path = new URL(req.url).pathname;
       if (CACHEABLE_PAGES.some((p) => path === p || path.startsWith(p + '/'))) {
         cache.put(req, res.clone());
       }

@@ -174,13 +174,13 @@ export const PLANS = {
     id: 'pro_6' as PlanTier,
     name: 'Pro',
     emoji: '🥈',
-    tagline: '6-Month Keto Transformation',
-    durationDays: 180,
+    tagline: '90-Day Keto Transformation',
+    durationDays: 90,
     color: '#6366f1',
     gradient: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
     features: [
       'Everything in Basic',
-      '6-month structured meal plan',
+      '90-day structured meal plan',
       '87+ keto recipes',
       'Advanced macros & analytics',
       'Weight progress charts',
@@ -227,13 +227,13 @@ export const PLANS = {
     id: 'elite_12' as PlanTier,
     name: 'Elite',
     emoji: '🥇',
-    tagline: '12-Month Elite Keto Lifestyle',
-    durationDays: 365,
+    tagline: '360-Day Elite Keto Lifestyle',
+    durationDays: 360,
     color: '#f59e0b',
     gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)',
     features: [
       'Everything in Pro',
-      'Full 12-month meal plan',
+      'Full 360-day meal plan',
       'Unlimited recipe access',
       'Weekly progress reports',
       'Community & forum access',
@@ -541,12 +541,10 @@ export async function getUserJourney(userId: string, client = supabase): Promise
 }
 
 export async function initializeUserJourney(userId: string, client = supabase): Promise<UserJourney | null> {
-  const existing = await getUserJourney(userId, client);
-  if (existing) return existing;
-
+  // Use upsert to avoid duplicate key errors from concurrent requests
   const { data, error } = await client
     .from('user_journey')
-    .insert({
+    .upsert({
       user_id: userId,
       start_date: new Date().toISOString().split('T')[0],
       current_day: 1,
@@ -556,14 +554,18 @@ export async function initializeUserJourney(userId: string, client = supabase): 
       streak_days: 0,
       longest_streak: 0,
       perfect_days: 0,
-    })
+    }, { onConflict: 'user_id', ignoreDuplicates: true })
     .select()
     .maybeSingle();
 
   if (error) {
     console.error('Error creating journey:', error);
-    return null;
+    // Row already exists — fetch and return it
+    return getUserJourney(userId, client);
   }
+
+  // ignoreDuplicates returns null data when row already existed — fetch it
+  if (!data) return getUserJourney(userId, client);
 
   await client.rpc('initialize_daily_tasks', {
     user_id_param: userId,

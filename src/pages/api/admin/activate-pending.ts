@@ -16,7 +16,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const days = tier === 'basic_30' ? 30 : tier === 'pro_6' ? 180 : 365;
+    const days = tier === 'basic_30' ? 30 : tier === 'pro_6' ? 90 : 360;
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + days);
 

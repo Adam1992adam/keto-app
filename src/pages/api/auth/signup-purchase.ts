@@ -93,8 +93,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // ── Calculate subscription dates ──────────
     const tierDays: Record<string, number> = {
       basic_30:  30,
-      pro_6:    180,
-      elite_12: 365,
+      pro_6:     90,
+      elite_12: 360,
     };
 
     const subStart = startDate ? new Date(startDate) : new Date();

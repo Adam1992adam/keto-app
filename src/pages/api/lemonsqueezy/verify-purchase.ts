@@ -77,8 +77,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // ── 3. Purchase found ✅ ──────────────────
     const tierDays: Record<string, number> = {
       basic_30:  30,
-      pro_6:    180,
-      elite_12: 365,
+      pro_6:     90,
+      elite_12: 360,
     };
 
     const tier = pending.subscription_tier || 'basic_30';

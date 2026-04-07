@@ -84,7 +84,7 @@ function p(text: string, style = '') {
 // ─────────────────────────────────────────────────────────────────────────────
 export async function sendWelcomeEmail(to: string, name: string, tier: string) {
   const firstName = name.split(' ')[0];
-  const tierLabel = tier === 'elite_12' ? '👑 Elite (365 days)' : tier === 'pro_6' ? '⚡ Pro (180 days)' : '🥑 Basic (30 days)';
+  const tierLabel = tier === 'elite_12' ? '👑 Elite (360 days)' : tier === 'pro_6' ? '⚡ Pro (90 days)' : '🥑 Basic (30 days)';
 
   const content = `
     ${h1(`Welcome, ${firstName}! 🎉`)}

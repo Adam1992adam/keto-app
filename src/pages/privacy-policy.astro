@@ -1,0 +1,147 @@
+---
+// src/pages/privacy-policy.astro
+const title = 'Privacy Policy · KetoJourney';
+const lastUpdated = 'April 7, 2026';
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{title}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #060d09; --card: #0d1a0f; --border: rgba(16,185,129,.12);
+      --text: #dfeedd; --soft: #4d7055; --green: #10b981; --green2: #34d399;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); line-height:1.7; }
+    a { color:var(--green); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+
+    .nav { display:flex; align-items:center; justify-content:space-between; padding:1rem 2rem; border-bottom:1px solid var(--border); }
+    .nav-logo { font-family:'Fraunces',serif; font-weight:900; font-size:1.2rem; color:var(--green2); display:flex; align-items:center; gap:.5rem; }
+    .nav-back { font-size:.83rem; font-weight:700; color:var(--soft); border:1px solid var(--border); padding:.4rem .9rem; border-radius:8px; transition:all .2s; }
+    .nav-back:hover { color:var(--text); border-color:var(--green); text-decoration:none; }
+
+    .page { max-width:760px; margin:0 auto; padding:3rem 1.5rem 5rem; }
+    .page-label { font-size:.7rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--green); margin-bottom:.75rem; }
+    h1 { font-family:'Fraunces',serif; font-weight:900; font-size:clamp(2rem,4vw,2.8rem); line-height:1.1; margin-bottom:.5rem; }
+    .meta { font-size:.78rem; color:var(--soft); margin-bottom:2.5rem; }
+
+    .section { margin-bottom:2rem; padding:1.5rem; background:var(--card); border:1px solid var(--border); border-radius:16px; }
+    h2 { font-family:'Fraunces',serif; font-size:1.15rem; font-weight:700; color:var(--green2); margin-bottom:.75rem; }
+    p { font-size:.9rem; color:rgba(223,238,221,.8); margin-bottom:.75rem; }
+    p:last-child { margin-bottom:0; }
+    ul { padding-left:1.25rem; margin:.5rem 0; }
+    li { font-size:.9rem; color:rgba(223,238,221,.8); margin-bottom:.35rem; }
+
+    .footer { text-align:center; padding:2rem; border-top:1px solid var(--border); font-size:.78rem; color:var(--soft); }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">🥑 KetoJourney</a>
+  <a href="/" class="nav-back">← Back to Home</a>
+</nav>
+
+<div class="page">
+  <div class="page-label">Legal</div>
+  <h1>Privacy Policy</h1>
+  <p class="meta">Last updated: {lastUpdated}</p>
+
+  <div class="section">
+    <h2>1. Introduction</h2>
+    <p>Welcome to KetoJourney ("we", "us", or "our"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our web application and services.</p>
+    <p>Please read this policy carefully. If you disagree with its terms, please discontinue use of the application.</p>
+  </div>
+
+  <div class="section">
+    <h2>2. Information We Collect</h2>
+    <p>We collect information you provide directly to us when you:</p>
+    <ul>
+      <li>Create an account (name, email address, password)</li>
+      <li>Complete the onboarding questionnaire (age, gender, height, weight, dietary goals)</li>
+      <li>Log daily check-ins, meals, weight, and measurements</li>
+      <li>Contact us for support</li>
+      <li>Make a purchase (processed securely by our payment provider)</li>
+    </ul>
+    <p>We also automatically collect certain technical information, including IP address, browser type, device identifiers, and usage data, to operate and improve the service.</p>
+  </div>
+
+  <div class="section">
+    <h2>3. How We Use Your Information</h2>
+    <p>We use the information we collect to:</p>
+    <ul>
+      <li>Provide, operate, and maintain the KetoJourney service</li>
+      <li>Personalize your meal plans, macro targets, and coaching content</li>
+      <li>Send transactional emails (account confirmation, weekly reports, streak reminders)</li>
+      <li>Process payments and manage your subscription access</li>
+      <li>Monitor and analyze usage patterns to improve the application</li>
+      <li>Comply with legal obligations</li>
+    </ul>
+    <p>We do not sell your personal data to third parties.</p>
+  </div>
+
+  <div class="section">
+    <h2>4. Data Storage & Security</h2>
+    <p>Your data is stored securely in Supabase (PostgreSQL), hosted within the European Union (EU West region). We implement industry-standard security measures including row-level security, encrypted connections (TLS), and hashed passwords.</p>
+    <p>While we take reasonable steps to protect your data, no method of transmission over the internet is 100% secure. We cannot guarantee absolute security.</p>
+  </div>
+
+  <div class="section">
+    <h2>5. Cookies & Tracking</h2>
+    <p>We use session cookies solely to maintain your logged-in state. We do not use third-party advertising cookies or behavioral tracking. Analytics, if used, are limited to aggregate, anonymized data.</p>
+  </div>
+
+  <div class="section">
+    <h2>6. Third-Party Services</h2>
+    <p>We use the following third-party services, each with their own privacy policies:</p>
+    <ul>
+      <li><strong>Supabase</strong> — database and authentication</li>
+      <li><strong>LemonSqueezy</strong> — payment processing (we never store card details)</li>
+      <li><strong>Resend</strong> — transactional email delivery</li>
+      <li><strong>Google Gemini API</strong> — AI Coach feature (Elite plan only)</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>7. Your Rights</h2>
+    <p>Depending on your location, you may have the right to:</p>
+    <ul>
+      <li>Access the personal data we hold about you</li>
+      <li>Request correction of inaccurate data</li>
+      <li>Request deletion of your account and associated data</li>
+      <li>Withdraw consent for email communications at any time</li>
+    </ul>
+    <p>To exercise any of these rights, contact us at the email address below.</p>
+  </div>
+
+  <div class="section">
+    <h2>8. Children's Privacy</h2>
+    <p>KetoJourney is not directed to individuals under the age of 13. We do not knowingly collect personal information from children. If you believe we have inadvertently collected such information, please contact us immediately.</p>
+  </div>
+
+  <div class="section">
+    <h2>9. Changes to This Policy</h2>
+    <p>We may update this Privacy Policy from time to time. We will notify you of significant changes by updating the "Last updated" date at the top of this page. Your continued use of the service after changes constitutes acceptance of the revised policy.</p>
+  </div>
+
+  <div class="section">
+    <h2>10. Contact Us</h2>
+    <p>If you have questions or concerns about this Privacy Policy, please contact us at:<br/>
+    <a href="mailto:support@ketojourney.app">support@ketojourney.app</a></p>
+  </div>
+</div>
+
+<footer class="footer">
+  © 2026 KetoJourney. All rights reserved. &nbsp;·&nbsp;
+  <a href="/privacy-policy">Privacy Policy</a> &nbsp;·&nbsp;
+  <a href="/disclaimer">Disclaimer</a>
+</footer>
+
+</body>
+</html>

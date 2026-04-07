@@ -22,13 +22,13 @@ async function verifySignature(secret: string, body: string, signature: string):
 function determineTier(variantName: string, price: number): { tier: string; days: number } {
   const name = (variantName || '').toLowerCase().trim();
 
-  if (name.includes('elite'))  return { tier: 'elite_12', days: 365 };
-  if (name.includes('pro'))    return { tier: 'pro_6',    days: 180 };
+  if (name.includes('elite'))  return { tier: 'elite_12', days: 360 };
+  if (name.includes('pro'))    return { tier: 'pro_6',    days: 90  };
   if (name.includes('basic') || name.includes('basec')) return { tier: 'basic_30', days: 30 };
 
-  // fallback بالسعر (بالسنتات)
-  if (price >= 15000) return { tier: 'elite_12', days: 365 };
-  if (price >= 5000)  return { tier: 'pro_6',    days: 180 };
+  // fallback by price (cents) — $149→Elite, $69→Pro, $29→Basic
+  if (price >= 13000) return { tier: 'elite_12', days: 360 };
+  if (price >= 5000)  return { tier: 'pro_6',    days: 90  };
   return { tier: 'basic_30', days: 30 };
 }
 

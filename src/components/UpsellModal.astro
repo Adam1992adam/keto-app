@@ -29,8 +29,8 @@ const upgradeAccent = isBasic ? '#6366f1' : '#f59e0b';
 const upgradeBg     = isBasic ? 'rgba(99,102,241,.08)' : 'rgba(245,158,11,.08)';
 const upgradeBorder = isBasic ? 'rgba(99,102,241,.3)'  : 'rgba(245,158,11,.3)';
 const upgradeEmoji  = isBasic ? '⚡' : '👑';
-const upgradePrice  = isBasic ? '$99.99 / 6 months' : '$199.99 / 12 months';
-const upgradePerMonth = isBasic ? '$16.67/mo' : '$16.67/mo';
+const upgradePrice  = isBasic ? '$69 / 90 days' : '$149 / 360 days';
+const upgradePerMonth = isBasic ? 'one-time' : 'one-time';
 const daysLeft = maxDays - currentDay;
 ---
 
@@ -88,15 +88,22 @@ const daysLeft = maxDays - currentDay;
 }
 .upsell-modal {
   position: relative;
+  /* Light mode: white card — dark mode override below */
   background: var(--card);
-  border: 1px solid var(--border2);
+  border: 1.5px solid var(--border2);
   border-radius: 24px;
   padding: 2.5rem 2rem 2rem;
   max-width: 420px; width: 100%;
-  box-shadow: 0 24px 80px rgba(0,0,0,.5);
+  box-shadow: 0 24px 80px rgba(0,0,0,.5), 0 0 0 1px var(--border2);
   text-align: center;
   transform: scale(.94) translateY(16px);
   transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+}
+/* Dark mode: card would be near-black and invisible against overlay — use lighter shade */
+[data-theme="dark"] .upsell-modal {
+  background: #142018;
+  border-color: rgba(16,185,129,.35);
+  box-shadow: 0 24px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(16,185,129,.15), inset 0 1px 0 rgba(16,185,129,.08);
 }
 .upsell-overlay.visible .upsell-modal {
   transform: scale(1) translateY(0);
@@ -195,8 +202,8 @@ var TRIGGERS = {
         : currentDay + ' days in — you\'re building real habits. Don\'t let your journey stop at ' + maxDays + ' days.';
     },
     features: isBasic
-      ? ['⚡ 87+ keto recipes', '📅 6-month meal plan', '📊 Advanced analytics', '🎯 Priority support']
-      : ['🤖 AI Keto Coach', '👥 Community access', '📅 12-month meal plan', '👑 Priority 24/7 support'],
+      ? ['⚡ 87+ keto recipes', '📅 90-day meal plan', '📊 Advanced analytics', '🎯 Priority support']
+      : ['🤖 AI Keto Coach', '👥 Community access', '📅 360-day meal plan', '👑 Priority 24/7 support'],
   },
 
   streak_momentum: {
@@ -213,7 +220,7 @@ var TRIGGERS = {
         + 'Unlock ' + (isBasic ? 'Pro' : 'Elite') + ' to match your effort with better tools.';
     },
     features: isBasic
-      ? ['📊 Advanced analytics & charts', '⚡ 87+ recipe library', '📅 6-month structured plan', '🏆 Weekly progress reports']
+      ? ['📊 Advanced analytics & charts', '⚡ 87+ recipe library', '📅 90-day structured plan', '🏆 Weekly progress reports']
       : ['🤖 Personal AI Keto Coach', '👥 Elite community', '💬 Unlimited AI conversations', '👑 VIP support'],
   },
 
@@ -225,7 +232,7 @@ var TRIGGERS = {
     badge: '⚖️',
     title: function(d) { return d.lost + ' ' + wUnit + ' gone!'; },
     sub: function() {
-      return 'You\'re already seeing real results. Imagine what 6 more months of structured keto could achieve with better tools.';
+      return 'You\'re already seeing real results. Imagine what 90 more days of structured keto could achieve with better tools.';
     },
     features: isBasic
       ? ['📊 Body composition tracking', '📈 Weight trend analytics', '⚡ 87+ keto recipes', '🎯 Personalised macro goals']
@@ -250,8 +257,8 @@ var TRIGGERS = {
       return (msgs[d.day] || '') + ' Upgrade to unlock more.';
     },
     features: isBasic
-      ? ['📅 6-month structured journey', '⚡ 87+ recipes to beat boredom', '📊 Advanced progress tracking', '🏆 Weekly reports']
-      : ['🤖 AI Coach reviews your week', '👥 Community motivation', '📅 12-month elite plan', '👑 Elite support'],
+      ? ['📅 90-day structured journey', '⚡ 87+ recipes to beat boredom', '📊 Advanced progress tracking', '🏆 Weekly reports']
+      : ['🤖 AI Coach reviews your week', '👥 Community motivation', '📅 360-day elite plan', '👑 Elite support'],
   },
 };
 
@@ -378,11 +385,19 @@ window.showFeatureUpsell = function(featureName) {
   showUpsell('feature_' + featureName, def, {});
 };
 
-/* ══ Auto-trigger on page load (300ms delay for smoothness) = */
+/* ══ Auto-trigger — skip the very first visit after login ══ */
 if (planType !== 'elite_12') {
   setTimeout(function() {
-    /* Don't fire on the upgrade page itself */
     if (window.location.pathname === '/dashboard/upgrade') return;
+
+    /* Don't fire on the first dashboard visit in this browser session.
+       sessionStorage resets on tab close so next login also gets a free pass. */
+    var sessionKey = 'keto_dash_visited';
+    if (!sessionStorage.getItem(sessionKey)) {
+      sessionStorage.setItem(sessionKey, '1');
+      return; /* skip this load — let the user see the page first */
+    }
+
     var hit = pickTrigger();
     if (hit) showUpsell(hit.name, hit.trigger, hit.data);
   }, 800);

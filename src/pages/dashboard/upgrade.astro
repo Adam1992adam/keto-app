@@ -8,11 +8,10 @@ import CheckCircle from 'lucide-astro/CheckCircle';
 import Users from 'lucide-astro/Users';
 import Award from 'lucide-astro/Award';
 import ChevronRight from 'lucide-astro/ChevronRight';
-import Share2 from 'lucide-astro/Share2';
 
 const auth = await requireLogin(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 
 const currentPlan = getPlan(profile.subscription_tier);
 const isSubscribed = profile?.subscription_status === 'active';
@@ -20,9 +19,9 @@ const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
 
-const journey = await getUserJourney(user.id);
+const journey = await getUserJourney(user.id, db);
 const currentDay = journey?.current_day || 1;
-const dailyTasks = await getDailyTasks(user.id, currentDay);
+const dailyTasks = await getDailyTasks(user.id, currentDay, db);
 const incompleteTasks = dailyTasks?.filter((t: any) => t.task_type !== 'reflection' && t.task_type !== 'weight' && !t.completed) || [];
 
 const LS_URL = import.meta.env.LEMON_SQUEEZY_CHECKOUT_URL || "https://new-keto-plan.lemonsqueezy.com/checkout/buy/b975765f-a640-4cec-b3ef-44112acc9f75";
@@ -35,7 +34,6 @@ const plans = [
     tagline: 'Perfect Start',
     price: 29.99,
     duration: '30 Days',
-    perMonth: null,
     gradient: 'linear-gradient(135deg,#10b981,#059669)',
     glow: 'rgba(16,185,129,.35)',
     border: 'rgba(16,185,129,.3)',
@@ -59,16 +57,15 @@ const plans = [
     name: 'Pro',
     emoji: '⚡',
     tagline: 'Most Popular',
-    price: 99.99,
-    duration: '6 Months',
-    perMonth: 16.67,
+    price: 69,
+    duration: '90 Days',
     gradient: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
     glow: 'rgba(99,102,241,.35)',
     border: 'rgba(99,102,241,.4)',
     accent: '#6366f1',
     popular: true,
     features: [
-      { text: '6-month meal plan', included: true },
+      { text: '90-day meal plan', included: true },
       { text: '87+ keto recipes', included: true },
       { text: '8 free eBooks', included: true },
       { text: 'Dashboard & tracking', included: true },
@@ -85,16 +82,15 @@ const plans = [
     name: 'Elite',
     emoji: '👑',
     tagline: 'Best Value',
-    price: 199.99,
-    duration: '12 Months',
-    perMonth: 16.67,
+    price: 149,
+    duration: '360 Days',
     gradient: 'linear-gradient(135deg,#f59e0b,#d97706)',
     glow: 'rgba(245,158,11,.35)',
     border: 'rgba(245,158,11,.35)',
     accent: '#f59e0b',
     popular: false,
     features: [
-      { text: '12-month meal plan', included: true },
+      { text: '360-day meal plan', included: true },
       { text: 'Unlimited recipes', included: true },
       { text: '12 free eBooks', included: true },
       { text: 'Dashboard & tracking', included: true },
@@ -603,12 +599,6 @@ const plans = [
               <sup>$</sup>{plan.price}
             </div>
             <div class="plan-duration">for {plan.duration}</div>
-            {plan.perMonth && (
-              <div class="plan-per-month">
-                <span><Share2 size={13} /></span>
-                <span>${plan.perMonth.toFixed(2)} / month</span>
-              </div>
-            )}
           </div>
         </div>
 
@@ -660,7 +650,7 @@ const plans = [
       <div class="compare-cell header-cell center">Elite</div>
     </div>
     {[
-      ['Meal Plan', '30 days', '6 months', '12 months'],
+      ['Meal Plan', '30 days', '90 days', '360 days'],
       ['Recipes', '30', '87+', 'Unlimited'],
       ['Free eBooks', '4', '8', '12'],
       ['Dashboard & Tracking', '✓', '✓', '✓'],

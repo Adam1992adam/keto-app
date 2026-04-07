@@ -97,10 +97,10 @@ const { userId } = Astro.props;
   .nb-panel {
     position: absolute; top: calc(100% + 12px); right: 0; z-index: 300;
     width: 380px; max-height: 540px;
-    background: #0a1610;
-    border: 1px solid rgba(16,185,129,.22);
+    background: var(--card, #0a1610);
+    border: 1px solid var(--border2, rgba(16,185,129,.22));
     border-radius: 22px;
-    box-shadow: 0 32px 80px rgba(0,0,0,.65), 0 0 0 1px rgba(16,185,129,.06), inset 0 1px 0 rgba(255,255,255,.04);
+    box-shadow: 0 32px 80px rgba(0,0,0,.35), 0 0 0 1px rgba(16,185,129,.06), inset 0 1px 0 rgba(255,255,255,.04);
     display: none; flex-direction: column; overflow: hidden;
     animation: panelDrop .22s cubic-bezier(.34,1.56,.64,1);
   }
@@ -112,11 +112,11 @@ const { userId } = Astro.props;
   .nb-header {
     display: flex; align-items: center; justify-content: space-between;
     padding: 1rem 1.2rem .85rem; flex-shrink: 0;
-    border-bottom: 1px solid rgba(16,185,129,.1);
+    border-bottom: 1px solid var(--border, rgba(16,185,129,.1));
     background: linear-gradient(135deg, rgba(16,185,129,.07) 0%, transparent 60%);
   }
   .nb-header-left { display: flex; align-items: center; gap: .55rem; }
-  .nb-title { font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 700; color: #dfeedd; letter-spacing: -.01em; }
+  .nb-title { font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 700; color: var(--text, #dfeedd); letter-spacing: -.01em; }
   .nb-count {
     font-size: .65rem; font-weight: 800; padding: .18rem .55rem; border-radius: 99px;
     background: rgba(16,185,129,.15); color: #10b981; letter-spacing: .02em; text-transform: uppercase;
@@ -124,8 +124,8 @@ const { userId } = Astro.props;
   .nb-header-right { display: flex; gap: .3rem; }
   .nb-hbtn {
     font-size: .68rem; font-weight: 700; padding: .3rem .7rem; border-radius: 9px;
-    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
-    color: #4d7055; cursor: pointer; transition: all .18s;
+    background: var(--card2, rgba(255,255,255,.04)); border: 1px solid var(--border, rgba(255,255,255,.08));
+    color: var(--soft, #4d7055); cursor: pointer; transition: all .18s;
   }
   .nb-hbtn:hover { background: rgba(16,185,129,.1); border-color: rgba(16,185,129,.25); color: #10b981; }
   .nb-hbtn-dismiss:hover { background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.3); color: #f87171; }
@@ -133,7 +133,7 @@ const { userId } = Astro.props;
   /* Loading */
   .nb-loading {
     display: flex; align-items: center; justify-content: center;
-    gap: .75rem; padding: 3rem 1rem; color: #4d7055; font-size: .82rem;
+    gap: .75rem; padding: 3rem 1rem; color: var(--soft, #4d7055); font-size: .82rem;
   }
   .nb-spinner {
     width: 18px; height: 18px; border-radius: 50%;
@@ -145,8 +145,8 @@ const { userId } = Astro.props;
   /* Empty */
   .nb-empty { text-align: center; padding: 3rem 1.5rem; }
   .nb-empty-icon { font-size: 2.8rem; margin-bottom: .75rem; line-height: 1; }
-  .nb-empty-title { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 700; color: #dfeedd; margin-bottom: .3rem; }
-  .nb-empty-sub { font-size: .78rem; color: #4d7055; }
+  .nb-empty-title { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 700; color: var(--text, #dfeedd); margin-bottom: .3rem; }
+  .nb-empty-sub { font-size: .78rem; color: var(--soft, #4d7055); }
 
   /* List */
   .nb-list { flex: 1; overflow-y: auto; padding: .5rem .65rem .65rem; display: flex; flex-direction: column; gap: .45rem; }
@@ -167,16 +167,16 @@ const { userId } = Astro.props;
   }
   .nb-item:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0,0,0,.3);
-    filter: brightness(1.08);
+    box-shadow: 0 8px 24px rgba(0,0,0,.15);
+    filter: brightness(1.05);
   }
   .nb-item:not(.unread) {
-    background: rgba(255,255,255,.02);
-    border-color: rgba(255,255,255,.06);
+    background: var(--card2, rgba(255,255,255,.02));
+    border-color: var(--border, rgba(255,255,255,.06));
     opacity: .72;
   }
   .nb-item.unread {
-    box-shadow: 0 2px 12px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.04);
+    box-shadow: 0 2px 12px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.04);
   }
 
   /* Icon circle */
@@ -193,16 +193,16 @@ const { userId } = Astro.props;
   .nb-item-title {
     font-size: .84rem; font-weight: 700; margin-bottom: .22rem; line-height: 1.3;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    color: #dfeedd;
+    color: var(--text, #dfeedd);
   }
-  .nb-item:not(.unread) .nb-item-title { color: #4d7055; }
+  .nb-item:not(.unread) .nb-item-title { color: var(--soft, #4d7055); }
   .nb-item-body {
-    font-size: .72rem; color: #4d7055; line-height: 1.5;
+    font-size: .72rem; color: var(--soft, #4d7055); line-height: 1.5;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     margin-bottom: .45rem;
   }
   .nb-item-meta { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
-  .nb-item-time { font-size: .63rem; color: #4d7055; opacity: .55; }
+  .nb-item-time { font-size: .63rem; color: var(--soft, #4d7055); opacity: .55; }
 
   /* Action pill */
   .nb-item-action {
@@ -221,8 +221,8 @@ const { userId } = Astro.props;
   .nb-dismiss {
     position: absolute; top: .6rem; right: .6rem;
     width: 20px; height: 20px; border-radius: 6px;
-    background: rgba(0,0,0,.2); border: 1px solid rgba(255,255,255,.08);
-    color: #4d7055; font-size: .75rem; cursor: pointer; line-height: 1;
+    background: var(--card2, rgba(0,0,0,.2)); border: 1px solid var(--border, rgba(255,255,255,.08));
+    color: var(--soft, #4d7055); font-size: .75rem; cursor: pointer; line-height: 1;
     display: none; align-items: center; justify-content: center; transition: all .15s;
   }
   .nb-item:hover .nb-dismiss { display: flex; }
@@ -230,12 +230,12 @@ const { userId } = Astro.props;
 
   /* Footer */
   .nb-footer {
-    padding: .65rem 1.2rem; border-top: 1px solid rgba(16,185,129,.08);
+    padding: .65rem 1.2rem; border-top: 1px solid var(--border, rgba(16,185,129,.08));
     display: flex; justify-content: center; flex-shrink: 0;
     background: rgba(16,185,129,.02);
   }
   .nb-refresh {
-    font-size: .72rem; font-weight: 700; color: #4d7055;
+    font-size: .72rem; font-weight: 700; color: var(--soft, #4d7055);
     background: none; border: none; cursor: pointer; padding: .3rem .85rem;
     border-radius: 99px; transition: all .18s; letter-spacing: .01em;
   }

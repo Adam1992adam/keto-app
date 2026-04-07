@@ -123,5 +123,8 @@ export async function requireLogin(Astro: any): Promise<AuthResult> {
   const profile = await getProfile(user.id, db);
   if (!profile) return { redirect: '/login' };
 
+  // Initialize journey with user-scoped client so RLS passes
+  await updateCurrentDay(user.id, db);
+
   return { user, profile, accessToken, db };
 }

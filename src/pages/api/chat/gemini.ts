@@ -150,7 +150,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 - Activity level: ${profile.activity_level || 'moderate'} | Primary goal: ${profile.goal || 'lose weight'}
 - Dietary restrictions: ${restrictions.length ? restrictions.join(', ') : 'none'}
 - Fasting protocol: ${onboarding?.fasting_protocol || 'not specified'}
-- Plan: Elite 365-day (Day ${currentDay}, Week ${weekNum})
+- Plan: Elite 360-day (Day ${currentDay}, Week ${weekNum})
 
 ## Journey Status
 - Streak: ${journey?.streak_days || 0} days | Level ${journey?.level || 1} | ${journey?.total_xp || 0} XP

@@ -611,9 +611,9 @@ const allowedEmail = emailParam ? emailParam.toLowerCase().trim() : '';
       verifiedEmail = email;
 
       const plans = {
-        'basic_30':  { emoji:'🥑', name:'Basic Plan', meta:'30-day access — $29.99' },
-        'pro_6':     { emoji:'⚡', name:'Pro Plan',   meta:'6-month access — $99.99' },
-        'elite_12':  { emoji:'👑', name:'Elite Plan', meta:'12-month access — $199.99' },
+        'basic_30':  { emoji:'🥑', name:'Basic Plan', meta:'30-day access — $29' },
+        'pro_6':     { emoji:'⚡', name:'Pro Plan',   meta:'90-day access — $69' },
+        'elite_12':  { emoji:'👑', name:'Elite Plan', meta:'360-day access — $149' },
       };
       const plan = plans[purchaseData.tier] || { emoji:'🥑', name:purchaseData.tier, meta:'' };
       document.getElementById('planEmoji').textContent = plan.emoji;
