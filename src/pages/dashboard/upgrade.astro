@@ -24,7 +24,23 @@ const currentDay = journey?.current_day || 1;
 const dailyTasks = await getDailyTasks(user.id, currentDay, db);
 const incompleteTasks = dailyTasks?.filter((t: any) => t.task_type !== 'reflection' && t.task_type !== 'weight' && !t.completed) || [];
 
-const LS_URL = import.meta.env.LEMON_SQUEEZY_CHECKOUT_URL || "https://new-keto-plan.lemonsqueezy.com/checkout/buy/b975765f-a640-4cec-b3ef-44112acc9f75";
+// Per-plan checkout URLs — set each in your Cloudflare environment variables.
+// Append query params at runtime to prefill email, name, and user ID.
+const LS_BASIC_URL = import.meta.env.LEMONSQUEEZY_BASIC_URL  || import.meta.env.LEMON_SQUEEZY_CHECKOUT_URL || '';
+const LS_PRO_URL   = import.meta.env.LEMONSQUEEZY_PRO_URL    || import.meta.env.LEMON_SQUEEZY_CHECKOUT_URL || '';
+const LS_ELITE_URL = import.meta.env.LEMONSQUEEZY_ELITE_URL  || import.meta.env.LEMON_SQUEEZY_CHECKOUT_URL || '';
+
+// Helpers passed to client so checkout URLs can be prefilled
+const userEmail = user.email || '';
+const userName  = profile.full_name || '';
+const userId    = user.id || '';
+
+// Plan → checkout URL map (consumed in define:vars)
+const planCheckoutUrls: Record<string, string> = {
+  basic_30: LS_BASIC_URL,
+  pro_6:    LS_PRO_URL,
+  elite_12: LS_ELITE_URL,
+};
 
 const plans = [
   {
@@ -572,10 +588,20 @@ const plans = [
         <div class="banner-icon">{currentPlan.emoji}</div>
         <div>
           <div class="banner-title">You're on the <strong>{currentPlan.name} Plan</strong></div>
-          <div class="banner-sub">Upgrade anytime to unlock more powerful features</div>
+          <div class="banner-sub">
+            {profile.subscription_end_date
+              ? `Access until ${new Date(profile.subscription_end_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+              : 'Upgrade anytime to unlock more powerful features'}
+          </div>
         </div>
       </div>
-      <span class="badge-active">✓ Active</span>
+      <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+        <span class="badge-active">✓ Active</span>
+        <button id="manageSubBtn" style="display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .85rem;border-radius:99px;border:1px solid var(--border2);background:transparent;color:var(--soft);font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;" onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--green)';" onmouseout="this.style.color='var(--soft)';this.style.borderColor='var(--border2)';">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+          Manage Subscription
+        </button>
+      </div>
     </div>
   )}
 
@@ -620,7 +646,7 @@ const plans = [
         <!-- CTA -->
         <div class="plan-footer">
           {currentPlan?.id === plan.id ? (
-            <div class="btn-current">✓ Current Plan</div>
+            <div class="btn-current">✓ Your Current Plan</div>
           ) : (
             <button
               class={`btn-upgrade ${plan.id === 'basic_30' ? 'green' : plan.id === 'pro_6' ? 'indigo' : 'gold'}`}
@@ -629,6 +655,7 @@ const plans = [
               data-plan-price={plan.price}
               data-plan-emoji={plan.emoji}
               data-plan-duration={plan.duration}
+              data-plan-url={planCheckoutUrls[plan.id] || ''}
               onclick="openModal(this)"
             >
               <span><ChevronRight size={16} /></span>
@@ -723,35 +750,50 @@ const plans = [
 
 <div class="toast" id="toast"></div>
 
-<script is:inline define:vars={{ LS_URL }}>
+<script is:inline define:vars={{ userEmail, userName, userId }}>
 
 // ── THEME ──
-const html = document.documentElement;
-const themeBtn = document.getElementById('themeBtn');
+var html     = document.documentElement;
+var themeBtn = document.getElementById('themeBtn');
 function applyTheme(t) {
   html.setAttribute('data-theme', t);
   localStorage.setItem('keto-theme', t);
   if (themeBtn) themeBtn.textContent = t === 'dark' ? '☀️' : '🌙';
 }
 applyTheme(localStorage.getItem('keto-theme') || 'dark');
-themeBtn?.addEventListener('click', () => {
+themeBtn?.addEventListener('click', function() {
   applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
 });
 
 // ── NOTIFS ──
-const notifBtn  = document.getElementById('notifBtn');
-const notifDrop = document.getElementById('notifDropdown');
-notifBtn?.addEventListener('click', e => { e.stopPropagation(); notifDrop?.classList.toggle('open'); });
-document.addEventListener('click', e => { if (notifDrop && !notifDrop.contains(e.target) && e.target !== notifBtn) notifDrop.classList.remove('open'); });
+var notifBtn  = document.getElementById('notifBtn');
+var notifDrop = document.getElementById('notifDropdown');
+notifBtn?.addEventListener('click', function(e) { e.stopPropagation(); notifDrop?.classList.toggle('open'); });
+document.addEventListener('click', function(e) {
+  if (notifDrop && !notifDrop.contains(e.target) && e.target !== notifBtn) notifDrop.classList.remove('open');
+});
 
-// ── MODAL ──
-let checkoutUrl = LS_URL;
+// ── CHECKOUT URL builder ──────────────────────────────────────────────────────
+// Prefills email, name, and user_id so the webhook can directly upgrade the account.
+function buildCheckoutUrl(baseUrl) {
+  if (!baseUrl) return '';
+  try {
+    var url = new URL(baseUrl);
+    if (userEmail) url.searchParams.set('checkout[email]', userEmail);
+    if (userName)  url.searchParams.set('checkout[name]',  userName);
+    if (userId)    url.searchParams.set('checkout[custom][user_id]', userId);
+    return url.toString();
+  } catch(e) { return baseUrl; }
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────────
+var _pendingCheckoutUrl = '';
 
 function openModal(btn) {
   document.getElementById('modalEmoji').textContent = btn.dataset.planEmoji;
-  document.getElementById('modalName').textContent  = `${btn.dataset.planName} Plan — ${btn.dataset.planDuration}`;
-  document.getElementById('modalPrice').textContent = `$${btn.dataset.planPrice} one-time payment`;
-  checkoutUrl = LS_URL;
+  document.getElementById('modalName').textContent  = btn.dataset.planName + ' Plan — ' + btn.dataset.planDuration;
+  document.getElementById('modalPrice').textContent = '$' + btn.dataset.planPrice + ' one-time payment';
+  _pendingCheckoutUrl = buildCheckoutUrl(btn.dataset.planUrl || '');
   document.getElementById('modalOverlay').classList.add('show');
 }
 
@@ -759,22 +801,52 @@ function closeModal() {
   document.getElementById('modalOverlay').classList.remove('show');
 }
 
-document.getElementById('modalOverlay').addEventListener('click', e => {
+document.getElementById('modalOverlay')?.addEventListener('click', function(e) {
   if (e.target === document.getElementById('modalOverlay')) closeModal();
 });
 
-document.getElementById('modalConfirm').addEventListener('click', () => {
+document.getElementById('modalConfirm')?.addEventListener('click', function() {
+  if (!_pendingCheckoutUrl) {
+    showToast('⚠️ Checkout URL not configured. Contact support.');
+    return;
+  }
   closeModal();
-  window.open(checkoutUrl, '_blank');
-  showToast('🚀 Redirecting to checkout...');
+  window.open(_pendingCheckoutUrl, '_blank');
+  showToast('🚀 Opening secure checkout…');
 });
 
+// ── MANAGE SUBSCRIPTION ───────────────────────────────────────────────────────
+document.getElementById('manageSubBtn')?.addEventListener('click', async function() {
+  var btn = this;
+  btn.textContent = 'Loading…';
+  btn.disabled = true;
+
+  try {
+    var r = await fetch('/api/lemonsqueezy/portal', { method: 'POST' });
+    var data = await r.json();
+
+    if (data.portal_url) {
+      window.open(data.portal_url, '_blank');
+    } else if (data.not_found) {
+      showToast('⚠️ No portal account found. Contact support if you need help.');
+    } else {
+      showToast('⚠️ ' + (data.error || 'Could not open portal. Try again.'));
+    }
+  } catch(e) {
+    showToast('❌ Network error. Please try again.');
+  }
+
+  btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg> Manage Subscription';
+  btn.disabled = false;
+});
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
 function showToast(msg) {
-  const t = document.getElementById('toast');
+  var t = document.getElementById('toast');
   if (!t) return;
   t.textContent = msg;
   t.className = 'toast show';
-  setTimeout(() => t.classList.remove('show'), 2800);
+  setTimeout(function() { t.classList.remove('show'); }, 3000);
 }
 
 window.openModal  = openModal;
