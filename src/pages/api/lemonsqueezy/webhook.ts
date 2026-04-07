@@ -42,11 +42,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const rawBody  = await request.text();
     const signature = request.headers.get('x-signature') || '';
 
-    // Read env (Cloudflare Workers runtime or build-time)
-    const env        = (locals as any)?.runtime?.env || {};
-    const SECRET     = env.LEMONSQUEEZY_SECRET     || import.meta.env.LEMONSQUEEZY_SECRET     || '';
-    const SUPABASE_URL  = env.PUBLIC_SUPABASE_URL        || import.meta.env.PUBLIC_SUPABASE_URL;
-    const SERVICE_KEY   = env.SUPABASE_SERVICE_ROLE_KEY  || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+    // Read env — process.env (Vercel runtime) → import.meta.env (build-time) → Cloudflare locals
+    const cfEnv      = (locals as any)?.runtime?.env || {};
+    const SECRET     = process.env.LEMONSQUEEZY_SECRET    || import.meta.env.LEMONSQUEEZY_SECRET    || cfEnv.LEMONSQUEEZY_SECRET    || '';
+    const SUPABASE_URL  = process.env.PUBLIC_SUPABASE_URL       || import.meta.env.PUBLIC_SUPABASE_URL       || cfEnv.PUBLIC_SUPABASE_URL;
+    const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY || cfEnv.SUPABASE_SERVICE_ROLE_KEY;
 
     // Verify webhook signature when secret is configured
     if (SECRET) {

@@ -38,7 +38,7 @@ New APIs: `/api/notifications/push-subscribe`, `/api/notifications/push-unsubscr
 **Keto Journey** — A 30/180/365-day structured keto diet coaching app.
 Users buy a plan (Basic/Pro/Elite), onboard, then follow daily tasks, meals, check-ins, fasting, and progress tracking.
 
-**Stack:** Astro 4 (SSR) · Supabase (Postgres + Auth) · Cloudflare Pages · TypeScript
+**Stack:** Astro 4 (SSR) · Supabase (Postgres + Auth) · Vercel (serverless) · TypeScript
 
 ---
 
@@ -563,7 +563,7 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 CREATE INDEX IF NOT EXISTS push_subs_user_idx ON push_subscriptions(user_id);
 ```
 
-### Env vars needed (.env + Cloudflare Pages dashboard)
+### Env vars needed (.env + Vercel dashboard)
 ```
 VAPID_PUBLIC_KEY=BIxMNga4pWzvQDMQgv0ZjwGLiyR_g34K9l1MfTB23W3Xsjwj7FkRk0p1pgA0EL2Xo-azzanTApqMPEhz1Pjo-0I
 VAPID_PRIVATE_KEY=IJSR7jvQLTa5BaX4kM7qLr0c7N8sG_KhNgnQfU_qSbg

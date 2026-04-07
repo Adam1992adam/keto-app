@@ -14,9 +14,10 @@ export const POST: APIRoute = async ({ cookies, locals }) => {
   if (!auth.ok) return auth.response;
   const { user } = auth;
 
-  const env      = (locals as any)?.runtime?.env || {};
-  const API_KEY  = env.LEMONSQUEEZY_API_KEY  || import.meta.env.LEMONSQUEEZY_API_KEY;
-  const STORE_ID = env.LEMONSQUEEZY_STORE_ID || import.meta.env.LEMONSQUEEZY_STORE_ID;
+  // process.env (Vercel) → import.meta.env (Astro SSR) → Cloudflare locals
+  const cfEnv    = (locals as any)?.runtime?.env || {};
+  const API_KEY  = process.env.LEMONSQUEEZY_API_KEY  || import.meta.env.LEMONSQUEEZY_API_KEY  || cfEnv.LEMONSQUEEZY_API_KEY;
+  const STORE_ID = process.env.LEMONSQUEEZY_STORE_ID || import.meta.env.LEMONSQUEEZY_STORE_ID || cfEnv.LEMONSQUEEZY_STORE_ID;
 
   if (!API_KEY || !STORE_ID) {
     return json({ error: 'Customer portal not configured' }, 503);
@@ -48,7 +49,7 @@ export const POST: APIRoute = async ({ cookies, locals }) => {
     if (!customer) {
       // Customer not found — they haven't purchased through LemonSqueezy yet,
       // or purchased under a different email. Return the store's generic billing page.
-      const STORE_SLUG = env.LEMONSQUEEZY_STORE_SLUG || import.meta.env.LEMONSQUEEZY_STORE_SLUG || '';
+      const STORE_SLUG = process.env.LEMONSQUEEZY_STORE_SLUG || import.meta.env.LEMONSQUEEZY_STORE_SLUG || cfEnv.LEMONSQUEEZY_STORE_SLUG || '';
       const fallback   = STORE_SLUG
         ? `https://${STORE_SLUG}.lemonsqueezy.com/billing`
         : null;
