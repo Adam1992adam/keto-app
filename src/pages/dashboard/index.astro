@@ -2447,38 +2447,44 @@ import gsap from 'gsap';
     });
   }
 
-  // Animate XP level display
+  // Animate XP level display (count UP from 1 to current level)
   const xpEl = document.getElementById('xpLevelDisplay');
   if (xpEl) {
     const lvl = parseInt(xpEl.textContent?.replace('Lv.', '') || '1');
-    gsap.from({ v: 1 }, {
-      v: lvl, duration: 1.2, ease: 'power2.out', delay: 0.5,
-      onUpdate: function() {
-        xpEl.textContent = 'Lv.' + Math.round(this.targets()[0].v);
-      },
-    });
-  }
-
-  // Animate streak number
-  const streakEl = document.querySelector('.stat-card:nth-child(2) .stat-val') as HTMLElement;
-  if (streakEl) {
-    const val = parseInt(streakEl.textContent || '0');
-    if (val > 0) {
-      gsap.from({ v: 0 }, {
-        v: val, duration: 1.1, ease: 'power2.out', delay: 0.35,
-        onUpdate: function() { streakEl.textContent = String(Math.round(this.targets()[0].v)); },
+    if (lvl > 1) {
+      const xpObj = { v: 1 };
+      xpEl.textContent = 'Lv.1';
+      gsap.to(xpObj, {
+        v: lvl, duration: 1.2, ease: 'power2.out', delay: 0.5,
+        onUpdate: function() { xpEl.textContent = 'Lv.' + Math.round(xpObj.v); },
       });
     }
   }
 
-  // Animate current day number
+  // Animate streak number (count UP from 0 to current streak)
+  const streakEl = document.querySelector('.stat-card:nth-child(2) .stat-val') as HTMLElement;
+  if (streakEl) {
+    const val = parseInt(streakEl.textContent || '0');
+    if (val > 0) {
+      const streakObj = { v: 0 };
+      streakEl.textContent = '0';
+      gsap.to(streakObj, {
+        v: val, duration: 1.1, ease: 'power2.out', delay: 0.35,
+        onUpdate: function() { streakEl.textContent = String(Math.round(streakObj.v)); },
+      });
+    }
+  }
+
+  // Animate current day number (count UP from 1 to currentDay)
   const dayEl = document.querySelector('.stat-card:nth-child(4) .stat-val') as HTMLElement;
   if (dayEl) {
     const val = parseInt(dayEl.textContent || '0');
     if (val > 1) {
-      gsap.from({ v: 1 }, {
+      const dayObj = { v: 1 };
+      dayEl.textContent = '1';
+      gsap.to(dayObj, {
         v: val, duration: 1.0, ease: 'power2.out', delay: 0.42,
-        onUpdate: function() { dayEl.textContent = String(Math.round(this.targets()[0].v)); },
+        onUpdate: function() { dayEl.textContent = String(Math.round(dayObj.v)); },
       });
     }
   }
