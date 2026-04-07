@@ -320,6 +320,7 @@ const avatarLetter       = profile.full_name?.charAt(0)?.toUpperCase() || '?';
     .toast.show{transform:translateY(0);opacity:1;}
     @media(max-width:900px){.hero-body{grid-template-columns:1fr;text-align:center;}.hero-tags{justify-content:center;}.score-wrap{margin:0 auto;}.stats-bar{grid-template-columns:repeat(3,1fr);}}
     @media(max-width:540px){.stats-bar{grid-template-columns:repeat(2,1fr);}.ach-grid{grid-template-columns:1fr;}}
+    @media(max-width:700px){#securityGrid{grid-template-columns:1fr !important;}}
   </style>
 </head>
 <body>
@@ -628,6 +629,58 @@ const avatarLetter       = profile.full_name?.charAt(0)?.toUpperCase() || '?';
         </div>
       </div>
     </div>
+
+    <!-- ── SECURITY SECTION — full width below the grid ── -->
+    <div id="securityGrid" style="margin-top:1.5rem;display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+
+      <!-- Change Email -->
+      <div class="form-section">
+        <div class="fsec-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:.3rem;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          Change Email
+        </div>
+        <p style="font-size:.77rem;color:var(--soft);margin-bottom:1rem;line-height:1.5;">A confirmation link will be sent to your new address before the change takes effect.</p>
+        <div class="fg" style="margin-bottom:.75rem;">
+          <label>Current Email</label>
+          <input type="email" value={profile.email || user.email || ''} class="fi" disabled style="opacity:.5;cursor:not-allowed;"/>
+        </div>
+        <div class="fg" style="margin-bottom:.75rem;">
+          <label>New Email</label>
+          <input type="email" id="newEmail" placeholder="new@example.com" class="fi" autocomplete="email"/>
+        </div>
+        <div id="emailMsg" style="display:none;font-size:.76rem;padding:.5rem .75rem;border-radius:8px;margin-bottom:.75rem;"></div>
+        <button id="saveEmail" class="btn-save" style="width:100%;justify-content:center;">Update Email</button>
+      </div>
+
+      <!-- Change Password -->
+      <div class="form-section">
+        <div class="fsec-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:.3rem;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Change Password
+        </div>
+        <p style="font-size:.77rem;color:var(--soft);margin-bottom:1rem;line-height:1.5;">Use at least 8 characters. You'll remain logged in after the change.</p>
+        <div class="fg" style="margin-bottom:.75rem;">
+          <label>Current Password</label>
+          <input type="password" id="curPwd" placeholder="••••••••" class="fi" autocomplete="current-password"/>
+        </div>
+        <div class="fg" style="margin-bottom:.75rem;">
+          <label>New Password</label>
+          <input type="password" id="newPwd" placeholder="••••••••" class="fi" autocomplete="new-password"/>
+          <div id="pwdStrength" style="margin-top:.4rem;height:3px;border-radius:99px;background:var(--border);overflow:hidden;"><div id="pwdStrengthBar" style="height:100%;width:0;transition:width .3s,background .3s;border-radius:99px;"></div></div>
+          <div id="pwdStrengthLabel" style="font-size:.65rem;color:var(--soft);margin-top:.25rem;"></div>
+        </div>
+        <div class="fg" style="margin-bottom:.75rem;">
+          <label>Confirm New Password</label>
+          <input type="password" id="confirmPwd" placeholder="••••••••" class="fi" autocomplete="new-password"/>
+          <div id="pwdMatchMsg" style="font-size:.7rem;margin-top:.3rem;"></div>
+        </div>
+        <div id="pwdMsg" style="display:none;font-size:.76rem;padding:.5rem .75rem;border-radius:8px;margin-bottom:.75rem;"></div>
+        <button id="savePwd" class="btn-save" style="width:100%;justify-content:center;">Update Password</button>
+      </div>
+
+    </div>
+    <!-- ── /SECURITY SECTION ── -->
+
   </div>
 
 </div>
@@ -848,6 +901,132 @@ document.getElementById('saveMacroGoals')?.addEventListener('click', function() 
     btn.textContent = '💾 Save Macro Goals';
     btn.disabled = false;
   });
+});
+
+/* ── CHANGE EMAIL ── */
+document.getElementById('saveEmail')?.addEventListener('click', async function() {
+  var btn = this;
+  var newEmail = document.getElementById('newEmail').value.trim();
+  var msgEl = document.getElementById('emailMsg');
+
+  function showEmailMsg(text, color) {
+    msgEl.textContent = text;
+    msgEl.style.display = 'block';
+    msgEl.style.background = color === 'green' ? 'rgba(16,185,129,.1)' : 'rgba(239,68,68,.1)';
+    msgEl.style.border = '1px solid ' + (color === 'green' ? 'rgba(16,185,129,.3)' : 'rgba(239,68,68,.3)');
+    msgEl.style.color = color === 'green' ? 'var(--green2)' : '#f87171';
+  }
+
+  if (!newEmail) { showEmailMsg('Please enter a new email address.', 'red'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  try {
+    var r = await fetch('/api/auth/change-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newEmail }),
+    });
+    var data = await r.json();
+    if (data.success) {
+      showEmailMsg('✅ ' + data.message, 'green');
+      document.getElementById('newEmail').value = '';
+    } else {
+      showEmailMsg('❌ ' + (data.error || 'Failed to update email.'), 'red');
+    }
+  } catch(e) {
+    showEmailMsg('❌ Network error. Please try again.', 'red');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Update Email';
+});
+
+/* ── PASSWORD STRENGTH METER ── */
+document.getElementById('newPwd')?.addEventListener('input', function() {
+  var pwd = this.value;
+  var bar = document.getElementById('pwdStrengthBar');
+  var lbl = document.getElementById('pwdStrengthLabel');
+  if (!pwd) { bar.style.width = '0'; lbl.textContent = ''; return; }
+
+  var score = 0;
+  if (pwd.length >= 8) score++;
+  if (pwd.length >= 12) score++;
+  if (/[A-Z]/.test(pwd)) score++;
+  if (/[0-9]/.test(pwd)) score++;
+  if (/[^A-Za-z0-9]/.test(pwd)) score++;
+
+  var pct = Math.round((score / 5) * 100);
+  var color = score <= 1 ? '#ef4444' : score <= 2 ? '#f59e0b' : score <= 3 ? '#3b82f6' : '#10b981';
+  var label = score <= 1 ? 'Weak' : score <= 2 ? 'Fair' : score <= 3 ? 'Good' : score === 4 ? 'Strong' : 'Very Strong';
+  bar.style.width = pct + '%';
+  bar.style.background = color;
+  lbl.textContent = label;
+  lbl.style.color = color;
+});
+
+/* ── PASSWORD MATCH CHECK ── */
+document.getElementById('confirmPwd')?.addEventListener('input', function() {
+  var newPwd = document.getElementById('newPwd').value;
+  var matchMsg = document.getElementById('pwdMatchMsg');
+  if (!this.value) { matchMsg.textContent = ''; return; }
+  if (this.value === newPwd) {
+    matchMsg.textContent = '✓ Passwords match';
+    matchMsg.style.color = 'var(--green)';
+  } else {
+    matchMsg.textContent = '✗ Passwords do not match';
+    matchMsg.style.color = '#f87171';
+  }
+});
+
+/* ── CHANGE PASSWORD ── */
+document.getElementById('savePwd')?.addEventListener('click', async function() {
+  var btn = this;
+  var curPwd = document.getElementById('curPwd').value;
+  var newPwd = document.getElementById('newPwd').value;
+  var confirmPwd = document.getElementById('confirmPwd').value;
+  var msgEl = document.getElementById('pwdMsg');
+
+  function showPwdMsg(text, color) {
+    msgEl.textContent = text;
+    msgEl.style.display = 'block';
+    msgEl.style.background = color === 'green' ? 'rgba(16,185,129,.1)' : 'rgba(239,68,68,.1)';
+    msgEl.style.border = '1px solid ' + (color === 'green' ? 'rgba(16,185,129,.3)' : 'rgba(239,68,68,.3)');
+    msgEl.style.color = color === 'green' ? 'var(--green2)' : '#f87171';
+  }
+
+  if (!curPwd || !newPwd || !confirmPwd) { showPwdMsg('All fields are required.', 'red'); return; }
+  if (newPwd !== confirmPwd) { showPwdMsg('New passwords do not match.', 'red'); return; }
+  if (newPwd.length < 8) { showPwdMsg('New password must be at least 8 characters.', 'red'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Updating…';
+
+  try {
+    var r = await fetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword: curPwd, newPassword: newPwd, confirmPassword: confirmPwd }),
+    });
+    var data = await r.json();
+    if (data.success) {
+      showPwdMsg('✅ Password updated successfully!', 'green');
+      document.getElementById('curPwd').value = '';
+      document.getElementById('newPwd').value = '';
+      document.getElementById('confirmPwd').value = '';
+      document.getElementById('pwdStrengthBar').style.width = '0';
+      document.getElementById('pwdStrengthLabel').textContent = '';
+      document.getElementById('pwdMatchMsg').textContent = '';
+    } else {
+      showPwdMsg('❌ ' + (data.error || 'Failed to update password.'), 'red');
+    }
+  } catch(e) {
+    showPwdMsg('❌ Network error. Please try again.', 'red');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Update Password';
 });
 </script>
 </body>
