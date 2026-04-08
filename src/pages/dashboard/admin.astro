@@ -8,30 +8,52 @@ const { data: { user } } = await supabase.auth.getUser(accessToken);
 if (!user) return Astro.redirect('/login');
 
 const profile = await getProfile(user.id);
-
-// Layer 1: Check if user is admin in database
 if (!profile?.is_admin) return Astro.redirect('/dashboard');
 
-// Layer 2: Check admin session
 const adminSession = Astro.cookies.get('admin-session')?.value;
-if (adminSession !== 'authenticated') {
-  return Astro.redirect('/admin-login');
-}
+if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
 
-// Fetch data
-const { data: allUsers } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
-const { data: allJourneys } = await supabase.from('user_journey').select('*');
-const journeyMap = new Map(allJourneys?.map(j => [j.user_id, j]) || []);
+// Plan prices
+const PLAN_PRICES: Record<string, number> = { basic_30: 29.99, pro_6: 69.00, elite_12: 149.00 };
+
+// Parallel data fetch
+const [
+  { data: allUsers },
+  { data: allJourneys },
+  { data: pendingRaw },
+] = await Promise.all([
+  supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+  supabase.from('user_journey').select('*'),
+  supabase.from('pending_activations').select('*').order('created_at', { ascending: false }),
+]);
+
+const journeyMap = new Map((allJourneys || []).map(j => [j.user_id, j]));
+const pending = pendingRaw || [];
 
 // Stats
 const totalUsers = allUsers?.length || 0;
-const activeSubscribers = allUsers?.filter(u => u.subscription_status === 'active').length || 0;
+const activeUsers = allUsers?.filter(u => u.subscription_status === 'active') || [];
+const activeSubscribers = activeUsers.length;
 const expiredSubscribers = allUsers?.filter(u => u.subscription_status === 'expired').length || 0;
-const allDays = allJourneys?.map(j => j.current_day || 1) || [];
-const avgDay = allDays.length > 0 ? Math.round(allDays.reduce((a,b) => a+b, 0) / allDays.length) : 0;
-const completed30 = allJourneys?.filter(j => (j.current_day || 0) >= 30).length || 0;
+const allDays = (allJourneys || []).map(j => j.current_day || 1);
+const avgDay = allDays.length > 0 ? Math.round(allDays.reduce((a, b) => a + b, 0) / allDays.length) : 0;
+const completed30 = (allJourneys || []).filter(j => (j.current_day || 0) >= 30).length;
 
-// Monthly Signups
+// Revenue
+const totalRevenue = activeUsers.reduce((sum, u) => sum + (PLAN_PRICES[u.subscription_tier] || 0), 0);
+const expiredRevenue = (allUsers || [])
+  .filter(u => u.subscription_status === 'expired')
+  .reduce((sum, u) => sum + (PLAN_PRICES[u.subscription_tier] || 0), 0);
+const allTimeRevenue = totalRevenue + expiredRevenue;
+
+const planCounts = {
+  basic_30: allUsers?.filter(u => u.subscription_tier === 'basic_30' && u.subscription_status === 'active').length || 0,
+  pro_6:    allUsers?.filter(u => u.subscription_tier === 'pro_6'    && u.subscription_status === 'active').length || 0,
+  elite_12: allUsers?.filter(u => u.subscription_tier === 'elite_12' && u.subscription_status === 'active').length || 0,
+  none:     allUsers?.filter(u => !u.subscription_status || u.subscription_status === 'none').length || 0,
+};
+
+// Monthly signups (last 6 months)
 const monthlySignups = Array.from({ length: 6 }, (_, idx) => {
   const date = new Date();
   date.setMonth(date.getMonth() - (5 - idx));
@@ -43,218 +65,666 @@ const monthlySignups = Array.from({ length: 6 }, (_, idx) => {
   return { month, count };
 });
 
-// Day Distribution
+// Day distribution (days 1–30)
 const dayDistribution = Array.from({ length: 30 }, (_, idx) => {
   const day = idx + 1;
-  const count = allJourneys?.filter(j => (j.current_day || 0) === day).length || 0;
+  const count = (allJourneys || []).filter(j => (j.current_day || 0) === day).length;
   return { day, count };
 });
 
-// Plan Counts
-const planCounts = {
-  basic_30: allUsers?.filter(u => u.subscription_tier === 'basic_30' && u.subscription_status === 'active').length || 0,
-  pro_6: allUsers?.filter(u => u.subscription_tier === 'pro_6' && u.subscription_status === 'active').length || 0,
-  elite_12: allUsers?.filter(u => u.subscription_tier === 'elite_12' && u.subscription_status === 'active').length || 0,
-  none: allUsers?.filter(u => !u.subscription_status || u.subscription_status === 'none').length || 0,
-};
-
-// Users Data
-const usersData = allUsers?.map(u => {
+// Users enriched
+const usersData = (allUsers || []).map(u => {
   const journey = journeyMap.get(u.id);
   const plan = getPlan(u.subscription_tier);
+  const maxDays = plan.durationDays || 30;
+  const progress = journey ? Math.min(100, Math.round(((journey.current_day || 1) / maxDays) * 100)) : 0;
+  const statusClass = u.subscription_status === 'active' ? 'badge-active'
+    : u.subscription_status === 'expired' ? 'badge-expired'
+    : 'badge-none';
+  const statusLabel = u.subscription_status === 'active' ? 'Active'
+    : u.subscription_status === 'expired' ? 'Expired'
+    : 'None';
   return {
     ...u,
     journey,
     plan,
+    progress,
+    statusClass,
+    statusLabel,
     displayWeight: u.weight_kg ? formatWeight(u.weight_kg, u.preferred_units || 'imperial') : '—',
     displayHeight: u.height_cm ? formatHeight(u.height_cm, u.preferred_units || 'imperial') : '—',
+    joinedStr: new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    endDateStr: u.subscription_end_date ? new Date(u.subscription_end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
+    endDateIso: u.subscription_end_date ? u.subscription_end_date.split('T')[0] : '',
   };
-}) || [];
+});
+
+const statsJson = JSON.stringify({
+  planCounts,
+  monthlySignups,
+  dayDistribution,
+  totalRevenue: totalRevenue.toFixed(2),
+  allTimeRevenue: allTimeRevenue.toFixed(2),
+});
+const usersJson = JSON.stringify(usersData.map(u => ({
+  id: u.id,
+  full_name: u.full_name,
+  email: u.email,
+  subscription_tier: u.subscription_tier,
+  subscription_status: u.subscription_status,
+  endDateIso: u.endDateIso,
+})));
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Admin – Keto Journey</title>
+  <title>Admin Panel · KetoJourney</title>
+  <meta name="robots" content="noindex, nofollow"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    :root{--bg-primary:#fff;--bg-secondary:#f9fafb;--bg-card:#fff;--text-primary:#111827;--text-secondary:#6b7280;--border-color:#e5e7eb;--accent-primary:#10b981;--shadow-md:0 4px 6px rgba(0,0,0,.1);--shadow-lg:0 10px 15px rgba(0,0,0,.1);--shadow-xl:0 20px 25px rgba(0,0,0,.15);}
-    [data-theme="dark"]{--bg-primary:#1a1a2e;--bg-secondary:#16213e;--bg-card:#0f3460;--text-primary:#eaeaea;--text-secondary:#a0aec0;--border-color:#2d3748;}
-    *{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-secondary);color:var(--text-primary);}
-    .container{max-width:1600px;margin:0 auto;padding:0 1.5rem;}
-    nav{background:var(--bg-primary);border-bottom:1px solid var(--border-color);padding:1rem 0;position:sticky;top:0;z-index:50;box-shadow:var(--shadow-md);}
-    nav a{color:var(--text-secondary);text-decoration:none;padding:.5rem 1rem;border-radius:.75rem;font-weight:500;transition:all .3s;}
-    nav a:hover,nav a.active{color:var(--accent-primary);}
-    .theme-toggle{position:relative;width:60px;height:30px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:9999px;cursor:pointer;}
-    .theme-toggle-slider{position:absolute;top:3px;left:3px;width:24px;height:24px;background:white;border-radius:50%;transition:all .3s;display:flex;align-items:center;justify-content:center;font-size:.75rem;}
-    [data-theme="dark"] .theme-toggle{background:linear-gradient(135deg,#2d3561,#1a1f3a);}
-    [data-theme="dark"] .theme-toggle-slider{transform:translateX(30px);background:#1a1a2e;color:#fbbf24;}
-    .hero{background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:2rem;padding:3rem;margin:2rem 0;color:white;position:relative;overflow:hidden;}
-    .hero::before{content:'';position:absolute;top:-50%;right:-50%;width:200%;height:200%;background:radial-gradient(circle,rgba(255,255,255,.1) 0%,transparent 70%);animation:rotate 20s linear infinite;}
-    @keyframes rotate{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
-    .hero h1{font-size:3rem;font-weight:900;position:relative;z-index:1;}
-    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.5rem;margin:2rem 0;}
-    .stat-card{background:var(--bg-card);border-radius:1.5rem;padding:2rem;border:2px solid var(--border-color);box-shadow:var(--shadow-lg);transition:all .3s;}
-    .stat-card:hover{transform:translateY(-5px);}
-    .stat-icon{width:4rem;height:4rem;background:linear-gradient(135deg,var(--accent-primary),#34d399);border-radius:1.25rem;display:flex;align-items:center;justify-content:center;font-size:2rem;margin-bottom:1rem;}
-    .stat-label{font-size:.875rem;color:var(--text-secondary);font-weight:700;text-transform:uppercase;margin-bottom:.5rem;}
-    .stat-value{font-size:2.5rem;font-weight:900;background:linear-gradient(135deg,var(--accent-primary),#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-    .card{background:var(--bg-card);border-radius:1.5rem;padding:2rem;border:1px solid var(--border-color);box-shadow:var(--shadow-lg);margin-bottom:2rem;}
-    .card h2{font-size:1.5rem;font-weight:800;margin-bottom:1.5rem;background:linear-gradient(135deg,var(--accent-primary),#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-    table{width:100%;border-collapse:collapse;}
-    th{padding:1rem;text-align:left;font-weight:800;font-size:.875rem;border-bottom:2px solid var(--border-color);text-transform:uppercase;}
-    td{padding:1rem;border-bottom:1px solid var(--border-color);font-size:.9375rem;}
-    tr:hover{background:rgba(16,185,129,.03);}
-    .badge{display:inline-flex;align-items:center;gap:.375rem;padding:.375rem .875rem;border-radius:9999px;font-size:.8125rem;font-weight:700;}
-    .badge-active{background:rgba(16,185,129,.15);color:#059669;border:2px solid #10b981;}
-    .badge-expired{background:rgba(239,68,68,.15);color:#dc2626;border:2px solid #ef4444;}
-    .badge-none{background:rgba(107,114,128,.15);color:var(--text-secondary);border:2px solid var(--border-color);}
-    .progress-bar{width:100%;height:.75rem;background:var(--border-color);border-radius:9999px;overflow:hidden;}
-    .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent-primary),#34d399);border-radius:9999px;}
-    .search-box{width:100%;padding:1rem 1.5rem;border:2px solid var(--border-color);border-radius:1rem;background:var(--bg-secondary);color:var(--text-primary);font-size:1rem;margin-bottom:1.5rem;}
-    .search-box:focus{outline:none;border-color:var(--accent-primary);}
-    .logout-btn{padding:.625rem 1.5rem;background:rgba(239,68,68,.1);color:#dc2626;border:2px solid #ef4444;border-radius:.75rem;font-weight:700;cursor:pointer;transition:all .3s;}
-    .logout-btn:hover{background:#ef4444;color:white;}
-    .flex{display:flex;align-items:center;}
-    .flex-between{display:flex;justify-content:space-between;align-items:center;}
-    .gap-2{gap:1rem;}
-    @media(max-width:768px){.stats-grid{grid-template-columns:1fr;}.hero h1{font-size:2rem;}}
+    :root {
+      --bg: #060d09; --bg2: #0a1510; --card: #0d1a0f; --card2: #111f13;
+      --border: rgba(16,185,129,.12); --border2: rgba(16,185,129,.25);
+      --text: #dfeedd; --soft: #4d7055; --muted: #233328;
+      --green: #10b981; --green2: #34d399;
+      --gold: #f59e0b; --red: #ef4444; --blue: #3b82f6; --purple: #8b5cf6;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+    a { color: var(--green); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Nav */
+    .admin-nav {
+      background: var(--card); border-bottom: 1px solid var(--border);
+      padding: .85rem 1.5rem; display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .nav-brand { display: flex; align-items: center; gap: .6rem; }
+    .nav-brand-icon { width: 36px; height: 36px; background: linear-gradient(135deg, #ef4444, #dc2626); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .nav-brand-text { font-size: 1rem; font-weight: 800; color: var(--text); letter-spacing: -.02em; }
+    .nav-brand-sub { font-size: .7rem; color: var(--soft); font-weight: 600; }
+    .nav-links { display: flex; align-items: center; gap: .5rem; }
+    .nav-link { font-size: .82rem; font-weight: 600; color: var(--soft); padding: .4rem .8rem; border-radius: 8px; transition: all .2s; }
+    .nav-link:hover { color: var(--text); background: var(--muted); text-decoration: none; }
+    .nav-link.danger { color: #ef9494; border: 1px solid rgba(239,68,68,.2); }
+    .nav-link.danger:hover { background: rgba(239,68,68,.1); color: #ef4444; }
+
+    /* Layout */
+    .page { max-width: 1400px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+
+    /* Hero */
+    .hero { background: linear-gradient(135deg, rgba(239,68,68,.15) 0%, rgba(220,38,38,.05) 100%); border: 1px solid rgba(239,68,68,.2); border-radius: 20px; padding: 2rem 2.5rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .hero-title { font-size: 1.8rem; font-weight: 900; color: var(--text); }
+    .hero-sub { font-size: .85rem; color: var(--soft); margin-top: .3rem; }
+    .hero-badge { padding: .4rem 1rem; background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3); border-radius: 999px; font-size: .78rem; font-weight: 700; color: #ef9494; white-space: nowrap; }
+
+    /* Stats grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1.4rem 1.6rem; transition: all .2s; }
+    .stat-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+    .stat-icon { font-size: 1.5rem; margin-bottom: .6rem; }
+    .stat-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--soft); margin-bottom: .3rem; }
+    .stat-value { font-size: 2rem; font-weight: 900; color: var(--green2); line-height: 1; }
+    .stat-value.money { color: var(--gold); }
+    .stat-value.red { color: #ef9494; }
+    .stat-sub { font-size: .72rem; color: var(--soft); margin-top: .3rem; }
+
+    /* Charts row */
+    .charts-row { display: grid; grid-template-columns: 280px 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+    @media (max-width: 1100px) { .charts-row { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 700px)  { .charts-row { grid-template-columns: 1fr; } }
+
+    /* Cards */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .card-title { font-size: 1rem; font-weight: 800; color: var(--text); margin-bottom: 1.2rem; display: flex; align-items: center; gap: .5rem; }
+    .card-title span { font-size: 1.1rem; }
+    .chart-wrap { position: relative; height: 240px; }
+
+    /* Pending activations */
+    .pending-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; }
+    .pending-count { background: rgba(245,158,11,.15); border: 1px solid rgba(245,158,11,.3); color: var(--gold); font-size: .72rem; font-weight: 700; padding: .25rem .7rem; border-radius: 999px; }
+
+    /* Tables */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: .75rem 1rem; text-align: left; font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--soft); border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: .85rem 1rem; border-bottom: 1px solid rgba(16,185,129,.06); font-size: .875rem; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(16,185,129,.02); }
+
+    .badge { display: inline-flex; align-items: center; padding: .25rem .7rem; border-radius: 999px; font-size: .72rem; font-weight: 700; white-space: nowrap; }
+    .badge-active  { background: rgba(16,185,129,.12); color: #10b981; border: 1px solid rgba(16,185,129,.25); }
+    .badge-expired { background: rgba(239,68,68,.1);   color: #ef9494; border: 1px solid rgba(239,68,68,.2); }
+    .badge-none    { background: rgba(107,114,128,.1); color: var(--soft); border: 1px solid var(--border); }
+    .badge-basic   { background: rgba(99,102,241,.12); color: #a5b4fc; border: 1px solid rgba(99,102,241,.2); }
+    .badge-pro     { background: rgba(16,185,129,.12); color: var(--green2); border: 1px solid var(--border2); }
+    .badge-elite   { background: rgba(245,158,11,.12); color: var(--gold);  border: 1px solid rgba(245,158,11,.25); }
+
+    .progress-bar { width: 100%; height: 5px; background: var(--muted); border-radius: 999px; overflow: hidden; min-width: 80px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--green2)); border-radius: 999px; }
+
+    /* Search & filters */
+    .table-toolbar { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+    .search-input { flex: 1; min-width: 200px; padding: .6rem 1rem; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: .875rem; }
+    .search-input:focus { outline: none; border-color: var(--green); }
+    .filter-select { padding: .6rem .9rem; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: .82rem; cursor: pointer; }
+    .filter-select:focus { outline: none; border-color: var(--green); }
+
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; gap: .4rem; padding: .4rem .9rem; border-radius: 8px; font-size: .78rem; font-weight: 700; cursor: pointer; transition: all .2s; border: none; }
+    .btn-edit   { background: rgba(59,130,246,.12);  color: #93c5fd; border: 1px solid rgba(59,130,246,.2); }
+    .btn-edit:hover   { background: rgba(59,130,246,.2); }
+    .btn-danger { background: rgba(239,68,68,.1); color: #ef9494; border: 1px solid rgba(239,68,68,.2); }
+    .btn-danger:hover { background: rgba(239,68,68,.18); }
+    .btn-success { background: rgba(16,185,129,.12); color: var(--green2); border: 1px solid var(--border2); }
+    .btn-success:hover { background: rgba(16,185,129,.2); }
+    .btn-primary { background: var(--green); color: #060d09; border: none; }
+    .btn-primary:hover { background: var(--green2); }
+
+    /* Edit Modal */
+    .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 200; align-items: center; justify-content: center; }
+    .modal-backdrop.open { display: flex; }
+    .modal { background: var(--card); border: 1px solid var(--border2); border-radius: 20px; padding: 2rem; width: 100%; max-width: 460px; margin: 1rem; }
+    .modal-title { font-size: 1.1rem; font-weight: 800; color: var(--text); margin-bottom: .3rem; }
+    .modal-sub { font-size: .8rem; color: var(--soft); margin-bottom: 1.5rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-label { display: block; font-size: .75rem; font-weight: 700; color: var(--soft); text-transform: uppercase; letter-spacing: .07em; margin-bottom: .4rem; }
+    .form-control { width: 100%; padding: .65rem 1rem; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: .875rem; }
+    .form-control:focus { outline: none; border-color: var(--green); }
+    .modal-actions { display: flex; gap: .75rem; margin-top: 1.5rem; }
+    .modal-actions .btn { flex: 1; justify-content: center; padding: .65rem; font-size: .875rem; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--card2); border: 1px solid var(--border2); border-radius: 12px; padding: .9rem 1.4rem; font-size: .875rem; font-weight: 600; color: var(--text); z-index: 300; transform: translateY(100px); opacity: 0; transition: all .3s; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: rgba(16,185,129,.4); }
+    .toast.error   { border-color: rgba(239,68,68,.4);  color: #ef9494; }
+
+    .empty-row td { text-align: center; color: var(--soft); padding: 2rem; font-size: .875rem; }
   </style>
 </head>
 <body>
 
-<nav>
-  <div class="container">
-    <div class="flex-between">
-      <div class="flex gap-2">
-        <span style="font-size:2.5rem;">🔐</span>
-        <div>
-          <h1 style="font-size:1.375rem;font-weight:800;background:linear-gradient(135deg,#ef4444,#dc2626);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Admin</h1>
-          <p style="font-size:.8125rem;color:var(--text-secondary);font-weight:600;">Control Panel</p>
-        </div>
-      </div>
-      <div class="flex gap-2">
-        <a href="/dashboard/">Dashboard</a>
-        <a href="/dashboard/profile">Profile</a>
-        <a href="/dashboard/admin" class="active">Admin</a>
-        <button onclick="adminLogout()" class="logout-btn">🚪 Logout</button>
-        <div class="flex gap-2" style="padding-left:1rem;border-left:1px solid var(--border-color);">
-          <div class="theme-toggle" id="themeToggle"><div class="theme-toggle-slider"><span id="themeIcon">☀️</span></div></div>
-        </div>
-      </div>
+<nav class="admin-nav">
+  <div class="nav-brand">
+    <div class="nav-brand-icon">🔐</div>
+    <div>
+      <div class="nav-brand-text">Admin Panel</div>
+      <div class="nav-brand-sub">KetoJourney</div>
     </div>
+  </div>
+  <div class="nav-links">
+    <a href="/dashboard/" class="nav-link">Dashboard</a>
+    <a href="/dashboard/profile" class="nav-link">Profile</a>
+    <button onclick="adminLogout()" class="btn btn-danger nav-link">Sign Out</button>
   </div>
 </nav>
 
-<div class="container" style="padding:2rem 1.5rem 4rem;">
+<div class="page">
 
+  <!-- Hero -->
   <div class="hero">
-    <h1>👨‍💼 Admin Control Panel</h1>
-    <p style="font-size:1.125rem;opacity:.95;position:relative;z-index:1;margin-top:.5rem;">Monitor all users, subscriptions, and progress</p>
+    <div>
+      <div class="hero-title">Admin Control Panel</div>
+      <div class="hero-sub">Manage users, subscriptions, and revenue</div>
+    </div>
+    <div class="hero-badge">🛡️ Secure Session</div>
   </div>
 
+  <!-- Stats Row -->
   <div class="stats-grid">
-    <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-label">Total Users</div><div class="stat-value">{totalUsers}</div></div>
-    <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-label">Active</div><div class="stat-value">{activeSubscribers}</div></div>
-    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-label">Avg Day</div><div class="stat-value">{avgDay}</div></div>
-    <div class="stat-card"><div class="stat-icon">🏆</div><div class="stat-label">Completed</div><div class="stat-value">{completed30}</div></div>
-    <div class="stat-card"><div class="stat-icon">❌</div><div class="stat-label">Expired</div><div class="stat-value">{expiredSubscribers}</div></div>
+    <div class="stat-card">
+      <div class="stat-icon">👥</div>
+      <div class="stat-label">Total Users</div>
+      <div class="stat-value">{totalUsers}</div>
+      <div class="stat-sub">All registered accounts</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">✅</div>
+      <div class="stat-label">Active Subscribers</div>
+      <div class="stat-value">{activeSubscribers}</div>
+      <div class="stat-sub">{totalUsers > 0 ? Math.round((activeSubscribers / totalUsers) * 100) : 0}% of total</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">💰</div>
+      <div class="stat-label">Active Revenue</div>
+      <div class="stat-value money">${totalRevenue.toFixed(0)}</div>
+      <div class="stat-sub">Current paid subscribers</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📊</div>
+      <div class="stat-label">All-Time Revenue</div>
+      <div class="stat-value money">${allTimeRevenue.toFixed(0)}</div>
+      <div class="stat-sub">Active + expired</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📅</div>
+      <div class="stat-label">Avg Journey Day</div>
+      <div class="stat-value">{avgDay}</div>
+      <div class="stat-sub">Across all users</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🏆</div>
+      <div class="stat-label">Completed 30d</div>
+      <div class="stat-value">{completed30}</div>
+      <div class="stat-sub">Reached day 30+</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">❌</div>
+      <div class="stat-label">Expired</div>
+      <div class="stat-value red">{expiredSubscribers}</div>
+      <div class="stat-sub">Inactive subscriptions</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">⏳</div>
+      <div class="stat-label">Pending</div>
+      <div class="stat-value">{pending.length}</div>
+      <div class="stat-sub">Awaiting activation</div>
+    </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:2rem;margin:2rem 0;">
-    <div class="card"><h2>📊 Plans</h2><div style="position:relative;height:300px;"><canvas id="planChart"></canvas></div></div>
-    <div class="card"><h2>📈 Signups</h2><div style="position:relative;height:300px;"><canvas id="signupChart"></canvas></div></div>
-    <div class="card"><h2>📊 Days</h2><div style="position:relative;height:300px;"><canvas id="dayChart"></canvas></div></div>
+  <!-- Charts -->
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-title"><span>📊</span> Plan Distribution</div>
+      <div class="chart-wrap"><canvas id="planChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>📈</span> Monthly Signups (6mo)</div>
+      <div class="chart-wrap"><canvas id="signupChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span>📊</span> Day Progress Distribution</div>
+      <div class="chart-wrap"><canvas id="dayChart"></canvas></div>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>👥 All Users ({totalUsers})</h2>
-    <input type="text" id="searchInput" class="search-box" placeholder="🔍 Search..."/>
-    <div style="overflow-x:auto;">
-      <table id="usersTable">
-        <thead><tr><th>Name</th><th>Email</th><th>Plan</th><th>Status</th><th>Day</th><th>Progress</th><th>XP</th><th>Weight</th><th>Height</th><th>Joined</th></tr></thead>
-        <tbody>
-          {usersData.map(u => {
-            const progress = u.journey ? Math.round(((u.journey.current_day || 1) / u.plan.durationDays) * 100) : 0;
-            return (
-              <tr>
-                <td style="font-weight:700;">{u.full_name}</td>
-                <td style="color:var(--text-secondary);">{u.email}</td>
-                <td><span style="font-size:1.25rem;">{u.plan.emoji}</span> <span style="font-weight:600;">{u.plan.name}</span></td>
+  <!-- Pending Activations -->
+  {pending.length > 0 && (
+    <div class="card">
+      <div class="pending-header">
+        <div class="card-title" style="margin-bottom:0;"><span>⏳</span> Pending Activations</div>
+        <span class="pending-count">{pending.length} pending</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Plan</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pending.map(p => (
+              <tr id={`pending-${p.id}`}>
+                <td style="font-weight:600;">{p.email}</td>
                 <td>
-                  {u.subscription_status === 'active' ? <span class="badge badge-active">✅ Active</span>
-                  : u.subscription_status === 'expired' ? <span class="badge badge-expired">❌ Expired</span>
-                  : <span class="badge badge-none">⚪ None</span>}
+                  {p.tier === 'elite_12' && <span class="badge badge-elite">Elite</span>}
+                  {p.tier === 'pro_6' && <span class="badge badge-pro">Pro</span>}
+                  {p.tier === 'basic_30' && <span class="badge badge-basic">Basic</span>}
+                  {!p.tier && <span class="badge badge-none">—</span>}
                 </td>
-                <td style="font-weight:700;font-size:1.125rem;">{u.journey?.current_day || 1}</td>
-                <td style="min-width:120px;">
-                  <div class="progress-bar"><div class="progress-fill" style={`width:${progress}%`}></div></div>
-                  <div style="font-size:.75rem;color:var(--text-secondary);margin-top:.25rem;">{progress}%</div>
+                <td style="color:var(--soft);font-size:.82rem;">{new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                <td>
+                  <div style="display:flex;gap:.5rem;">
+                    <button class="btn btn-success" onclick={`activatePending('${p.id}','${p.email}','${p.tier}')`}>✓ Activate</button>
+                    <button class="btn btn-danger" onclick={`deletePending('${p.id}')`}>✕ Delete</button>
+                  </div>
                 </td>
-                <td style="font-weight:700;">{u.journey?.total_xp || 0}</td>
-                <td>{u.displayWeight}</td>
-                <td>{u.displayHeight}</td>
-                <td style="color:var(--text-secondary);font-size:.875rem;">{new Date(u.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
               </tr>
-            );
-          })}
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )}
+
+  <!-- Users Table -->
+  <div class="card">
+    <div class="card-title"><span>👥</span> All Users ({totalUsers})</div>
+    <div class="table-toolbar">
+      <input type="text" id="searchInput" class="search-input" placeholder="Search by name, email…"/>
+      <select id="statusFilter" class="filter-select">
+        <option value="">All Statuses</option>
+        <option value="active">Active</option>
+        <option value="expired">Expired</option>
+        <option value="none">None</option>
+      </select>
+      <select id="tierFilter" class="filter-select">
+        <option value="">All Plans</option>
+        <option value="basic_30">Basic</option>
+        <option value="pro_6">Pro</option>
+        <option value="elite_12">Elite</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table id="usersTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Plan</th>
+            <th>Status</th>
+            <th>Day</th>
+            <th>Progress</th>
+            <th>XP</th>
+            <th>Weight</th>
+            <th>Ends</th>
+            <th>Joined</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {usersData.length === 0 && (
+            <tr class="empty-row"><td colspan="11">No users found</td></tr>
+          )}
+          {usersData.map(u => (
+            <tr data-name={(u.full_name || '').toLowerCase()} data-email={(u.email || '').toLowerCase()} data-status={u.subscription_status || 'none'} data-tier={u.subscription_tier || ''}>
+              <td style="font-weight:700;white-space:nowrap;">{u.full_name || '—'}</td>
+              <td style="color:var(--soft);font-size:.82rem;">{u.email}</td>
+              <td>
+                {u.subscription_tier === 'elite_12' && <span class="badge badge-elite">Elite</span>}
+                {u.subscription_tier === 'pro_6'    && <span class="badge badge-pro">Pro</span>}
+                {u.subscription_tier === 'basic_30' && <span class="badge badge-basic">Basic</span>}
+                {!u.subscription_tier && <span class="badge badge-none">—</span>}
+              </td>
+              <td><span class={`badge ${u.statusClass}`}>{u.statusLabel}</span></td>
+              <td style="font-weight:700;font-size:1.05rem;">{u.journey?.current_day || 1}</td>
+              <td style="min-width:100px;">
+                <div class="progress-bar"><div class="progress-fill" style={`width:${u.progress}%`}></div></div>
+                <div style="font-size:.7rem;color:var(--soft);margin-top:.2rem;">{u.progress}%</div>
+              </td>
+              <td style="font-weight:600;">{(u.journey?.total_xp || 0).toLocaleString()}</td>
+              <td style="color:var(--soft);">{u.displayWeight}</td>
+              <td style="font-size:.82rem;color:var(--soft);">{u.endDateStr}</td>
+              <td style="font-size:.78rem;color:var(--soft);white-space:nowrap;">{u.joinedStr}</td>
+              <td>
+                <button class="btn btn-edit" onclick={`openEditModal('${u.id}','${(u.full_name || '').replace(/'/g, "\\'")}','${u.email}','${u.subscription_tier || ''}','${u.subscription_status || ''}','${u.endDateIso}')`}>
+                  Edit
+                </button>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
   </div>
 
+</div><!-- end .page -->
+
+<!-- Edit Modal -->
+<div class="modal-backdrop" id="editModal">
+  <div class="modal">
+    <div class="modal-title">Edit User</div>
+    <div class="modal-sub" id="editModalSub">user@email.com</div>
+
+    <input type="hidden" id="editUserId"/>
+
+    <div class="form-group">
+      <label class="form-label" for="editTier">Subscription Plan</label>
+      <select class="form-control" id="editTier">
+        <option value="">No Plan</option>
+        <option value="basic_30">Basic (30 days) — $29.99</option>
+        <option value="pro_6">Pro (180 days) — $69.00</option>
+        <option value="elite_12">Elite (365 days) — $149.00</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="editStatus">Status</label>
+      <select class="form-control" id="editStatus">
+        <option value="active">Active</option>
+        <option value="expired">Expired</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="none">None</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="editEndDate">Subscription End Date</label>
+      <input type="date" class="form-control" id="editEndDate"/>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Quick Extend</label>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <button class="btn btn-edit" onclick="extendDays(30)">+30 days</button>
+        <button class="btn btn-edit" onclick="extendDays(90)">+90 days</button>
+        <button class="btn btn-edit" onclick="extendDays(180)">+180 days</button>
+        <button class="btn btn-edit" onclick="extendDays(365)">+1 year</button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-danger" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveUser()">Save Changes</button>
+    </div>
+  </div>
 </div>
 
-<script is:inline define:vars={{planCounts:JSON.stringify(planCounts),monthlySignups:JSON.stringify(monthlySignups),dayDistribution:JSON.stringify(dayDistribution)}}>
-  const html=document.documentElement;
-  const themeIcon=document.getElementById('themeIcon');
-  const saved=localStorage.getItem('theme')||'light';
-  html.setAttribute('data-theme',saved);
-  if(themeIcon)themeIcon.textContent=saved==='dark'?'🌙':'☀️';
-  document.getElementById('themeToggle')?.addEventListener('click',function(){
-    const next=html.getAttribute('data-theme')==='dark'?'light':'dark';
-    html.setAttribute('data-theme',next);
-    if(themeIcon)themeIcon.textContent=next==='dark'?'🌙':'☀️';
-    localStorage.setItem('theme',next);
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script is:inline define:vars={{ statsJson, usersJson }}>
+  var stats = JSON.parse(statsJson);
+  var usersIndex = JSON.parse(usersJson);
+
+  // ── Charts ──────────────────────────────────────────────────────────
+  window.addEventListener('load', function () {
+    if (typeof Chart === 'undefined') return;
+    var tc = '#4d7055';
+    var gc = 'rgba(16,185,129,.08)';
+
+    new Chart(document.getElementById('planChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Basic', 'Pro', 'Elite', 'None'],
+        datasets: [{
+          data: [stats.planCounts.basic_30, stats.planCounts.pro_6, stats.planCounts.elite_12, stats.planCounts.none],
+          backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#233328'],
+          borderColor: '#0d1a0f',
+          borderWidth: 3,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '65%',
+        plugins: { legend: { position: 'bottom', labels: { color: '#dfeedd', font: { size: 11, weight: 'bold' }, padding: 12 } } },
+      },
+    });
+
+    new Chart(document.getElementById('signupChart'), {
+      type: 'line',
+      data: {
+        labels: stats.monthlySignups.map(function (d) { return d.month; }),
+        datasets: [{
+          label: 'Signups',
+          data: stats.monthlySignups.map(function (d) { return d.count; }),
+          borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.08)',
+          fill: true, tension: .4, borderWidth: 2, pointBackgroundColor: '#10b981',
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: gc }, ticks: { color: tc, stepSize: 1 } },
+          x: { grid: { display: false }, ticks: { color: tc } },
+        },
+      },
+    });
+
+    new Chart(document.getElementById('dayChart'), {
+      type: 'bar',
+      data: {
+        labels: stats.dayDistribution.map(function (d) { return 'D' + d.day; }),
+        datasets: [{
+          data: stats.dayDistribution.map(function (d) { return d.count; }),
+          backgroundColor: 'rgba(16,185,129,.5)', borderColor: '#10b981',
+          borderWidth: 1, borderRadius: 4,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: gc }, ticks: { color: tc, stepSize: 1 } },
+          x: { grid: { display: false }, ticks: { color: tc, font: { size: 9 } } },
+        },
+      },
+    });
   });
 
-  // Admin Logout
+  // ── Search / Filter ──────────────────────────────────────────────────
+  function filterTable() {
+    var q      = (document.getElementById('searchInput').value || '').toLowerCase();
+    var status = document.getElementById('statusFilter').value;
+    var tier   = document.getElementById('tierFilter').value;
+    var rows   = document.querySelectorAll('#usersTable tbody tr[data-email]');
+    rows.forEach(function (row) {
+      var name  = row.getAttribute('data-name')  || '';
+      var email = row.getAttribute('data-email') || '';
+      var rs    = row.getAttribute('data-status') || '';
+      var rt    = row.getAttribute('data-tier')   || '';
+      var matchQ = !q || name.includes(q) || email.includes(q);
+      var matchS = !status || rs === status;
+      var matchT = !tier   || rt === tier;
+      row.style.display = (matchQ && matchS && matchT) ? '' : 'none';
+    });
+  }
+  document.getElementById('searchInput').addEventListener('input', filterTable);
+  document.getElementById('statusFilter').addEventListener('change', filterTable);
+  document.getElementById('tierFilter').addEventListener('change', filterTable);
+
+  // ── Edit Modal ───────────────────────────────────────────────────────
+  var currentUserId = null;
+
+  function openEditModal(id, name, email, tier, status, endDate) {
+    currentUserId = id;
+    document.getElementById('editModalSub').textContent = name + ' · ' + email;
+    document.getElementById('editUserId').value = id;
+    document.getElementById('editTier').value   = tier   || '';
+    document.getElementById('editStatus').value = status || 'none';
+    document.getElementById('editEndDate').value = endDate || '';
+    document.getElementById('editModal').classList.add('open');
+  }
+  window.openEditModal = openEditModal;
+
+  function closeEditModal() {
+    document.getElementById('editModal').classList.remove('open');
+    currentUserId = null;
+  }
+  window.closeEditModal = closeEditModal;
+
+  document.getElementById('editModal').addEventListener('click', function (e) {
+    if (e.target === this) closeEditModal();
+  });
+
+  function extendDays(days) {
+    var input = document.getElementById('editEndDate');
+    var base  = input.value ? new Date(input.value) : new Date();
+    base.setDate(base.getDate() + days);
+    input.value = base.toISOString().split('T')[0];
+  }
+  window.extendDays = extendDays;
+
+  function saveUser() {
+    var id      = document.getElementById('editUserId').value;
+    var tier    = document.getElementById('editTier').value;
+    var status  = document.getElementById('editStatus').value;
+    var endDate = document.getElementById('editEndDate').value;
+
+    // Find user from index
+    var userRec = usersIndex.find(function (u) { return u.id === id; });
+    var fullName = userRec ? userRec.full_name : '';
+
+    fetch('/api/admin/update-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: id,
+        full_name: fullName,
+        subscription_tier: tier,
+        subscription_status: status,
+        subscription_end_date: endDate || null,
+      }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.success) {
+          showToast('User updated successfully', 'success');
+          closeEditModal();
+          setTimeout(function () { window.location.reload(); }, 1200);
+        } else {
+          showToast('Error: ' + (data.error || 'Unknown error'), 'error');
+        }
+      })
+      .catch(function () { showToast('Network error', 'error'); });
+  }
+  window.saveUser = saveUser;
+
+  // ── Pending Activations ──────────────────────────────────────────────
+  function activatePending(id, email, tier) {
+    if (!confirm('Activate ' + email + ' on ' + tier + '?')) return;
+    fetch('/api/admin/activate-pending', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id, email: email, tier: tier }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.success) {
+          showToast('Activated!', 'success');
+          var row = document.getElementById('pending-' + id);
+          if (row) row.remove();
+        } else {
+          showToast('Error activating', 'error');
+        }
+      });
+  }
+  window.activatePending = activatePending;
+
+  function deletePending(id) {
+    if (!confirm('Delete this pending activation?')) return;
+    fetch('/api/admin/delete-pending', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.success) {
+          showToast('Deleted', 'success');
+          var row = document.getElementById('pending-' + id);
+          if (row) row.remove();
+        } else {
+          showToast('Error deleting', 'error');
+        }
+      });
+  }
+  window.deletePending = deletePending;
+
+  // ── Admin Logout ─────────────────────────────────────────────────────
   function adminLogout() {
-    if (confirm('🚪 Logout from admin panel?')) {
-      document.cookie = 'admin-session=; path=/; max-age=0';
-      window.location.href = '/admin-login';
-    }
+    if (!confirm('Sign out of admin panel?')) return;
+    fetch('/api/admin/verify', { method: 'DELETE' })
+      .then(function () { window.location.href = '/admin-login'; });
   }
   window.adminLogout = adminLogout;
 
-  const searchInput=document.getElementById('searchInput');
-  const table=document.getElementById('usersTable');
-  if(searchInput&&table){
-    searchInput.addEventListener('input',function(){
-      const q=this.value.toLowerCase();
-      const rows=table.querySelectorAll('tbody tr');
-      rows.forEach(row=>{row.style.display=row.textContent.toLowerCase().includes(q)?'':'none';});
-    });
+  // ── Toast ────────────────────────────────────────────────────────────
+  function showToast(msg, type) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast ' + (type || '');
+    el.classList.add('show');
+    setTimeout(function () { el.classList.remove('show'); }, 3000);
   }
-
-  window.addEventListener('load',function(){
-    if(typeof Chart==='undefined')return;
-    const isDark=html.getAttribute('data-theme')==='dark';
-    const tc=isDark?'#eaeaea':'#374151';
-    const gc=isDark?'rgba(255,255,255,.1)':'rgba(0,0,0,.05)';
-
-    const planData=JSON.parse(planCounts);
-    new Chart(document.getElementById('planChart'),{type:'doughnut',data:{labels:['🥉 Basic','🥈 Pro','🥇 Elite','⚪ None'],datasets:[{data:[planData.basic_30,planData.pro_6,planData.elite_12,planData.none],backgroundColor:['#6366f1','#10b981','#f59e0b','#6b7280']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:tc,font:{size:12,weight:'bold'}}}}}});
-
-    const signupData=JSON.parse(monthlySignups);
-    new Chart(document.getElementById('signupChart'),{type:'line',data:{labels:signupData.map(d=>d.month),datasets:[{label:'Signups',data:signupData.map(d=>d.count),borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.1)',fill:true,tension:.4,borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:gc},ticks:{color:tc}},x:{grid:{display:false},ticks:{color:tc}}}}});
-
-    const dayData=JSON.parse(dayDistribution);
-    new Chart(document.getElementById('dayChart'),{type:'bar',data:{labels:dayData.map(d=>'D'+d.day),datasets:[{data:dayData.map(d=>d.count),backgroundColor:'#10b981',borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:gc},ticks:{color:tc}},x:{grid:{display:false},ticks:{color:tc,font:{size:9}}}}}});
-  });
 </script>
 </body>
 </html>
