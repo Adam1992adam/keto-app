@@ -17,6 +17,13 @@ if (accessToken) {
 
 const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').replace(/\/$/, '');
 const accountDeleted = Astro.url.searchParams.get('deleted') === '1';
+
+// LemonSqueezy checkout URLs — set these in Vercel env vars
+// After payment, LemonSqueezy should redirect to: https://www.ketojourney.fun/signup
+const SIGNUP_FALLBACK = '/signup';
+const CHECKOUT_BASIC = import.meta.env.LEMONSQUEEZY_BASIC_URL || SIGNUP_FALLBACK;
+const CHECKOUT_PRO   = import.meta.env.LEMONSQUEEZY_PRO_URL   || SIGNUP_FALLBACK;
+const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || SIGNUP_FALLBACK;
 const PAGE_TITLE       = 'Keto Journey — Transform Your Body With Intelligent Keto';
 const PAGE_DESCRIPTION = 'AI-powered keto meal plans, daily coaching, and smart progress tracking — personalized to YOUR goals. Start your 30, 90, or 360-day keto journey today.';
 const OG_IMAGE         = `${SITE_URL}/og-image.png`;
@@ -1366,7 +1373,7 @@ const OG_IMAGE         = `${SITE_URL}/og-image.png`;
           <li><span class="chk">✓</span> Daily task &amp; habit tracking</li>
           <li><span class="chk">✓</span> Weight &amp; progress logging</li>
         </ul>
-        <a href="/signup" class="plan-btn ghost">Start Basic</a>
+        <a href={CHECKOUT_BASIC} class="plan-btn ghost">Start Basic</a>
       </div>
 
       <!-- Pro — featured -->
@@ -1387,7 +1394,7 @@ const OG_IMAGE         = `${SITE_URL}/og-image.png`;
           <li><span class="chk">✓</span> Body measurements tracking</li>
           <li><span class="chk">✓</span> Weekly performance reports</li>
         </ul>
-        <a href="/signup" class="plan-btn solid">Start Pro</a>
+        <a href={CHECKOUT_PRO} class="plan-btn solid">Start Pro</a>
       </div>
 
       <!-- Elite -->
@@ -1410,7 +1417,7 @@ const OG_IMAGE         = `${SITE_URL}/og-image.png`;
           <li><span class="chk gold">★</span> Personalized notifications</li>
           <li><span class="chk gold">★</span> Lifetime updates included</li>
         </ul>
-        <a href="/signup" class="plan-btn ghost">Start Elite</a>
+        <a href={CHECKOUT_ELITE} class="plan-btn ghost">Start Elite</a>
       </div>
 
     </div>
