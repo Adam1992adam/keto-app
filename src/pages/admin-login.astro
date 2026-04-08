@@ -1,8 +1,8 @@
 ---
 // Check if already has admin session
 const adminSession = Astro.cookies.get('admin-session')?.value;
-if (adminSession === 'verified') {
-  return Astro.redirect('/dashboard/admin');
+if (adminSession === 'authenticated') {
+  return Astro.redirect('/admin');
 }
 ---
 
@@ -83,7 +83,7 @@ if (adminSession === 'verified') {
   </form>
   
   <div class="back-link">
-    <a href="/dashboard/">← Back to Dashboard</a>
+    <a href="/">← Back to Site</a>
   </div>
 </div>
 
@@ -135,7 +135,7 @@ if (adminSession === 'verified') {
         
         // Redirect after brief delay
         setTimeout(() => {
-          window.location.href = '/dashboard/admin';
+          window.location.href = '/admin';
         }, 800);
       } else {
         // Wrong password
