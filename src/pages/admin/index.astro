@@ -1,17 +1,16 @@
 ---
-import { supabase, getProfile, getPlan, formatWeight, formatHeight } from '../../lib/supabase';
+import { getPlan, formatWeight, formatHeight } from '../../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 
-const accessToken = Astro.cookies.get('sb-access-token')?.value;
-if (!accessToken) return Astro.redirect('/login');
-
-const { data: { user } } = await supabase.auth.getUser(accessToken);
-if (!user) return Astro.redirect('/login');
-
-const profile = await getProfile(user.id);
-if (!profile?.is_admin) return Astro.redirect('/');
-
+// Admin auth — only requires the admin-session cookie (set by /api/admin/verify with ADMIN_PASSWORD)
 const adminSession = Astro.cookies.get('admin-session')?.value;
 if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
+
+// Use service role key to bypass RLS for admin queries
+const env = (Astro.locals as any)?.runtime?.env || {};
+const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL || env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+const adminDb = createClient(SUPABASE_URL, SERVICE_KEY);
 
 const PLAN_PRICES: Record<string, number> = { basic_30: 29.99, pro_6: 69.00, elite_12: 149.00 };
 
@@ -20,9 +19,9 @@ const [
   { data: allJourneys },
   { data: pendingRaw },
 ] = await Promise.all([
-  supabase.from('profiles').select('*').order('created_at', { ascending: false }),
-  supabase.from('user_journey').select('*'),
-  supabase.from('pending_activations').select('*').order('created_at', { ascending: false }),
+  adminDb.from('profiles').select('*').order('created_at', { ascending: false }),
+  adminDb.from('user_journey').select('*'),
+  adminDb.from('pending_activations').select('*').order('created_at', { ascending: false }),
 ]);
 
 const journeyMap = new Map((allJourneys || []).map(j => [j.user_id, j]));
