@@ -34,9 +34,9 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
   <style>
     :root {
-      --dark:#0a0f0a; --dark2:#0f1710; --card:#141f14;
-      --border:rgba(16,185,129,.14); --border2:rgba(16,185,129,.3);
-      --text:#e8f0e8; --soft:#6a8a6a; --muted:#3a4e3a;
+      --dark:#07100a; --dark2:#0d1810; --card:#111d13;
+      --border:rgba(16,185,129,.13); --border2:rgba(16,185,129,.28);
+      --text:#e4efe4; --soft:#5a7a5a; --muted:#2a3e2a;
       --green:#10b981; --green2:#34d399; --red:#ef4444;
       --gold:#f59e0b; --blue:#3b82f6; --indigo:#6366f1;
     }
@@ -53,77 +53,113 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
     .panel-img { position:relative; overflow:hidden; }
     .panel-img-bg {
       position:absolute; inset:0;
-      background:url('https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=1000&q=85') center/cover no-repeat;
-      transition:transform 8s ease;
+      background:url('https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=1200&q=85') center/cover no-repeat;
+      transition:transform 10s ease;
     }
     .panel-img:hover .panel-img-bg { transform:scale(1.04); }
     .panel-img-overlay {
       position:absolute; inset:0;
-      background:linear-gradient(160deg,rgba(10,15,10,.85) 0%,rgba(10,15,10,.35) 55%,rgba(16,185,129,.12) 100%);
+      background:linear-gradient(160deg,rgba(7,16,10,.92) 0%,rgba(7,16,10,.45) 50%,rgba(16,185,129,.08) 100%);
     }
     .panel-content {
       position:relative; z-index:1; height:100%;
       display:flex; flex-direction:column; justify-content:space-between;
-      padding:3rem;
+      padding:2.75rem;
     }
     .panel-logo {
-      display:flex; align-items:center; gap:.6rem;
-      font-family:'Fraunces',serif; font-weight:700; font-size:1.15rem;
+      display:flex; align-items:center; gap:.55rem;
+      font-family:'Fraunces',serif; font-weight:700; font-size:1.1rem;
       color:#fff; text-decoration:none;
     }
     .panel-logo span { color:var(--green); }
-    .panel-middle {}
+
     .panel-eyebrow {
       display:inline-flex; align-items:center; gap:.4rem;
-      background:rgba(16,185,129,.14); border:1px solid rgba(16,185,129,.3);
-      border-radius:99px; padding:.3rem .85rem;
-      font-size:.7rem; font-weight:800; color:var(--green);
-      text-transform:uppercase; letter-spacing:.09em; margin-bottom:1rem;
+      background:rgba(16,185,129,.15); border:1px solid rgba(16,185,129,.32);
+      border-radius:99px; padding:.3rem .9rem;
+      font-size:.68rem; font-weight:800; color:var(--green);
+      text-transform:uppercase; letter-spacing:.1em; margin-bottom:1rem;
     }
     .panel-title {
-      font-family:'Fraunces',serif; font-size:2.8rem; font-weight:900;
-      line-height:1.08; color:#fff; margin-bottom:1rem;
+      font-family:'Fraunces',serif; font-size:2.65rem; font-weight:900;
+      line-height:1.07; color:#fff; margin-bottom:1.4rem;
     }
-    .panel-title em { font-style:italic; color:var(--green); }
-    .panel-perks { display:flex; flex-direction:column; gap:.7rem; margin-top:1.5rem; }
+    .panel-title em { font-style:italic; color:var(--green2); }
+
+    /* ── STATS ROW ── */
+    .panel-stats {
+      display:flex; align-items:stretch; gap:0;
+      background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1);
+      border-radius:16px; backdrop-filter:blur(12px); overflow:hidden;
+      margin-bottom:1.4rem;
+    }
+    .stat-item { flex:1; text-align:center; padding:.9rem .5rem; }
+    .stat-num {
+      font-family:'Fraunces',serif; font-size:1.35rem; font-weight:900;
+      color:#fff; line-height:1;
+    }
+    .stat-label {
+      font-size:.62rem; color:rgba(255,255,255,.45);
+      text-transform:uppercase; letter-spacing:.07em; margin-top:.2rem;
+    }
+    .stat-sep { width:1px; background:rgba(255,255,255,.1); align-self:stretch; }
+
+    /* ── PERKS ── */
+    .panel-perks { display:flex; flex-direction:column; gap:.6rem; }
     .perk {
-      display:flex; align-items:center; gap:.875rem;
-      background:rgba(255,255,255,.07); backdrop-filter:blur(12px);
-      border:1px solid rgba(255,255,255,.1); border-radius:12px;
-      padding:.875rem 1.1rem;
+      display:flex; align-items:center; gap:.8rem;
+      background:rgba(255,255,255,.06); backdrop-filter:blur(14px);
+      border:1px solid rgba(255,255,255,.09); border-radius:13px;
+      padding:.8rem 1rem; transition:border-color .2s;
     }
+    .perk:hover { border-color:rgba(16,185,129,.25); }
     .perk-icon {
-      width:36px; height:36px; border-radius:10px; flex-shrink:0;
-      display:flex; align-items:center; justify-content:center; font-size:1rem;
+      width:34px; height:34px; border-radius:9px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center; font-size:.95rem;
     }
-    .perk-text { font-size:.82rem; font-weight:600; color:rgba(255,255,255,.85); }
-    .perk-sub { font-size:.7rem; color:rgba(255,255,255,.45); margin-top:.1rem; }
-    .panel-bottom-img {
-      border-radius:16px; overflow:hidden; height:140px; margin-top:1.5rem;
+    .perk-text { font-size:.8rem; font-weight:700; color:rgba(255,255,255,.88); }
+    .perk-sub  { font-size:.67rem; color:rgba(255,255,255,.4); margin-top:.08rem; }
+
+    /* ── TESTIMONIAL ── */
+    .panel-testimonial {
+      background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1);
+      border-radius:16px; padding:1.1rem 1.25rem; backdrop-filter:blur(12px);
     }
-    .panel-bottom-img img {
-      width:100%; height:100%; object-fit:cover;
+    .testimonial-quote {
+      font-size:.8rem; color:rgba(255,255,255,.78); line-height:1.65;
+      margin-bottom:.8rem; font-style:italic;
     }
+    .testimonial-quote::before { content:'"'; font-size:1.1rem; color:var(--green); margin-right:.1rem; }
+    .testimonial-quote::after  { content:'"'; font-size:1.1rem; color:var(--green); margin-left:.1rem; }
+    .testimonial-meta { display:flex; align-items:center; gap:.65rem; }
+    .testimonial-avatar {
+      width:32px; height:32px; border-radius:50%; flex-shrink:0;
+      background:linear-gradient(135deg,#10b981,#059669);
+      display:flex; align-items:center; justify-content:center;
+      font-size:.7rem; font-weight:800; color:#fff;
+    }
+    .testimonial-name { font-size:.78rem; font-weight:700; color:rgba(255,255,255,.85); }
+    .testimonial-plan { font-size:.62rem; color:rgba(255,255,255,.38); margin-top:.05rem; }
+    .testimonial-stars { margin-left:auto; color:var(--gold); font-size:.8rem; letter-spacing:.05em; }
 
     /* ── RIGHT PANEL ── */
     .panel-form {
       display:flex; flex-direction:column; justify-content:center;
-      padding:3rem 4rem; background:var(--dark2); overflow-y:auto;
+      padding:3rem 3.5rem; background:var(--dark2); overflow-y:auto;
     }
-    .form-top { margin-bottom:2rem; animation:fadeUp .5s ease both; }
+    .form-top { margin-bottom:1.75rem; animation:fadeUp .5s ease both; }
     .form-back {
       display:inline-flex; align-items:center; gap:.4rem;
-      font-size:.75rem; font-weight:700; color:var(--soft);
-      text-decoration:none; margin-bottom:1.5rem;
-      transition:color .2s;
+      font-size:.73rem; font-weight:700; color:var(--soft);
+      text-decoration:none; margin-bottom:1.4rem; transition:color .2s;
     }
     .form-back:hover { color:var(--text); }
     .form-tag {
       display:inline-flex; align-items:center; gap:.4rem;
       background:rgba(16,185,129,.08); border:1px solid var(--border);
       border-radius:99px; padding:.28rem .8rem;
-      font-size:.68rem; font-weight:800; color:var(--green);
-      text-transform:uppercase; letter-spacing:.08em; margin-bottom:.875rem;
+      font-size:.67rem; font-weight:800; color:var(--green);
+      text-transform:uppercase; letter-spacing:.08em; margin-bottom:.85rem;
     }
     .form-title {
       font-family:'Fraunces',serif; font-size:2rem; font-weight:900;
@@ -134,7 +170,7 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
       background:linear-gradient(135deg,var(--green),var(--green2));
       -webkit-background-clip:text; -webkit-text-fill-color:transparent;
     }
-    .form-sub { font-size:.82rem; color:var(--soft); }
+    .form-sub { font-size:.8rem; color:var(--soft); }
 
     /* ── STEP INDICATOR ── */
     .steps {
@@ -142,17 +178,17 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
       animation:fadeUp .4s .05s ease both;
     }
     .step-dot {
-      width:32px; height:32px; border-radius:50%;
+      width:30px; height:30px; border-radius:50%; flex-shrink:0;
       display:flex; align-items:center; justify-content:center;
-      font-size:.72rem; font-weight:800;
+      font-size:.7rem; font-weight:800;
       border:2px solid var(--border); color:var(--muted);
       transition:all .3s;
     }
-    .step-dot.active { background:var(--green); border-color:var(--green); color:#fff; }
-    .step-dot.done { background:rgba(16,185,129,.15); border-color:var(--green); color:var(--green); }
+    .step-dot.active { background:var(--green); border-color:var(--green); color:#fff; box-shadow:0 0 0 4px rgba(16,185,129,.18); }
+    .step-dot.done   { background:rgba(16,185,129,.15); border-color:var(--green); color:var(--green); }
     .step-line { flex:1; height:2px; background:var(--border); border-radius:2px; transition:all .3s; }
     .step-line.done { background:var(--green); }
-    .step-label { font-size:.68rem; color:var(--soft); white-space:nowrap; }
+    .step-label { font-size:.65rem; color:var(--soft); white-space:nowrap; }
 
     /* ── STEP PANELS ── */
     .step-panel { display:none; }
@@ -161,17 +197,17 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
     /* ── FIELDS ── */
     .field { margin-bottom:1.1rem; }
     .field-label {
-      display:block; font-size:.75rem; font-weight:800;
+      display:block; font-size:.73rem; font-weight:800;
       color:var(--soft); text-transform:uppercase; letter-spacing:.07em;
       margin-bottom:.45rem;
     }
     .field-wrap { position:relative; }
     .field-icon {
       position:absolute; left:.95rem; top:50%; transform:translateY(-50%);
-      font-size:.9rem; pointer-events:none;
+      font-size:.85rem; pointer-events:none;
     }
     .field-input {
-      width:100%; padding:.825rem 1rem .825rem 2.6rem;
+      width:100%; padding:.825rem 1rem .825rem 2.5rem;
       background:var(--card); border:1.5px solid var(--border);
       border-radius:12px; color:var(--text);
       font-family:'DM Sans',sans-serif; font-size:.875rem; font-weight:500;
@@ -182,18 +218,18 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
       border-color:var(--green); background:rgba(16,185,129,.04);
       box-shadow:0 0 0 4px rgba(16,185,129,.1);
     }
-    .field-input.error { border-color:var(--red); box-shadow:0 0 0 3px rgba(239,68,68,.1); }
+    .field-input.error   { border-color:var(--red); box-shadow:0 0 0 3px rgba(239,68,68,.1); }
     .field-input.success { border-color:var(--green); }
     .field-msg {
       font-size:.72rem; margin-top:.4rem;
       display:flex; align-items:center; gap:.35rem;
     }
-    .field-msg.error { color:#fca5a5; }
+    .field-msg.error   { color:#fca5a5; }
     .field-msg.success { color:var(--green2); }
     .field-pw-toggle {
       position:absolute; right:.875rem; top:50%; transform:translateY(-50%);
       background:none; border:none; cursor:pointer;
-      color:var(--soft); font-size:.95rem; transition:color .2s; padding:.25rem;
+      color:var(--soft); font-size:.9rem; transition:color .2s; padding:.25rem;
     }
     .field-pw-toggle:hover { color:var(--text); }
 
@@ -209,64 +245,97 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
     .pw-bar.s { background:var(--green); }
     .pw-label { font-size:.68rem; color:var(--soft); }
 
-    /* ── PLAN BADGE ── */
+    /* ── PLAN BADGE (step 2 confirmed) ── */
     .plan-box {
-      background:linear-gradient(135deg,rgba(16,185,129,.08),rgba(52,211,153,.04));
+      background:linear-gradient(135deg,rgba(16,185,129,.08),rgba(52,211,153,.03));
       border:1.5px solid var(--border2); border-radius:16px;
-      padding:1.25rem 1.5rem; margin-bottom:1.5rem;
-      display:flex; align-items:center; gap:1rem;
+      padding:1.1rem 1.4rem; margin-bottom:1.5rem;
+      display:flex; align-items:center; gap:.875rem;
     }
-    .pb-emoji { font-size:2.2rem; flex-shrink:0; }
-    .pb-title { font-weight:800; font-size:.95rem; margin-bottom:.15rem; }
-    .pb-meta { font-size:.73rem; color:var(--soft); }
+    .pb-emoji { font-size:2rem; flex-shrink:0; }
+    .pb-title { font-weight:800; font-size:.9rem; margin-bottom:.12rem; }
+    .pb-meta  { font-size:.72rem; color:var(--soft); }
     .pb-badge {
-      margin-left:auto; padding:.25rem .75rem; border-radius:99px;
+      margin-left:auto; padding:.25rem .8rem; border-radius:99px;
       background:rgba(16,185,129,.12); border:1px solid var(--border2);
-      font-size:.68rem; font-weight:800; color:var(--green); flex-shrink:0;
+      font-size:.65rem; font-weight:800; color:var(--green); flex-shrink:0;
+      display:flex; align-items:center; gap:.3rem;
     }
 
-    /* ── LOADING STATE ── */
-    .loading-state {
-      text-align:center; padding:2.5rem 1rem;
-    }
+    /* ── LOADING ── */
+    .loading-state { text-align:center; padding:2.5rem 1rem; }
     .spinner-lg {
-      width:52px; height:52px; border-radius:50%;
+      width:48px; height:48px; border-radius:50%;
       border:3px solid var(--border); border-top-color:var(--green);
       animation:spin .8s linear infinite; margin:0 auto 1.25rem;
     }
-    .loading-title { font-family:'Fraunces',serif; font-size:1.2rem; font-weight:700; margin-bottom:.4rem; }
-    .loading-sub { font-size:.82rem; color:var(--soft); }
+    .loading-title { font-family:'Fraunces',serif; font-size:1.15rem; font-weight:700; margin-bottom:.4rem; }
+    .loading-sub   { font-size:.8rem; color:var(--soft); }
     @keyframes spin { to{transform:rotate(360deg);} }
 
-    /* ── NO PURCHASE STATE ── */
-    .empty-state {
-      text-align:center; padding:2rem;
-      background:rgba(239,68,68,.05); border:1px solid rgba(239,68,68,.15);
-      border-radius:16px; margin-bottom:1.5rem;
+    /* ── NO PURCHASE HEADER ── */
+    .np-header { text-align:center; margin-bottom:1.35rem; }
+    .np-stars {
+      display:inline-flex; align-items:center; gap:.5rem;
+      margin-bottom:.75rem;
     }
-    .empty-icon { font-size:2.5rem; margin-bottom:.875rem; }
-    .empty-title { font-family:'Fraunces',serif; font-size:1.2rem; font-weight:700; color:#fca5a5; margin-bottom:.5rem; }
-    .empty-sub { font-size:.82rem; color:var(--soft); line-height:1.6; margin-bottom:1.25rem; }
+    .np-stars-text { color:var(--gold); font-size:.85rem; letter-spacing:.05em; }
+    .np-stars-count {
+      font-size:.72rem; color:var(--soft); font-weight:600;
+      padding:.2rem .7rem; border-radius:99px;
+      background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.18);
+    }
+    .np-title {
+      font-family:'Fraunces',serif; font-size:1.45rem; font-weight:900;
+      margin-bottom:.4rem; line-height:1.1;
+    }
+    .np-sub { font-size:.77rem; color:var(--soft); line-height:1.6; max-width:330px; margin:0 auto; }
 
-    /* ── SUCCESS STATE ── */
-    .success-state {
-      text-align:center; padding:2rem;
+    /* ── PLAN PICKER (cards injected by JS) ── */
+    .plan-picker { display:flex; flex-direction:column; gap:.85rem; margin-bottom:.5rem; }
+
+    /* ── TRUST ROW ── */
+    .np-trust {
+      display:flex; align-items:center; justify-content:center;
+      flex-wrap:wrap; gap:.5rem; margin:.9rem 0 1rem;
+      font-size:.7rem; color:var(--soft);
     }
-    .success-icon { font-size:4rem; margin-bottom:1rem; }
-    .success-title { font-family:'Fraunces',serif; font-size:1.6rem; font-weight:900; color:var(--green); margin-bottom:.5rem; }
-    .success-sub { font-size:.875rem; color:var(--soft); line-height:1.6; }
-    .progress-bar {
-      height:4px; background:var(--muted); border-radius:2px; margin-top:1.5rem; overflow:hidden;
+    .np-trust-item { display:flex; align-items:center; gap:.3rem; }
+    .trust-sep { color:var(--muted); }
+
+    /* ── STEP 1 TRUST ── */
+    .s1-trust {
+      display:flex; align-items:center; justify-content:center;
+      gap:.6rem; flex-wrap:wrap; margin:.875rem 0 1.25rem;
+      font-size:.7rem; color:var(--soft);
     }
+    .s1-trust-dot { color:var(--muted); }
+
+    /* ── EMPTY / ALREADY REGISTERED ── */
+    .empty-state {
+      text-align:center; padding:1.75rem;
+      background:rgba(239,68,68,.05); border:1px solid rgba(239,68,68,.15);
+      border-radius:16px; margin-bottom:1.25rem;
+    }
+    .empty-icon  { font-size:2.2rem; margin-bottom:.75rem; }
+    .empty-title { font-family:'Fraunces',serif; font-size:1.1rem; font-weight:700; color:#fca5a5; margin-bottom:.4rem; }
+    .empty-sub   { font-size:.8rem; color:var(--soft); line-height:1.6; margin-bottom:1.1rem; }
+
+    /* ── SUCCESS ── */
+    .success-state { text-align:center; padding:2rem 1rem; }
+    .success-icon  { font-size:3.5rem; margin-bottom:.875rem; }
+    .success-title { font-family:'Fraunces',serif; font-size:1.55rem; font-weight:900; color:var(--green); margin-bottom:.5rem; }
+    .success-sub   { font-size:.85rem; color:var(--soft); line-height:1.6; margin-bottom:1.5rem; }
+    .progress-bar { height:4px; background:var(--muted); border-radius:2px; overflow:hidden; }
     .progress-fill {
       height:100%; background:linear-gradient(90deg,var(--green),var(--green2));
-      border-radius:2px; animation:progressGrow 2s ease forwards;
+      border-radius:2px; animation:progressGrow 2.2s ease forwards;
     }
     @keyframes progressGrow { from{width:0%;}to{width:100%;} }
 
     /* ── BUTTONS ── */
     .btn-submit {
-      width:100%; padding:.925rem;
+      width:100%; padding:.95rem;
       background:linear-gradient(135deg,var(--green),var(--green2));
       border:none; border-radius:12px; color:#fff;
       font-family:'DM Sans',sans-serif; font-weight:800; font-size:.9rem;
@@ -276,18 +345,18 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
     }
     .btn-submit::before {
       content:''; position:absolute; inset:0;
-      background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);
       transform:translateX(-100%); transition:transform .5s;
     }
     .btn-submit:hover::before { transform:translateX(100%); }
-    .btn-submit:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(16,185,129,.38); }
+    .btn-submit:hover { transform:translateY(-2px); box-shadow:0 10px 28px rgba(16,185,129,.38); }
     .btn-submit:disabled { opacity:.5; cursor:not-allowed; transform:none; }
     .btn-outline {
-      width:100%; padding:.875rem;
+      width:100%; padding:.85rem;
       background:transparent; border:1.5px solid var(--border);
       border-radius:12px; color:var(--soft);
-      font-family:'DM Sans',sans-serif; font-weight:700; font-size:.875rem;
-      cursor:pointer; transition:all .22s; margin-top:.75rem;
+      font-family:'DM Sans',sans-serif; font-weight:700; font-size:.85rem;
+      cursor:pointer; transition:all .22s; margin-top:.6rem;
     }
     .btn-outline:hover { border-color:var(--green); color:var(--green); }
     .btn-purchase {
@@ -299,79 +368,6 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
     }
     .btn-purchase:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(99,102,241,.4); }
 
-    /* ── NO-PURCHASE PLAN PICKER ── */
-    .np-header { text-align:center; margin-bottom:1.25rem; }
-    .np-icon { font-size:2.2rem; margin-bottom:.5rem; }
-    .np-title { font-family:'Fraunces',serif; font-size:1.15rem; font-weight:900; margin-bottom:.35rem; }
-    .np-sub { font-size:.78rem; color:var(--soft); line-height:1.6; }
-
-    .plan-picker { display:flex; flex-direction:column; gap:.75rem; margin-bottom:1.1rem; }
-
-    .picker-card {
-      position:relative; display:block;
-      padding:1rem 1.15rem; border-radius:16px;
-      border:1.5px solid var(--border); background:var(--card);
-      text-decoration:none; color:var(--text);
-      transition:all .25s; overflow:hidden;
-    }
-    .picker-card::after {
-      content:''; position:absolute; inset:0;
-      background:linear-gradient(135deg,rgba(16,185,129,.0) 0%,rgba(16,185,129,.06) 100%);
-      opacity:0; transition:opacity .25s;
-    }
-    .picker-card:hover { border-color:var(--green2); transform:translateY(-2px); box-shadow:0 8px 24px rgba(16,185,129,.12); text-decoration:none; }
-    .picker-card:hover::after { opacity:1; }
-
-    .picker-card.featured {
-      border-color:var(--green);
-      background:linear-gradient(135deg,rgba(16,185,129,.1) 0%,rgba(16,185,129,.04) 100%);
-      box-shadow:0 4px 20px rgba(16,185,129,.15);
-    }
-    .picker-card.featured:hover { box-shadow:0 8px 32px rgba(16,185,129,.28); }
-    .picker-badge {
-      display:inline-flex; align-items:center; gap:.3rem;
-      background:var(--green); color:#fff;
-      font-size:.6rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
-      padding:.22rem .65rem; border-radius:99px; margin-bottom:.6rem;
-    }
-    .picker-badge.gold { background:linear-gradient(135deg,#f59e0b,#d97706); }
-
-    .picker-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:.5rem; }
-    .picker-left { display:flex; align-items:center; gap:.65rem; }
-    .picker-emoji {
-      width:38px; height:38px; border-radius:10px; flex-shrink:0;
-      display:flex; align-items:center; justify-content:center; font-size:1.2rem;
-    }
-    .picker-emoji.green { background:rgba(16,185,129,.18); }
-    .picker-emoji.indigo { background:rgba(99,102,241,.18); }
-    .picker-emoji.gold { background:rgba(245,158,11,.18); }
-    .picker-name { font-weight:900; font-size:.925rem; line-height:1.2; }
-    .picker-duration { font-size:.7rem; color:var(--soft); margin-top:.08rem; }
-    .picker-price-wrap { text-align:right; flex-shrink:0; }
-    .picker-amount { font-family:'Fraunces',serif; font-size:1.5rem; font-weight:900; color:var(--green2); line-height:1; }
-    .picker-card.featured .picker-amount { color:var(--green); }
-    .picker-card:nth-child(3) .picker-amount { color:var(--gold); }
-    .picker-period { font-size:.62rem; color:var(--soft); margin-top:.15rem; }
-
-    .picker-feats { display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.6rem; }
-    .picker-feat {
-      font-size:.68rem; font-weight:600; color:var(--soft);
-      background:rgba(255,255,255,.04); border:1px solid var(--border);
-      padding:.2rem .55rem; border-radius:6px;
-    }
-    .picker-card.featured .picker-feat { color:rgba(52,211,153,.8); border-color:rgba(16,185,129,.2); background:rgba(16,185,129,.06); }
-
-    .picker-cta {
-      display:flex; align-items:center; justify-content:center; gap:.4rem;
-      margin-top:.85rem; padding:.65rem; border-radius:10px;
-      font-size:.8rem; font-weight:800;
-      background:rgba(255,255,255,.05); border:1px solid var(--border);
-      color:var(--soft); transition:all .2s;
-    }
-    .picker-card:hover .picker-cta { color:var(--text); border-color:var(--green); background:rgba(16,185,129,.08); }
-    .picker-card.featured .picker-cta { background:var(--green); border-color:var(--green); color:#fff; }
-    .picker-card.featured:hover .picker-cta { background:var(--green2); border-color:var(--green2); }
-
     /* ── INLINE SPINNER ── */
     .btn-spin {
       display:none; width:16px; height:16px; border-radius:50%;
@@ -380,20 +376,18 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
     }
 
     /* ── DIVIDER ── */
-    .divider { display:flex; align-items:center; gap:.875rem; margin:1.25rem 0 1rem; }
+    .divider { display:flex; align-items:center; gap:.875rem; margin:1.1rem 0 .9rem; }
     .div-line { flex:1; height:1px; background:var(--border); }
-    .div-text { font-size:.7rem; font-weight:700; color:var(--muted); white-space:nowrap; }
+    .div-text { font-size:.68rem; font-weight:700; color:var(--muted); white-space:nowrap; }
 
     /* ── LOGIN LINK ── */
-    .login-prompt {
-      text-align:center; font-size:.8rem; color:var(--soft);
-    }
+    .login-prompt { text-align:center; font-size:.8rem; color:var(--soft); }
     .login-prompt a { color:var(--green); font-weight:800; text-decoration:none; }
     .login-prompt a:hover { text-decoration:underline; }
 
     @keyframes fadeUp { from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);} }
 
-    @media(max-width:768px) {
+    @media(max-width:900px) {
       body { grid-template-columns:1fr; }
       .panel-img { display:none; }
       .panel-form { padding:2.5rem 1.75rem; }
@@ -402,22 +396,44 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
 </head>
 <body>
 
-<!-- LEFT PANEL -->
+<!-- ══════════════════════════════════════════════
+     LEFT PANEL
+══════════════════════════════════════════════ -->
 <div class="panel-img">
   <div class="panel-img-bg"></div>
   <div class="panel-img-overlay"></div>
   <div class="panel-content">
+
     <a href="/" class="panel-logo">🥑 Keto<span>Journey</span></a>
 
     <div class="panel-middle">
       <div class="panel-eyebrow">🚀 Start today</div>
       <h2 class="panel-title">Your body<br/>can do <em>more</em><br/>than you think</h2>
+
+      <!-- Stats row -->
+      <div class="panel-stats">
+        <div class="stat-item">
+          <div class="stat-num">2,400+</div>
+          <div class="stat-label">Members</div>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-item">
+          <div class="stat-num">4.9 ★</div>
+          <div class="stat-label">Rating</div>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-item">
+          <div class="stat-num">87+</div>
+          <div class="stat-label">Recipes</div>
+        </div>
+      </div>
+
+      <!-- Perks -->
       <div class="panel-perks">
         {[
-          { icon:'📅', g:'linear-gradient(135deg,#10b981,#059669)', g2:'rgba(16,185,129,.2)', title:'30-day structured plan', sub:'Every meal planned for you' },
-          { icon:'🍽️', g:'linear-gradient(135deg,#f59e0b,#d97706)', g2:'rgba(245,158,11,.2)', title:'87 delicious recipes', sub:'All under 20g net carbs' },
-          { icon:'🤖', g:'linear-gradient(135deg,#6366f1,#4f46e5)', g2:'rgba(99,102,241,.2)', title:'AI Keto Coach (Elite)', sub:'Personal nutrition guidance' },
-          { icon:'🛡️', g:'linear-gradient(135deg,#3b82f6,#2563eb)', g2:'rgba(59,130,246,.2)', title:'30-day money-back guarantee', sub:'Zero risk, full results' },
+          { icon:'📅', g:'linear-gradient(135deg,#10b981,#059669)', g2:'rgba(16,185,129,.22)', title:'30-day structured plan', sub:'Every meal planned for you' },
+          { icon:'🍽️', g:'linear-gradient(135deg,#f59e0b,#d97706)', g2:'rgba(245,158,11,.22)', title:'87 delicious keto recipes', sub:'All under 20g net carbs' },
+          { icon:'🛡️', g:'linear-gradient(135deg,#3b82f6,#2563eb)', g2:'rgba(59,130,246,.22)', title:'30-day money-back guarantee', sub:'Zero risk, full results' },
         ].map(p => (
           <div class="perk">
             <div class="perk-icon" style={`background:${p.g};box-shadow:0 4px 10px ${p.g2};`}>{p.icon}</div>
@@ -430,20 +446,34 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
       </div>
     </div>
 
-    <div class="panel-bottom-img">
-      <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80" alt="Keto food"/>
+    <!-- Testimonial -->
+    <div class="panel-testimonial">
+      <div class="testimonial-quote">Lost 18 lbs in my first 30 days. The structured meal plans made keto genuinely easy to follow.</div>
+      <div class="testimonial-meta">
+        <div class="testimonial-avatar">SM</div>
+        <div>
+          <div class="testimonial-name">Sarah M.</div>
+          <div class="testimonial-plan">Basic Plan · Verified Member</div>
+        </div>
+        <div class="testimonial-stars">★★★★★</div>
+      </div>
     </div>
+
   </div>
 </div>
 
-<!-- RIGHT PANEL -->
+
+<!-- ══════════════════════════════════════════════
+     RIGHT PANEL
+══════════════════════════════════════════════ -->
 <div class="panel-form">
-  <!-- Referral bonus banner — shown via JS when ?ref= is present -->
+
+  <!-- Referral bonus banner -->
   <div id="refBanner" style="display:none;align-items:center;gap:.75rem;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:14px;padding:.875rem 1.1rem;margin-bottom:1.5rem;">
-    <span style="font-size:1.3rem;">🎁</span>
+    <span style="font-size:1.25rem;">🎁</span>
     <div>
       <div style="font-weight:800;font-size:.85rem;color:#34d399;">You've been invited!</div>
-      <div style="font-size:.78rem;color:#6a8a6a;margin-top:.1rem;">You'll receive a <strong style="color:#10b981;">+50 XP</strong> welcome bonus when you complete signup.</div>
+      <div style="font-size:.78rem;color:#5a7a5a;margin-top:.1rem;">You'll receive a <strong style="color:#10b981;">+50 XP</strong> welcome bonus when you complete signup.</div>
     </div>
   </div>
 
@@ -463,7 +493,9 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
     <div class="step-dot" id="stepDot3">3</div>
   </div>
 
-  <!-- ── STEP 1: VERIFY EMAIL ── -->
+  <!-- ──────────────────────────────────────
+       STEP 1: VERIFY EMAIL
+  ────────────────────────────────────── -->
   <div class="step-panel active" id="panel1">
     <div class="field">
       <label class="field-label">Purchase Email</label>
@@ -476,21 +508,32 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
         ⚠️ Please enter a valid email address
       </div>
     </div>
+
     <button type="button" class="btn-submit" id="verifyBtn">
       <div class="btn-spin" id="verifySpin"></div>
-      <span id="verifyTxt">Verify Purchase 🔍</span>
+      <span id="verifyTxt">Verify Purchase →</span>
     </button>
+
+    <!-- Trust signals -->
+    <div class="s1-trust">
+      <span class="s1-trust-item">🔒 Secure</span>
+      <span class="s1-trust-dot">·</span>
+      <span class="s1-trust-item">✓ 30-day guarantee</span>
+      <span class="s1-trust-dot">·</span>
+      <span class="s1-trust-item">⚡ Instant access</span>
+    </div>
+
     <div class="divider">
       <div class="div-line"></div>
       <div class="div-text">Already have an account?</div>
       <div class="div-line"></div>
     </div>
-    <div class="login-prompt">
-      <a href="/login">Log in instead →</a>
-    </div>
+    <div class="login-prompt"><a href="/login">Log in instead →</a></div>
   </div>
 
-  <!-- ── LOADING ── -->
+  <!-- ──────────────────────────────────────
+       LOADING
+  ────────────────────────────────────── -->
   <div class="step-panel" id="panelLoading">
     <div class="loading-state">
       <div class="spinner-lg"></div>
@@ -499,22 +542,38 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
     </div>
   </div>
 
-  <!-- ── NO PURCHASE — PLAN PICKER ── -->
+  <!-- ──────────────────────────────────────
+       NO PURCHASE — PLAN PICKER
+  ────────────────────────────────────── -->
   <div class="step-panel" id="panelNoPurchase">
+
     <div class="np-header">
-      <div class="np-icon">🛒</div>
-      <div class="np-title">Choose your plan to get started</div>
-      <div class="np-sub">No purchase found for this email. Pick a plan below — you'll be brought straight back here after checkout.</div>
+      <div class="np-stars">
+        <span class="np-stars-text">★★★★★</span>
+        <span class="np-stars-count">Trusted by 2,400+ members</span>
+      </div>
+      <div class="np-title">Choose your plan</div>
+      <p class="np-sub">Pick a plan below — you'll be brought back here after checkout to finish setup</p>
     </div>
 
-    <div class="plan-picker" id="planPickerCards">
-      <!-- Cards injected by JS with email pre-filled in checkout URLs -->
+    <!-- Cards injected by JS -->
+    <div class="plan-picker" id="planPickerCards"></div>
+
+    <!-- Trust row -->
+    <div class="np-trust">
+      <span class="np-trust-item">🔒 Secure checkout</span>
+      <span class="trust-sep">·</span>
+      <span class="np-trust-item">✓ 30-day guarantee</span>
+      <span class="trust-sep">·</span>
+      <span class="np-trust-item">⚡ Instant access</span>
     </div>
 
     <button type="button" class="btn-outline" onclick="resetToStep1()">← Try a different email</button>
   </div>
 
-  <!-- ── ALREADY REGISTERED ── -->
+  <!-- ──────────────────────────────────────
+       ALREADY REGISTERED
+  ────────────────────────────────────── -->
   <div class="step-panel" id="panelAlready">
     <div class="empty-state" style="background:rgba(245,158,11,.05);border-color:rgba(245,158,11,.2);">
       <div class="empty-icon">⚠️</div>
@@ -525,15 +584,20 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
     <button type="button" class="btn-outline" onclick="resetToStep1()">← Try a different email</button>
   </div>
 
-  <!-- ── STEP 2: PLAN CONFIRMED ── -->
+  <!-- ──────────────────────────────────────
+       STEP 2: CREATE ACCOUNT
+  ────────────────────────────────────── -->
   <div class="step-panel" id="panel2">
     <div class="plan-box" id="planBox">
       <div class="pb-emoji" id="planEmoji">🥑</div>
       <div>
         <div class="pb-title" id="planTitle">Loading plan…</div>
-        <div class="pb-meta" id="planMeta">Verifying…</div>
+        <div class="pb-meta"  id="planMeta">Verifying…</div>
       </div>
-      <div class="pb-badge">✓ Verified</div>
+      <div class="pb-badge">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        Verified
+      </div>
     </div>
 
     <div class="field">
@@ -578,7 +642,7 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
       <div class="btn-spin" id="createSpin"></div>
       <span id="createTxt">Create My Account 🚀</span>
     </button>
-    <p style="font-size:.72rem;color:#4d7055;text-align:center;margin-top:.75rem;line-height:1.5;">
+    <p style="font-size:.7rem;color:#4d7055;text-align:center;margin-top:.75rem;line-height:1.6;">
       By creating an account you agree to our
       <a href="/terms" target="_blank" style="color:#10b981;">Terms of Service</a>
       and <a href="/privacy-policy" target="_blank" style="color:#10b981;">Privacy Policy</a>.
@@ -586,7 +650,9 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
     <div class="field-msg error" id="formError" style="display:none;margin-top:.75rem;justify-content:center;"></div>
   </div>
 
-  <!-- ── STEP 3: SUCCESS ── -->
+  <!-- ──────────────────────────────────────
+       STEP 3: SUCCESS
+  ────────────────────────────────────── -->
   <div class="step-panel" id="panel3">
     <div class="success-state">
       <div class="success-icon">🎉</div>
@@ -594,34 +660,36 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
       <div class="success-sub">
         Your account is ready. Redirecting you to your personal dashboard…
       </div>
-      <div class="progress-bar">
-        <div class="progress-fill"></div>
-      </div>
+      <div class="progress-bar"><div class="progress-fill"></div></div>
     </div>
   </div>
 
 </div><!-- /panel-form -->
 
-<script is:inline define:vars={{ allowedEmail, CHECKOUT_BASIC, CHECKOUT_PRO, CHECKOUT_ELITE }}>
-  let purchaseData = null;
-  let verifiedEmail = '';
 
-  // Step management
+<script is:inline define:vars={{ allowedEmail, CHECKOUT_BASIC, CHECKOUT_PRO, CHECKOUT_ELITE }}>
+  var purchaseData = null;
+  var verifiedEmail = '';
+
+  // ── Step management ──────────────────────────────────
   function goToPanel(id) {
-    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
-    document.getElementById(id)?.classList.add('active');
+    document.querySelectorAll('.step-panel').forEach(function(p) { p.classList.remove('active'); });
+    var el = document.getElementById(id);
+    if (el) el.classList.add('active');
   }
 
   function updateStepUI(step) {
-    for (let i = 1; i <= 3; i++) {
-      const dot = document.getElementById(`stepDot${i}`);
-      dot.classList.remove('active','done');
+    for (var i = 1; i <= 3; i++) {
+      var dot = document.getElementById('stepDot' + i);
+      if (!dot) continue;
+      dot.classList.remove('active', 'done');
       if (i < step) dot.classList.add('done');
       else if (i === step) dot.classList.add('active');
     }
-    for (let i = 1; i <= 2; i++) {
-      const line = document.getElementById(`stepLine${i}`);
-      if (i < step) line.classList.add('done');
+    for (var j = 1; j <= 2; j++) {
+      var line = document.getElementById('stepLine' + j);
+      if (!line) continue;
+      if (j < step) line.classList.add('done');
       else line.classList.remove('done');
     }
   }
@@ -634,20 +702,27 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
     verifiedEmail = '';
   }
 
-  // Password strength
-  const pwField = document.getElementById('password');
-  pwField?.addEventListener('input', () => {
-    const val = pwField.value;
-    const strength = getStrength(val);
-    const bars = [document.getElementById('bar1'), document.getElementById('bar2'), document.getElementById('bar3'), document.getElementById('bar4')];
-    const label = document.getElementById('pwLabel');
-    const cls = strength <= 1 ? 'w' : strength <= 2 ? 'm' : 's';
-    bars.forEach((b, i) => { b.className = 'pw-bar'; if (i < strength) b.classList.add(cls); });
-    const labels = ['','Too weak','Fair','Good','Strong 💪'];
-    if (label) label.textContent = val ? (labels[strength] || 'Strong 💪') : 'Enter a password';
-  });
+  // ── Password strength ────────────────────────────────
+  var pwField = document.getElementById('password');
+  if (pwField) {
+    pwField.addEventListener('input', function() {
+      var val = pwField.value;
+      var strength = getStrength(val);
+      var bars = ['bar1','bar2','bar3','bar4'].map(function(id) { return document.getElementById(id); });
+      var label = document.getElementById('pwLabel');
+      var cls = strength <= 1 ? 'w' : strength <= 2 ? 'm' : 's';
+      bars.forEach(function(b, i) {
+        if (!b) return;
+        b.className = 'pw-bar';
+        if (i < strength) b.classList.add(cls);
+      });
+      var labels = ['', 'Too weak', 'Fair', 'Good', 'Strong 💪'];
+      if (label) label.textContent = val ? (labels[strength] || 'Strong 💪') : 'Enter a password';
+    });
+  }
+
   function getStrength(pw) {
-    let s = 0;
+    var s = 0;
     if (pw.length >= 6) s++;
     if (pw.length >= 10) s++;
     if (/[A-Z]/.test(pw) || /[0-9]/.test(pw)) s++;
@@ -655,103 +730,186 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
     return Math.min(s, 4);
   }
 
-  // Password toggles
-  [['password','pw1Toggle'],['confirmPassword','pw2Toggle']].forEach(([fid, bid]) => {
-    const f = document.getElementById(fid);
-    const b = document.getElementById(bid);
+  // ── Password toggles ─────────────────────────────────
+  [['password','pw1Toggle'],['confirmPassword','pw2Toggle']].forEach(function(pair) {
+    var f = document.getElementById(pair[0]);
+    var b = document.getElementById(pair[1]);
     if (f && b) {
-      b.addEventListener('click', () => {
-        const isText = f.type === 'text';
+      b.addEventListener('click', function() {
+        var isText = f.type === 'text';
         f.type = isText ? 'password' : 'text';
         b.textContent = isText ? '👁️' : '🙈';
       });
     }
   });
 
-  // Build LemonSqueezy checkout URL with email pre-filled
+  // ── Build checkout URL ───────────────────────────────
   function buildCheckoutUrl(base, email) {
     if (!base) return '/#pricing';
     var sep = base.includes('?') ? '&' : '?';
     return base + sep + 'checkout%5Bemail%5D=' + encodeURIComponent(email);
   }
 
-  // Render plan picker cards with email pre-filled in checkout links
+  // ── Plan picker ──────────────────────────────────────
   function showPlanPicker(email) {
     var plans = [
       {
-        emojiCls: 'green', emoji: '🥑',
+        icon: '🥑',
+        iconBg: 'rgba(16,185,129,.15)',
         badge: null,
-        name: 'Basic', duration: '30-Day Kickstart',
-        amount: '$29', period: 'one-time payment',
-        feats: ['30 structured days', '30+ recipes', 'Progress tracking'],
-        cta: 'Start Basic →',
+        name: 'Basic',
+        sub: '30-Day Kickstart',
+        price: '$29',
+        perDay: '$0.97/day',
+        feats: ['30 structured keto days', '30+ curated recipes', 'Daily check-ins & streaks', 'Progress tracking', 'Weekly shopping lists'],
+        cta: 'Get Started with Basic',
+        cardBg: 'rgba(10,18,11,.97)',
+        borderColor: 'rgba(16,185,129,.22)',
+        shadow: 'none',
+        priceColor: '#34d399',
+        ctaBg: 'rgba(16,185,129,.1)',
+        ctaBorder: 'rgba(16,185,129,.28)',
+        ctaColor: '#34d399',
+        ctaShadow: '',
+        checkColor: '#34d399',
         featured: false,
         url: buildCheckoutUrl(CHECKOUT_BASIC, email),
       },
       {
-        emojiCls: 'indigo', emoji: '⚡',
-        badge: { label: '⭐ Most Popular', cls: '' },
-        name: 'Pro', duration: '90-Day Transformation',
-        amount: '$69', period: 'one-time payment',
-        feats: ['87+ premium recipes', 'Advanced analytics', 'Fasting timer', 'Weekly reports'],
-        cta: 'Start Pro — Best Choice →',
+        icon: '⚡',
+        iconBg: 'rgba(99,102,241,.2)',
+        badge: '⭐ Most Popular',
+        badgeBg: 'linear-gradient(135deg,#10b981,#059669)',
+        badgeColor: '#fff',
+        name: 'Pro',
+        sub: '90-Day Transformation',
+        price: '$69',
+        perDay: 'Just $0.77/day',
+        feats: ['87+ premium recipes', 'Advanced analytics', 'Fasting timer & tracker', 'Weekly reports', 'Meal swap engine', 'Body measurements'],
+        cta: 'Start Pro — Best Choice',
+        cardBg: 'linear-gradient(150deg,rgba(16,185,129,.13) 0%,rgba(10,18,11,.98) 55%)',
+        borderColor: '#10b981',
+        shadow: '0 0 50px rgba(16,185,129,.16), inset 0 1px 0 rgba(52,211,153,.15)',
+        priceColor: '#10b981',
+        ctaBg: 'linear-gradient(135deg,#10b981,#34d399)',
+        ctaBorder: 'transparent',
+        ctaColor: '#fff',
+        ctaShadow: '0 6px 22px rgba(16,185,129,.45)',
+        checkColor: '#10b981',
         featured: true,
         url: buildCheckoutUrl(CHECKOUT_PRO, email),
       },
       {
-        emojiCls: 'gold', emoji: '👑',
-        badge: { label: '👑 Best Value', cls: 'gold' },
-        name: 'Elite', duration: '360-Day Lifestyle',
-        amount: '$149', period: 'one-time payment',
-        feats: ['Everything in Pro', 'AI Coach (24/7)', 'Lifetime updates'],
-        cta: 'Start Elite →',
+        icon: '👑',
+        iconBg: 'rgba(245,158,11,.18)',
+        badge: '👑 Best Value',
+        badgeBg: 'linear-gradient(135deg,#f59e0b,#d97706)',
+        badgeColor: '#fff',
+        name: 'Elite',
+        sub: '360-Day Lifestyle',
+        price: '$149',
+        perDay: 'Just $0.41/day',
+        feats: ['Everything in Pro', 'AI Keto Coach 24/7', 'Priority support', 'Lifetime updates', '360 structured days'],
+        cta: 'Start Elite Plan',
+        cardBg: 'rgba(10,18,11,.97)',
+        borderColor: 'rgba(245,158,11,.3)',
+        shadow: 'none',
+        priceColor: '#f59e0b',
+        ctaBg: 'linear-gradient(135deg,#f59e0b,#d97706)',
+        ctaBorder: 'transparent',
+        ctaColor: '#fff',
+        ctaShadow: '0 6px 22px rgba(245,158,11,.38)',
+        checkColor: '#f59e0b',
         featured: false,
         url: buildCheckoutUrl(CHECKOUT_ELITE, email),
       },
     ];
+
+    var checkSvgTpl = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="COLOR" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><polyline points="20 6 9 17 4 12"/></svg>';
+    var arrowSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0;"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+
     var container = document.getElementById('planPickerCards');
     container.innerHTML = plans.map(function(p) {
-      var badge = p.badge
-        ? '<div class="picker-badge ' + p.badge.cls + '">' + p.badge.label + '</div>'
-        : '';
-      var feats = p.feats.map(function(f) {
-        return '<span class="picker-feat">✓ ' + f + '</span>';
+      var checkSvg = checkSvgTpl.replace('COLOR', p.checkColor);
+
+      var badgeHtml = p.badge
+        ? '<div style="display:inline-flex;align-items:center;gap:.3rem;background:' + p.badgeBg + ';color:' + p.badgeColor + ';font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .9rem;border-radius:99px;margin-bottom:.85rem;">' + p.badge + '</div>'
+        : '<div style="height:.6rem;margin-bottom:.85rem;"></div>';
+
+      var featsHtml = p.feats.map(function(f) {
+        return '<li style="display:flex;align-items:flex-start;gap:.5rem;font-size:.78rem;color:rgba(220,235,220,.78);line-height:1.45;">' + checkSvg + '<span>' + f + '</span></li>';
       }).join('');
-      return '<a href="' + p.url + '" class="picker-card' + (p.featured ? ' featured' : '') + '">'
-        + badge
-        + '<div class="picker-top">'
-        +   '<div class="picker-left">'
-        +     '<div class="picker-emoji ' + p.emojiCls + '">' + p.emoji + '</div>'
+
+      var perDayHtml = p.perDay
+        ? '<div style="display:flex;align-items:center;justify-content:center;gap:.3rem;margin-bottom:.85rem;font-size:.68rem;color:#5a7a5a;font-weight:600;">'
+          + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><path d="M12 2v20M2 12h20"/></svg>'
+          + p.perDay + '</div>'
+        : '';
+
+      var ctaBoxShadow = p.ctaShadow ? ';box-shadow:' + p.ctaShadow : '';
+
+      return '<a href="' + p.url + '" '
+        + 'style="display:block;position:relative;border-radius:20px;padding:1.4rem 1.5rem;'
+        + 'border:1.5px solid ' + p.borderColor + ';background:' + p.cardBg + ';'
+        + 'box-shadow:' + p.shadow + ';text-decoration:none;color:#dfeedd;'
+        + 'transition:transform .22s,box-shadow .22s;" '
+        + 'onmouseover="this.style.transform=\'translateY(-3px)\'" '
+        + 'onmouseout="this.style.transform=\'none\'">'
+
+        // Badge row (always present, empty spacer if no badge)
+        + badgeHtml
+
+        // Header: icon + name | price
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.1rem;">'
+        +   '<div style="display:flex;align-items:center;gap:.75rem;">'
+        +     '<div style="width:44px;height:44px;border-radius:12px;background:' + p.iconBg + ';display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;">' + p.icon + '</div>'
         +     '<div>'
-        +       '<div class="picker-name">' + p.name + '</div>'
-        +       '<div class="picker-duration">' + p.duration + '</div>'
+        +       '<div style="font-weight:900;font-size:1rem;line-height:1.2;color:#e8f0e8;">' + p.name + '</div>'
+        +       '<div style="font-size:.7rem;color:#5a7a5a;margin-top:.1rem;">' + p.sub + '</div>'
         +     '</div>'
         +   '</div>'
-        +   '<div class="picker-price-wrap">'
-        +     '<div class="picker-amount">' + p.amount + '</div>'
-        +     '<div class="picker-period">' + p.period + '</div>'
+        +   '<div style="text-align:right;flex-shrink:0;padding-left:.5rem;">'
+        +     '<div style="font-size:2.1rem;font-weight:900;color:' + p.priceColor + ';line-height:1;font-family:Georgia,serif;">' + p.price + '</div>'
+        +     '<div style="font-size:.58rem;color:#5a7a5a;margin-top:.12rem;text-transform:uppercase;letter-spacing:.05em;">one-time</div>'
         +   '</div>'
         + '</div>'
-        + '<div class="picker-feats">' + feats + '</div>'
-        + '<div class="picker-cta">' + p.cta + '</div>'
+
+        // Divider
+        + '<div style="height:1px;background:rgba(255,255,255,.07);margin-bottom:1rem;"></div>'
+
+        // Features list
+        + '<ul style="list-style:none;display:flex;flex-direction:column;gap:.45rem;margin-bottom:.9rem;padding:0;">'
+        + featsHtml
+        + '</ul>'
+
+        // Per-day cost
+        + perDayHtml
+
+        // CTA button
+        + '<div style="display:flex;align-items:center;justify-content:center;gap:.45rem;padding:.875rem;border-radius:12px;background:' + p.ctaBg + ';border:1.5px solid ' + p.ctaBorder + ';color:' + p.ctaColor + ';font-size:.875rem;font-weight:800;letter-spacing:.01em' + ctaBoxShadow + ';">'
+        +   '<span>' + p.cta + '</span>'
+        +   arrowSvg
+        + '</div>'
+
         + '</a>';
     }).join('');
+
     goToPanel('panelNoPurchase');
   }
 
-  // VERIFY
+  // ── Verify purchase ──────────────────────────────────
   async function startVerification() {
-    const email = document.getElementById('emailInput').value.trim().toLowerCase();
-    const emailErr = document.getElementById('emailError');
+    var email = document.getElementById('emailInput').value.trim().toLowerCase();
+    var emailErr = document.getElementById('emailError');
 
     if (!email || !email.includes('@')) {
       emailErr.style.display = 'flex'; return;
     }
     emailErr.style.display = 'none';
 
-    const btn = document.getElementById('verifyBtn');
-    const spin = document.getElementById('verifySpin');
-    const txt = document.getElementById('verifyTxt');
+    var btn  = document.getElementById('verifyBtn');
+    var spin = document.getElementById('verifySpin');
+    var txt  = document.getElementById('verifyTxt');
     btn.disabled = true;
     spin.style.display = 'block';
     txt.textContent = 'Verifying…';
@@ -759,11 +917,12 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
     goToPanel('panelLoading');
 
     try {
-      const res = await fetch('/api/lemonsqueezy/verify-purchase', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ email })
+      var res = await fetch('/api/lemonsqueezy/verify-purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email }),
       });
-      const result = await res.json();
+      var result = await res.json();
 
       if (result.reason === 'already_registered') {
         goToPanel('panelAlready'); return;
@@ -773,16 +932,16 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
         showPlanPicker(email); return;
       }
 
-      // Success — fill plan details
+      // Success — populate plan box
       purchaseData  = result.purchase;
       verifiedEmail = email;
 
-      const plans = {
-        'basic_30':  { emoji:'🥑', name:'Basic Plan', meta:'30-day access — $29' },
-        'pro_6':     { emoji:'⚡', name:'Pro Plan',   meta:'90-day access — $69' },
-        'elite_12':  { emoji:'👑', name:'Elite Plan', meta:'360-day access — $149' },
+      var plans = {
+        'basic_30':  { emoji:'🥑', name:'Basic Plan',  meta:'30-day access · $29 one-time' },
+        'pro_6':     { emoji:'⚡', name:'Pro Plan',    meta:'90-day access · $69 one-time' },
+        'elite_12':  { emoji:'👑', name:'Elite Plan',  meta:'360-day access · $149 one-time' },
       };
-      const plan = plans[purchaseData.tier] || { emoji:'🥑', name:purchaseData.tier, meta:'' };
+      var plan = plans[purchaseData.tier] || { emoji:'🥑', name: purchaseData.tier, meta: '' };
       document.getElementById('planEmoji').textContent = plan.emoji;
       document.getElementById('planTitle').textContent = plan.name;
       document.getElementById('planMeta').textContent  = plan.meta;
@@ -790,91 +949,95 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
       updateStepUI(2);
       goToPanel('panel2');
 
-    } catch {
+    } catch(e) {
       showPlanPicker(email);
     } finally {
-      btn.disabled = false; spin.style.display = 'none'; txt.textContent = 'Verify Purchase 🔍';
+      btn.disabled = false;
+      spin.style.display = 'none';
+      txt.textContent = 'Verify Purchase →';
     }
   }
 
-  // CREATE ACCOUNT
+  // ── Create account ───────────────────────────────────
   async function handleCreate() {
     if (!purchaseData) return;
 
-    // Clear errors
-    ['nameError','passwordError','confirmError','formError'].forEach(id => {
+    ['nameError','passwordError','confirmError','formError'].forEach(function(id) {
       document.getElementById(id).style.display = 'none';
     });
 
-    const fullName  = document.getElementById('fullName').value.trim();
-    const password  = document.getElementById('password').value;
-    const confirm   = document.getElementById('confirmPassword').value;
-    let err = false;
+    var fullName = document.getElementById('fullName').value.trim();
+    var password = document.getElementById('password').value;
+    var confirm  = document.getElementById('confirmPassword').value;
+    var err = false;
 
-    if (!fullName) { document.getElementById('nameError').style.display = 'flex'; err = true; }
+    if (!fullName)           { document.getElementById('nameError').style.display = 'flex';     err = true; }
     if (password.length < 6) { document.getElementById('passwordError').style.display = 'flex'; err = true; }
     if (password !== confirm) { document.getElementById('confirmError').style.display = 'flex'; err = true; }
     if (err) return;
 
-    const btn = document.getElementById('createBtn');
-    const spin = document.getElementById('createSpin');
-    const txt = document.getElementById('createTxt');
+    var btn  = document.getElementById('createBtn');
+    var spin = document.getElementById('createSpin');
+    var txt  = document.getElementById('createTxt');
     btn.disabled = true;
     spin.style.display = 'block';
     txt.textContent = 'Creating account…';
 
     try {
-      const refCode = localStorage.getItem('keto_ref') || '';
+      var refCode = localStorage.getItem('keto_ref') || '';
 
-      const res = await fetch('/api/auth/signup-purchase', {
-        method:'POST', headers:{'Content-Type':'application/json'},
+      var res = await fetch('/api/auth/signup-purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email:         verifiedEmail,
-          password,      fullName,
+          password:      password,
+          fullName:      fullName,
           tier:          purchaseData.tier,
           startDate:     purchaseData.start_date,
           endDate:       purchaseData.end_date,
           saleId:        purchaseData.sale_id,
           referral_code: refCode || undefined,
-        })
+        }),
       });
-      const result = await res.json();
+      var result = await res.json();
       if (!res.ok) throw new Error(result.error || 'Signup failed');
 
-      // Clear the stored referral code after use
       localStorage.removeItem('keto_ref');
 
       updateStepUI(3);
       goToPanel('panel3');
-      setTimeout(() => { window.location.href = '/dashboard'; }, 2200);
+      setTimeout(function() { window.location.href = '/dashboard'; }, 2200);
 
-    } catch (e) {
-      const errEl = document.getElementById('formError');
+    } catch(e) {
+      var errEl = document.getElementById('formError');
       errEl.textContent = '⚠️ ' + e.message;
       errEl.style.display = 'flex';
-      btn.disabled = false; spin.style.display = 'none'; txt.textContent = 'Create My Account 🚀';
+      btn.disabled = false;
+      spin.style.display = 'none';
+      txt.textContent = 'Create My Account 🚀';
     }
   }
 
-  // Capture referral code from URL and persist in localStorage
+  // ── Referral code capture ────────────────────────────
   (function() {
     var params = new URLSearchParams(window.location.search);
     var ref = params.get('ref');
     if (ref && ref.length >= 6) {
       localStorage.setItem('keto_ref', ref.toUpperCase());
-      // Show a banner so the referred user knows they'll get a bonus
       var banner = document.getElementById('refBanner');
-      if (banner) { banner.style.display = 'flex'; }
+      if (banner) banner.style.display = 'flex';
     }
   })();
 
-  // Wire events
-  window.addEventListener('DOMContentLoaded', () => {
+  // ── Wire events ──────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', function() {
     document.getElementById('verifyBtn').addEventListener('click', startVerification);
-    document.getElementById('emailInput').addEventListener('keydown', e => { if (e.key === 'Enter') startVerification(); });
+    document.getElementById('emailInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') startVerification();
+    });
     document.getElementById('createBtn').addEventListener('click', handleCreate);
 
-    // Auto-fill from URL
     if (allowedEmail) {
       document.getElementById('emailInput').value = allowedEmail;
       startVerification();
@@ -883,6 +1046,7 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
 
   window.resetToStep1 = resetToStep1;
 </script>
+
 <CookieConsent />
 </body>
 </html>
