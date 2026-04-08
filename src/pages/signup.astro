@@ -3,7 +3,7 @@
 import CookieConsent from '../components/CookieConsent.astro';
 const emailParam = Astro.url.searchParams.get('email');
 const allowedEmail = emailParam ? emailParam.toLowerCase().trim() : '';
-const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.app').replace(/\/$/, '');
+const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').replace(/\/$/, '');
 ---
 
 <!DOCTYPE html>

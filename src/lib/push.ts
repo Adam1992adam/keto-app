@@ -9,7 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 function getWebPush() {
   const publicKey  = import.meta.env.PUBLIC_VAPID_PUBLIC_KEY;
   const privateKey = import.meta.env.VAPID_PRIVATE_KEY;
-  const email      = import.meta.env.VAPID_EMAIL || 'mailto:admin@ketojourney.app';
+  const email      = import.meta.env.VAPID_EMAIL || 'mailto:admin@ketojourney.fun';
 
   if (!publicKey || !privateKey) {
     throw new Error('VAPID keys not configured. Add PUBLIC_VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY to .env');

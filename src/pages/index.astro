@@ -15,7 +15,7 @@ if (accessToken) {
   if (user) return Astro.redirect('/dashboard');
 }
 
-const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.app').replace(/\/$/, '');
+const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').replace(/\/$/, '');
 const accountDeleted = Astro.url.searchParams.get('deleted') === '1';
 const PAGE_TITLE       = 'Keto Journey — Transform Your Body With Intelligent Keto';
 const PAGE_DESCRIPTION = 'AI-powered keto meal plans, daily coaching, and smart progress tracking — personalized to YOUR goals. Start your 30, 90, or 360-day keto journey today.';
