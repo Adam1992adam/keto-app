@@ -4,6 +4,9 @@ import CookieConsent from '../components/CookieConsent.astro';
 const emailParam = Astro.url.searchParams.get('email');
 const allowedEmail = emailParam ? emailParam.toLowerCase().trim() : '';
 const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').replace(/\/$/, '');
+const CHECKOUT_BASIC = import.meta.env.LEMONSQUEEZY_BASIC_URL || '';
+const CHECKOUT_PRO   = import.meta.env.LEMONSQUEEZY_PRO_URL   || '';
+const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
 ---
 
 <!DOCTYPE html>
@@ -296,6 +299,39 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
     }
     .btn-purchase:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(99,102,241,.4); }
 
+    /* ── NO-PURCHASE PLAN PICKER ── */
+    .np-header { text-align:center; margin-bottom:1.25rem; }
+    .np-icon { font-size:2rem; margin-bottom:.5rem; }
+    .np-title { font-family:'Fraunces',serif; font-size:1.1rem; font-weight:800; margin-bottom:.35rem; }
+    .np-sub { font-size:.78rem; color:var(--soft); line-height:1.55; }
+
+    .plan-picker { display:flex; flex-direction:column; gap:.65rem; margin-bottom:1rem; }
+    .picker-card {
+      display:flex; align-items:center; gap:.875rem;
+      padding:.9rem 1.1rem; border-radius:14px;
+      border:1.5px solid var(--border); background:var(--card);
+      text-decoration:none; color:var(--text);
+      transition:all .22s; cursor:pointer;
+    }
+    .picker-card:hover { border-color:var(--green); background:rgba(16,185,129,.05); transform:translateX(4px); text-decoration:none; }
+    .picker-card.featured { border-color:rgba(16,185,129,.4); background:rgba(16,185,129,.06); position:relative; }
+    .picker-card.featured::before {
+      content:'Most Popular'; position:absolute; top:-10px; right:12px;
+      background:var(--green); color:#fff; font-size:.62rem; font-weight:800;
+      padding:.2rem .6rem; border-radius:99px; letter-spacing:.05em; text-transform:uppercase;
+    }
+    .picker-emoji { font-size:1.6rem; flex-shrink:0; }
+    .picker-info { flex:1; }
+    .picker-name { font-weight:800; font-size:.875rem; margin-bottom:.1rem; }
+    .picker-meta { font-size:.72rem; color:var(--soft); }
+    .picker-price {
+      font-size:1.1rem; font-weight:900; color:var(--green2);
+      flex-shrink:0; text-align:right;
+    }
+    .picker-price span { display:block; font-size:.62rem; font-weight:500; color:var(--soft); }
+    .picker-arrow { font-size:.9rem; color:var(--soft); flex-shrink:0; margin-left:.25rem; }
+    .picker-card:hover .picker-arrow { color:var(--green); }
+
     /* ── INLINE SPINNER ── */
     .btn-spin {
       display:none; width:16px; height:16px; border-radius:50%;
@@ -423,20 +459,19 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
     </div>
   </div>
 
-  <!-- ── NO PURCHASE ── -->
+  <!-- ── NO PURCHASE — PLAN PICKER ── -->
   <div class="step-panel" id="panelNoPurchase">
-    <div class="empty-state">
-      <div class="empty-icon">😕</div>
-      <div class="empty-title">No purchase found</div>
-      <div class="empty-sub">
-        We couldn't find an order for this email.<br/>
-        Make sure you used the same email when purchasing.
-      </div>
-      <a href="/" class="btn-purchase">Get Keto Journey →</a>
+    <div class="np-header">
+      <div class="np-icon">🛒</div>
+      <div class="np-title">Choose your plan to get started</div>
+      <div class="np-sub">No purchase found for this email. Pick a plan below — you'll be brought straight back here after checkout.</div>
     </div>
-    <button type="button" class="btn-outline" onclick="resetToStep1()">
-      ← Try a different email
-    </button>
+
+    <div class="plan-picker" id="planPickerCards">
+      <!-- Cards injected by JS with email pre-filled in checkout URLs -->
+    </div>
+
+    <button type="button" class="btn-outline" onclick="resetToStep1()">← Try a different email</button>
   </div>
 
   <!-- ── ALREADY REGISTERED ── -->
@@ -527,7 +562,7 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
 
 </div><!-- /panel-form -->
 
-<script is:inline define:vars={{ allowedEmail }}>
+<script is:inline define:vars={{ allowedEmail, CHECKOUT_BASIC, CHECKOUT_PRO, CHECKOUT_ELITE }}>
   let purchaseData = null;
   let verifiedEmail = '';
 
@@ -593,6 +628,47 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
     }
   });
 
+  // Build LemonSqueezy checkout URL with email pre-filled
+  function buildCheckoutUrl(base, email) {
+    if (!base) return '/#pricing';
+    var sep = base.includes('?') ? '&' : '?';
+    return base + sep + 'checkout%5Bemail%5D=' + encodeURIComponent(email);
+  }
+
+  // Render plan picker cards with email pre-filled in checkout links
+  function showPlanPicker(email) {
+    var plans = [
+      {
+        emoji: '🥑', name: 'Basic Plan', duration: '30-day Kickstart',
+        price: '$29', period: 'one-time', url: buildCheckoutUrl(CHECKOUT_BASIC, email),
+        featured: false,
+      },
+      {
+        emoji: '⚡', name: 'Pro Plan', duration: '90-day Transformation',
+        price: '$69', period: 'one-time', url: buildCheckoutUrl(CHECKOUT_PRO, email),
+        featured: true,
+      },
+      {
+        emoji: '👑', name: 'Elite Plan', duration: '360-day Lifestyle + AI Coach',
+        price: '$149', period: 'one-time', url: buildCheckoutUrl(CHECKOUT_ELITE, email),
+        featured: false,
+      },
+    ];
+    var container = document.getElementById('planPickerCards');
+    container.innerHTML = plans.map(function(p) {
+      return '<a href="' + p.url + '" class="picker-card' + (p.featured ? ' featured' : '') + '">'
+        + '<div class="picker-emoji">' + p.emoji + '</div>'
+        + '<div class="picker-info">'
+        +   '<div class="picker-name">' + p.name + '</div>'
+        +   '<div class="picker-meta">' + p.duration + '</div>'
+        + '</div>'
+        + '<div class="picker-price">' + p.price + '<span>' + p.period + '</span></div>'
+        + '<div class="picker-arrow">→</div>'
+        + '</a>';
+    }).join('');
+    goToPanel('panelNoPurchase');
+  }
+
   // VERIFY
   async function startVerification() {
     const email = document.getElementById('emailInput').value.trim().toLowerCase();
@@ -624,7 +700,7 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
       }
 
       if (!result.success || !result.canSignup) {
-        goToPanel('panelNoPurchase'); return;
+        showPlanPicker(email); return;
       }
 
       // Success — fill plan details
@@ -645,7 +721,7 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
       goToPanel('panel2');
 
     } catch {
-      goToPanel('panelNoPurchase');
+      showPlanPicker(email);
     } finally {
       btn.disabled = false; spin.style.display = 'none'; txt.textContent = 'Verify Purchase 🔍';
     }
