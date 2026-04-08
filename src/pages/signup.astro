@@ -301,36 +301,76 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
 
     /* ── NO-PURCHASE PLAN PICKER ── */
     .np-header { text-align:center; margin-bottom:1.25rem; }
-    .np-icon { font-size:2rem; margin-bottom:.5rem; }
-    .np-title { font-family:'Fraunces',serif; font-size:1.1rem; font-weight:800; margin-bottom:.35rem; }
-    .np-sub { font-size:.78rem; color:var(--soft); line-height:1.55; }
+    .np-icon { font-size:2.2rem; margin-bottom:.5rem; }
+    .np-title { font-family:'Fraunces',serif; font-size:1.15rem; font-weight:900; margin-bottom:.35rem; }
+    .np-sub { font-size:.78rem; color:var(--soft); line-height:1.6; }
 
-    .plan-picker { display:flex; flex-direction:column; gap:.65rem; margin-bottom:1rem; }
+    .plan-picker { display:flex; flex-direction:column; gap:.75rem; margin-bottom:1.1rem; }
+
     .picker-card {
-      display:flex; align-items:center; gap:.875rem;
-      padding:.9rem 1.1rem; border-radius:14px;
+      position:relative; display:block;
+      padding:1rem 1.15rem; border-radius:16px;
       border:1.5px solid var(--border); background:var(--card);
       text-decoration:none; color:var(--text);
-      transition:all .22s; cursor:pointer;
+      transition:all .25s; overflow:hidden;
     }
-    .picker-card:hover { border-color:var(--green); background:rgba(16,185,129,.05); transform:translateX(4px); text-decoration:none; }
-    .picker-card.featured { border-color:rgba(16,185,129,.4); background:rgba(16,185,129,.06); position:relative; }
-    .picker-card.featured::before {
-      content:'Most Popular'; position:absolute; top:-10px; right:12px;
-      background:var(--green); color:#fff; font-size:.62rem; font-weight:800;
-      padding:.2rem .6rem; border-radius:99px; letter-spacing:.05em; text-transform:uppercase;
+    .picker-card::after {
+      content:''; position:absolute; inset:0;
+      background:linear-gradient(135deg,rgba(16,185,129,.0) 0%,rgba(16,185,129,.06) 100%);
+      opacity:0; transition:opacity .25s;
     }
-    .picker-emoji { font-size:1.6rem; flex-shrink:0; }
-    .picker-info { flex:1; }
-    .picker-name { font-weight:800; font-size:.875rem; margin-bottom:.1rem; }
-    .picker-meta { font-size:.72rem; color:var(--soft); }
-    .picker-price {
-      font-size:1.1rem; font-weight:900; color:var(--green2);
-      flex-shrink:0; text-align:right;
+    .picker-card:hover { border-color:var(--green2); transform:translateY(-2px); box-shadow:0 8px 24px rgba(16,185,129,.12); text-decoration:none; }
+    .picker-card:hover::after { opacity:1; }
+
+    .picker-card.featured {
+      border-color:var(--green);
+      background:linear-gradient(135deg,rgba(16,185,129,.1) 0%,rgba(16,185,129,.04) 100%);
+      box-shadow:0 4px 20px rgba(16,185,129,.15);
     }
-    .picker-price span { display:block; font-size:.62rem; font-weight:500; color:var(--soft); }
-    .picker-arrow { font-size:.9rem; color:var(--soft); flex-shrink:0; margin-left:.25rem; }
-    .picker-card:hover .picker-arrow { color:var(--green); }
+    .picker-card.featured:hover { box-shadow:0 8px 32px rgba(16,185,129,.28); }
+    .picker-badge {
+      display:inline-flex; align-items:center; gap:.3rem;
+      background:var(--green); color:#fff;
+      font-size:.6rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+      padding:.22rem .65rem; border-radius:99px; margin-bottom:.6rem;
+    }
+    .picker-badge.gold { background:linear-gradient(135deg,#f59e0b,#d97706); }
+
+    .picker-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:.5rem; }
+    .picker-left { display:flex; align-items:center; gap:.65rem; }
+    .picker-emoji {
+      width:38px; height:38px; border-radius:10px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center; font-size:1.2rem;
+    }
+    .picker-emoji.green { background:rgba(16,185,129,.18); }
+    .picker-emoji.indigo { background:rgba(99,102,241,.18); }
+    .picker-emoji.gold { background:rgba(245,158,11,.18); }
+    .picker-name { font-weight:900; font-size:.925rem; line-height:1.2; }
+    .picker-duration { font-size:.7rem; color:var(--soft); margin-top:.08rem; }
+    .picker-price-wrap { text-align:right; flex-shrink:0; }
+    .picker-amount { font-family:'Fraunces',serif; font-size:1.5rem; font-weight:900; color:var(--green2); line-height:1; }
+    .picker-card.featured .picker-amount { color:var(--green); }
+    .picker-card:nth-child(3) .picker-amount { color:var(--gold); }
+    .picker-period { font-size:.62rem; color:var(--soft); margin-top:.15rem; }
+
+    .picker-feats { display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.6rem; }
+    .picker-feat {
+      font-size:.68rem; font-weight:600; color:var(--soft);
+      background:rgba(255,255,255,.04); border:1px solid var(--border);
+      padding:.2rem .55rem; border-radius:6px;
+    }
+    .picker-card.featured .picker-feat { color:rgba(52,211,153,.8); border-color:rgba(16,185,129,.2); background:rgba(16,185,129,.06); }
+
+    .picker-cta {
+      display:flex; align-items:center; justify-content:center; gap:.4rem;
+      margin-top:.85rem; padding:.65rem; border-radius:10px;
+      font-size:.8rem; font-weight:800;
+      background:rgba(255,255,255,.05); border:1px solid var(--border);
+      color:var(--soft); transition:all .2s;
+    }
+    .picker-card:hover .picker-cta { color:var(--text); border-color:var(--green); background:rgba(16,185,129,.08); }
+    .picker-card.featured .picker-cta { background:var(--green); border-color:var(--green); color:#fff; }
+    .picker-card.featured:hover .picker-cta { background:var(--green2); border-color:var(--green2); }
 
     /* ── INLINE SPINNER ── */
     .btn-spin {
@@ -639,31 +679,61 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
   function showPlanPicker(email) {
     var plans = [
       {
-        emoji: '🥑', name: 'Basic Plan', duration: '30-day Kickstart',
-        price: '$29', period: 'one-time', url: buildCheckoutUrl(CHECKOUT_BASIC, email),
+        emojiCls: 'green', emoji: '🥑',
+        badge: null,
+        name: 'Basic', duration: '30-Day Kickstart',
+        amount: '$29', period: 'one-time payment',
+        feats: ['30 structured days', '30+ recipes', 'Progress tracking'],
+        cta: 'Start Basic →',
         featured: false,
+        url: buildCheckoutUrl(CHECKOUT_BASIC, email),
       },
       {
-        emoji: '⚡', name: 'Pro Plan', duration: '90-day Transformation',
-        price: '$69', period: 'one-time', url: buildCheckoutUrl(CHECKOUT_PRO, email),
+        emojiCls: 'indigo', emoji: '⚡',
+        badge: { label: '⭐ Most Popular', cls: '' },
+        name: 'Pro', duration: '90-Day Transformation',
+        amount: '$69', period: 'one-time payment',
+        feats: ['87+ premium recipes', 'Advanced analytics', 'Fasting timer', 'Weekly reports'],
+        cta: 'Start Pro — Best Choice →',
         featured: true,
+        url: buildCheckoutUrl(CHECKOUT_PRO, email),
       },
       {
-        emoji: '👑', name: 'Elite Plan', duration: '360-day Lifestyle + AI Coach',
-        price: '$149', period: 'one-time', url: buildCheckoutUrl(CHECKOUT_ELITE, email),
+        emojiCls: 'gold', emoji: '👑',
+        badge: { label: '👑 Best Value', cls: 'gold' },
+        name: 'Elite', duration: '360-Day Lifestyle',
+        amount: '$149', period: 'one-time payment',
+        feats: ['Everything in Pro', 'AI Coach (24/7)', 'Lifetime updates'],
+        cta: 'Start Elite →',
         featured: false,
+        url: buildCheckoutUrl(CHECKOUT_ELITE, email),
       },
     ];
     var container = document.getElementById('planPickerCards');
     container.innerHTML = plans.map(function(p) {
+      var badge = p.badge
+        ? '<div class="picker-badge ' + p.badge.cls + '">' + p.badge.label + '</div>'
+        : '';
+      var feats = p.feats.map(function(f) {
+        return '<span class="picker-feat">✓ ' + f + '</span>';
+      }).join('');
       return '<a href="' + p.url + '" class="picker-card' + (p.featured ? ' featured' : '') + '">'
-        + '<div class="picker-emoji">' + p.emoji + '</div>'
-        + '<div class="picker-info">'
-        +   '<div class="picker-name">' + p.name + '</div>'
-        +   '<div class="picker-meta">' + p.duration + '</div>'
+        + badge
+        + '<div class="picker-top">'
+        +   '<div class="picker-left">'
+        +     '<div class="picker-emoji ' + p.emojiCls + '">' + p.emoji + '</div>'
+        +     '<div>'
+        +       '<div class="picker-name">' + p.name + '</div>'
+        +       '<div class="picker-duration">' + p.duration + '</div>'
+        +     '</div>'
+        +   '</div>'
+        +   '<div class="picker-price-wrap">'
+        +     '<div class="picker-amount">' + p.amount + '</div>'
+        +     '<div class="picker-period">' + p.period + '</div>'
+        +   '</div>'
         + '</div>'
-        + '<div class="picker-price">' + p.price + '<span>' + p.period + '</span></div>'
-        + '<div class="picker-arrow">→</div>'
+        + '<div class="picker-feats">' + feats + '</div>'
+        + '<div class="picker-cta">' + p.cta + '</div>'
         + '</a>';
     }).join('');
     goToPanel('panelNoPurchase');
