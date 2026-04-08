@@ -31,9 +31,10 @@ const LS_PRO_URL   = import.meta.env.LEMONSQUEEZY_PRO_URL    || import.meta.env.
 const LS_ELITE_URL = import.meta.env.LEMONSQUEEZY_ELITE_URL  || import.meta.env.LEMON_SQUEEZY_CHECKOUT_URL || '';
 
 // Helpers passed to client so checkout URLs can be prefilled
-const userEmail = user.email || '';
-const userName  = profile.full_name || '';
-const userId    = user.id || '';
+const userEmail  = user.email || '';
+// userName already declared above (profile.full_name first word) — reuse it
+const userFullName = profile.full_name || '';
+const userId     = user.id || '';
 
 // Plan → checkout URL map (consumed in define:vars)
 const planCheckoutUrls: Record<string, string> = {
@@ -750,7 +751,7 @@ const plans = [
 
 <div class="toast" id="toast"></div>
 
-<script is:inline define:vars={{ userEmail, userName, userId }}>
+<script is:inline define:vars={{ userEmail, userName: userFullName, userId }}>
 
 // ── THEME ──
 var html     = document.documentElement;
