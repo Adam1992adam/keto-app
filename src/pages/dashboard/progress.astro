@@ -9,7 +9,16 @@ const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 
-const journey = await getUserJourney(user.id, db);
+let journey = null;
+try {
+  journey = await getUserJourney(user.id, db);
+} catch (e) {
+  console.error('[Progress] DB unavailable:', e);
+  return new Response(
+    `<!DOCTYPE html><html><head><title>Temporarily Unavailable</title><meta http-equiv="refresh" content="15;url=/dashboard/progress"></head><body style="background:#060d09;color:#dfeedd;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:1.2rem;text-align:center;padding:2rem"><h2 style="font-family:Fraunces,serif;font-size:1.6rem;margin:0;color:#10b981">Keto Journey</h2><p style="font-size:1.1rem;margin:0">Progress page temporarily unavailable</p><p style="color:#4d7055;margin:0;font-size:.9rem">Retrying in 15 seconds…</p><a href="/dashboard/progress" style="color:#10b981;font-size:.9rem;margin-top:.5rem">Retry now</a></body></html>`,
+    { status: 503, headers: { 'Content-Type': 'text/html' } }
+  );
+}
 if (!journey) return Astro.redirect('/dashboard');
 
 const currentDay  = journey.current_day  || 1;
@@ -35,21 +44,10 @@ const toM    = (cm) => units === 'imperial' ? cmToInches(cm) : Math.round(cm * 1
 const fourteenAgo  = new Date(Date.now() - 13 * 86400000).toISOString().split('T')[0];
 const ninetyDaysAgo = new Date(Date.now() - 89 * 86400000).toISOString().split('T')[0];
 
-// ── PARALLEL batch: all 12 independent DB queries ─────────────────────────────
-const [
-  { data: weightLogs },
-  { data: onboarding },
-  { data: checkins },
-  { data: xpTxnsRaw },
-  { data: completedTasksData },
-  { data: ketoneLogs },
-  { data: macroGoals },
-  { data: foodLogTrend },
-  achievements,
-  { data: measurements },
-  { data: checkin90 },
-  { data: progressPhotos },
-] = await Promise.all([
+// ── PARALLEL batch: all 12 independent DB queries (graceful empty state on failure) ─────
+let progressBatch = new Array(12).fill({ data: null });
+try {
+  progressBatch = await Promise.all([
   db.from('weight_logs')
     .select('weight, logged_date')
     .eq('user_id', user.id)
@@ -94,7 +92,25 @@ const [
     .eq('user_id', user.id)
     .order('taken_date', { ascending: false })
     .limit(4),
-]);
+  ]);
+} catch (e) {
+  console.error('[Progress] DB unavailable (batch):', e);
+}
+
+const [
+  { data: weightLogs },
+  { data: onboarding },
+  { data: checkins },
+  { data: xpTxnsRaw },
+  { data: completedTasksData },
+  { data: ketoneLogs },
+  { data: macroGoals },
+  { data: foodLogTrend },
+  achievements,
+  { data: measurements },
+  { data: checkin90 },
+  { data: progressPhotos },
+] = progressBatch;
 
 // Post-batch derivations
 const xpTxns = xpTxnsRaw || [];

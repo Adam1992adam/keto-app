@@ -482,14 +482,21 @@ body {
   position: absolute; top: calc(100% + 8px); left: 50%;
   transform: translateX(-50%) translateY(-4px);
   min-width: 158px;
-  background: var(--card);
-  border: 1px solid var(--border);
+  /* Light mode — hardcoded so it always renders regardless of CSS variable resolution */
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,.09);
   border-radius: var(--r-lg);
   padding: .45rem;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 8px 32px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.06);
   opacity: 0; pointer-events: none;
   transition: opacity .16s ease, transform .16s ease;
   z-index: 300;
+}
+/* Dark mode override — :global() prevents Astro from scoping the html ancestor */
+:global([data-theme="dark"]) .dn-drop {
+  background: #1a2e1e;
+  border: 1px solid rgba(16,185,129,.25);
+  box-shadow: 0 8px 32px rgba(0,0,0,.5), 0 2px 8px rgba(0,0,0,.3);
 }
 .dn-group.open .dn-drop {
   opacity: 1; pointer-events: auto;
@@ -502,8 +509,9 @@ body {
   color: var(--soft); text-decoration: none; white-space: nowrap;
   transition: color .14s, background .14s;
 }
-.dn-drop-link:hover { color: var(--text); background: var(--bg2); }
-.dn-drop-link.active { color: var(--green); background: var(--green-bg); }
+.dn-drop-link:hover { color: var(--text); background: rgba(0,0,0,.05); }
+:global([data-theme="dark"]) .dn-drop-link:hover { color: #dfeedd; background: rgba(255,255,255,.06); }
+.dn-drop-link.active { color: #10b981; background: rgba(16,185,129,.1); }
 
 /* ── Spacer ──────────────────────────────────────────────── */
 .dn-sp { flex: 1; min-width: 0; }

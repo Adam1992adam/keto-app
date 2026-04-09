@@ -34,11 +34,23 @@ const planType  = profile.subscription_tier || 'basic_30';
 const maxDays   = getMaxJourneyDays(planType);
 const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 
-// ── Batch 1: onboarding + journey in parallel (both need only user.id) ──────
-const [{ data: onboarding }, journey] = await Promise.all([
-  db.from('onboarding_data').select('*').eq('user_id', user.id).maybeSingle(),
-  getUserJourney(user.id, db),
-]);
+// ── Batch 1: onboarding + journey in parallel (critical — graceful error on DB failure) ──
+let onboarding = null;
+let journey = null;
+try {
+  const [ob, j] = await Promise.all([
+    db.from('onboarding_data').select('*').eq('user_id', user.id).maybeSingle(),
+    getUserJourney(user.id, db),
+  ]);
+  onboarding = ob.data;
+  journey = j;
+} catch (e) {
+  console.error('[Dashboard] DB unavailable (batch 1):', e);
+  return new Response(
+    `<!DOCTYPE html><html><head><title>Temporarily Unavailable</title><meta http-equiv="refresh" content="15;url=/dashboard"></head><body style="background:#060d09;color:#dfeedd;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:1.2rem;text-align:center;padding:2rem"><h2 style="font-family:Fraunces,serif;font-size:1.6rem;margin:0;color:#10b981">Keto Journey</h2><p style="font-size:1.1rem;margin:0">Dashboard is temporarily unavailable</p><p style="color:#4d7055;margin:0;font-size:.9rem">Retrying automatically in 15 seconds…</p><a href="/dashboard" style="color:#10b981;font-size:.9rem;margin-top:.5rem">Retry now</a></body></html>`,
+    { status: 503, headers: { 'Content-Type': 'text/html' } }
+  );
+}
 if (!onboarding) return Astro.redirect('/dashboard/onboarding');
 
 const currentDay  = journey?.current_day  || 1;
@@ -53,23 +65,10 @@ const twoWeeksAgo = new Date(Date.now() - 14 * 86400000).toISOString().split('T'
 const mealCycleDays = getMealCycleDays(planType);
 const mealDayTarget = ((currentDay - 1) % mealCycleDays) + 1;
 
-// ── Batch 2: all remaining queries fire in parallel ───────────────────────
-const [
-  { data: rawTasksCurrent },
-  { data: rawTasksDay1 },
-  { data: todayCheckin },
-  { data: weightLogs },
-  { data: activeFast },
-  { data: recentCheckins },
-  { data: weekReport },
-  { data: rawMealsDirect },
-  { data: recentSwaps },
-  { data: mealCompletions },
-  { data: macroGoals },
-  { data: foodLogs },
-  { data: habitsRaw },
-  { data: habitDoneRaw },
-] = await Promise.all([
+// ── Batch 2: all remaining queries fire in parallel (non-critical — empty state on failure) ──
+let batch2 = new Array(14).fill({ data: null });
+try {
+  batch2 = await Promise.all([
   db.from('daily_tasks').select('id, task_title, task_type, completed, xp_earned')
     .eq('user_id', user.id).eq('day_number', currentDay).order('created_at'),
   db.from('daily_tasks').select('id, task_title, task_type, completed, xp_earned')
@@ -99,7 +98,28 @@ const [
     .eq('user_id', user.id).eq('is_active', true).order('sort_order').order('created_at').limit(6),
   db.from('habit_completions').select('habit_id')
     .eq('user_id', user.id).eq('completed_date', today),
-]);
+  ]);
+} catch (e) {
+  console.error('[Dashboard] DB unavailable (batch 2):', e);
+  // batch2 stays as empty-data array — page renders with empty states
+}
+
+const [
+  { data: rawTasksCurrent },
+  { data: rawTasksDay1 },
+  { data: todayCheckin },
+  { data: weightLogs },
+  { data: activeFast },
+  { data: recentCheckins },
+  { data: weekReport },
+  { data: rawMealsDirect },
+  { data: recentSwaps },
+  { data: mealCompletions },
+  { data: macroGoals },
+  { data: foodLogs },
+  { data: habitsRaw },
+  { data: habitDoneRaw },
+] = batch2;
 
 // Meal plan fallback: if no meals for this tier, try basic_30
 const rawMeals = (rawMealsDirect && rawMealsDirect.length > 0)

@@ -40,7 +40,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   } catch (err: any) {
     console.error('Profile update error:', err);
-    return json({ error: 'Server error', details: err.message }, 500);
+    return json({ error: 'Server error' }, 500);
   }
 };
 

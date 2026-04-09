@@ -48,13 +48,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const SUPABASE_URL  = process.env.PUBLIC_SUPABASE_URL       || import.meta.env.PUBLIC_SUPABASE_URL       || cfEnv.PUBLIC_SUPABASE_URL;
     const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY || cfEnv.SUPABASE_SERVICE_ROLE_KEY;
 
-    // Verify webhook signature when secret is configured
-    if (SECRET) {
-      const valid = await verifySignature(SECRET, rawBody, signature);
-      if (!valid) {
-        console.error('[LS Webhook] Invalid signature');
-        return json({ error: 'Invalid signature' }, 401);
-      }
+    // Signature verification is MANDATORY — reject if secret is not configured
+    if (!SECRET) {
+      console.error('[LS Webhook] LEMONSQUEEZY_SECRET not configured — rejecting request');
+      return json({ error: 'Server configuration error' }, 500);
+    }
+    const valid = await verifySignature(SECRET, rawBody, signature);
+    if (!valid) {
+      console.error('[LS Webhook] Invalid signature — possible spoofed request');
+      return json({ error: 'Invalid signature' }, 401);
     }
 
     if (!SUPABASE_URL || !SERVICE_KEY) {
@@ -86,6 +88,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (orderStatus !== 'paid') {
         console.log(`[LS Webhook] Skipping — status: ${orderStatus}`);
         return json({ received: true, skipped: true, reason: 'not_paid' });
+      }
+
+      // Idempotency: skip if this exact order ID was already processed
+      if (orderId) {
+        const { data: alreadyDone } = await db
+          .from('profiles')
+          .select('id')
+          .eq('sale_id', orderId)
+          .maybeSingle();
+        if (alreadyDone) {
+          console.log(`[LS Webhook] Duplicate order ${orderId} — already processed, skipping`);
+          return json({ received: true, skipped: true, reason: 'duplicate_order' });
+        }
+        const { data: alreadyPending } = await db
+          .from('pending_activations')
+          .select('id')
+          .eq('payhip_sale_id', orderId)
+          .maybeSingle();
+        if (alreadyPending) {
+          console.log(`[LS Webhook] Duplicate order ${orderId} — already in pending, skipping`);
+          return json({ received: true, skipped: true, reason: 'duplicate_order' });
+        }
       }
 
       const { tier, days } = detectTier(variantName, priceCents);

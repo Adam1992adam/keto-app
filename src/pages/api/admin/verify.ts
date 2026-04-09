@@ -4,6 +4,20 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
   try {
     const env = (locals as any)?.runtime?.env || {};
     const ADMIN_PASSWORD = env.ADMIN_PASSWORD || import.meta.env.ADMIN_PASSWORD;
+    const APP_URL = process.env.PUBLIC_APP_URL || import.meta.env.PUBLIC_APP_URL || '';
+
+    // CSRF: verify request originates from our own domain
+    const origin  = request.headers.get('origin')  || '';
+    const referer = request.headers.get('referer') || '';
+    const allowed = APP_URL
+      ? (origin.startsWith(APP_URL) || referer.startsWith(APP_URL))
+      : (origin.includes('localhost') || origin.includes('ketojourney'));
+    if (!allowed) {
+      return new Response(JSON.stringify({ success: false, error: 'Forbidden' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     const { password } = await request.json();
 

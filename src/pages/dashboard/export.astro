@@ -14,13 +14,13 @@ import Utensils from 'lucide-astro/Utensils';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
 
-const journey    = await getUserJourney(user.id);
+const journey    = await getUserJourney(user.id, db);
 const currentDay = journey?.current_day || 1;
 
 const imperial = (profile.preferred_units || 'imperial') === 'imperial';

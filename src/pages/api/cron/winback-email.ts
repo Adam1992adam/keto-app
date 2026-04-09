@@ -8,13 +8,13 @@ import { sendWinbackEmail } from '../../../lib/email';
 
 export const GET: APIRoute = async ({ request }) => {
   const authHeader = request.headers.get('authorization');
-  const CRON_SECRET = import.meta.env.CRON_SECRET;
+  const CRON_SECRET = process.env.CRON_SECRET || import.meta.env.CRON_SECRET;
   if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
     return json({ error: 'Forbidden' }, 403);
   }
 
-  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-  const serviceKey  = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceKey) return json({ error: 'Supabase not configured' }, 500);
 
   const db = createClient(supabaseUrl, serviceKey);

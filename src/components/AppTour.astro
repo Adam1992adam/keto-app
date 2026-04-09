@@ -18,92 +18,127 @@ window.__tourUserName = __tn;
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 
+/* ── Safety: remove any stale driver.js overlay from a prior failed run ── */
+function cleanupStaleDriverOverlay() {
+  try {
+    // Remove driver-active class in case it was left on the html element
+    document.documentElement.classList.remove('driver-active');
+    // Remove any leftover driver overlay/popover DOM nodes
+    document.querySelectorAll('.driver-overlay, .driver-popover').forEach(function(el) {
+      el.remove();
+    });
+    // Restore scroll in case body.overflow was set to hidden
+    if (document.body.style.overflow === 'hidden') {
+      document.body.style.overflow = '';
+    }
+  } catch(e) {}
+}
+
+// Run cleanup immediately on script load — catches frozen overlays from prior sessions
+cleanupStaleDriverOverlay();
+
 function startTour() {
   var name = (window as any).__tourUserName || 'there';
+  var d: any = null;
 
-  var d = driver({
-    showProgress: true,
-    progressText: '{{current}} of {{total}}',
-    nextBtnText: 'Next →',
-    prevBtnText: '← Back',
-    doneBtnText: "Let's go! 🚀",
-    animate: true,
-    smoothScroll: true,
-    stagePadding: 12,
-    stageRadius: 18,
-    popoverClass: 'keto-tour-popover',
-    onDestroyed: function () {
-      localStorage.setItem('keto-tour-v1', 'done');
-    },
-    steps: [
-      {
-        popover: {
-          title: 'Welcome to Keto Journey! 👋',
-          description:
-            'Hey <strong>' + name + '</strong>! Let\'s take a quick 60-second tour of your dashboard so you know exactly where everything is.',
-        },
+  try {
+    d = driver({
+      showProgress: true,
+      progressText: '{{current}} of {{total}}',
+      nextBtnText: 'Next →',
+      prevBtnText: '← Back',
+      doneBtnText: "Let's go! 🚀",
+      animate: true,
+      smoothScroll: true,
+      stagePadding: 12,
+      stageRadius: 18,
+      popoverClass: 'keto-tour-popover',
+      onDestroyed: function () {
+        localStorage.setItem('keto-tour-v1', 'done');
+        cleanupStaleDriverOverlay();
       },
-      {
-        element: '#tour-stats',
-        popover: {
-          title: 'Your Daily Stats',
-          description:
-            'These 4 cards show your most important metrics: weight lost, current streak, XP level, and days remaining. They update automatically every day.',
-          side: 'bottom',
-          align: 'start',
+      steps: [
+        {
+          popover: {
+            title: 'Welcome to Keto Journey! 👋',
+            description:
+              'Hey <strong>' + name + '</strong>! Let\'s take a quick 60-second tour of your dashboard so you know exactly where everything is.',
+          },
         },
-      },
-      {
-        element: '#tour-quick-actions',
-        popover: {
-          title: 'Start Here Every Morning',
-          description:
-            'Your daily routine at a glance. Tap <strong>Check-in</strong> first, then log your weight and review your meals. Every action earns XP.',
-          side: 'bottom',
-          align: 'start',
+        {
+          element: '#tour-stats',
+          popover: {
+            title: 'Your Daily Stats',
+            description:
+              'These 4 cards show your most important metrics: weight lost, current streak, XP level, and days remaining. They update automatically every day.',
+            side: 'bottom',
+            align: 'start',
+          },
         },
-      },
-      {
-        element: '#tour-tasks',
-        popover: {
-          title: 'Daily Tasks → XP → Level Up',
-          description:
-            'Complete these tasks each day to earn XP, build your streak, and level up. Tasks are personalized for your current day in the program.',
-          side: 'top',
-          align: 'start',
+        {
+          element: '#tour-quick-actions',
+          popover: {
+            title: 'Start Here Every Morning',
+            description:
+              'Your daily routine at a glance. Tap <strong>Check-in</strong> first, then log your weight and review your meals. Every action earns XP.',
+            side: 'bottom',
+            align: 'start',
+          },
         },
-      },
-      {
-        element: '#tour-meals',
-        popover: {
-          title: 'Your Personalized Meal Plan',
-          description:
-            'Keto meals tailored to your dietary preferences and plan tier. Tap any meal card to see the full recipe with step-by-step instructions and nutrition.',
-          side: 'top',
-          align: 'start',
+        {
+          element: '#tour-tasks',
+          popover: {
+            title: 'Daily Tasks → XP → Level Up',
+            description:
+              'Complete these tasks each day to earn XP, build your streak, and level up. Tasks are personalized for your current day in the program.',
+            side: 'top',
+            align: 'start',
+          },
         },
-      },
-      {
-        element: '.dn-tabs',
-        popover: {
-          title: 'Navigate All Features',
-          description:
-            'Use the top menu to access every feature: Progress charts, Fasting timer, Habits, Shopping list, Recipes, and more. On mobile, use the bottom bar.',
-          side: 'bottom',
-          align: 'start',
+        {
+          element: '#tour-meals',
+          popover: {
+            title: 'Your Personalized Meal Plan',
+            description:
+              'Keto meals tailored to your dietary preferences and plan tier. Tap any meal card to see the full recipe with step-by-step instructions and nutrition.',
+            side: 'top',
+            align: 'start',
+          },
         },
-      },
-      {
-        popover: {
-          title: "You're all set! 🎉",
-          description:
-            'Start with your <strong>first check-in</strong> to earn XP and set your baseline. You can re-run this tour anytime from <strong>More → Learn & Help</strong>.',
+        {
+          element: '.dn-tabs',
+          popover: {
+            title: 'Navigate All Features',
+            description:
+              'Use the top menu to access every feature: Progress charts, Fasting timer, Habits, Shopping list, Recipes, and more. On mobile, use the bottom bar.',
+            side: 'bottom',
+            align: 'start',
+          },
         },
-      },
-    ],
-  });
+        {
+          popover: {
+            title: "You're all set! 🎉",
+            description:
+              'Start with your <strong>first check-in</strong> to earn XP and set your baseline. You can re-run this tour anytime from <strong>More → Learn & Help</strong>.',
+          },
+        },
+      ],
+    });
+  } catch(initErr) {
+    // driver() constructor failed — mark done so we don't retry
+    localStorage.setItem('keto-tour-v1', 'done');
+    cleanupStaleDriverOverlay();
+    return;
+  }
 
-  d.drive();
+  try {
+    d.drive();
+  } catch(driveErr) {
+    // drive() threw — destroy to remove any partially-created overlay
+    try { d.destroy(); } catch(e) {}
+    localStorage.setItem('keto-tour-v1', 'done');
+    cleanupStaleDriverOverlay();
+  }
 }
 
 // Force restart if navigated from Learn page with ?tour=1
