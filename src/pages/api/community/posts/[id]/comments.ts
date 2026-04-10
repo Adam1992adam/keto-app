@@ -18,6 +18,7 @@ export const GET: APIRoute = async ({ cookies, params }) => {
       .select('id, content, created_at, user_id')
       .eq('post_id', post_id)
       .eq('is_deleted', false)
+      .eq('is_hidden', false)
       .order('created_at', { ascending: true })
       .limit(100);
 
@@ -55,6 +56,12 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
 
     const body = await request.json();
     const { content } = body;
+
+    // Block community-banned users
+    const { data: commenterProfile } = await db
+      .from('profiles').select('community_banned').eq('id', user.id).maybeSingle();
+    if (commenterProfile?.community_banned)
+      return json({ error: 'You are banned from the community.' }, 403);
 
     if (!content || typeof content !== 'string' || content.trim().length < 1)
       return json({ error: 'Content required' }, 400);

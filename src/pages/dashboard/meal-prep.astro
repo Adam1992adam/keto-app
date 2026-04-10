@@ -120,6 +120,15 @@ const planDataJson = JSON.stringify(planData);
   <!-- ── Status messages ────────────────────────────────────── -->
   <div id="mpStatus" class="mp-status" style="display:none"></div>
 
+  <!-- ── Mobile Day Tabs (hidden on desktop) ───────────────── -->
+  <div class="mp-day-tabs" id="mpDayTabs">
+    {DAYS.map((day, di) => (
+      <button class={`mp-day-tab${di === 0 ? ' active' : ''}`} data-di={di} onclick="window.selectDay(this)">
+        {day.slice(0,2)}
+      </button>
+    ))}
+  </div>
+
   <!-- ── Weekly Grid ────────────────────────────────────────── -->
   <section class="mp-grid-section">
     <div class="mp-grid" id="mpGrid">
@@ -159,6 +168,13 @@ const planDataJson = JSON.stringify(planData);
       ))}
     </div>
   </section>
+
+  <!-- ── Sticky mobile save bar ────────────────────────────── -->
+  <div class="mp-sticky-save">
+    <button class="mp-btn-save mp-btn-save-sticky" onclick="window.savePlan()">
+      <CheckSquare size={16} style="vertical-align:middle;margin-right:.3rem;" /> Save Plan
+    </button>
+  </div>
 
   <!-- ── Shopping Needs ─────────────────────────────────────── -->
   <section class="mp-shop-section">
@@ -460,6 +476,75 @@ body {
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ── Mobile day tabs ─────────────────────────────────────────── */
+.mp-day-tabs {
+  display: none;
+  gap: .35rem;
+  overflow-x: auto;
+  padding: 0 0 .75rem;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+  animation: fadeUp .4s ease both;
+}
+.mp-day-tabs::-webkit-scrollbar { display: none; }
+.mp-day-tab {
+  flex-shrink: 0;
+  padding: .5rem .9rem;
+  border-radius: 99px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--soft);
+  font-weight: 800;
+  font-size: .82rem;
+  cursor: pointer;
+  transition: all .2s;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mp-day-tab.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
+/* ── Sticky save bar (mobile only) ──────────────────────────── */
+.mp-sticky-save {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: .75rem 1.25rem calc(.75rem + env(safe-area-inset-bottom, 0px));
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+.mp-btn-save-sticky {
+  width: 100%;
+}
+
+/* ── Mobile overrides ────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .mp-day-tabs { display: flex; }
+  .mp-sticky-save { display: block; }
+  .mp-page { padding-bottom: 7rem; }
+
+  /* Hide hero save button on mobile (sticky bar covers it) */
+  .mp-hero .mp-btn-save { display: none; }
+
+  /* Only show active day card */
+  .mp-grid { grid-template-columns: 1fr !important; overflow-x: visible; }
+  .mp-day-card { display: none; }
+  .mp-day-card.mp-day-active { display: block; }
+
+  /* iOS zoom fix: font < 16px triggers auto-zoom on focus */
+  .mp-input { font-size: 16px !important; }
+}
 </style>
 
 <script is:inline define:vars={{ planDataJson, DAYS: JSON.stringify(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']) }}>
@@ -663,6 +748,25 @@ body {
       }
     });
   };
+
+  /* ── Mobile day-tab selection ───────────────────────────── */
+  window.selectDay = function(tabBtn) {
+    var di = parseInt(tabBtn.getAttribute('data-di'), 10);
+    // Update tab styles
+    document.querySelectorAll('.mp-day-tab').forEach(function(t, i) {
+      t.classList.toggle('active', i === di);
+    });
+    // Show/hide day cards
+    document.querySelectorAll('.mp-day-card').forEach(function(card, i) {
+      card.classList.toggle('mp-day-active', i === di);
+    });
+  };
+
+  // Activate first day card by default on mobile
+  (function initDayTabs() {
+    var first = document.querySelector('.mp-day-card');
+    if (first) first.classList.add('mp-day-active');
+  }());
 
   /* ── Initial shopping render from saved plan ────────────── */
   refreshShopping();

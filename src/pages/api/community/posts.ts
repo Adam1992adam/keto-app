@@ -22,6 +22,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
       .from('community_posts')
       .select('id, user_id, content, category, like_count, fire_count, clap_count, comment_count, is_pinned, created_at, updated_at')
       .eq('is_deleted', false)
+      .eq('is_hidden', false)
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false })
       .range(offset, offset + PAGE_SIZE - 1);
@@ -92,6 +93,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return json({ error: 'Content too long (max 2000 characters)' }, 400);
     if (!ALLOWED_CATEGORIES.includes(category))
       return json({ error: 'Invalid category' }, 400);
+
+    // Block community-banned users
+    const { data: posterProfile } = await db
+      .from('profiles').select('community_banned').eq('id', user.id).maybeSingle();
+    if (posterProfile?.community_banned)
+      return json({ error: 'You are banned from the community.' }, 403);
 
     // Rate limit: max 10 posts per user per day
     const today = new Date().toISOString().split('T')[0];

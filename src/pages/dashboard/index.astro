@@ -2,6 +2,7 @@
 // src/pages/dashboard/index.astro
 import { getUserJourney, getMaxJourneyDays, getMealCycleDays } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
+import { generateInsights } from '../../lib/insights';
 import DashNav from '../../components/DashNav.astro';
 import UpsellModal from '../../components/UpsellModal.astro';
 // ── Lucide icons ──────────────────────────────────────────
@@ -53,12 +54,15 @@ try {
 }
 if (!onboarding) return Astro.redirect('/dashboard/onboarding');
 
-const currentDay  = journey?.current_day  || 1;
-const currentWeek = Math.ceil(currentDay / 7);
-const totalXP     = journey?.total_xp     || 0;
-const xpLevel     = journey?.level        || 1;
-const streakDays  = journey?.streak_days  || 0;
-const today       = new Date().toISOString().split('T')[0];
+const currentDay    = journey?.current_day    || 1;
+const currentWeek   = Math.ceil(currentDay / 7);
+const totalXP       = journey?.total_xp       || 0;
+const xpLevel       = journey?.level          || 1;
+const streakDays    = journey?.streak_days    || 0;
+const streakShields = (journey as any)?.streak_shields    ?? 1;
+const shieldLastUsed = (journey as any)?.shield_last_used ?? null;
+// Shield usable: have shields, missed only yesterday (gentle lapse), cooldown clear
+const today         = new Date().toISOString().split('T')[0];
 const twoWeeksAgo = new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0];
 
 // Pre-compute values needed for batch 2 queries
@@ -121,14 +125,16 @@ const [
   { data: habitDoneRaw },
 ] = batch2;
 
-// Meal plan fallback: if no meals for this tier, try basic_30
-const rawMeals = (rawMealsDirect && rawMealsDirect.length > 0)
-  ? rawMealsDirect
-  : await db
-      .from('meal_plans')
-      .select('*, recipe:recipes(id, title, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, tags)')
-      .eq('plan_type', 'basic_30').eq('day_number', mealDayTarget).order('meal_type')
-      .then(({ data }) => data || []);
+// Meal plan fallback + insights fire in parallel
+const [rawMeals, smartInsights] = await Promise.all([
+  (rawMealsDirect && rawMealsDirect.length > 0)
+    ? Promise.resolve(rawMealsDirect)
+    : db.from('meal_plans')
+        .select('*, recipe:recipes(id, title, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, tags)')
+        .eq('plan_type', 'basic_30').eq('day_number', mealDayTarget).order('meal_type')
+        .then(({ data }: any) => data || []),
+  generateInsights(user.id, db, currentDay, streakDays).catch(() => []),
+]);
 
 const usingFallback  = !(rawTasksCurrent && rawTasksCurrent.length > 0);
 const tasks          = !usingFallback ? rawTasksCurrent : (rawTasksDay1 || []);
@@ -283,6 +289,26 @@ const streakDotMax = Math.min(streakDays + 3, 14);
 
 // Weight data passed to ApexCharts via client script (weightLogs already fetched above)
 
+// ── Day-1 Guide data (passed to client only on day 1) ────────────────────
+const isDay1 = currentDay === 1;
+const goalLabelMap: Record<string, string> = {
+  lose_weight:  'Lose weight steadily',
+  lose_fast:    'Lose weight fast',
+  maintain:     'Maintain weight',
+  build_muscle: 'Build muscle',
+  energy:       'Boost energy',
+  health:       'Improve overall health',
+};
+const d1GoalLabel = goalLabelMap[onboarding?.goal || ''] || 'Reach your goal';
+const d1PlanLabel = planType === 'elite_12' ? `Elite ${maxDays}-Day Plan` : planType === 'pro_6' ? `Pro 90-Day Plan` : 'Basic 30-Day Plan';
+const d1Meals = todayMeals.slice(0, 3).map((m: any) => ({
+  type:     (m.meal_type || '').charAt(0).toUpperCase() + (m.meal_type || '').slice(1),
+  title:    m.recipe?.title || 'Meal plan loading…',
+  calories: m.recipe?.calories || 0,
+  protein:  Math.round(parseFloat(m.recipe?.protein || '0')),
+}));
+const d1Tasks = tasks.slice(0, 5).map((t: any) => ({ title: t.task_title || t.task_type || 'Task' }));
+
 // Journey milestones — no `let` in frontmatter per Astro/esbuild rules
 const milestoneInterval = planType === 'basic_30' ? 7 : 30;
 const milestoneCount = Math.floor(maxDays / milestoneInterval);
@@ -374,6 +400,11 @@ const lapseTips: Record<string, { icon: string; title: string; body: string; col
     body: `It's been ${daysSinceCheckin} days. Life happens. The best keto journeys aren't perfect — they're persistent. Take 2 minutes to check in today and your streak starts fresh.` },
 };
 const lapseBanner = isLapsed ? lapseTips[lapseLevel] : null;
+
+// Shield can be used when: gentle lapse (missed only yesterday) + have shields + cooldown clear
+const shieldCooldownClear = !shieldLastUsed ||
+  new Date(today).getTime() - new Date(shieldLastUsed).getTime() > 2 * 86400000;
+const shieldUsable = lapseLevel === 'gentle' && streakShields > 0 && shieldCooldownClear && streakDays > 0;
 
 // ── Daily Focus CTA — one clear priority action ────────────────────────────
 const pendingTasks   = totalTasks - completedTasks;
@@ -871,6 +902,26 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
     @keyframes tOut{from{opacity:1;}to{opacity:0;}}
 
     /* LAPSE RECOVERY BANNER */
+    /* Smart Insights */
+    .insights-card{background:var(--card);border:1px solid var(--border2);border-radius:18px;padding:1rem 1.2rem;margin-bottom:1rem;animation:fadeUp .4s ease both;}
+    .insights-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;}
+    .insights-title{font-size:.78rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--green2);}
+    .insights-dismiss{background:none;border:none;color:var(--soft);font-size:1.2rem;cursor:pointer;line-height:1;padding:.1rem .3rem;border-radius:6px;}
+    .insights-dismiss:hover{color:var(--text);background:var(--muted);}
+    .insights-list{display:flex;flex-direction:column;gap:.65rem;}
+    .insight-row{display:flex;gap:.75rem;align-items:flex-start;padding:.75rem .9rem;border-radius:12px;border:1px solid;}
+    .insight-positive{background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.18);}
+    .insight-warning{background:rgba(245,158,11,.06);border-color:rgba(245,158,11,.2);}
+    .insight-info{background:rgba(59,130,246,.05);border-color:rgba(59,130,246,.15);}
+    .insight-icon{font-size:1.2rem;flex-shrink:0;margin-top:.05rem;}
+    .insight-body{display:flex;flex-direction:column;gap:.2rem;min-width:0;}
+    .insight-title{font-size:.83rem;font-weight:700;color:var(--text);}
+    .insight-text{font-size:.78rem;color:var(--soft);line-height:1.55;}
+    .insight-action{font-size:.75rem;font-weight:700;color:var(--green);text-decoration:none;margin-top:.15rem;display:inline-block;}
+    .insight-action:hover{text-decoration:underline;}
+    .lb-btn-shield{background:rgba(99,102,241,.15)!important;color:#a5b4fc!important;border:1px solid rgba(99,102,241,.35)!important;cursor:pointer;font-family:inherit;}
+    .lb-btn-shield:hover{opacity:.85;}
+    .lb-btn-shield:disabled{opacity:.5;cursor:not-allowed;}
     .lapse-banner{display:flex;align-items:flex-start;gap:.9rem;padding:1rem 1.25rem;border-radius:16px;border:1.5px solid;margin-bottom:1rem;animation:fadeUp .4s ease both;}
     .lb-icon{font-size:1.5rem;flex-shrink:0;margin-top:.05rem;}
     .lb-body{flex:1;min-width:0;}
@@ -963,14 +1014,52 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
 
   <!-- LAPSE RECOVERY BANNER — shown when user missed 1+ days -->
   {lapseBanner && (
-    <div class="lapse-banner" style={`background:${lapseBanner.bg};border-color:${lapseBanner.border};`}>
+    <div class="lapse-banner" id="lapseBanner" style={`background:${lapseBanner.bg};border-color:${lapseBanner.border};`}>
       <div class="lb-icon">{lapseBanner.icon}</div>
       <div class="lb-body">
         <div class="lb-title" style={`color:${lapseBanner.color}`}>{lapseBanner.title}</div>
         <div class="lb-text">{lapseBanner.body}</div>
-        <a href="/dashboard/checkin" class="lb-btn" style={`background:${lapseBanner.color};`}>Check In Now — Restart Streak →</a>
+        <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.5rem;align-items:center;">
+          <a href="/dashboard/checkin" class="lb-btn" style={`background:${lapseBanner.color};`}>Check In Now →</a>
+          {shieldUsable && (
+            <button id="useShieldBtn" class="lb-btn lb-btn-shield" onclick="useStreakShield()">
+              🛡 Use Shield ({streakShields} left)
+            </button>
+          )}
+          {!shieldUsable && streakShields > 0 && lapseLevel !== 'gentle' && (
+            <span style="font-size:.75rem;color:var(--soft);">🛡 {streakShields} shield{streakShields !== 1 ? 's' : ''} saved (shields only cover 1 missed day)</span>
+          )}
+        </div>
+        <div id="shieldMsg" style="display:none;font-size:.78rem;font-weight:600;margin-top:.4rem;"></div>
       </div>
       <button onclick="this.closest('.lapse-banner').style.display='none'" style="background:none;border:none;color:var(--soft);font-size:1.1rem;cursor:pointer;padding:.1rem .3rem;flex-shrink:0;">×</button>
+    </div>
+  )}
+
+  <!-- SMART INSIGHTS -->
+  {smartInsights.length > 0 && (
+    <div class="insights-card" id="insightsCard">
+      <div class="insights-header">
+        <span class="insights-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:-2px;margin-right:.35rem"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Smart Insights
+        </span>
+        <button class="insights-dismiss" onclick="document.getElementById('insightsCard').style.display='none'" aria-label="Dismiss">×</button>
+      </div>
+      <div class="insights-list">
+        {smartInsights.map((ins: any) => (
+          <div class={`insight-row insight-${ins.level}`}>
+            <span class="insight-icon">{ins.icon}</span>
+            <div class="insight-body">
+              <div class="insight-title">{ins.title}</div>
+              <div class="insight-text">{ins.body}</div>
+              {ins.action && (
+                <a href={ins.action.url} class="insight-action">{ins.action.label} →</a>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )}
 
@@ -1023,6 +1112,12 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
       {checkinDone
         ? <span class="stat-badge bg-g">Streak safe</span>
         : <span class="stat-badge bg-a">Check in today</span>}
+      {streakShields > 0 && (
+        <div style="font-size:.65rem;color:var(--soft);margin-top:.35rem;display:flex;align-items:center;gap:.25rem;">
+          {'🛡'.repeat(Math.min(streakShields, 3))}
+          <span>{streakShields} shield{streakShields !== 1 ? 's' : ''}</span>
+        </div>
+      )}
       <div class="stat-mini-bar"><div class="stat-mini-fill" style={`width:${streakPct}%;background:linear-gradient(90deg,#f59e0b,#fcd34d);`}></div></div>
     </div>
     <div class="stat-card" style="--glow:rgba(139,92,246,.09);--glow-color:rgba(139,92,246,.6);--icon-bg:rgba(139,92,246,.1);animation-delay:.12s">
@@ -2531,6 +2626,227 @@ import gsap from 'gsap';
 <script is:inline define:vars={{ weightLogsForChart: (weightLogs || []).map((w: any) => ({ w: w.weight, d: w.logged_date?.slice(5) || '' })).reverse(), wUnitForChart: (profile.preferred_units === 'imperial' ? 'lbs' : 'kg') }}>
 window.__weightData = weightLogsForChart;
 window.__wUnit      = wUnitForChart;
+</script>
+
+{isDay1 && (
+  <>
+  <!-- DAY 1 GUIDED OVERLAY -->
+  <div id="d1Overlay" style="position:fixed;inset:0;z-index:9000;background:rgba(6,13,9,.88);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:1rem;">
+    <div id="d1Card" style="background:#0d1a0f;border:1.5px solid rgba(16,185,129,.3);border-radius:24px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.6);">
+
+      <!-- Progress bar -->
+      <div style="height:3px;background:rgba(16,185,129,.12);border-radius:99px;margin:1.2rem 1.5rem .2rem;">
+        <div id="d1Progress" style="height:100%;border-radius:99px;background:linear-gradient(90deg,#10b981,#34d399);transition:width .35s ease;width:25%;"></div>
+      </div>
+      <div id="d1StepLabel" style="text-align:right;font-size:.68rem;font-weight:700;color:rgba(16,185,129,.6);padding:0 1.5rem .8rem;letter-spacing:.06em;">STEP 1 OF 4</div>
+
+      <!-- Steps container -->
+      <div id="d1Steps">
+
+        <!-- STEP 1: Welcome -->
+        <div class="d1-step" id="d1s1" style="padding:0 1.75rem 1.75rem;">
+          <div style="font-size:2.8rem;margin-bottom:1rem;text-align:center;">🥑</div>
+          <h2 style="font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;text-align:center;color:#dfeedd;line-height:1.25;margin-bottom:.5rem;">
+            Welcome to Day 1, <em style="color:#34d399;">{userName}!</em>
+          </h2>
+          <p style="text-align:center;font-size:.88rem;color:#4d7055;margin-bottom:1.5rem;line-height:1.6;">
+            Your goal: <strong style="color:#dfeedd;">{d1GoalLabel}</strong><br/>
+            Your plan: <strong style="color:#10b981;">{d1PlanLabel}</strong>
+          </p>
+          <div style="display:flex;flex-direction:column;gap:.55rem;margin-bottom:1.5rem;">
+            <div style="display:flex;align-items:center;gap:.75rem;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);border-radius:12px;padding:.75rem 1rem;">
+              <span style="font-size:1.2rem;">🍽</span>
+              <div><div style="font-size:.84rem;font-weight:700;color:#dfeedd;">Your meal plan is ready</div><div style="font-size:.75rem;color:#4d7055;">3 keto meals prepared for you today</div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:.75rem;background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.15);border-radius:12px;padding:.75rem 1rem;">
+              <span style="font-size:1.2rem;">✅</span>
+              <div><div style="font-size:.84rem;font-weight:700;color:#dfeedd;">Daily tasks assigned</div><div style="font-size:.75rem;color:#4d7055;">Complete them to earn XP and build your streak</div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:.75rem;background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.15);border-radius:12px;padding:.75rem 1rem;">
+              <span style="font-size:1.2rem;">🔥</span>
+              <div><div style="font-size:.84rem;font-weight:700;color:#dfeedd;">Your streak starts tonight</div><div style="font-size:.75rem;color:#4d7055;">Check in before midnight to begin Day 1</div></div>
+            </div>
+          </div>
+          <button onclick="d1Next()" style="width:100%;padding:.85rem;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:.95rem;cursor:pointer;font-family:inherit;">
+            Let's see my meals →
+          </button>
+        </div>
+
+        <!-- STEP 2: Meals -->
+        <div class="d1-step" id="d1s2" style="display:none;padding:0 1.75rem 1.75rem;">
+          <h2 style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#dfeedd;margin-bottom:.3rem;">Today's Meals 🍳</h2>
+          <p style="font-size:.82rem;color:#4d7055;margin-bottom:1.2rem;">Your keto meal plan for Day 1 — all under 25g net carbs total.</p>
+          <div style="display:flex;flex-direction:column;gap:.65rem;margin-bottom:1.4rem;" id="d1MealList"></div>
+          <p style="font-size:.75rem;color:#4d7055;margin-bottom:1.2rem;">
+            💡 <strong style="color:#dfeedd;">Tip:</strong> Don't like a meal? Use the <em>Swap</em> button on the dashboard to replace it with something similar.
+          </p>
+          <div style="display:flex;gap:.6rem;">
+            <button onclick="d1Back()" style="flex:0 0 auto;padding:.75rem 1.1rem;background:transparent;border:1px solid rgba(16,185,129,.25);color:#4d7055;border-radius:10px;font-size:.85rem;cursor:pointer;font-family:inherit;">← Back</button>
+            <button onclick="d1Next()" style="flex:1;padding:.75rem;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.88rem;cursor:pointer;font-family:inherit;">See my tasks →</button>
+          </div>
+        </div>
+
+        <!-- STEP 3: Tasks -->
+        <div class="d1-step" id="d1s3" style="display:none;padding:0 1.75rem 1.75rem;">
+          <h2 style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#dfeedd;margin-bottom:.3rem;">Today's Tasks ✅</h2>
+          <p style="font-size:.82rem;color:#4d7055;margin-bottom:1.2rem;">Complete these today to earn XP and build your first streak.</p>
+          <div style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.4rem;" id="d1TaskList"></div>
+          <div style="background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:12px;padding:.75rem 1rem;margin-bottom:1.3rem;font-size:.78rem;color:#c4b5fd;line-height:1.6;">
+            ⚡ <strong>Each completed task earns XP.</strong> Your level, streak, and XP are all tracked on your dashboard — check in every day to keep the streak alive.
+          </div>
+          <div style="display:flex;gap:.6rem;">
+            <button onclick="d1Back()" style="flex:0 0 auto;padding:.75rem 1.1rem;background:transparent;border:1px solid rgba(16,185,129,.25);color:#4d7055;border-radius:10px;font-size:.85rem;cursor:pointer;font-family:inherit;">← Back</button>
+            <button onclick="d1Next()" style="flex:1;padding:.75rem;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.88rem;cursor:pointer;font-family:inherit;">Almost done →</button>
+          </div>
+        </div>
+
+        <!-- STEP 4: Start Strong -->
+        <div class="d1-step" id="d1s4" style="display:none;padding:0 1.75rem 1.75rem;">
+          <div style="font-size:2.5rem;text-align:center;margin-bottom:.75rem;">🚀</div>
+          <h2 style="font-family:'Fraunces',serif;font-size:1.4rem;font-weight:900;text-align:center;color:#dfeedd;margin-bottom:.4rem;">You're set, {userName}!</h2>
+          <p style="text-align:center;font-size:.84rem;color:#4d7055;margin-bottom:1.4rem;line-height:1.6;">
+            The most important thing you can do <strong style="color:#dfeedd;">today</strong> is complete your check-in. It takes 60 seconds and starts your streak.
+          </p>
+          <div style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.3rem;">
+            <a href="/dashboard/checkin" onclick="d1Dismiss()" style="display:block;text-align:center;padding:.85rem;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border-radius:12px;font-weight:700;font-size:.95rem;text-decoration:none;">
+              ✅ Do My Day 1 Check-In →
+            </a>
+            <a href="/dashboard/fasting" onclick="d1Dismiss()" style="display:block;text-align:center;padding:.7rem;background:rgba(139,92,246,.1);color:#c4b5fd;border:1px solid rgba(139,92,246,.25);border-radius:12px;font-weight:600;font-size:.85rem;text-decoration:none;">
+              ⏱ Start My First Fast
+            </a>
+            <button onclick="d1Dismiss()" style="padding:.7rem;background:transparent;border:1px solid rgba(16,185,129,.2);color:#4d7055;border-radius:12px;font-size:.82rem;cursor:pointer;font-family:inherit;">
+              Go to dashboard — I'll explore on my own
+            </button>
+          </div>
+          <p style="text-align:center;font-size:.72rem;color:#233328;">
+            💡 You can revisit this guide anytime via <strong>Help → App Guide</strong>
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  </>
+)}
+
+<script is:inline define:vars={{ isDay1, d1Meals, d1Tasks, userName: userName }}>
+if (isDay1 && localStorage.getItem('keto-d1-guide') !== 'done') {
+  // Populate dynamic content
+  var mealList = document.getElementById('d1MealList');
+  if (mealList && d1Meals.length) {
+    var mealIcons = { Breakfast:'🌅', Lunch:'☀️', Dinner:'🌙', Snack:'🥗' };
+    d1Meals.forEach(function(m) {
+      var icon = mealIcons[m.type] || '🍽';
+      var el = document.createElement('div');
+      el.style.cssText = 'display:flex;align-items:center;gap:.75rem;background:rgba(13,26,15,.8);border:1px solid rgba(16,185,129,.15);border-radius:12px;padding:.75rem 1rem;';
+      el.innerHTML = '<span style="font-size:1.3rem;flex-shrink:0;">' + icon + '</span>'
+        + '<div style="min-width:0;">'
+        + '<div style="font-size:.7rem;font-weight:700;color:#4d7055;text-transform:uppercase;letter-spacing:.07em;">' + m.type + '</div>'
+        + '<div style="font-size:.86rem;font-weight:600;color:#dfeedd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + m.title + '</div>'
+        + '<div style="font-size:.72rem;color:#4d7055;">' + m.calories + ' cal · ' + m.protein + 'g protein</div>'
+        + '</div>';
+      mealList.appendChild(el);
+    });
+    if (!d1Meals.length) {
+      mealList.innerHTML = '<p style="color:#4d7055;font-size:.83rem;text-align:center;padding:1rem;">Meal plan loading — check your dashboard.</p>';
+    }
+  }
+
+  var taskList = document.getElementById('d1TaskList');
+  if (taskList && d1Tasks.length) {
+    d1Tasks.forEach(function(t) {
+      var el = document.createElement('div');
+      el.style.cssText = 'display:flex;align-items:center;gap:.65rem;padding:.65rem .9rem;background:rgba(13,26,15,.8);border:1px solid rgba(16,185,129,.12);border-radius:10px;';
+      el.innerHTML = '<div style="width:18px;height:18px;border-radius:50%;border:2px solid rgba(16,185,129,.4);flex-shrink:0;"></div>'
+        + '<span style="font-size:.84rem;color:#dfeedd;">' + t.title + '</span>';
+      taskList.appendChild(el);
+    });
+  }
+} else {
+  // Already seen or not day 1 — hide overlay immediately
+  var overlay = document.getElementById('d1Overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+var d1Step = 1;
+var d1Total = 4;
+
+function d1Next() {
+  if (d1Step >= d1Total) return;
+  document.getElementById('d1s' + d1Step).style.display = 'none';
+  d1Step++;
+  document.getElementById('d1s' + d1Step).style.display = '';
+  document.getElementById('d1Progress').style.width = Math.round((d1Step / d1Total) * 100) + '%';
+  document.getElementById('d1StepLabel').textContent = 'STEP ' + d1Step + ' OF ' + d1Total;
+  document.getElementById('d1Card').scrollTop = 0;
+}
+
+function d1Back() {
+  if (d1Step <= 1) return;
+  document.getElementById('d1s' + d1Step).style.display = 'none';
+  d1Step--;
+  document.getElementById('d1s' + d1Step).style.display = '';
+  document.getElementById('d1Progress').style.width = Math.round((d1Step / d1Total) * 100) + '%';
+  document.getElementById('d1StepLabel').textContent = 'STEP ' + d1Step + ' OF ' + d1Total;
+  document.getElementById('d1Card').scrollTop = 0;
+}
+
+function d1Dismiss() {
+  localStorage.setItem('keto-d1-guide', 'done');
+  var overlay = document.getElementById('d1Overlay');
+  if (overlay) {
+    overlay.style.transition = 'opacity .3s';
+    overlay.style.opacity = '0';
+    setTimeout(function() { overlay.style.display = 'none'; }, 300);
+  }
+}
+
+window.d1Next    = d1Next;
+window.d1Back    = d1Back;
+window.d1Dismiss = d1Dismiss;
+</script>
+
+<script is:inline>
+async function useStreakShield() {
+  var btn = document.getElementById('useShieldBtn');
+  var msg = document.getElementById('shieldMsg');
+  if (!btn) return;
+  btn.disabled = true;
+  btn.textContent = 'Activating…';
+
+  try {
+    var res  = await fetch('/api/streak/use-shield', { method: 'POST' });
+    var data = await res.json();
+
+    if (!res.ok || !data.success) {
+      msg.textContent = '⚠️ ' + (data.error || 'Shield could not be activated.');
+      msg.style.color = '#f87171';
+      msg.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = '🛡 Use Shield';
+      return;
+    }
+
+    // Success — show confirmation then reload
+    var banner = document.getElementById('lapseBanner');
+    if (banner) {
+      banner.style.background = 'rgba(16,185,129,.09)';
+      banner.style.borderColor = 'rgba(16,185,129,.3)';
+    }
+    msg.textContent = '🛡 Shield activated! Streak restored to ' + data.new_streak + ' days. (' + data.shields_remaining + ' shield' + (data.shields_remaining !== 1 ? 's' : '') + ' remaining)';
+    msg.style.color = '#6ee7b7';
+    msg.style.display = 'block';
+    btn.style.display = 'none';
+
+    setTimeout(function() { window.location.reload(); }, 1800);
+  } catch (e) {
+    msg.textContent = '⚠️ Network error. Please try again.';
+    msg.style.color = '#f87171';
+    msg.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = '🛡 Use Shield';
+  }
+}
 </script>
 
 <AppTour userName={userName} />

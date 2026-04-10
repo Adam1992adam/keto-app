@@ -1,6 +1,7 @@
 ---
 import { getUserJourney, getMaxJourneyDays, getAchievements, kgToLbs, cmToInches } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
+import { generateInsights } from '../../lib/insights';
 import DashNav from '../../components/DashNav.astro';
 
 const auth = await requireAuth(Astro);
@@ -115,6 +116,9 @@ const [
 // Post-batch derivations
 const xpTxns = xpTxnsRaw || [];
 const totalCompletedTasks = completedTasksData?.length || 0;
+
+// Smart Insights (fire after batch, non-blocking)
+const smartInsights = await generateInsights(user.id, db, currentDay, streakDays).catch(() => []);
 
 const startWeight  = onboarding?.current_weight || profile.weight_kg || 0;
 const targetWeight = onboarding?.target_weight  || profile.target_weight_kg || 0;
@@ -688,6 +692,31 @@ const initialPhotos = progressPhotos || [];
       <div class="hstat-sub" style="background:rgba(6,182,212,.1);color:var(--cyan);">{perfectDays} perfect days</div>
     </div>
   </div>
+
+  <!-- SMART INSIGHTS -->
+  {smartInsights.length > 0 && (
+    <div class="card" id="insightsCard" style="animation-delay:.19s;margin-bottom:1.75rem;padding:1.25rem 1.4rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;">
+        <span style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--green2);">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:inline;vertical-align:-1px;margin-right:.3rem"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Smart Insights
+        </span>
+        <button onclick="document.getElementById('insightsCard').style.display='none'" style="background:none;border:none;color:var(--soft);font-size:1.1rem;cursor:pointer;padding:.1rem .3rem;border-radius:6px;">×</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.6rem;">
+        {smartInsights.map((ins: any) => (
+          <div style={`display:flex;gap:.7rem;align-items:flex-start;padding:.7rem .85rem;border-radius:12px;border:1px solid;background:${ins.level==='positive'?'rgba(16,185,129,.06)':ins.level==='warning'?'rgba(245,158,11,.06)':'rgba(59,130,246,.05)'};border-color:${ins.level==='positive'?'rgba(16,185,129,.18)':ins.level==='warning'?'rgba(245,158,11,.2)':'rgba(59,130,246,.15)'};`}>
+            <span style="font-size:1.1rem;flex-shrink:0;">{ins.icon}</span>
+            <div>
+              <div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:.15rem;">{ins.title}</div>
+              <div style="font-size:.77rem;color:var(--soft);line-height:1.55;">{ins.body}</div>
+              {ins.action && <a href={ins.action.url} style="font-size:.73rem;font-weight:700;color:var(--green);text-decoration:none;margin-top:.2rem;display:inline-block;">{ins.action.label} →</a>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
 
   <!-- GOAL WEIGHT MILESTONE TIMELINE -->
   {goalHasTarget && (

@@ -405,7 +405,49 @@ const { count: memberCount } = await db
     .com-btn-primary { padding: .6rem 1.5rem; background: var(--green); color: #fff; border: none; border-radius: 10px; font-weight: 700; font-size: .85rem; cursor: pointer; font-family: inherit; transition: opacity .2s; }
     .com-btn-primary:hover { opacity: .88; }
     .com-btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Report / comment actions */
+    .com-drop-item.warn { color: #f97316; }
+    .com-drop-item.warn:hover { background: rgba(249,115,22,.08); }
+    .com-comment-actions { display: inline-flex; gap: .3rem; margin-left: .4rem; }
+    .com-comment-action { background: none; border: none; font-size: .7rem; color: var(--soft); cursor: pointer; padding: .1rem .35rem; border-radius: 4px; font-family: inherit; transition: color .15s; }
+    .com-comment-action:hover { color: var(--red); }
   </style>
+
+  <!-- REPORT MODAL -->
+  <div id="reportModal" class="com-modal-overlay">
+    <div class="com-modal" style="max-width:420px">
+      <div class="com-modal-head">
+        <h2>Report Content</h2>
+        <button id="closeReportModal" class="com-modal-close">&times;</button>
+      </div>
+      <div style="padding:1.25rem">
+        <p style="font-size:.85rem;color:var(--soft);margin-bottom:1rem;line-height:1.5">
+          Help keep our community safe. Select a reason and our moderators will review this content.
+        </p>
+        <label style="font-size:.78rem;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:.5rem">Reason</label>
+        <select id="reportReason" style="width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:.6rem .9rem;color:var(--text);font-size:.88rem;font-family:inherit;cursor:pointer">
+          <option value="spam">Spam or self-promotion</option>
+          <option value="harassment">Harassment or bullying</option>
+          <option value="inappropriate">Inappropriate content</option>
+          <option value="misinformation">Health misinformation</option>
+          <option value="other">Other</option>
+        </select>
+        <div style="margin-top:.75rem;min-height:1.2rem">
+          <span id="reportError" style="font-size:.78rem;color:var(--red);font-weight:600"></span>
+        </div>
+      </div>
+      <div class="com-modal-footer">
+        <button id="closeReportModal2" class="com-btn-ghost" onclick="document.getElementById('reportModal').classList.remove('open')">Cancel</button>
+        <button id="submitReport" class="com-btn-primary" style="background:var(--red)">Submit Report</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPORT TOAST -->
+  <div id="reportToast" style="display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1a2e1f;border:1px solid rgba(16,185,129,.3);color:var(--green2);padding:.65rem 1.3rem;border-radius:999px;font-size:.83rem;font-weight:600;z-index:2000;align-items:center;gap:.5rem;box-shadow:0 4px 20px rgba(0,0,0,.4)">
+    ✓ Report submitted — our moderators will review it
+  </div>
 
   <script is:inline define:vars={{ userName, planType }}>
   (function() {
@@ -471,6 +513,8 @@ const { count: memberCount } = await db
       html += '<div class="com-dropdown">';
       if (p.is_own) {
         html += '<div class="com-drop-item danger" onclick="deletePost(\'' + esc(p.id) + '\', this)">🗑 Delete</div>';
+      } else {
+        html += '<div class="com-drop-item warn" onclick="openReportModal(\'post\',\'' + esc(p.id) + '\')">🚩 Report</div>';
       }
       html += '<div class="com-drop-item" onclick="copyLink(\'' + esc(p.id) + '\')">🔗 Copy link</div>';
       html += '</div>';
@@ -622,10 +666,17 @@ const { count: memberCount } = await db
       var col = colorFor(c.author_name || 'M');
       var el = document.createElement('div');
       el.className = 'com-comment';
+      if (c.id) el.dataset.cid = c.id;
+      var actions = '';
+      if (c.is_own) {
+        actions = '<button class="com-comment-action" onclick="deleteComment(\'' + esc(c.id||'') + '\',this)">Delete</button>';
+      } else if (c.id) {
+        actions = '<button class="com-comment-action" onclick="openReportModal(\'comment\',\'' + esc(c.id) + '\')">Report</button>';
+      }
       el.innerHTML =
         '<div class="com-comment-av" style="background:linear-gradient(135deg,' + col + ',rgba(52,211,153,.6))">' + esc((c.author_name||'M').charAt(0).toUpperCase()) + '</div>' +
         '<div class="com-comment-bubble">' +
-          '<div class="com-comment-author">' + esc(c.author_name || 'Member') + '</div>' +
+          '<div class="com-comment-author">' + esc(c.author_name || 'Member') + (actions ? ' <span class="com-comment-actions">' + actions + '</span>' : '') + '</div>' +
           '<div class="com-comment-text">' + esc(c.content) + '</div>' +
           '<div class="com-comment-time">' + timeAgo(c.created_at) + '</div>' +
         '</div>';
@@ -741,6 +792,66 @@ const { count: memberCount } = await db
           if (card) card.remove();
         });
     };
+
+    window.deleteComment = function(commentId, btn) {
+      if (!commentId || !confirm('Delete this comment?')) return;
+      fetch('/api/community/comments/' + commentId + '/delete', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.error) return;
+          var el = document.querySelector('[data-cid="' + commentId + '"]');
+          if (el) el.remove();
+        });
+    };
+
+    // ── Report modal ──────────────────────────────────────────────
+    var reportModal    = document.getElementById('reportModal');
+    var reportTarget   = { type: null, id: null };
+
+    window.openReportModal = function(type, id) {
+      reportTarget.type = type;
+      reportTarget.id   = id;
+      document.getElementById('reportError').textContent = '';
+      document.getElementById('reportReason').value = 'spam';
+      reportModal.classList.add('open');
+      document.querySelectorAll('.com-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
+    };
+
+    document.getElementById('closeReportModal').addEventListener('click', function() {
+      reportModal.classList.remove('open');
+    });
+    reportModal.addEventListener('click', function(e) {
+      if (e.target === reportModal) reportModal.classList.remove('open');
+    });
+
+    document.getElementById('submitReport').addEventListener('click', function() {
+      var reason = document.getElementById('reportReason').value;
+      var errEl  = document.getElementById('reportError');
+      var btn    = document.getElementById('submitReport');
+      errEl.textContent = '';
+      if (!reportTarget.id) return;
+
+      var url = reportTarget.type === 'post'
+        ? '/api/community/posts/'    + reportTarget.id + '/report'
+        : '/api/community/comments/' + reportTarget.id + '/report';
+
+      btn.disabled = true; btn.textContent = 'Submitting…';
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason }),
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        btn.disabled = false; btn.textContent = 'Submit Report';
+        if (data.error) { errEl.textContent = data.error; return; }
+        reportModal.classList.remove('open');
+        // Brief toast
+        var toast = document.getElementById('reportToast');
+        if (toast) { toast.style.display = 'flex'; setTimeout(function() { toast.style.display = 'none'; }, 3000); }
+      }).catch(function() {
+        btn.disabled = false; btn.textContent = 'Submit Report';
+        errEl.textContent = 'Network error.';
+      });
+    });
 
     window.expandPost = function(postId, btn) {
       var textEl = document.getElementById('pt-' + postId);

@@ -186,8 +186,10 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
     .btn-upgrade { background:linear-gradient(135deg,var(--purple),#6366f1); color:#fff; }
     .btn-refund  { background:rgba(239,68,68,.12); color:#ef4444; border:1px solid rgba(239,68,68,.25); }
     .btn-support { background:rgba(16,185,129,.12); color:var(--green2); border:1px solid rgba(16,185,129,.25); }
+    .btn-portal  { background:rgba(59,130,246,.12); color:#93c5fd; border:1px solid rgba(59,130,246,.25); }
     .btn-disabled{ background:var(--muted); color:var(--soft); cursor:not-allowed; }
     .btn-disabled:hover { opacity:1; transform:none; }
+    .portal-note { font-size:.75rem; color:var(--soft); margin-top:.5rem; line-height:1.5; }
 
     .refund-warning {
       background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.25);
@@ -315,6 +317,19 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
       )}
     </div>
 
+    <!-- Customer Portal -->
+    <div class="action-card">
+      <div class="action-card-icon">🧾</div>
+      <div class="action-card-title">Billing Portal</div>
+      <div class="action-card-body">
+        View your order, download your invoice, or manage your purchase directly through our billing provider.
+      </div>
+      <button id="portalBtn" class="action-btn btn-portal" onclick="openPortal()">
+        Open Billing Portal →
+      </button>
+      <div id="portalMsg" class="portal-note" style="display:none"></div>
+    </div>
+
     <!-- Support -->
     <div class="action-card">
       <div class="action-card-icon">💬</div>
@@ -341,6 +356,40 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
 
   </div>
 </div>
+
+<script is:inline>
+async function openPortal() {
+  var btn = document.getElementById('portalBtn');
+  var msg = document.getElementById('portalMsg');
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+  msg.style.display = 'none';
+
+  try {
+    var res  = await fetch('/api/lemonsqueezy/portal', { method: 'POST' });
+    var data = await res.json();
+
+    if (data.portal_url) {
+      window.open(data.portal_url, '_blank', 'noopener');
+    } else if (data.not_found) {
+      msg.style.display = 'block';
+      msg.style.color = 'var(--soft)';
+      msg.textContent = 'No billing record found for this email. If you purchased under a different email, contact support.';
+    } else {
+      msg.style.display = 'block';
+      msg.style.color = '#ef4444';
+      msg.textContent = data.error || 'Unable to open billing portal. Please try again or contact support.';
+    }
+  } catch (e) {
+    msg.style.display = 'block';
+    msg.style.color = '#ef4444';
+    msg.textContent = 'Network error. Please try again.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Open Billing Portal →';
+  }
+}
+</script>
 
 </body>
 </html>

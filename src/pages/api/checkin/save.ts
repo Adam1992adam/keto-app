@@ -121,6 +121,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // (avoids an extra user_journey SELECT on RPC failure)
     const currentDay: number = dayResult.data ?? 1;
 
+    // Award a streak shield at every 7-day streak milestone (fire-and-forget)
+    db.rpc('award_streak_shield', { user_id_param: user.id }).catch(() => {});
+
     // ── 5. Auto-complete task entries for what was logged ──
     await autoCompleteTask(user.id, 'checkin', currentDay, accessToken);
     if ((water_glasses || 0) >= 8) {

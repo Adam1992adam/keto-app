@@ -1,0 +1,425 @@
+---
+// /admin/moderation — Community moderation queue
+import { createClient } from '@supabase/supabase-js';
+
+const adminSession = Astro.cookies.get('admin-session')?.value;
+if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
+
+const env = (Astro.locals as any)?.runtime?.env || {};
+const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL || env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+const adminDb = createClient(SUPABASE_URL, SERVICE_KEY);
+
+const tab = Astro.url.searchParams.get('tab') || 'pending';
+
+// Load reports + related post/comment data
+const { data: reportsRaw } = await adminDb
+  .from('community_reports')
+  .select('*')
+  .eq('status', tab === 'pending' ? 'pending' : tab === 'dismissed' ? 'dismissed' : 'actioned')
+  .order('created_at', { ascending: false })
+  .limit(100);
+
+const reports = reportsRaw || [];
+
+// Collect IDs to fetch related data
+const postIds     = [...new Set(reports.filter(r => r.post_id).map(r => r.post_id))];
+const commentIds  = [...new Set(reports.filter(r => r.comment_id).map(r => r.comment_id))];
+const reporterIds = [...new Set(reports.map(r => r.reporter_id))];
+
+const [postsRes, commentsRes, reporterRes] = await Promise.all([
+  postIds.length > 0
+    ? adminDb.from('community_posts').select('id, content, user_id, is_hidden, is_deleted').in('id', postIds)
+    : Promise.resolve({ data: [] }),
+  commentIds.length > 0
+    ? adminDb.from('community_comments').select('id, content, user_id, post_id, is_hidden, is_deleted').in('id', commentIds)
+    : Promise.resolve({ data: [] }),
+  reporterIds.length > 0
+    ? adminDb.from('profiles').select('id, full_name, email, community_banned').in('id', reporterIds)
+    : Promise.resolve({ data: [] }),
+]);
+
+// Collect all author IDs from posts + comments
+const authorIds = [
+  ...new Set([
+    ...(postsRes.data || []).map((p: any) => p.user_id),
+    ...(commentsRes.data || []).map((c: any) => c.user_id),
+  ])
+];
+const { data: authorProfiles } = authorIds.length > 0
+  ? await adminDb.from('profiles').select('id, full_name, email, community_banned, subscription_tier').in('id', authorIds)
+  : { data: [] };
+
+const postMap: Record<string, any>     = {};
+const commentMap: Record<string, any>  = {};
+const reporterMap: Record<string, any> = {};
+const authorMap: Record<string, any>   = {};
+
+for (const p of (postsRes.data    || [])) postMap[p.id]     = p;
+for (const c of (commentsRes.data || [])) commentMap[c.id]  = c;
+for (const r of (reporterRes.data || [])) reporterMap[r.id] = r;
+for (const a of (authorProfiles   || [])) authorMap[a.id]   = a;
+
+const enriched = reports.map((r: any) => {
+  const post    = r.post_id    ? postMap[r.post_id]       : null;
+  const comment = r.comment_id ? commentMap[r.comment_id] : null;
+  const target  = post || comment;
+  const author  = target ? authorMap[target.user_id] : null;
+  const reporter = reporterMap[r.reporter_id];
+  return { ...r, post, comment, author, reporter };
+});
+
+// Banned users list
+const { data: bannedRaw } = await adminDb
+  .from('profiles')
+  .select('id, full_name, email, subscription_tier, community_banned_at, community_banned_reason')
+  .eq('community_banned', true)
+  .order('community_banned_at', { ascending: false });
+const bannedUsers = bannedRaw || [];
+
+// Counts for tabs
+const [{ count: pendingCount }, { count: dismissedCount }, { count: actionedCount }] = await Promise.all([
+  adminDb.from('community_reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+  adminDb.from('community_reports').select('id', { count: 'exact', head: true }).eq('status', 'dismissed'),
+  adminDb.from('community_reports').select('id', { count: 'exact', head: true }).eq('status', 'actioned'),
+]);
+
+const dataJson = JSON.stringify({ enriched, bannedUsers });
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Moderation · KetoJourney Admin</title>
+  <meta name="robots" content="noindex, nofollow"/>
+  <style>
+    :root {
+      --bg: #060d09; --card: #0d1a0f; --card2: #111f13;
+      --border: rgba(16,185,129,.12); --border2: rgba(16,185,129,.25);
+      --text: #dfeedd; --soft: #4d7055; --muted: #233328;
+      --green: #10b981; --green2: #34d399;
+      --gold: #f59e0b; --red: #ef4444; --orange: #f97316;
+      --blue: #3b82f6; --purple: #8b5cf6;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+    a { color: var(--green); text-decoration: none; }
+
+    .admin-nav { background: var(--card); border-bottom: 1px solid var(--border); padding: .85rem 1.5rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+    .nav-brand { display: flex; align-items: center; gap: .6rem; }
+    .nav-brand-icon { width: 36px; height: 36px; background: linear-gradient(135deg,#ef4444,#dc2626); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .nav-brand-text { font-size: 1rem; font-weight: 800; color: var(--text); }
+    .nav-links { display: flex; gap: .5rem; }
+    .nav-link { font-size: .82rem; font-weight: 600; color: var(--soft); padding: .4rem .8rem; border-radius: 8px; transition: all .2s; }
+    .nav-link:hover { color: var(--text); background: var(--muted); }
+    .nav-link.active { color: var(--text); background: var(--muted); }
+
+    .page { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+
+    .hero { background: linear-gradient(135deg,rgba(239,68,68,.12),rgba(220,38,38,.04)); border: 1px solid rgba(239,68,68,.2); border-radius: 20px; padding: 1.8rem 2.2rem; margin-bottom: 2rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .hero-title { font-size: 1.6rem; font-weight: 900; }
+    .hero-sub { font-size: .84rem; color: var(--soft); margin-top: .25rem; }
+
+    .tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: .4rem; width: fit-content; }
+    .tab { padding: .5rem 1.2rem; border-radius: 10px; font-size: .83rem; font-weight: 700; cursor: pointer; color: var(--soft); border: none; background: none; transition: all .2s; display: flex; align-items: center; gap: .4rem; }
+    .tab.active { background: var(--card2); color: var(--text); }
+    .tab-count { font-size: .72rem; padding: .15rem .45rem; border-radius: 999px; background: rgba(255,255,255,.08); }
+    .tab-count.red { background: rgba(239,68,68,.2); color: #ef9494; }
+
+    .report-list { display: flex; flex-direction: column; gap: 1rem; }
+    .report-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; transition: border-color .2s; }
+    .report-card:hover { border-color: var(--border2); }
+    .report-card.actioned { border-color: rgba(16,185,129,.2); }
+    .report-card.dismissed { opacity: .65; }
+
+    .report-header { padding: 1rem 1.2rem .75rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--border); }
+    .report-meta { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+    .badge { font-size: .7rem; font-weight: 700; padding: .2rem .55rem; border-radius: 999px; border: 1px solid; }
+    .badge-reason { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.3); color: #ef9494; }
+    .badge-type-post { background: rgba(59,130,246,.1); border-color: rgba(59,130,246,.25); color: #93c5fd; }
+    .badge-type-comment { background: rgba(139,92,246,.1); border-color: rgba(139,92,246,.25); color: #c4b5fd; }
+    .badge-status-pending { background: rgba(245,158,11,.1); border-color: rgba(245,158,11,.3); color: #fcd34d; }
+    .badge-status-actioned { background: rgba(16,185,129,.1); border-color: rgba(16,185,129,.3); color: #6ee7b7; }
+    .badge-status-dismissed { background: rgba(100,116,139,.1); border-color: rgba(100,116,139,.25); color: #94a3b8; }
+    .badge-banned { background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.35); color: #f87171; }
+
+    .report-time { font-size: .72rem; color: var(--soft); white-space: nowrap; }
+
+    .report-body { padding: 1rem 1.2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media(max-width: 700px) { .report-body { grid-template-columns: 1fr; } }
+
+    .info-block { display: flex; flex-direction: column; gap: .3rem; }
+    .info-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--soft); }
+    .info-value { font-size: .84rem; color: var(--text); }
+    .info-value.content-preview { background: var(--card2); border: 1px solid var(--border); border-radius: 8px; padding: .6rem .8rem; font-size: .82rem; line-height: 1.5; color: var(--text); word-break: break-word; max-height: 100px; overflow: hidden; position: relative; }
+    .info-value.content-preview.hidden-content { color: var(--soft); font-style: italic; }
+    .info-value a { color: var(--green); font-size: .8rem; }
+
+    .report-actions { padding: .75rem 1.2rem; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+    .btn { padding: .45rem 1rem; border-radius: 8px; font-size: .8rem; font-weight: 700; cursor: pointer; border: 1px solid; transition: all .18s; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-dismiss  { background: transparent; border-color: rgba(100,116,139,.3); color: #94a3b8; }
+    .btn-dismiss:hover:not(:disabled)  { background: rgba(100,116,139,.1); }
+    .btn-hide     { background: transparent; border-color: rgba(245,158,11,.3); color: #fcd34d; }
+    .btn-hide:hover:not(:disabled)     { background: rgba(245,158,11,.1); }
+    .btn-ban      { background: transparent; border-color: rgba(239,68,68,.3); color: #f87171; }
+    .btn-ban:hover:not(:disabled)      { background: rgba(239,68,68,.1); }
+    .btn-unban    { background: transparent; border-color: rgba(16,185,129,.3); color: #6ee7b7; }
+    .btn-unban:hover:not(:disabled)    { background: rgba(16,185,129,.1); }
+    .btn-note-toggle { background: transparent; border-color: var(--border); color: var(--soft); font-size: .75rem; }
+    .btn-note-toggle:hover { color: var(--text); }
+
+    .note-row { display: none; padding: .6rem 1.2rem .75rem; border-top: 1px solid var(--border); gap: .5rem; align-items: center; }
+    .note-row.open { display: flex; }
+    .note-input { flex: 1; background: var(--card2); border: 1px solid var(--border2); border-radius: 8px; padding: .45rem .8rem; font-size: .82rem; color: var(--text); outline: none; }
+    .note-input:focus { border-color: var(--green); }
+
+    .empty-state { text-align: center; padding: 4rem 2rem; color: var(--soft); }
+    .empty-state .icon { font-size: 2.5rem; margin-bottom: 1rem; }
+    .empty-state p { font-size: .9rem; }
+
+    .banned-list { display: flex; flex-direction: column; gap: .75rem; }
+    .banned-card { background: var(--card); border: 1px solid rgba(239,68,68,.2); border-radius: 14px; padding: 1rem 1.2rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .banned-info { display: flex; flex-direction: column; gap: .25rem; }
+    .banned-name { font-size: .9rem; font-weight: 700; color: var(--text); }
+    .banned-detail { font-size: .75rem; color: var(--soft); }
+    .banned-reason { font-size: .75rem; color: #f87171; font-style: italic; }
+
+    .action-feedback { font-size: .78rem; color: var(--green2); margin-left: auto; display: none; }
+    .action-feedback.error { color: #f87171; }
+  </style>
+</head>
+<body>
+<nav class="admin-nav">
+  <div class="nav-brand">
+    <div class="nav-brand-icon">🛡</div>
+    <div>
+      <div class="nav-brand-text">KetoJourney Admin</div>
+    </div>
+  </div>
+  <div class="nav-links">
+    <a href="/admin" class="nav-link">Dashboard</a>
+    <a href="/admin/moderation" class="nav-link active">Moderation</a>
+    <a href="/api/auth/logout" class="nav-link" style="color:#ef9494">Logout</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="hero">
+    <div>
+      <div class="hero-title">Community Moderation</div>
+      <div class="hero-sub">Review reports, hide content, and manage bans</div>
+    </div>
+    <div style="display:flex;gap:.75rem;align-items:center">
+      {(pendingCount || 0) > 0 && (
+        <span style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171;font-size:.8rem;font-weight:700;padding:.35rem .9rem;border-radius:999px">
+          {pendingCount} pending
+        </span>
+      )}
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <a href="?tab=pending" class={`tab ${tab==='pending'?'active':''}`}>
+      Pending <span class={`tab-count ${(pendingCount||0)>0?'red':''}`}>{pendingCount||0}</span>
+    </a>
+    <a href="?tab=actioned" class={`tab ${tab==='actioned'?'active':''}`}>
+      Actioned <span class="tab-count">{actionedCount||0}</span>
+    </a>
+    <a href="?tab=dismissed" class={`tab ${tab==='dismissed'?'active':''}`}>
+      Dismissed <span class="tab-count">{dismissedCount||0}</span>
+    </a>
+    <a href="?tab=banned" class={`tab ${tab==='banned'?'active':''}`}>
+      Banned Users <span class={`tab-count ${bannedUsers.length>0?'red':''}`}>{bannedUsers.length}</span>
+    </a>
+  </div>
+
+  {tab !== 'banned' && (
+    <div class="report-list" id="reportList">
+      {enriched.length === 0 ? (
+        <div class="empty-state">
+          <div class="icon">✅</div>
+          <p>No {tab} reports.</p>
+        </div>
+      ) : enriched.map((r: any) => {
+        const isPost    = !!r.post;
+        const target    = r.post || r.comment;
+        const isHidden  = target?.is_hidden;
+        const isDeleted = target?.is_deleted;
+        const authorBanned = r.author?.community_banned;
+        const timeAgo = new Date(r.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+        return (
+          <div class={`report-card ${r.status}`} id={`report-${r.id}`}>
+            <div class="report-header">
+              <div class="report-meta">
+                <span class={`badge badge-type-${isPost?'post':'comment'}`}>{isPost?'Post':'Comment'}</span>
+                <span class={`badge badge-reason`}>{r.reason}</span>
+                <span class={`badge badge-status-${r.status}`}>{r.status}</span>
+                {isHidden  && <span class="badge" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:#fcd34d">Hidden</span>}
+                {isDeleted && <span class="badge" style="background:rgba(100,116,139,.1);border-color:rgba(100,116,139,.25);color:#94a3b8">Deleted</span>}
+                {authorBanned && <span class="badge badge-banned">Author Banned</span>}
+              </div>
+              <div class="report-time">{timeAgo}</div>
+            </div>
+
+            <div class="report-body">
+              <div class="info-block">
+                <div class="info-label">Content</div>
+                <div class={`info-value content-preview ${isHidden||isDeleted?'hidden-content':''}`}>
+                  {isDeleted ? '[Deleted by author]' : isHidden ? '[Hidden by moderator]' : (target?.content || '—')}
+                </div>
+              </div>
+              <div class="info-block" style="gap:.6rem">
+                <div>
+                  <div class="info-label">Author</div>
+                  <div class="info-value">
+                    {r.author?.full_name || 'Unknown'}
+                    <span style="color:var(--soft);font-size:.75rem"> · {r.author?.email || '—'}</span>
+                  </div>
+                </div>
+                <div>
+                  <div class="info-label">Reported by</div>
+                  <div class="info-value">
+                    {r.reporter?.full_name || 'Unknown'}
+                    <span style="color:var(--soft);font-size:.75rem"> · {r.reporter?.email || '—'}</span>
+                  </div>
+                </div>
+                {r.mod_note && (
+                  <div>
+                    <div class="info-label">Mod note</div>
+                    <div class="info-value" style="color:var(--soft);font-style:italic">{r.mod_note}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {tab === 'pending' && (
+              <>
+                <div class="report-actions">
+                  <button class="btn btn-dismiss" onclick={`modAction('dismiss','${r.id}',null,null,null)`}>Dismiss</button>
+                  {isPost && !isHidden && !isDeleted && (
+                    <button class="btn btn-hide" onclick={`modAction('hide_post','${r.id}','${r.post_id}',null,null)`}>Hide Post</button>
+                  )}
+                  {!isPost && !isHidden && !isDeleted && (
+                    <button class="btn btn-hide" onclick={`modAction('hide_comment','${r.id}',null,'${r.comment_id}',null)`}>Hide Comment</button>
+                  )}
+                  {r.author && !r.author.community_banned && (
+                    <button class="btn btn-ban" onclick={`modAction('ban_user','${r.id}',null,null,'${r.author?.id}')`}>Ban User</button>
+                  )}
+                  {r.author?.community_banned && (
+                    <button class="btn btn-unban" onclick={`modAction('unban_user',null,null,null,'${r.author?.id}')`}>Unban User</button>
+                  )}
+                  <button class="btn btn-note-toggle" onclick={`toggleNote('note-${r.id}')`}>+ Add note</button>
+                  <span class="action-feedback" id={`fb-${r.id}`}></span>
+                </div>
+                <div class="note-row" id={`note-${r.id}`}>
+                  <input class="note-input" id={`note-input-${r.id}`} placeholder="Mod note (optional)…" type="text"/>
+                </div>
+              </>
+            )}
+
+            {tab !== 'pending' && (
+              <div class="report-actions">
+                {r.author?.community_banned && (
+                  <button class="btn btn-unban" onclick={`modAction('unban_user',null,null,null,'${r.author?.id}')`}>Unban User</button>
+                )}
+                <span class="action-feedback" id={`fb-${r.id}`}></span>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  )}
+
+  {tab === 'banned' && (
+    <div>
+      {bannedUsers.length === 0 ? (
+        <div class="empty-state">
+          <div class="icon">✅</div>
+          <p>No banned users.</p>
+        </div>
+      ) : (
+        <div class="banned-list">
+          {bannedUsers.map((u: any) => (
+            <div class="banned-card" id={`banned-${u.id}`}>
+              <div class="banned-info">
+                <div class="banned-name">{u.full_name || 'Unknown'} <span style="color:var(--soft);font-size:.8rem;font-weight:400">· {u.email}</span></div>
+                <div class="banned-detail">
+                  Tier: {u.subscription_tier || '—'} ·
+                  Banned: {u.community_banned_at ? new Date(u.community_banned_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'}
+                </div>
+                {u.community_banned_reason && <div class="banned-reason">Reason: {u.community_banned_reason}</div>}
+              </div>
+              <div style="display:flex;align-items:center;gap:.75rem">
+                <button class="btn btn-unban" onclick={`modAction('unban_user',null,null,null,'${u.id}','banned-${u.id}')`}>Unban</button>
+                <span class="action-feedback" id={`fb-banned-${u.id}`}></span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )}
+</div>
+
+<script is:inline>
+function toggleNote(id) {
+  var el = document.getElementById(id);
+  if (el) el.classList.toggle('open');
+}
+
+async function modAction(action, reportId, postId, commentId, userId, cardId) {
+  var noteInput = reportId ? document.getElementById('note-input-' + reportId) : null;
+  var modNote = noteInput ? noteInput.value.trim() : null;
+  var fb = document.getElementById(reportId ? 'fb-' + reportId : 'fb-banned-' + userId);
+
+  var payload = { action: action };
+  if (reportId)   payload.report_id  = reportId;
+  if (postId)     payload.post_id    = postId;
+  if (commentId)  payload.comment_id = commentId;
+  if (userId)     payload.user_id    = userId;
+  if (modNote)    payload.mod_note   = modNote;
+
+  try {
+    var res = await fetch('/api/admin/moderation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    var data = await res.json();
+
+    if (!res.ok || !data.success) {
+      if (fb) { fb.textContent = data.error || 'Error'; fb.className = 'action-feedback error'; fb.style.display = 'inline'; }
+      return;
+    }
+
+    // Visual feedback then remove/update card
+    if (fb) { fb.textContent = 'Done ✓'; fb.className = 'action-feedback'; fb.style.display = 'inline'; }
+
+    var targetId = cardId || (reportId ? 'report-' + reportId : null);
+    var card = targetId ? document.getElementById(targetId) : null;
+
+    setTimeout(function() {
+      if (card) {
+        if (action === 'dismiss' || action === 'hide_post' || action === 'hide_comment' || action === 'ban_user') {
+          card.style.transition = 'opacity .4s';
+          card.style.opacity = '0';
+          setTimeout(function() { card.remove(); }, 400);
+        } else if (action === 'unban_user') {
+          card.style.transition = 'opacity .4s';
+          card.style.opacity = '0';
+          setTimeout(function() { card.remove(); }, 400);
+        }
+      }
+    }, 600);
+  } catch (e) {
+    if (fb) { fb.textContent = 'Network error'; fb.className = 'action-feedback error'; fb.style.display = 'inline'; }
+  }
+}
+</script>
+</body>
+</html>
