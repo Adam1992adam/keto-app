@@ -20,18 +20,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // @ts-ignore
     const env = locals?.runtime?.env || {};
-    const SUPABASE_URL = env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
-    const SUPABASE_KEY = env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    const SUPABASE_URL  = process.env.PUBLIC_SUPABASE_URL       || import.meta.env.PUBLIC_SUPABASE_URL       || env.PUBLIC_SUPABASE_URL;
+    const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!SUPABASE_URL || !SUPABASE_KEY) {
+    if (!SUPABASE_URL || !SERVICE_KEY) {
       return new Response(JSON.stringify({ error: 'Server config error' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
+    // Service role key required — pending_activations has RLS enabled with no anon policy
     const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
     // ── 1. Check email not already registered ─
     const { data: existingProfile } = await supabase
