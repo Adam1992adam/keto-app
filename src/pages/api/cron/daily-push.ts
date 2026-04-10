@@ -17,7 +17,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const authHeader = request.headers.get('authorization');
   // @ts-ignore
   const env = locals?.runtime?.env || {};
-  const CRON_SECRET = env.CRON_SECRET || import.meta.env.CRON_SECRET;
+  const CRON_SECRET = process.env.CRON_SECRET || import.meta.env.CRON_SECRET || env.CRON_SECRET;
 
   if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
     return json({ error: 'Forbidden' }, 403);
@@ -28,8 +28,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const today    = new Date().toISOString().split('T')[0];
 
   // ── Service-role client ─────────────────────────────────────
-  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || env.PUBLIC_SUPABASE_URL;
-  const serviceKey  = import.meta.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.PUBLIC_SUPABASE_URL       || import.meta.env.PUBLIC_SUPABASE_URL       || env.PUBLIC_SUPABASE_URL;
+  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceKey) return json({ error: 'Supabase not configured' }, 500);
 
   const db = createClient(supabaseUrl, serviceKey);

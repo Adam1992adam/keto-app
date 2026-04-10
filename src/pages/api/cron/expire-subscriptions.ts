@@ -22,7 +22,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // @ts-ignore
     const env = runtime?.env || {};
     
-    const CRON_SECRET = env.CRON_SECRET || import.meta.env.CRON_SECRET;
+    const CRON_SECRET = process.env.CRON_SECRET || import.meta.env.CRON_SECRET || env.CRON_SECRET;
     
     if (!CRON_SECRET) {
       console.error('❌ CRON_SECRET not found in environment');
@@ -62,9 +62,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // ============================================
     // 2️⃣ GET SUPABASE CREDENTIALS
     // ============================================
-    const SUPABASE_URL = env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+    const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL       || import.meta.env.PUBLIC_SUPABASE_URL       || env.PUBLIC_SUPABASE_URL;
     // Use service role key to bypass RLS — anon key cannot update other users' rows
-    const SUPABASE_KEY = env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
     
     if (!SUPABASE_URL || !SUPABASE_KEY) {
       console.error('❌ Supabase credentials missing');

@@ -35,10 +35,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // ── Read Supabase credentials ─────────────
     const env = (locals as any)?.runtime?.env || {};
-    const SUPABASE_URL = env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
-    const SUPABASE_KEY = env.PUBLIC_SUPABASE_ANON_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    const SUPABASE_URL  = process.env.PUBLIC_SUPABASE_URL       || import.meta.env.PUBLIC_SUPABASE_URL       || env.PUBLIC_SUPABASE_URL;
+    const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
+    const SUPABASE_ANON = process.env.PUBLIC_SUPABASE_ANON_KEY  || import.meta.env.PUBLIC_SUPABASE_ANON_KEY  || env.PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!SUPABASE_URL || !SUPABASE_KEY) {
+    if (!SUPABASE_URL || !SERVICE_KEY) {
       return new Response(JSON.stringify({ error: 'Server configuration error' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
@@ -46,7 +47,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    // Admin client (service role) — needed to auto-confirm email and bypass RLS
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+    // Anon client — used only for signIn after account creation
+    const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON || '');
 
     const cleanEmail = email.trim().toLowerCase();
 
@@ -64,13 +68,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // ── Create Supabase Auth account ──────────
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // ── Create Supabase Auth account (admin — auto-confirms email) ──
+    // Email is already validated via LemonSqueezy payment, so we skip
+    // the confirmation step to avoid friction for paying customers.
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: cleanEmail,
       password,
-      options: {
-        data: { full_name: fullName },
-      },
+      email_confirm: true,
+      user_metadata: { full_name: fullName },
     });
 
     if (authError) {
