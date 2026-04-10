@@ -159,7 +159,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // initializeUserJourney is a no-op if journey already exists (e.g. auto-created
     // from a prior dashboard visit before onboarding completed). We always reset
     // start_date to today and current_day to 1 so the journey begins correctly.
-    await initializeUserJourney(user.id);
+    await initializeUserJourney(user.id, db);
     await db
       .from('user_journey')
       .update({
