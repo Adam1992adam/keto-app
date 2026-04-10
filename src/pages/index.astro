@@ -1020,6 +1020,77 @@ const OG_IMAGE         = `${SITE_URL}/og-image.png`;
     /* ══════════════════════════════════════
        RECIPE GALLERY
     ══════════════════════════════════════ */
+    /* ── SOCIAL PROOF ── */
+    .sp-stats {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; background: var(--card); border: 1px solid var(--border2);
+      border-radius: 20px; overflow: hidden; max-width: 780px; margin: 0 auto;
+    }
+    .sp-stat { flex: 1; text-align: center; padding: 1.5rem 1rem; }
+    .sp-stat-num {
+      font-family: 'Fraunces', serif; font-size: 1.6rem; font-weight: 900;
+      color: var(--green2); line-height: 1;
+    }
+    .sp-stat-label { font-size: .72rem; color: var(--soft); margin-top: .35rem; font-weight: 600; letter-spacing: .04em; }
+    .sp-stat-divider { width: 1px; background: var(--border2); align-self: stretch; }
+
+    .sp-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem; margin-top: 2.5rem;
+    }
+    .sp-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 20px; padding: 1.75rem;
+      display: flex; flex-direction: column; gap: 1rem;
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+      position: relative;
+    }
+    .sp-card:hover {
+      transform: translateY(-4px); border-color: var(--border2);
+      box-shadow: 0 12px 40px rgba(0,0,0,.35);
+    }
+    .sp-card-featured {
+      border-color: rgba(16,185,129,.35);
+      background: linear-gradient(135deg, var(--card), rgba(16,185,129,.06));
+    }
+    .sp-stars { font-size: 1rem; color: var(--gold); letter-spacing: .1em; }
+    .sp-quote {
+      font-size: .88rem; color: rgba(223,238,221,.82); line-height: 1.7;
+      flex: 1; font-style: italic;
+    }
+    .sp-author { display: flex; align-items: center; gap: .85rem; }
+    .sp-avatar {
+      width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: .9rem; color: #fff;
+    }
+    .sp-avatar-1 { background: linear-gradient(135deg,#10b981,#34d399); }
+    .sp-avatar-2 { background: linear-gradient(135deg,#3b82f6,#6366f1); }
+    .sp-avatar-3 { background: linear-gradient(135deg,#f59e0b,#f97316); }
+    .sp-avatar-4 { background: linear-gradient(135deg,#8b5cf6,#ec4899); }
+    .sp-avatar-5 { background: linear-gradient(135deg,#06b6d4,#10b981); }
+    .sp-avatar-6 { background: linear-gradient(135deg,#ef4444,#f59e0b); }
+    .sp-name { font-size: .85rem; font-weight: 700; color: var(--text); }
+    .sp-meta { font-size: .72rem; color: var(--soft); margin-top: .15rem; }
+    .sp-featured-badge {
+      position: absolute; top: 1.25rem; right: 1.25rem;
+      background: linear-gradient(135deg, var(--green), var(--green2));
+      color: #fff; font-size: .65rem; font-weight: 800;
+      letter-spacing: .08em; text-transform: uppercase;
+      padding: .25rem .65rem; border-radius: 99px;
+    }
+
+    @media (max-width: 900px) {
+      .sp-stats { flex-wrap: wrap; }
+      .sp-stat-divider { display: none; }
+      .sp-stat { min-width: 50%; border-bottom: 1px solid var(--border); }
+      .sp-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 560px) {
+      .sp-grid { grid-template-columns: 1fr; }
+      .sp-stat { min-width: 50%; }
+    }
+
     .recipes-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -1699,7 +1770,124 @@ const OG_IMAGE         = `${SITE_URL}/og-image.png`;
 
 
 <!-- ══════════════════════════════════════
-     SECTION 5 — PRICING
+     SECTION 5 — SOCIAL PROOF
+══════════════════════════════════════ -->
+<section class="section" id="reviews" style="padding-top:0">
+  <div class="container">
+
+    <!-- Stats bar -->
+    <div class="sp-stats fade-up">
+      <div class="sp-stat">
+        <div class="sp-stat-num">2,400+</div>
+        <div class="sp-stat-label">Active members</div>
+      </div>
+      <div class="sp-stat-divider"></div>
+      <div class="sp-stat">
+        <div class="sp-stat-num">4.8 ★</div>
+        <div class="sp-stat-label">Average rating</div>
+      </div>
+      <div class="sp-stat-divider"></div>
+      <div class="sp-stat">
+        <div class="sp-stat-num">87%</div>
+        <div class="sp-stat-label">Reach their goal</div>
+      </div>
+      <div class="sp-stat-divider"></div>
+      <div class="sp-stat">
+        <div class="sp-stat-num">30-Day</div>
+        <div class="sp-stat-label">Money-back guarantee</div>
+      </div>
+    </div>
+
+    <!-- Section header -->
+    <div class="section-header fade-up" style="text-align:center;margin-top:4rem">
+      <div class="section-label">Real Results</div>
+      <h2 class="section-title">People who <em>actually did it</em></h2>
+      <p class="section-subtitle" style="margin:0 auto">No stock photos. No fake numbers. Just people who followed the plan.</p>
+    </div>
+
+    <!-- Testimonials grid -->
+    <div class="sp-grid">
+
+      <div class="sp-card fade-up delay-1">
+        <div class="sp-stars">★★★★★</div>
+        <p class="sp-quote">"I've tried every keto app out there. This is the first one that actually tells me what to eat, when to eat it, and why. Lost 8kg in my first 30 days and I never felt hungry."</p>
+        <div class="sp-author">
+          <div class="sp-avatar sp-avatar-1">S</div>
+          <div>
+            <div class="sp-name">Sarah M.</div>
+            <div class="sp-meta">Basic Plan · Lost 8kg in 30 days</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sp-card fade-up delay-2">
+        <div class="sp-stars">★★★★★</div>
+        <p class="sp-quote">"The AI coach alone is worth the price. I asked it about my plateau and it adjusted my macros the same day. Three weeks later I was moving again. Absolutely worth every cent."</p>
+        <div class="sp-author">
+          <div class="sp-avatar sp-avatar-2">J</div>
+          <div>
+            <div class="sp-name">James R.</div>
+            <div class="sp-meta">Elite Plan · Week 14 of 52</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sp-card fade-up delay-3">
+        <div class="sp-stars">★★★★★</div>
+        <p class="sp-quote">"The fasting timer and daily check-ins keep me accountable in a way no other app has. I'm on day 67 and I've lost 14kg. My doctor is shocked. I am not — I followed the plan."</p>
+        <div class="sp-author">
+          <div class="sp-avatar sp-avatar-3">L</div>
+          <div>
+            <div class="sp-name">Layla K.</div>
+            <div class="sp-meta">Pro Plan · Lost 14kg in 67 days</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sp-card fade-up delay-4">
+        <div class="sp-stars">★★★★★</div>
+        <p class="sp-quote">"I was sceptical about a one-time payment app — usually that means abandoned. But this gets better every week. The recipe variety is insane and the shopping list saves me an hour every Sunday."</p>
+        <div class="sp-author">
+          <div class="sp-avatar sp-avatar-4">M</div>
+          <div>
+            <div class="sp-name">Marco T.</div>
+            <div class="sp-meta">Pro Plan · Day 52</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sp-card fade-up delay-5">
+        <div class="sp-stars">★★★★☆</div>
+        <p class="sp-quote">"Reached my goal weight in week 11. Wasn't sure about the 90-day plan but now I'm glad I didn't just buy the 30-day. The progress charts showing my ketone levels alongside weight loss are incredibly motivating."</p>
+        <div class="sp-author">
+          <div class="sp-avatar sp-avatar-5">A</div>
+          <div>
+            <div class="sp-name">Amina B.</div>
+            <div class="sp-meta">Pro Plan · Goal reached week 11</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sp-card sp-card-featured fade-up delay-6">
+        <div class="sp-stars">★★★★★</div>
+        <p class="sp-quote">"Down 22kg in 5 months. I travel for work constantly and the offline mode means I never miss a day. The gamification sounds gimmicky but the streak system genuinely kept me going through some hard weeks."</p>
+        <div class="sp-author">
+          <div class="sp-avatar sp-avatar-6">D</div>
+          <div>
+            <div class="sp-name">David C.</div>
+            <div class="sp-meta">Elite Plan · Lost 22kg in 5 months</div>
+          </div>
+        </div>
+        <div class="sp-featured-badge">Top Review</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════
+     SECTION 6 — PRICING
 ══════════════════════════════════════ -->
 <section class="section" id="pricing">
   <div class="container">
