@@ -150,14 +150,20 @@ export async function sendWeeklySummaryEmail(to: string, name: string, stats: {
   totalXp: number;
   level: number;
   weightLost: number;
+  weekWeightDelta?: number;
   avgEnergy: number;
+  avgMood?: number;
   tasksCompleted?: number;
   tasksTotal?: number;
   waterAvg?: number;
+  topFoods?: string[];
+  fastingSessions?: number;
+  topInsight?: { icon: string; title: string; body: string };
 }) {
   const firstName = name.split(' ')[0];
-  const { weekNum, currentDay, streak, checkins, xpEarned, totalXp, level, weightLost, avgEnergy,
-          tasksCompleted = 0, tasksTotal = 0, waterAvg = 0 } = stats;
+  const { weekNum, currentDay, streak, checkins, xpEarned, totalXp, level, weightLost,
+          weekWeightDelta, avgEnergy, avgMood = 0, tasksCompleted = 0, tasksTotal = 0,
+          waterAvg = 0, topFoods = [], fastingSessions = 0, topInsight } = stats;
 
   const levelTitles = ['Keto Beginner','Keto Learner','Fat Burner','Keto Warrior','Ketosis Master','Keto Champion','Elite Keto','Keto Legend','Keto Immortal','Grand Keto'];
   const levelTitle  = levelTitles[Math.min(Math.floor((level - 1) / 2), levelTitles.length - 1)];
@@ -177,6 +183,13 @@ export async function sendWeeklySummaryEmail(to: string, name: string, stats: {
     score >= 3 ? `💪 <strong style="color:#dfeedd;">Solid effort this week, ${firstName}!</strong> A few more check-ins next week and you'll be unstoppable.` :
                  `🌱 <strong style="color:#dfeedd;">Every journey has tough weeks, ${firstName}.</strong> The important thing is you're still here. Reset, refocus, and let's make next week count.`;
 
+  // Week-over-week weight chip
+  const weightDeltaChip = weekWeightDelta !== undefined && Math.abs(weekWeightDelta) >= 0.1
+    ? weekWeightDelta < 0
+      ? `<span style="display:inline-block;padding:3px 10px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.22);border-radius:99px;font-size:12px;font-weight:800;color:#10b981;margin-left:8px;">↓ ${Math.abs(weekWeightDelta).toFixed(1)} kg this week</span>`
+      : `<span style="display:inline-block;padding:3px 10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:99px;font-size:12px;font-weight:800;color:#f87171;margin-left:8px;">↑ ${weekWeightDelta.toFixed(1)} kg this week</span>`
+    : '';
+
   const content = `
     ${h1(`Week ${weekNum} Summary 📊`)}
     <div style="padding:14px 16px;background:rgba(16,185,129,.07);border-radius:12px;border:1px solid rgba(16,185,129,.14);margin-bottom:20px;">
@@ -186,9 +199,9 @@ export async function sendWeeklySummaryEmail(to: string, name: string, stats: {
     <!-- Stats grid -->
     <table width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;">
       <tr>
-        ${statCell('🔥', streak > 0 ? `${streak}-Day` : '0', 'Current Streak', '#f59e0b')}
+        ${statCell('🔥', streak > 0 ? `${streak}-Day` : '0', 'Streak', '#f59e0b')}
         ${statCell('✏️', checkinsLabel, 'Check-ins', '#10b981')}
-        ${statCell('⭐', xpEarned > 0 ? `+${xpEarned}` : '0', 'XP This Week', '#8b5cf6')}
+        ${statCell('⭐', xpEarned > 0 ? `+${xpEarned}` : '0', 'XP Earned', '#8b5cf6')}
         ${statCell('⚡', energyLabel, 'Avg Energy', '#3b82f6')}
       </tr>
     </table>
@@ -206,15 +219,36 @@ export async function sendWeeklySummaryEmail(to: string, name: string, stats: {
       </div>
     </div>` : ''}
 
+    ${topFoods.length > 0 ? `<!-- Top foods this week -->
+    <div style="padding:14px 16px;background:rgba(16,185,129,.05);border-radius:12px;border:1px solid rgba(16,185,129,.11);margin-bottom:16px;">
+      <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#dfeedd;">🍽️ What you ate most this week</p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${topFoods.map(f => `<span style="display:inline-block;padding:4px 11px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.18);border-radius:99px;font-size:12px;color:#34d399;font-weight:700;">${f}</span>`).join('')}
+      </div>
+    </div>` : ''}
+
     ${waterAvg >= 1 ? `<div style="padding:12px 16px;background:rgba(59,130,246,.07);border-radius:12px;border:1px solid rgba(59,130,246,.15);margin-bottom:16px;">
-      <p style="margin:0;font-size:13px;color:#60a5fa;">💧 Average hydration: <strong>${waterAvg.toFixed(1)} glasses/day</strong>${waterAvg >= 8 ? ' — excellent hydration!' : waterAvg >= 6 ? ' — good, aim for 8+' : ' — try to drink more water!'}</p>
+      <p style="margin:0;font-size:13px;color:#60a5fa;">💧 Average hydration: <strong>${waterAvg.toFixed(1)} glasses/day</strong>${waterAvg >= 8 ? ' — excellent hydration! 🌊' : waterAvg >= 6 ? ' — good, aim for 8+' : ' — try to increase water intake'}</p>
     </div>` : ''}
 
-    ${weightLost > 0 ? `<div style="padding:14px 16px;background:rgba(16,185,129,.08);border-radius:12px;border:1px solid rgba(16,185,129,.15);margin-bottom:16px;">
-      <p style="margin:0;font-size:14px;color:#10b981;font-weight:700;">🎯 ${(weightLost * 2.20462).toFixed(1)} lbs lost since you started — incredible progress!</p>
+    ${fastingSessions > 0 ? `<div style="padding:12px 16px;background:rgba(139,92,246,.07);border-radius:12px;border:1px solid rgba(139,92,246,.15);margin-bottom:16px;">
+      <p style="margin:0;font-size:13px;color:#a78bfa;">⏱️ <strong>${fastingSessions} fasting session${fastingSessions !== 1 ? 's' : ''}</strong> completed this week${fastingSessions >= 4 ? ' — elite-level discipline!' : fastingSessions >= 2 ? ' — great consistency' : ''}</p>
     </div>` : ''}
 
-    ${p(`You're on <strong style="color:#dfeedd;">Day ${currentDay}</strong> · <strong style="color:#8b5cf6;">Level ${level} — ${levelTitle}</strong> · <strong style="color:#f59e0b;">${totalXp.toLocaleString()} total XP</strong>. Week ${nextWeek} starts now — make it count!`)}
+    ${weightLost > 0 || weekWeightDelta !== undefined ? `<div style="padding:14px 16px;background:rgba(16,185,129,.08);border-radius:12px;border:1px solid rgba(16,185,129,.15);margin-bottom:16px;">
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td><p style="margin:0;font-size:14px;color:#10b981;font-weight:700;">🎯 ${weightLost > 0 ? `${(weightLost * 2.20462).toFixed(1)} lbs lost since you started` : 'Weight tracking active'}</p></td>
+        ${weekWeightDelta !== undefined ? `<td style="text-align:right;">${weightDeltaChip}</td>` : ''}
+      </tr></table>
+    </div>` : ''}
+
+    ${topInsight ? `<!-- Personalized insight -->
+    <div style="padding:16px;background:rgba(245,158,11,.07);border-radius:12px;border:1px solid rgba(245,158,11,.18);margin-bottom:16px;">
+      <p style="margin:0 0 6px;font-size:14px;font-weight:800;color:#dfeedd;">${topInsight.icon} ${topInsight.title}</p>
+      <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.6;">${topInsight.body}</p>
+    </div>` : ''}
+
+    ${p(`Day <strong style="color:#dfeedd;">${currentDay}</strong> · <strong style="color:#8b5cf6;">Level ${level} — ${levelTitle}</strong> · <strong style="color:#f59e0b;">${totalXp.toLocaleString()} XP</strong>. Week ${nextWeek} starts now!`)}
 
     <div style="text-align:center;margin:24px 0;">
       ${btn(`${APP_URL}/dashboard/weekly`, `View Week ${weekNum} Full Report →`)}
@@ -228,17 +262,27 @@ export async function sendWeeklySummaryEmail(to: string, name: string, stats: {
 
   const html = layout(content, `Your Week ${weekNum} keto summary — ${streak > 0 ? `${streak}-day streak!` : 'keep going!'}`);
 
+  // Pick the most impressive stat for the subject line
+  const subject = (() => {
+    if (weekWeightDelta !== undefined && weekWeightDelta < -0.5)
+      return `🎯 Lost ${Math.abs(weekWeightDelta).toFixed(1)} kg this week — Week ${weekNum} summary, ${firstName}!`;
+    if (streak >= 14)
+      return `🔥 ${streak}-day streak! Your Week ${weekNum} summary, ${firstName}`;
+    if (checkins === 7)
+      return `✅ Perfect week — 7/7 check-ins! Week ${weekNum} summary, ${firstName}`;
+    if (avgEnergy >= 4.5 && checkins >= 5)
+      return `⚡ Incredible energy this week — Week ${weekNum} summary, ${firstName}!`;
+    if (fastingSessions >= 3)
+      return `⏱️ ${fastingSessions} fasting sessions this week — Week ${weekNum} summary, ${firstName}!`;
+    if (streak >= 7)
+      return `🔥 ${streak}-day streak — Week ${weekNum} summary, ${firstName}!`;
+    if (checkins >= 5)
+      return `💪 Strong week, ${firstName}! Your Week ${weekNum} summary`;
+    return `📊 Week ${weekNum} summary — let's make Week ${nextWeek} count, ${firstName}!`;
+  })();
+
   const resend = getResend();
-  return resend.emails.send({
-    from: FROM,
-    to,
-    subject: streak >= 7
-      ? `🔥 ${streak}-day streak — Week ${weekNum} summary, ${firstName}!`
-      : checkins >= 6
-      ? `✅ Strong week, ${firstName}! Your Week ${weekNum} summary`
-      : `📊 Week ${weekNum} summary — let's crush Week ${nextWeek}, ${firstName}!`,
-    html,
-  });
+  return resend.emails.send({ from: FROM, to, subject, html });
 }
 
 function statCell(icon: string, value: string, label: string, color: string) {
