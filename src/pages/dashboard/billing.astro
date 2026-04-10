@@ -1,0 +1,346 @@
+---
+import { requireAuth } from '../../lib/auth';
+import DashNav from '../../components/DashNav.astro';
+
+const auth = await requireAuth(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile } = auth;
+
+const planType  = profile.subscription_tier || 'basic_30';
+const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const userName  = profile.full_name?.split(' ')[0] || 'there';
+
+// Subscription dates
+const startDate = profile.subscription_start_date ? new Date(profile.subscription_start_date) : null;
+const endDate   = profile.subscription_end_date   ? new Date(profile.subscription_end_date)   : null;
+const now       = new Date();
+
+const totalDays    = (startDate && endDate) ? Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000) : 30;
+const daysUsed     = startDate ? Math.max(0, Math.ceil((now.getTime() - startDate.getTime()) / 86400000)) : 0;
+const daysLeft     = endDate   ? Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / 86400000)) : 0;
+const progressPct  = Math.min(100, Math.round((daysUsed / totalDays) * 100));
+
+// Refund eligibility — within 30 days of purchase
+const daysSincePurchase = startDate ? Math.ceil((now.getTime() - startDate.getTime()) / 86400000) : 999;
+const refundEligible    = daysSincePurchase <= 30;
+
+// Plan metadata
+const planMeta: Record<string, { name: string; price: string; color: string; gradient: string; features: string[] }> = {
+  basic_30:  {
+    name: 'Basic Plan', price: '$29', color: '#10b981',
+    gradient: 'linear-gradient(135deg,#10b981,#059669)',
+    features: ['30-day structured meal plan', '30 keto recipes', 'Progress tracking', 'Fasting timer', 'Daily check-ins', '4 free eBooks'],
+  },
+  pro_6: {
+    name: 'Pro Plan', price: '$69', color: '#8b5cf6',
+    gradient: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+    features: ['90-day structured meal plan', '87+ keto recipes', 'Advanced analytics', 'Body measurements', 'Community access', 'Priority support', '4 free eBooks'],
+  },
+  elite_12: {
+    name: 'Elite Plan', price: '$149', color: '#f59e0b',
+    gradient: 'linear-gradient(135deg,#f59e0b,#f97316)',
+    features: ['360-day structured meal plan', '87+ keto recipes', 'AI Keto Coach (unlimited)', 'Advanced analytics', 'Body measurements', 'Community access', 'Priority support', '4 free eBooks'],
+  },
+};
+
+const meta        = planMeta[planType] || planMeta.basic_30;
+const isElite     = planType === 'elite_12';
+const isPro       = planType === 'pro_6';
+const isActive    = profile.subscription_status === 'active';
+
+const formatDate  = (d: Date | null) => d ? d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) : '—';
+const saleId      = profile.payhip_sale_id || profile.sale_id || null;
+
+const CHECKOUT_PRO   = import.meta.env.LEMONSQUEEZY_PRO_URL   || '';
+const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
+const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
+---
+
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Plan · Keto Journey</title>
+  <meta name="robots" content="noindex"/>
+  <script is:inline>
+    (function(){ var t = localStorage.getItem('keto-theme') || 'dark'; document.documentElement.setAttribute('data-theme', t); })();
+  </script>
+  <link rel="icon" type="image/png" sizes="32x32" href="/icon-72.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#060d09; --card:#0d1a0f; --card2:#111f13;
+      --border:rgba(16,185,129,.1); --border2:rgba(16,185,129,.22);
+      --text:#dfeedd; --soft:#4d7055; --muted:#233328;
+      --green:#10b981; --green2:#34d399; --gold:#f59e0b;
+      --red:#ef4444; --purple:#8b5cf6;
+    }
+    [data-theme="light"] {
+      --bg:#f4faf6; --card:#ffffff; --card2:#f0f7f2;
+      --border:rgba(16,185,129,.15); --border2:rgba(16,185,129,.3);
+      --text:#0d1f10; --soft:#4d7055; --muted:#c8e0cc;
+    }
+    *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+    .page { max-width:860px; margin:0 auto; padding:2rem 1.25rem 5rem; }
+    h1 { font-family:'Fraunces',serif; font-weight:900; font-size:clamp(1.6rem,3vw,2.2rem); margin-bottom:.35rem; }
+    .sub { font-size:.88rem; color:var(--soft); margin-bottom:2rem; }
+
+    /* ── Plan card ── */
+    .plan-card {
+      border-radius:24px; padding:2rem;
+      border:1.5px solid var(--border2);
+      background:var(--card);
+      margin-bottom:1.5rem;
+      position:relative; overflow:hidden;
+    }
+    .plan-card::before {
+      content:''; position:absolute; inset:0;
+      background:var(--plan-gradient);
+      opacity:.07; pointer-events:none;
+    }
+    .plan-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem; }
+    .plan-name-row { display:flex; align-items:center; gap:.75rem; }
+    .plan-badge {
+      padding:.35rem 1rem; border-radius:99px;
+      font-size:.72rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+      color:#fff; background:var(--plan-gradient);
+    }
+    .plan-title { font-family:'Fraunces',serif; font-size:1.5rem; font-weight:900; }
+    .plan-status {
+      padding:.3rem .85rem; border-radius:99px; font-size:.72rem; font-weight:800;
+      letter-spacing:.06em; text-transform:uppercase;
+    }
+    .plan-status.active   { background:rgba(16,185,129,.15); color:var(--green2); border:1px solid rgba(16,185,129,.3); }
+    .plan-status.expired  { background:rgba(239,68,68,.12);  color:#ef4444;       border:1px solid rgba(239,68,68,.25); }
+    .plan-status.inactive { background:rgba(107,114,128,.12);color:#9ca3af;       border:1px solid rgba(107,114,128,.2);}
+
+    /* Progress bar */
+    .progress-section { margin-bottom:1.5rem; }
+    .progress-label { display:flex; justify-content:space-between; font-size:.8rem; color:var(--soft); margin-bottom:.5rem; }
+    .progress-label strong { color:var(--text); }
+    .progress-track {
+      height:8px; background:var(--muted); border-radius:99px; overflow:hidden;
+    }
+    .progress-fill {
+      height:100%; border-radius:99px;
+      background:var(--plan-gradient);
+      transition:width .6s ease;
+    }
+    .progress-stats { display:flex; gap:1.5rem; margin-top:1rem; flex-wrap:wrap; }
+    .pstat { font-size:.82rem; }
+    .pstat-num { font-family:'Fraunces',serif; font-size:1.3rem; font-weight:900; color:var(--text); line-height:1; }
+    .pstat-label { font-size:.72rem; color:var(--soft); margin-top:.15rem; }
+
+    /* Features list */
+    .features-title { font-size:.75rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--soft); margin-bottom:.75rem; }
+    .features-list { display:flex; flex-wrap:wrap; gap:.5rem; }
+    .feature-pill {
+      background:var(--card2); border:1px solid var(--border);
+      border-radius:99px; padding:.3rem .85rem;
+      font-size:.78rem; color:var(--text);
+      display:flex; align-items:center; gap:.4rem;
+    }
+    .feature-pill::before { content:'✓'; color:var(--green); font-weight:800; font-size:.72rem; }
+
+    /* Order info */
+    .order-row {
+      display:flex; gap:.75rem; align-items:center; flex-wrap:wrap;
+      background:var(--card2); border:1px solid var(--border);
+      border-radius:12px; padding:.875rem 1.1rem; margin-top:1.25rem;
+      font-size:.82rem;
+    }
+    .order-label { color:var(--soft); }
+    .order-val { color:var(--text); font-weight:700; font-family:monospace; font-size:.8rem; word-break:break-all; }
+
+    /* Info cards row */
+    .info-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem; }
+    @media(max-width:560px) { .info-row { grid-template-columns:1fr; } }
+    .info-card {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:16px; padding:1.25rem 1.5rem;
+    }
+    .info-card-label { font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:var(--soft); margin-bottom:.4rem; }
+    .info-card-val { font-family:'Fraunces',serif; font-size:1.15rem; font-weight:700; color:var(--text); }
+
+    /* Action cards */
+    .actions-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    @media(max-width:560px) { .actions-grid { grid-template-columns:1fr; } }
+    .action-card {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:20px; padding:1.5rem;
+      display:flex; flex-direction:column; gap:.75rem;
+    }
+    .action-card-icon { font-size:1.5rem; }
+    .action-card-title { font-size:.95rem; font-weight:700; color:var(--text); }
+    .action-card-body { font-size:.82rem; color:var(--soft); line-height:1.6; flex:1; }
+    .action-btn {
+      display:inline-flex; align-items:center; justify-content:center; gap:.4rem;
+      padding:.6rem 1.25rem; border-radius:10px; font-size:.82rem; font-weight:700;
+      text-decoration:none; transition:opacity .15s, transform .15s; cursor:pointer; border:none;
+    }
+    .action-btn:hover { opacity:.88; transform:translateY(-1px); }
+    .btn-upgrade { background:linear-gradient(135deg,var(--purple),#6366f1); color:#fff; }
+    .btn-refund  { background:rgba(239,68,68,.12); color:#ef4444; border:1px solid rgba(239,68,68,.25); }
+    .btn-support { background:rgba(16,185,129,.12); color:var(--green2); border:1px solid rgba(16,185,129,.25); }
+    .btn-disabled{ background:var(--muted); color:var(--soft); cursor:not-allowed; }
+    .btn-disabled:hover { opacity:1; transform:none; }
+
+    .refund-warning {
+      background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.25);
+      border-radius:10px; padding:.75rem 1rem; font-size:.78rem; color:rgba(245,158,11,.9);
+      margin-top:.5rem;
+    }
+  </style>
+</head>
+<body>
+
+<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="profile" />
+
+<div class="page">
+  <h1>My Plan</h1>
+  <p class="sub">Manage your subscription, view usage, and upgrade anytime.</p>
+
+  <!-- ── Plan card ── -->
+  <div class="plan-card" style={`--plan-gradient:${meta.gradient};`}>
+    <div class="plan-header">
+      <div class="plan-name-row">
+        <span class="plan-badge">{meta.name}</span>
+        <span class="plan-title">{meta.price} one-time</span>
+      </div>
+      <span class={`plan-status ${isActive ? 'active' : 'expired'}`}>
+        {isActive ? '● Active' : '● Expired'}
+      </span>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-section">
+      <div class="progress-label">
+        <span>Journey progress</span>
+        <strong>{progressPct}% complete</strong>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" style={`width:${progressPct}%`}></div>
+      </div>
+      <div class="progress-stats">
+        <div class="pstat">
+          <div class="pstat-num">{daysUsed}</div>
+          <div class="pstat-label">Days completed</div>
+        </div>
+        <div class="pstat">
+          <div class="pstat-num">{daysLeft}</div>
+          <div class="pstat-label">Days remaining</div>
+        </div>
+        <div class="pstat">
+          <div class="pstat-num">{totalDays}</div>
+          <div class="pstat-label">Total days</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Features -->
+    <div class="features-title">What's included</div>
+    <div class="features-list">
+      {meta.features.map((f: string) => (
+        <span class="feature-pill">{f}</span>
+      ))}
+    </div>
+
+    <!-- Order info -->
+    {saleId && (
+      <div class="order-row">
+        <span class="order-label">Order ID:</span>
+        <span class="order-val">{saleId}</span>
+      </div>
+    )}
+  </div>
+
+  <!-- ── Dates ── -->
+  <div class="info-row">
+    <div class="info-card">
+      <div class="info-card-label">Started</div>
+      <div class="info-card-val">{formatDate(startDate)}</div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-label">{isActive ? 'Expires' : 'Expired'}</div>
+      <div class="info-card-val">{formatDate(endDate)}</div>
+    </div>
+  </div>
+
+  <!-- ── Actions ── -->
+  <div class="actions-grid">
+
+    <!-- Upgrade (hidden for Elite) -->
+    {!isElite && (
+      <div class="action-card">
+        <div class="action-card-icon">⚡</div>
+        <div class="action-card-title">Upgrade your plan</div>
+        <div class="action-card-body">
+          {isPro
+            ? 'Unlock the AI Keto Coach, 360-day plan, and lifetime priority support with Elite.'
+            : 'Get 87+ recipes, 90-day plan, advanced analytics, and community access with Pro.'}
+        </div>
+        <a href={upgradeUrl} class="action-btn btn-upgrade">
+          Upgrade to {isPro ? 'Elite' : 'Pro'} →
+        </a>
+      </div>
+    )}
+
+    <!-- Refund -->
+    <div class="action-card">
+      <div class="action-card-icon">🛡️</div>
+      <div class="action-card-title">30-Day Money-Back Guarantee</div>
+      <div class="action-card-body">
+        {refundEligible
+          ? `You're within the 30-day refund window (day ${daysSincePurchase} of 30). Email us with your order ID and we'll process it within 5 business days.`
+          : 'Your 30-day refund window has passed. Contact support if you experienced a technical issue — we\'ll always work with you.'}
+      </div>
+      {refundEligible ? (
+        <a
+          href={`mailto:support@ketojourney.fun?subject=Refund Request — Order ${saleId || ''}&body=Hi, I'd like to request a refund.%0A%0AOrder ID: ${saleId || 'N/A'}%0AEmail: ${user.email}%0APlan: ${meta.name}`}
+          class="action-btn btn-refund"
+        >
+          Request Refund →
+        </a>
+      ) : (
+        <span class="action-btn btn-disabled">Window closed</span>
+      )}
+      {refundEligible && (
+        <div class="refund-warning">
+          ⚠️ Requesting a refund will cancel your access immediately.
+        </div>
+      )}
+    </div>
+
+    <!-- Support -->
+    <div class="action-card">
+      <div class="action-card-icon">💬</div>
+      <div class="action-card-title">Contact Support</div>
+      <div class="action-card-body">
+        Questions about your plan, billing, or the app? Our team typically responds within 1–2 business days.
+      </div>
+      <a href="mailto:support@ketojourney.fun" class="action-btn btn-support">
+        Email Support →
+      </a>
+    </div>
+
+    <!-- View policy -->
+    <div class="action-card">
+      <div class="action-card-icon">📄</div>
+      <div class="action-card-title">Refund Policy</div>
+      <div class="action-card-body">
+        Read the full details of our 30-day money-back guarantee, eligibility criteria, and processing timeline.
+      </div>
+      <a href="/refund-policy" class="action-btn btn-support">
+        View Policy →
+      </a>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
