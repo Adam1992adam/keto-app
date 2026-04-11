@@ -1,0 +1,494 @@
+---
+// src/pages/dashboard/scanner.astro — Keto Product Scanner
+import { requireAuth } from '../../lib/auth';
+import DashNav from '../../components/DashNav.astro';
+
+const auth = await requireAuth(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile } = auth;
+
+const planType  = profile.subscription_tier || 'basic_30';
+const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const userName  = profile.full_name || 'Member';
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Keto Scanner · Keto Journey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script is:inline>(function(){ const t=localStorage.getItem('keto-theme')||'dark'; document.documentElement.setAttribute('data-theme',t); })();</script>
+  <style>
+    :root {
+      --bg:#060d09; --card:#0d1a0f; --card2:#111f13;
+      --border:rgba(16,185,129,.1); --border2:rgba(16,185,129,.22);
+      --text:#dfeedd; --soft:#4d7055; --muted:#233328;
+      --green:#10b981; --green2:#34d399; --gold:#f59e0b;
+      --red:#ef4444; --red2:#fca5a5;
+      --radius:20px;
+    }
+    [data-theme="light"] {
+      --bg:#f0faf4; --card:#fff; --card2:#f5fdf8;
+      --border:rgba(16,185,129,.15); --border2:rgba(16,185,129,.3);
+      --text:#0f2417; --soft:#4d7055; --muted:#b0d4bc;
+    }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:none} }
+    .fade-up { animation:fadeUp .5s ease both; }
+    .delay-1 { animation-delay:.08s; }
+    .delay-2 { animation-delay:.16s; }
+    .delay-3 { animation-delay:.24s; }
+
+    /* ── Layout ── */
+    .page { max-width:700px; margin:0 auto; padding:2rem 1.25rem 5rem; }
+    .page-title { font-family:'Fraunces',serif; font-size:2rem; font-weight:700; margin-bottom:.35rem; }
+    .page-title em { font-style:italic; color:var(--green2); }
+    .page-sub { color:var(--soft); font-size:.9rem; margin-bottom:2rem; }
+
+    /* ── Scanner card ── */
+    .scan-card {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--radius); padding:1.75rem; margin-bottom:1.25rem;
+    }
+    .scan-card-title {
+      font-weight:700; font-size:.95rem; margin-bottom:1.25rem;
+      display:flex; align-items:center; gap:.5rem;
+    }
+    .scan-card-title svg { color:var(--green); flex-shrink:0; }
+
+    /* ── Camera view ── */
+    #cameraWrap {
+      position:relative; background:#000; border-radius:14px;
+      overflow:hidden; aspect-ratio:4/3; margin-bottom:1rem;
+      display:flex; align-items:center; justify-content:center;
+    }
+    #cameraWrap video { width:100%; height:100%; object-fit:cover; display:block; }
+    .cam-overlay {
+      position:absolute; inset:0; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:.75rem; pointer-events:none;
+    }
+    .cam-frame {
+      width:220px; height:100px; border:2.5px solid var(--green2);
+      border-radius:10px; box-shadow:0 0 0 9999px rgba(0,0,0,.45);
+      position:relative;
+    }
+    .cam-laser {
+      position:absolute; top:50%; left:5%; right:5%; height:2px;
+      background:var(--green); opacity:.85;
+      animation:laser 1.6s ease-in-out infinite;
+    }
+    @keyframes laser { 0%,100%{top:20%} 50%{top:80%} }
+    .cam-hint { color:#fff; font-size:.78rem; opacity:.8; text-align:center; }
+
+    /* ── Scan buttons ── */
+    .scan-actions { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; }
+    .btn-camera {
+      display:flex; align-items:center; justify-content:center; gap:.5rem;
+      padding:.85rem; border-radius:12px; font-weight:600; font-size:.88rem;
+      border:none; cursor:pointer; transition:all .2s;
+    }
+    .btn-camera.primary { background:var(--green); color:#fff; }
+    .btn-camera.primary:hover { background:var(--green2); transform:translateY(-1px); }
+    .btn-camera.secondary { background:var(--card2); color:var(--text); border:1px solid var(--border2); }
+    .btn-camera.secondary:hover { border-color:var(--green); transform:translateY(-1px); }
+
+    /* ── Manual entry ── */
+    .manual-row { display:flex; gap:.5rem; margin-top:1rem; }
+    .manual-input {
+      flex:1; background:var(--card2); border:1px solid var(--border2);
+      border-radius:10px; padding:.75rem 1rem; color:var(--text);
+      font-size:1rem; outline:none; font-family:'DM Sans',sans-serif;
+    }
+    .manual-input:focus { border-color:var(--green); }
+    .manual-input::placeholder { color:var(--soft); }
+    .btn-lookup {
+      padding:.75rem 1.25rem; background:var(--green); color:#fff;
+      border:none; border-radius:10px; font-weight:700; font-size:.88rem;
+      cursor:pointer; white-space:nowrap; transition:all .2s;
+    }
+    .btn-lookup:hover { background:var(--green2); }
+
+    /* ── Result card ── */
+    #resultCard {
+      display:none; background:var(--card); border:1px solid var(--border2);
+      border-radius:var(--radius); overflow:hidden; margin-bottom:1.25rem;
+    }
+    .result-header {
+      padding:1.25rem 1.5rem 1rem;
+      border-bottom:1px solid var(--border);
+    }
+    .result-verdict {
+      display:inline-flex; align-items:center; gap:.5rem;
+      padding:.45rem 1rem; border-radius:50px;
+      font-weight:700; font-size:.95rem; margin-bottom:.75rem;
+    }
+    .verdict-keto { background:rgba(16,185,129,.15); color:var(--green2); border:1px solid rgba(16,185,129,.3); }
+    .verdict-not  { background:rgba(239,68,68,.12);  color:var(--red2);   border:1px solid rgba(239,68,68,.25); }
+    .verdict-caution { background:rgba(245,158,11,.12); color:#fcd34d; border:1px solid rgba(245,158,11,.25); }
+    .result-name  { font-weight:700; font-size:1.15rem; line-height:1.3; }
+    .result-brand { color:var(--soft); font-size:.82rem; margin-top:.2rem; }
+
+    /* ── Macro grid ── */
+    .macro-grid {
+      display:grid; grid-template-columns:repeat(5,1fr);
+      gap:0; border-top:1px solid var(--border);
+    }
+    .macro-cell {
+      padding:.9rem .5rem; text-align:center;
+      border-right:1px solid var(--border);
+    }
+    .macro-cell:last-child { border-right:none; }
+    .macro-val { font-size:1.15rem; font-weight:700; line-height:1; }
+    .macro-lbl { font-size:.68rem; color:var(--soft); margin-top:.25rem; text-transform:uppercase; letter-spacing:.04em; }
+    .macro-val.calories { color:var(--gold); }
+    .macro-val.protein  { color:#60a5fa; }
+    .macro-val.fat      { color:#f472b6; }
+    .macro-val.carbs    { color:#fb923c; }
+    .macro-val.net-carbs{ color:var(--green2); }
+
+    /* ── Serving note ── */
+    .result-serving {
+      padding:.65rem 1.5rem;
+      font-size:.75rem; color:var(--soft);
+      background:var(--card2); border-top:1px solid var(--border);
+    }
+
+    /* ── Keto guide ── */
+    .guide-card {
+      background:var(--card2); border:1px solid var(--border);
+      border-radius:14px; padding:1.25rem 1.5rem;
+    }
+    .guide-title { font-weight:700; font-size:.88rem; margin-bottom:1rem; color:var(--soft); }
+    .guide-row { display:flex; align-items:center; gap:.75rem; margin-bottom:.65rem; }
+    .guide-row:last-child { margin-bottom:0; }
+    .guide-dot {
+      width:10px; height:10px; border-radius:50%; flex-shrink:0;
+    }
+    .guide-dot.green { background:var(--green); }
+    .guide-dot.yellow { background:var(--gold); }
+    .guide-dot.red { background:var(--red); }
+    .guide-text { font-size:.82rem; color:var(--text); }
+    .guide-text strong { color:var(--green2); }
+
+    /* ── History ── */
+    .history-list { margin-top:1rem; display:flex; flex-direction:column; gap:.5rem; }
+    .history-item {
+      display:flex; align-items:center; gap:.75rem;
+      padding:.65rem .9rem; background:var(--card2);
+      border-radius:10px; border:1px solid var(--border); cursor:pointer;
+      transition:border-color .2s;
+    }
+    .history-item:hover { border-color:var(--border2); }
+    .history-verdict { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .history-name { font-size:.85rem; font-weight:600; flex:1; }
+    .history-carbs { font-size:.78rem; color:var(--soft); }
+
+    /* ── Toast ── */
+    #scanToast {
+      position:fixed; bottom:5.5rem; left:50%; transform:translateX(-50%) translateY(20px);
+      background:#1a2e20; color:var(--green2); padding:.6rem 1.2rem;
+      border-radius:50px; font-size:.82rem; font-weight:600;
+      border:1px solid var(--border2); opacity:0; transition:all .3s;
+      pointer-events:none; white-space:nowrap; z-index:999;
+    }
+    #scanToast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+    @media(max-width:480px) {
+      .macro-grid { grid-template-columns:repeat(3,1fr); }
+      .macro-cell:nth-child(3) { border-right:none; }
+      .macro-cell:nth-child(4),
+      .macro-cell:nth-child(5) { border-top:1px solid var(--border); }
+      .scan-actions { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+  <DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="scanner" />
+
+  <div class="page">
+    <h1 class="page-title fade-up">Keto <em>Scanner</em></h1>
+    <p class="page-sub fade-up delay-1">Scan any product barcode to instantly check if it's keto-friendly.</p>
+
+    <!-- ── SCANNER CARD ── -->
+    <div class="scan-card fade-up delay-1">
+      <div class="scan-card-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="14" y1="17" x2="21" y2="17"/><line x1="14" y1="20" x2="21" y2="20"/></svg>
+        Scan Barcode
+      </div>
+
+      <!-- Camera view (hidden until started) -->
+      <div id="cameraWrap" style="display:none;">
+        <video id="scanVideo" autoplay playsinline muted></video>
+        <div class="cam-overlay">
+          <div class="cam-frame"><div class="cam-laser"></div></div>
+          <div class="cam-hint">Align barcode within the frame</div>
+        </div>
+      </div>
+
+      <div class="scan-actions">
+        <button class="btn-camera primary" id="btnCamera" onclick="window.startCamera()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Scan with Camera
+        </button>
+        <button class="btn-camera secondary" id="btnStop" onclick="window.stopCamera()" style="display:none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+          Stop Camera
+        </button>
+        <button class="btn-camera secondary" onclick="window.focusManual()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+          Enter Barcode
+        </button>
+      </div>
+
+      <!-- Manual entry -->
+      <div class="manual-row">
+        <input
+          type="number"
+          id="manualBarcode"
+          class="manual-input"
+          placeholder="e.g. 5449000000996"
+          inputmode="numeric"
+          style="font-size:16px;"
+        />
+        <button class="btn-lookup" onclick="window.lookupManual()">Check</button>
+      </div>
+    </div>
+
+    <!-- ── RESULT CARD ── -->
+    <div id="resultCard">
+      <div class="result-header">
+        <div id="resultVerdict" class="result-verdict"></div>
+        <div id="resultName" class="result-name"></div>
+        <div id="resultBrand" class="result-brand"></div>
+      </div>
+      <div class="macro-grid">
+        <div class="macro-cell">
+          <div id="rCal" class="macro-val calories">—</div>
+          <div class="macro-lbl">kcal</div>
+        </div>
+        <div class="macro-cell">
+          <div id="rProt" class="macro-val protein">—</div>
+          <div class="macro-lbl">Protein</div>
+        </div>
+        <div class="macro-cell">
+          <div id="rFat" class="macro-val fat">—</div>
+          <div class="macro-lbl">Fat</div>
+        </div>
+        <div class="macro-cell">
+          <div id="rCarbs" class="macro-val carbs">—</div>
+          <div class="macro-lbl">Carbs</div>
+        </div>
+        <div class="macro-cell">
+          <div id="rNetCarbs" class="macro-val net-carbs">—</div>
+          <div class="macro-lbl">Net Carbs</div>
+        </div>
+      </div>
+      <div class="result-serving" id="resultServing">Per 100g</div>
+    </div>
+
+    <!-- ── KETO GUIDE ── -->
+    <div class="scan-card fade-up delay-2">
+      <div class="scan-card-title">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Keto Rating Guide
+      </div>
+      <div class="guide-card">
+        <div class="guide-title">Based on net carbs per 100g</div>
+        <div class="guide-row">
+          <div class="guide-dot green"></div>
+          <div class="guide-text"><strong>Keto ✅</strong> — Under 5g net carbs · Safe to eat freely</div>
+        </div>
+        <div class="guide-row">
+          <div class="guide-dot yellow"></div>
+          <div class="guide-text"><strong>Caution ⚠️</strong> — 5g to 10g net carbs · Eat in moderation</div>
+        </div>
+        <div class="guide-row">
+          <div class="guide-dot red"></div>
+          <div class="guide-text"><strong>Not Keto ❌</strong> — Over 10g net carbs · Avoid or limit severely</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SCAN HISTORY ── -->
+    <div class="scan-card fade-up delay-3" id="historyCard" style="display:none;">
+      <div class="scan-card-title">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
+        Recent Scans
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+  </div>
+
+  <div id="scanToast"></div>
+
+  <script is:inline>
+  (function() {
+    var videoStream = null;
+    var barcodeInterval = null;
+    var scanHistory = JSON.parse(localStorage.getItem('keto-scan-history') || '[]');
+
+    // ── Toast ────────────────────────────────────────────────
+    function toast(msg) {
+      var el = document.getElementById('scanToast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(function() { el.classList.remove('show'); }, 2800);
+    }
+
+    // ── Camera ───────────────────────────────────────────────
+    window.startCamera = function() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast('❌ Camera not supported on this browser');
+        return;
+      }
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(function(stream) {
+          videoStream = stream;
+          var video = document.getElementById('scanVideo');
+          video.srcObject = stream;
+          document.getElementById('cameraWrap').style.display = 'block';
+          document.getElementById('btnCamera').style.display = 'none';
+          document.getElementById('btnStop').style.display = '';
+
+          if (typeof BarcodeDetector !== 'undefined') {
+            var detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39'] });
+            barcodeInterval = setInterval(function() {
+              if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                detector.detect(video).then(function(codes) {
+                  if (codes.length > 0) {
+                    window.stopCamera();
+                    lookupBarcode(codes[0].rawValue);
+                  }
+                }).catch(function(){});
+              }
+            }, 400);
+          } else {
+            toast('⚠️ Auto-detect unavailable — enter barcode manually');
+          }
+        })
+        .catch(function(err) {
+          if (err.name === 'NotAllowedError') toast('❌ Camera permission denied');
+          else toast('❌ Could not access camera');
+        });
+    };
+
+    window.stopCamera = function() {
+      if (barcodeInterval) { clearInterval(barcodeInterval); barcodeInterval = null; }
+      if (videoStream) { videoStream.getTracks().forEach(function(t){ t.stop(); }); videoStream = null; }
+      document.getElementById('cameraWrap').style.display = 'none';
+      document.getElementById('btnCamera').style.display = '';
+      document.getElementById('btnStop').style.display = 'none';
+    };
+
+    window.focusManual = function() {
+      document.getElementById('manualBarcode').focus();
+    };
+
+    window.lookupManual = function() {
+      var val = (document.getElementById('manualBarcode').value || '').trim();
+      if (!val) { document.getElementById('manualBarcode').focus(); return; }
+      lookupBarcode(val);
+    };
+
+    // Enter key on manual input
+    document.getElementById('manualBarcode').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') window.lookupManual();
+    });
+
+    // ── Barcode Lookup ───────────────────────────────────────
+    function lookupBarcode(code) {
+      toast('🔍 Looking up product…');
+      var url = 'https://world.openfoodfacts.org/api/v0/product/' + encodeURIComponent(code) + '.json?fields=product_name,brands,nutriments,serving_quantity,serving_size';
+      fetch(url)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.status !== 1 || !data.product) {
+            toast('❌ Product not found in database');
+            return;
+          }
+          showResult(data.product, code);
+        })
+        .catch(function() { toast('❌ Lookup failed — check your connection'); });
+    }
+
+    // ── Show Result ──────────────────────────────────────────
+    function showResult(p, code) {
+      var n       = p.nutriments || {};
+      var cal     = Math.round(n['energy-kcal_100g'] || (n['energy_100g'] / 4.184) || 0);
+      var prot    = roundN(n['proteins_100g']);
+      var fat     = roundN(n['fat_100g']);
+      var carbs   = roundN(n['carbohydrates_100g']);
+      var fiber   = roundN(n['fiber_100g']);
+      var netCarbs= Math.max(0, roundN(carbs - fiber));
+      var name    = p.product_name || ('Product ' + code);
+      var brand   = p.brands || '';
+      var serving = p.serving_size || '100g';
+
+      // Verdict
+      var verdict, verdictClass;
+      if (netCarbs <= 5) {
+        verdict = '✅ Keto Friendly';
+        verdictClass = 'verdict-keto';
+      } else if (netCarbs <= 10) {
+        verdict = '⚠️ Eat with Caution';
+        verdictClass = 'verdict-caution';
+      } else {
+        verdict = '❌ Not Keto';
+        verdictClass = 'verdict-not';
+      }
+
+      // Fill card
+      document.getElementById('resultVerdict').textContent = verdict;
+      document.getElementById('resultVerdict').className   = 'result-verdict ' + verdictClass;
+      document.getElementById('resultName').textContent    = name;
+      document.getElementById('resultBrand').textContent   = brand;
+      document.getElementById('rCal').textContent     = cal  || '—';
+      document.getElementById('rProt').textContent    = prot + 'g';
+      document.getElementById('rFat').textContent     = fat  + 'g';
+      document.getElementById('rCarbs').textContent   = carbs + 'g';
+      document.getElementById('rNetCarbs').textContent= netCarbs + 'g';
+      document.getElementById('resultServing').textContent = 'Per 100g · Serving size: ' + serving;
+      document.getElementById('resultCard').style.display = 'block';
+      document.getElementById('resultCard').scrollIntoView({ behavior:'smooth', block:'nearest' });
+
+      // Save to history
+      var entry = { code: code, name: name, netCarbs: netCarbs, verdictClass: verdictClass, ts: Date.now() };
+      scanHistory = [entry].concat(scanHistory.filter(function(h){ return h.code !== code; })).slice(0, 8);
+      localStorage.setItem('keto-scan-history', JSON.stringify(scanHistory));
+      renderHistory();
+      toast(verdict);
+    }
+
+    // ── History ──────────────────────────────────────────────
+    function renderHistory() {
+      if (!scanHistory.length) return;
+      document.getElementById('historyCard').style.display = 'block';
+      var list = document.getElementById('historyList');
+      list.innerHTML = scanHistory.map(function(h) {
+        var dotColor = h.verdictClass === 'verdict-keto' ? 'background:var(--green)' :
+                       h.verdictClass === 'verdict-caution' ? 'background:var(--gold)' : 'background:var(--red)';
+        return '<div class="history-item" onclick="window.relookup(\'' + h.code + '\')">' +
+          '<div class="history-verdict" style="' + dotColor + '"></div>' +
+          '<div class="history-name">' + h.name + '</div>' +
+          '<div class="history-carbs">' + h.netCarbs + 'g net carbs</div>' +
+          '</div>';
+      }).join('');
+    }
+
+    window.relookup = function(code) {
+      document.getElementById('manualBarcode').value = code;
+      lookupBarcode(code);
+    };
+
+    function roundN(v) { return Math.round((parseFloat(v) || 0) * 10) / 10; }
+
+    // Init
+    renderHistory();
+  })();
+  </script>
+</body>
+</html>
