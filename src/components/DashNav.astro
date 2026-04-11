@@ -34,7 +34,7 @@ const initials  = (userName[0] || 'U').toUpperCase();
 const tierText  = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const tierCss   = planType === 'elite_12' ? 'dn-tier dn-tier--elite' : planType === 'pro_6' ? 'dn-tier dn-tier--pro' : 'dn-tier dn-tier--basic';
 
-const progressPages = ['progress', 'photos', 'checkin', 'reflections', 'ketones', 'share'];
+const progressPages = ['progress', 'photos', 'checkin', 'reflections', 'ketones', 'share', 'steps'];
 const mealPages     = ['browse', 'recipes', 'food-log', 'favorites', 'meal-prep', 'scanner'];
 const planPages     = ['shopping', 'habits', 'weekly', 'fasting', 'keto-calculator'];
 const morePages     = ['learn', 'notifications', 'export', 'referrals', 'guide'];
@@ -60,6 +60,7 @@ const groups = [
       { href: '/dashboard/reflections', key: 'reflections', label: 'Journal'   },
       { href: '/dashboard/ketones',     key: 'ketones',     label: 'Ketones'   },
       { href: '/dashboard/share',       key: 'share',       label: 'Share'     },
+      { href: '/dashboard/steps',       key: 'steps',       label: 'Steps'     },
     ],
   },
   {

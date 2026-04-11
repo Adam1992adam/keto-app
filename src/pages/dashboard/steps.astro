@@ -1,0 +1,563 @@
+---
+// src/pages/dashboard/steps.astro — Daily Steps Tracker
+import { requireAuth } from '../../lib/auth';
+import DashNav from '../../components/DashNav.astro';
+
+const auth = await requireAuth(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile, db } = auth;
+
+const planType  = profile.subscription_tier || 'basic_30';
+const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const userName  = profile.full_name || 'Member';
+
+const today = new Date().toISOString().slice(0, 10);
+
+// Last 7 days
+const sevenDaysAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+const { data: weekLogs } = await db
+  .from('step_logs')
+  .select('logged_date, steps, goal')
+  .eq('user_id', user.id)
+  .gte('logged_date', sevenDaysAgo)
+  .order('logged_date', { ascending: true });
+
+const todayLog  = weekLogs?.find((r: any) => r.logged_date === today);
+const todaySteps = todayLog?.steps || 0;
+const stepGoal   = todayLog?.goal  || 10000;
+const pct        = Math.min(100, Math.round((todaySteps / stepGoal) * 100));
+
+// Build 7-day array (fill missing days with 0)
+const days7: { date: string; label: string; steps: number; isToday: boolean }[] = [];
+for (let i = 6; i >= 0; i--) {
+  const d   = new Date(Date.now() - i * 86400000);
+  const iso = d.toISOString().slice(0, 10);
+  const lbl = d.toLocaleDateString('en', { weekday: 'short' });
+  const log = weekLogs?.find((r: any) => r.logged_date === iso);
+  days7.push({ date: iso, label: lbl, steps: log?.steps || 0, isToday: iso === today });
+}
+
+const weekTotal = days7.reduce((s, d) => s + d.steps, 0);
+const weekAvg   = Math.round(weekTotal / 7);
+const maxSteps  = Math.max(...days7.map(d => d.steps), stepGoal);
+
+// Ring geometry
+const R   = 54;
+const CIRC = Math.round(2 * Math.PI * R);
+const dash = Math.round((pct / 100) * CIRC);
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Steps Tracker · Keto Journey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script is:inline>(function(){ const t=localStorage.getItem('keto-theme')||'dark'; document.documentElement.setAttribute('data-theme',t); })();</script>
+  <style>
+    :root {
+      --bg:#060d09; --card:#0d1a0f; --card2:#111f13;
+      --border:rgba(16,185,129,.1); --border2:rgba(16,185,129,.22);
+      --text:#dfeedd; --soft:#4d7055; --muted:#233328;
+      --green:#10b981; --green2:#34d399; --gold:#f59e0b;
+      --blue:#3b82f6; --purple:#8b5cf6; --red:#ef4444;
+      --radius:20px;
+    }
+    [data-theme="light"] {
+      --bg:#f0faf4; --card:#fff; --card2:#f5fdf8;
+      --border:rgba(16,185,129,.15); --border2:rgba(16,185,129,.3);
+      --text:#0f2417; --soft:#4d7055; --muted:#b0d4bc;
+    }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+    .fade-up { animation:fadeUp .5s ease both; }
+    .d1{animation-delay:.07s} .d2{animation-delay:.14s} .d3{animation-delay:.21s} .d4{animation-delay:.28s}
+
+    .page { max-width:760px; margin:0 auto; padding:2rem 1.25rem 5rem; }
+    .page-title { font-family:'Fraunces',serif; font-size:2rem; font-weight:700; margin-bottom:.3rem; }
+    .page-title em { font-style:italic; color:var(--green2); }
+    .page-sub { color:var(--soft); font-size:.88rem; margin-bottom:2rem; }
+
+    /* ── Grid ── */
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-bottom:1.25rem; }
+    @media(max-width:600px){ .grid2{ grid-template-columns:1fr; } }
+
+    /* ── Card ── */
+    .card {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--radius); padding:1.5rem;
+    }
+    .card-title {
+      font-weight:700; font-size:.85rem; color:var(--soft);
+      text-transform:uppercase; letter-spacing:.06em; margin-bottom:1.25rem;
+      display:flex; align-items:center; gap:.45rem;
+    }
+    .card-title svg { color:var(--green); }
+
+    /* ── Ring ── */
+    .ring-wrap { display:flex; flex-direction:column; align-items:center; gap:1rem; }
+    .ring-svg { overflow:visible; }
+    .ring-track { fill:none; stroke:var(--muted); stroke-width:8; }
+    .ring-fill  {
+      fill:none; stroke:var(--green); stroke-width:8;
+      stroke-linecap:round;
+      stroke-dasharray: {CIRC};
+      stroke-dashoffset: {CIRC - dash};
+      transform:rotate(-90deg); transform-origin:60px 60px;
+      transition:stroke-dashoffset 1s ease;
+    }
+    .ring-pct  { fill:var(--green2); font-size:22px; font-weight:700; font-family:'DM Sans',sans-serif; text-anchor:middle; dominant-baseline:middle; }
+    .ring-lbl  { fill:var(--soft);   font-size:9px;  font-family:'DM Sans',sans-serif; text-anchor:middle; }
+
+    .steps-big { font-size:2.6rem; font-weight:700; line-height:1; text-align:center; }
+    .steps-big span { color:var(--green2); }
+    .steps-goal { text-align:center; color:var(--soft); font-size:.82rem; margin-top:.2rem; }
+
+    /* ── Stats row ── */
+    .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem; margin-bottom:1.25rem; }
+    .stat-cell {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:14px; padding:.9rem .75rem; text-align:center;
+    }
+    .stat-val { font-size:1.4rem; font-weight:700; color:var(--green2); line-height:1; }
+    .stat-lbl { font-size:.7rem; color:var(--soft); margin-top:.3rem; text-transform:uppercase; letter-spacing:.05em; }
+
+    /* ── Bar chart ── */
+    .bar-chart { display:flex; align-items:flex-end; gap:.4rem; height:80px; margin-bottom:.5rem; }
+    .bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:.35rem; }
+    .bar-track { width:100%; background:var(--muted); border-radius:6px 6px 0 0; position:relative; min-height:4px; }
+    .bar-fill {
+      position:absolute; bottom:0; left:0; right:0;
+      background:var(--green); border-radius:6px 6px 0 0;
+      transition:height .6s ease;
+    }
+    .bar-fill.today { background:var(--green2); }
+    .bar-fill.goal-reached { background:var(--gold); }
+    .bar-lbl { font-size:.65rem; color:var(--soft); }
+    .bar-steps { font-size:.6rem; color:var(--text); font-weight:600; }
+    .goal-line {
+      position:absolute; left:0; right:0; height:2px;
+      background:rgba(245,158,11,.5); border-radius:2px;
+    }
+
+    /* ── Manual entry ── */
+    .entry-row { display:flex; gap:.6rem; align-items:center; }
+    .step-input {
+      flex:1; background:var(--card2); border:1px solid var(--border2);
+      border-radius:11px; padding:.75rem 1rem; color:var(--text);
+      font-size:16px; font-family:'DM Sans',sans-serif; outline:none;
+    }
+    .step-input:focus { border-color:var(--green); }
+    .btn-save {
+      padding:.75rem 1.25rem; background:var(--green); color:#fff;
+      border:none; border-radius:11px; font-weight:700; font-size:.88rem;
+      cursor:pointer; transition:all .2s; white-space:nowrap;
+    }
+    .btn-save:hover { background:var(--green2); }
+    .btn-save:disabled { opacity:.5; cursor:not-allowed; }
+
+    /* ── Goal row ── */
+    .goal-row { display:flex; gap:.6rem; align-items:center; margin-top:.75rem; }
+    .goal-label { font-size:.8rem; color:var(--soft); white-space:nowrap; }
+
+    /* ── Auto count button ── */
+    .btn-auto {
+      width:100%; padding:.85rem; border-radius:12px;
+      border:1px solid var(--border2); background:var(--card2);
+      color:var(--text); font-weight:600; font-size:.88rem;
+      cursor:pointer; transition:all .2s; display:flex;
+      align-items:center; justify-content:center; gap:.5rem; margin-bottom:.75rem;
+    }
+    .btn-auto:hover { border-color:var(--green); }
+    .btn-auto.active { background:rgba(16,185,129,.12); border-color:var(--green); color:var(--green2); }
+    .btn-auto .dot {
+      width:8px; height:8px; border-radius:50%; background:var(--green);
+      animation:pulse 1s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.75)} }
+
+    /* ── Import section ── */
+    .import-note {
+      background:var(--card2); border:1px solid var(--border);
+      border-radius:12px; padding:1rem 1.25rem; font-size:.8rem;
+      color:var(--soft); line-height:1.6;
+    }
+    .import-note strong { color:var(--text); }
+    .import-steps { margin-top:.65rem; padding-left:1rem; }
+    .import-steps li { margin-bottom:.3rem; }
+    .import-row { display:flex; gap:.6rem; margin-top:.85rem; }
+    .import-input {
+      display:none;
+    }
+    .btn-import {
+      flex:1; padding:.7rem; border-radius:10px; background:var(--card2);
+      border:1px solid var(--border2); color:var(--text); font-size:.82rem;
+      font-weight:600; cursor:pointer; transition:all .2s; text-align:center;
+    }
+    .btn-import:hover { border-color:var(--green); }
+
+    /* ── Toast ── */
+    #stepsToast {
+      position:fixed; bottom:5.5rem; left:50%; transform:translateX(-50%) translateY(20px);
+      background:#1a2e20; color:var(--green2); padding:.6rem 1.2rem;
+      border-radius:50px; font-size:.82rem; font-weight:600;
+      border:1px solid var(--border2); opacity:0; transition:all .3s;
+      pointer-events:none; white-space:nowrap; z-index:999;
+    }
+    #stepsToast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+  <DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="steps" />
+
+  <div class="page">
+    <h1 class="page-title fade-up">Daily <em>Steps</em></h1>
+    <p class="page-sub fade-up d1">Track your activity — every step counts toward your keto goals.</p>
+
+    <!-- ── STATS ROW ── -->
+    <div class="stats-row fade-up d1">
+      <div class="stat-cell">
+        <div class="stat-val" id="statToday">{todaySteps.toLocaleString()}</div>
+        <div class="stat-lbl">Today</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-val">{weekAvg.toLocaleString()}</div>
+        <div class="stat-lbl">7-day avg</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-val">{weekTotal.toLocaleString()}</div>
+        <div class="stat-lbl">This week</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+
+      <!-- ── RING + TODAY ── -->
+      <div class="card fade-up d2">
+        <div class="card-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Today's Progress
+        </div>
+        <div class="ring-wrap">
+          <svg class="ring-svg" width="120" height="120" viewBox="0 0 120 120">
+            <circle class="ring-track" cx="60" cy="60" r={R} />
+            <circle class="ring-fill" cx="60" cy="60" r={R}
+              stroke-dasharray={CIRC}
+              stroke-dashoffset={CIRC - dash}
+              style={`stroke-dasharray:${CIRC};stroke-dashoffset:${CIRC - dash};fill:none;stroke:var(--green);stroke-width:8;stroke-linecap:round;transform:rotate(-90deg);transform-origin:60px 60px;`}
+            />
+            <text class="ring-pct" x="60" y="57" id="ringPct">{pct}%</text>
+            <text class="ring-lbl" x="60" y="70">of goal</text>
+          </svg>
+          <div>
+            <div class="steps-big"><span id="ringSteps">{todaySteps.toLocaleString()}</span></div>
+            <div class="steps-goal" id="ringGoal">Goal: {stepGoal.toLocaleString()} steps</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MANUAL ENTRY + AUTO ── -->
+      <div class="card fade-up d2">
+        <div class="card-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Log Steps
+        </div>
+
+        <!-- Auto-count (mobile only) -->
+        <button class="btn-auto" id="btnAutoCount" onclick="window.toggleAutoCount()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          <span id="btnAutoLabel">Start Auto-Counting</span>
+        </button>
+
+        <!-- Manual entry -->
+        <div style="font-size:.78rem;color:var(--soft);margin-bottom:.5rem;">Manual entry</div>
+        <div class="entry-row">
+          <input
+            type="number"
+            id="stepsInput"
+            class="step-input"
+            placeholder="e.g. 8500"
+            min="0"
+            max="100000"
+            inputmode="numeric"
+            value={todaySteps || ''}
+          />
+          <button class="btn-save" id="btnSave" onclick="window.saveSteps()">Save</button>
+        </div>
+
+        <!-- Goal -->
+        <div class="goal-row">
+          <span class="goal-label">Daily goal:</span>
+          <input
+            type="number"
+            id="goalInput"
+            class="step-input"
+            style="font-size:14px;padding:.5rem .75rem;"
+            value={stepGoal}
+            min="1000"
+            max="50000"
+            step="500"
+            inputmode="numeric"
+          />
+          <button class="btn-save" onclick="window.saveGoal()" style="padding:.5rem .75rem;font-size:.8rem;">Set</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 7-DAY BAR CHART ── -->
+    <div class="card fade-up d3" style="margin-bottom:1.25rem;">
+      <div class="card-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Last 7 Days
+      </div>
+      <div class="bar-chart">
+        {days7.map((d) => {
+          const barH = maxSteps > 0 ? Math.round((d.steps / maxSteps) * 80) : 0;
+          const goalH = maxSteps > 0 ? Math.round((stepGoal / maxSteps) * 80) : 80;
+          const reached = d.steps >= stepGoal;
+          return (
+            <div class="bar-col">
+              <div class="bar-steps">{d.steps >= 1000 ? (d.steps/1000).toFixed(1)+'k' : d.steps || ''}</div>
+              <div class="bar-track" style={`height:80px;`}>
+                <div
+                  class={`bar-fill${d.isToday ? ' today' : ''}${reached ? ' goal-reached' : ''}`}
+                  style={`height:${barH}px;`}
+                ></div>
+                <div class="goal-line" style={`bottom:${goalH}px;`}></div>
+              </div>
+              <div class="bar-lbl">{d.label}</div>
+            </div>
+          );
+        })}
+      </div>
+      <div style="font-size:.68rem;color:var(--soft);margin-top:.25rem;">
+        <span style="display:inline-block;width:8px;height:2px;background:rgba(245,158,11,.5);vertical-align:middle;margin-right:.3rem;border-radius:1px;"></span>
+        Daily goal line · Gold bar = goal reached
+      </div>
+    </div>
+
+    <!-- ── MAC / DESKTOP IMPORT ── -->
+    <div class="card fade-up d4">
+      <div class="card-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Import from Apple Health (Mac / iPhone)
+      </div>
+      <div class="import-note">
+        <strong>How to export from iPhone:</strong>
+        <ol class="import-steps">
+          <li>Open the <strong>Health</strong> app on your iPhone</li>
+          <li>Tap your profile photo → <strong>Export All Health Data</strong></li>
+          <li>Extract the ZIP → open <code>export.xml</code></li>
+          <li>Use the button below to import a simple CSV (Date, Steps)</li>
+        </ol>
+        <strong>CSV format expected:</strong> two columns — <code>date</code> (YYYY-MM-DD) and <code>steps</code> (number).
+      </div>
+      <div class="import-row">
+        <input type="file" id="csvFile" class="import-input" accept=".csv" onchange="window.importCSV(this)" />
+        <button class="btn-import" onclick="document.getElementById('csvFile').click()">
+          📂 Choose CSV File
+        </button>
+        <button class="btn-import" onclick="window.downloadTemplate()">
+          ⬇️ Download Template
+        </button>
+      </div>
+      <div id="importStatus" style="font-size:.78rem;color:var(--green2);margin-top:.6rem;display:none;"></div>
+    </div>
+  </div>
+
+  <div id="stepsToast"></div>
+
+  <script is:inline define:vars={{ todaySteps, stepGoal, today: today }}>
+  (function() {
+    var CIRC = 339;
+    var currentSteps = todaySteps;
+    var currentGoal  = stepGoal;
+    var autoActive   = false;
+    var motionCount  = 0;
+    var lastMag      = 0;
+    var threshold    = 12;
+    var cooldown     = false;
+
+    function toast(msg) {
+      var el = document.getElementById('stepsToast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(window._stepsToastTimer);
+      window._stepsToastTimer = setTimeout(function() { el.classList.remove('show'); }, 2800);
+    }
+
+    function updateRing(steps, goal) {
+      var pct = Math.min(100, Math.round((steps / goal) * 100));
+      var dash = Math.round((pct / 100) * CIRC);
+      var fill = document.querySelector('.ring-fill');
+      if (fill) {
+        fill.style.strokeDashoffset = CIRC - dash;
+        fill.style.stroke = steps >= goal ? 'var(--gold)' : 'var(--green)';
+      }
+      var ringPct = document.getElementById('ringPct');
+      if (ringPct) ringPct.textContent = pct + '%';
+      var ringSteps = document.getElementById('ringSteps');
+      if (ringSteps) ringSteps.textContent = steps.toLocaleString();
+      var statToday = document.getElementById('statToday');
+      if (statToday) statToday.textContent = steps.toLocaleString();
+    }
+
+    // ── Save steps ──────────────────────────────────────────
+    window.saveSteps = function(stepsOverride, sourceOverride) {
+      var steps = stepsOverride !== undefined
+        ? stepsOverride
+        : parseInt(document.getElementById('stepsInput').value) || 0;
+      var source = sourceOverride || 'manual';
+      var btn = document.getElementById('btnSave');
+      if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+      fetch('/api/steps/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ steps: steps, goal: currentGoal, source: source, date: today }),
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.success) {
+          currentSteps = steps;
+          updateRing(steps, currentGoal);
+          toast('✅ ' + steps.toLocaleString() + ' steps saved!');
+        } else {
+          toast('❌ Failed to save');
+        }
+      })
+      .catch(function() { toast('❌ Network error'); })
+      .finally(function() {
+        if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+      });
+    };
+
+    window.saveGoal = function() {
+      var g = parseInt(document.getElementById('goalInput').value) || 10000;
+      currentGoal = g;
+      document.getElementById('ringGoal').textContent = 'Goal: ' + g.toLocaleString() + ' steps';
+      window.saveSteps(currentSteps, 'manual');
+      toast('🎯 Goal set to ' + g.toLocaleString() + ' steps');
+    };
+
+    // ── Auto-count (mobile accelerometer) ───────────────────
+    window.toggleAutoCount = function() {
+      if (autoActive) {
+        stopAutoCount();
+      } else {
+        startAutoCount();
+      }
+    };
+
+    function startAutoCount() {
+      if (typeof DeviceMotionEvent === 'undefined') {
+        toast('❌ Motion sensor not available on this device');
+        return;
+      }
+      // iOS 13+ requires permission
+      if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission()
+          .then(function(state) {
+            if (state === 'granted') beginMotion();
+            else toast('❌ Motion permission denied');
+          })
+          .catch(function() { toast('❌ Could not request permission'); });
+      } else {
+        beginMotion();
+      }
+    }
+
+    function beginMotion() {
+      autoActive = true;
+      motionCount = 0;
+      var btn = document.getElementById('btnAutoCount');
+      btn.classList.add('active');
+      btn.innerHTML = '<div class="dot"></div><span id="btnAutoLabel">Counting… 0 steps (tap to stop)</span>';
+      window.addEventListener('devicemotion', onMotion);
+      toast('👟 Auto-counting started');
+    }
+
+    function stopAutoCount() {
+      autoActive = false;
+      window.removeEventListener('devicemotion', onMotion);
+      var btn = document.getElementById('btnAutoCount');
+      btn.classList.remove('active');
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><span>Start Auto-Counting</span>';
+      // Add counted steps to current total
+      var newTotal = currentSteps + motionCount;
+      document.getElementById('stepsInput').value = newTotal;
+      window.saveSteps(newTotal, 'auto');
+      toast('✅ Added ' + motionCount + ' steps (' + newTotal.toLocaleString() + ' total)');
+    }
+
+    function onMotion(e) {
+      var a = e.accelerationIncludingGravity || e.acceleration;
+      if (!a) return;
+      var mag = Math.sqrt((a.x||0)*(a.x||0) + (a.y||0)*(a.y||0) + (a.z||0)*(a.z||0));
+      var delta = Math.abs(mag - lastMag);
+      lastMag = mag;
+      if (delta > threshold && !cooldown) {
+        motionCount++;
+        cooldown = true;
+        setTimeout(function() { cooldown = false; }, 350);
+        var lbl = document.getElementById('btnAutoLabel');
+        if (lbl) lbl.textContent = 'Counting… ' + motionCount + ' steps (tap to stop)';
+      }
+    }
+
+    // ── CSV Import ───────────────────────────────────────────
+    window.importCSV = function(input) {
+      var file = input.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var lines = (e.target.result || '').split('\n').map(function(l){ return l.trim(); }).filter(Boolean);
+        var imported = 0;
+        var promises = [];
+        lines.forEach(function(line, idx) {
+          if (idx === 0 && line.toLowerCase().includes('date')) return; // skip header
+          var parts = line.split(',');
+          if (parts.length < 2) return;
+          var date  = parts[0].trim();
+          var steps = parseInt(parts[1].trim());
+          if (!date || isNaN(steps)) return;
+          promises.push(
+            fetch('/api/steps/save', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ steps: steps, goal: currentGoal, source: 'import', date: date }),
+            })
+            .then(function(r){ return r.json(); })
+            .then(function(d){ if (d.success) imported++; })
+          );
+        });
+        Promise.all(promises).then(function() {
+          var status = document.getElementById('importStatus');
+          status.style.display = 'block';
+          status.textContent = '✅ Imported ' + imported + ' day(s) of step data.';
+          toast('✅ Imported ' + imported + ' days');
+          if (lines.some(function(l){ return l.startsWith(today); })) {
+            setTimeout(function() { window.location.reload(); }, 1500);
+          }
+        });
+      };
+      reader.readAsText(file);
+    };
+
+    window.downloadTemplate = function() {
+      var csv = 'date,steps\n' + today + ',8500\n';
+      var blob = new Blob([csv], { type: 'text/csv' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'steps-template.csv';
+      a.click();
+    };
+
+    // Init ring
+    updateRing(currentSteps, currentGoal);
+  })();
+  </script>
+</body>
+</html>
