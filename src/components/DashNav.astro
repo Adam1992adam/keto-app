@@ -7,6 +7,7 @@
 
 import NotificationsBell from './NotificationsBell.astro';
 import CookieConsent from './CookieConsent.astro';
+import { getTranslator, normaliseLang } from '../lib/i18n';
 import Home         from 'lucide-astro/Home';
 import ChevronDown  from 'lucide-astro/ChevronDown';
 import Sparkles     from 'lucide-astro/Sparkles';
@@ -30,6 +31,9 @@ interface Props {
 
 const { userId, userName, tierLabel, planType, activePage = '' } = Astro.props;
 
+const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
+const t    = getTranslator(lang);
+
 const initials  = (userName[0] || 'U').toUpperCase();
 const tierText  = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const tierCss   = planType === 'elite_12' ? 'dn-tier dn-tier--elite' : planType === 'pro_6' ? 'dn-tier dn-tier--pro' : 'dn-tier dn-tier--basic';
@@ -52,47 +56,47 @@ const activeGroup =
 
 const groups = [
   {
-    key: 'progress', label: 'Progress',
+    key: 'progress', label: t('nav.progress'),
     links: [
-      { href: '/dashboard/progress',    key: 'progress',    label: 'Progress'  },
-      { href: '/dashboard/photos',      key: 'photos',      label: 'Photos'    },
-      { href: '/dashboard/checkin',     key: 'checkin',     label: 'Check-in'  },
-      { href: '/dashboard/reflections', key: 'reflections', label: 'Journal'   },
-      { href: '/dashboard/ketones',     key: 'ketones',     label: 'Ketones'   },
-      { href: '/dashboard/share',       key: 'share',       label: 'Share'     },
-      { href: '/dashboard/steps',       key: 'steps',       label: 'Steps'     },
+      { href: '/dashboard/progress',    key: 'progress',    label: t('nav.progress_page') },
+      { href: '/dashboard/photos',      key: 'photos',      label: t('nav.photos')        },
+      { href: '/dashboard/checkin',     key: 'checkin',     label: t('nav.checkin')       },
+      { href: '/dashboard/reflections', key: 'reflections', label: t('nav.reflections')   },
+      { href: '/dashboard/ketones',     key: 'ketones',     label: t('nav.ketones')       },
+      { href: '/dashboard/share',       key: 'share',       label: t('nav.share')         },
+      { href: '/dashboard/steps',       key: 'steps',       label: t('nav.steps')         },
     ],
   },
   {
-    key: 'meals', label: 'Meals',
+    key: 'meals', label: t('nav.meals'),
     links: [
-      { href: '/dashboard/browse',    key: 'browse',    label: 'Browse Recipes' },
-      { href: '/dashboard/recipes',   key: 'recipes',   label: 'Recipes'   },
-      { href: '/dashboard/food-log',  key: 'food-log',  label: 'Food Log'  },
-      { href: '/dashboard/favorites', key: 'favorites', label: 'Favorites' },
-      { href: '/dashboard/meal-prep', key: 'meal-prep', label: 'Meal Prep' },
-      { href: '/dashboard/scanner',   key: 'scanner',   label: 'Keto Scanner' },
+      { href: '/dashboard/browse',    key: 'browse',    label: t('nav.browse')    },
+      { href: '/dashboard/recipes',   key: 'recipes',   label: t('nav.recipes')   },
+      { href: '/dashboard/food-log',  key: 'food-log',  label: t('nav.food_log')  },
+      { href: '/dashboard/favorites', key: 'favorites', label: t('nav.favorites') },
+      { href: '/dashboard/meal-prep', key: 'meal-prep', label: t('nav.meal_prep') },
+      { href: '/dashboard/scanner',   key: 'scanner',   label: t('nav.scanner')   },
     ],
   },
   {
-    key: 'plan', label: 'Plan',
+    key: 'plan', label: t('nav.plan'),
     links: [
-      { href: '/dashboard/shopping', key: 'shopping', label: 'Shopping' },
-      { href: '/dashboard/habits',   key: 'habits',   label: 'Habits'   },
-      { href: '/dashboard/weekly',   key: 'weekly',   label: 'Weekly'   },
-      { href: '/dashboard/fasting',          key: 'fasting',          label: 'Fasting'    },
-      { href: '/dashboard/keto-calculator', key: 'keto-calculator', label: 'Calculator' },
+      { href: '/dashboard/shopping',        key: 'shopping',        label: t('nav.shopping')   },
+      { href: '/dashboard/habits',          key: 'habits',          label: t('nav.habits')     },
+      { href: '/dashboard/weekly',          key: 'weekly',          label: t('nav.weekly')     },
+      { href: '/dashboard/fasting',         key: 'fasting',         label: t('nav.fasting')    },
+      { href: '/dashboard/keto-calculator', key: 'keto-calculator', label: t('nav.calculator') },
     ],
   },
   {
-    key: 'more', label: 'More',
+    key: 'more', label: t('nav.more'),
     links: [
-      { href: '/dashboard/guide',          key: 'guide',         label: 'App Guide'     },
-      { href: '/dashboard/learn',         key: 'learn',         label: 'Learn'         },
-      { href: '/dashboard/notifications', key: 'notifications', label: 'Notifications' },
-      { href: '/dashboard/export',        key: 'export',        label: 'Export'        },
-      { href: '/dashboard/referrals',     key: 'referrals',     label: 'Refer Friends' },
-      { href: '/dashboard/billing',       key: 'billing',       label: 'My Plan & Billing' },
+      { href: '/dashboard/guide',          key: 'guide',          label: t('nav.guide')          },
+      { href: '/dashboard/learn',          key: 'learn',          label: t('nav.learn')          },
+      { href: '/dashboard/notifications',  key: 'notifications',  label: t('nav.notifications')  },
+      { href: '/dashboard/export',         key: 'export',         label: t('nav.export')         },
+      { href: '/dashboard/referrals',      key: 'referrals',      label: t('nav.referrals')      },
+      { href: '/dashboard/billing',        key: 'billing',        label: t('nav.billing')        },
     ],
   },
 ];
@@ -127,7 +131,7 @@ const groups = [
     <li>
       <a href="/dashboard" class={`dn-tab${activeGroup === 'today' ? ' active' : ''}`}>
         <Home size={13} />
-        Today
+        {t('nav.today')}
       </a>
     </li>
 
@@ -163,7 +167,7 @@ const groups = [
         <a href="/dashboard/ai-coach"
           class={`dn-tab dn-elite${activePage === 'ai-coach' ? ' active' : ''}`}>
           <Sparkles size={13} />
-          AI Coach
+          {t('nav.ai_coach')}
         </a>
       </li>
     )}
@@ -174,7 +178,7 @@ const groups = [
           onclick="window.showFeatureUpsell && window.showFeatureUpsell('ai-coach')"
           title="Elite only">
           <Sparkles size={13} />
-          AI Coach 🔒
+          {t('nav.ai_coach')} 🔒
         </button>
       </li>
     )}
@@ -183,7 +187,7 @@ const groups = [
         <a href="/dashboard/community"
           class={`dn-tab dn-elite${activePage === 'community' ? ' active' : ''}`}>
           <Users size={13} />
-          Community
+          {t('nav.community')}
         </a>
       </li>
     )}
@@ -194,7 +198,7 @@ const groups = [
           onclick="window.showFeatureUpsell && window.showFeatureUpsell('community')"
           title="Pro & Elite only">
           <Users size={13} />
-          Community 🔒
+          {t('nav.community')} 🔒
         </button>
       </li>
     )}
@@ -205,7 +209,7 @@ const groups = [
         <a href="/dashboard/upgrade"
           class={`dn-tab dn-upgrade${activePage === 'upgrade' ? ' active' : ''}`}>
           <Zap size={13} />
-          Upgrade to Pro
+          {t('nav.upgrade')}
         </a>
       </li>
     )}
@@ -214,7 +218,7 @@ const groups = [
         <a href="/dashboard/upgrade"
           class={`dn-tab dn-upgrade dn-upgrade--elite${activePage === 'upgrade' ? ' active' : ''}`}>
           <Zap size={13} />
-          Upgrade to Elite
+          {t('nav.upgrade_elite')}
         </a>
       </li>
     )}
@@ -246,19 +250,19 @@ const groups = [
 <!-- ══ MOBILE BOTTOM NAV ══════════════════════════════════ -->
 <nav class="dn-bottom" aria-label="Mobile navigation">
   <a href="/dashboard" class={`dn-bn${activeGroup === 'today' ? ' active' : ''}`}>
-    <Home size={20} /><span>Today</span>
+    <Home size={20} /><span>{t('nav.today')}</span>
   </a>
   <a href="/dashboard/progress" class={`dn-bn${activeGroup === 'progress' ? ' active' : ''}`}>
-    <Activity size={20} /><span>Progress</span>
+    <Activity size={20} /><span>{t('nav.progress')}</span>
   </a>
   <a href="/dashboard/recipes" class={`dn-bn${activeGroup === 'meals' ? ' active' : ''}`}>
-    <Utensils size={20} /><span>Meals</span>
+    <Utensils size={20} /><span>{t('nav.meals')}</span>
   </a>
   <a href="/dashboard/shopping" class={`dn-bn${activeGroup === 'plan' ? ' active' : ''}`}>
-    <ClipboardList size={20} /><span>Plan</span>
+    <ClipboardList size={20} /><span>{t('nav.plan')}</span>
   </a>
   <a href="/dashboard/profile" class={`dn-bn${activeGroup === 'profile' ? ' active' : ''}`}>
-    <User size={20} /><span>Me</span>
+    <User size={20} /><span>{t('nav.profile')}</span>
   </a>
 </nav>
 

@@ -306,6 +306,8 @@ const avatarLetter       = profile.full_name?.charAt(0)?.toUpperCase() || '?';
     .export-btn{display:flex;align-items:center;gap:.5rem;padding:.65rem .85rem;border-radius:11px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-weight:600;font-size:.78rem;text-decoration:none;transition:all .2s;}
     .export-btn:hover{border-color:var(--border2);background:rgba(16,185,129,.06);transform:translateY(-1px);}
     .export-icon{font-size:.9rem;flex-shrink:0;}
+    .lang-btn{display:flex;align-items:center;gap:.5rem;padding:.55rem .75rem;border-radius:10px;border:1.5px solid var(--border);background:var(--card2);color:var(--soft);cursor:pointer;transition:all .2s;font-weight:600;}
+    .lang-btn:hover{border-color:var(--border2);color:var(--text);}
     /* MACRO RINGS */
     .macro-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.875rem;}
     .mring{text-align:center;padding:1.1rem .75rem;border-radius:13px;background:var(--surface);border:1px solid var(--border);}
@@ -620,6 +622,38 @@ const avatarLetter       = profile.full_name?.charAt(0)?.toUpperCase() || '?';
           </div>
           <button id="saveAva" class="btn-save" style="width:100%;justify-content:center;">Save Avatar</button>
         </div>
+
+        <!-- ── Language Selector ──────────────────────────── -->
+        <div class="form-section" id="languageSection">
+          <div class="fsec-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:.3rem;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            Display Language
+          </div>
+          <p style="font-size:.75rem;color:var(--soft);margin-bottom:1rem;line-height:1.5;">Choose your preferred language for the app interface.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem;" id="langGrid">
+            {[
+              { code: 'en', label: 'English',   flag: '🇬🇧' },
+              { code: 'fr', label: 'Français',  flag: '🇫🇷' },
+              { code: 'de', label: 'Deutsch',   flag: '🇩🇪' },
+              { code: 'es', label: 'Español',   flag: '🇪🇸' },
+              { code: 'pt', label: 'Português', flag: '🇵🇹' },
+            ].map(lng => (
+              <button
+                type="button"
+                data-lang={lng.code}
+                class="lang-btn"
+                style={(profile.preferred_language || 'en') === lng.code
+                  ? 'border-color:var(--green);background:rgba(16,185,129,.08);color:var(--green);font-weight:700;'
+                  : ''}
+              >
+                <span style="font-size:1.1rem;">{lng.flag}</span>
+                <span style="font-size:.8rem;">{lng.label}</span>
+              </button>
+            ))}
+          </div>
+          <div id="langMsg" style="display:none;font-size:.76rem;padding:.4rem .75rem;border-radius:8px;margin-bottom:.5rem;"></div>
+        </div>
+
         <div class="form-section">
           <div class="fsec-title"><Zap size={15} style="display:inline;vertical-align:middle;" /> Quick Actions</div>
           <a href="/dashboard" class="qa"><BarChart3 size={14} style="display:inline;vertical-align:middle;" /> Dashboard</a>
@@ -883,6 +917,34 @@ async function setUnits(u){
   if(r.ok)window.location.reload();else showToast('❌ Failed');
 }
 window.setUnits=setUnits;
+
+// LANGUAGE SELECTOR
+document.querySelectorAll('.lang-btn').forEach(function(btn){
+  btn.addEventListener('click', async function(){
+    var code = btn.getAttribute('data-lang');
+    var msg  = document.getElementById('langMsg');
+    // Highlight selected
+    document.querySelectorAll('.lang-btn').forEach(function(b){
+      b.style.borderColor='';b.style.background='';b.style.color='';b.style.fontWeight='';
+    });
+    btn.style.borderColor='var(--green)';
+    btn.style.background='rgba(16,185,129,.08)';
+    btn.style.color='var(--green)';
+    btn.style.fontWeight='700';
+    // Save
+    var r = await fetch('/api/profile/update-language',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({lang:code})
+    });
+    if(r.ok){
+      if(msg){msg.textContent='Language saved!';msg.style.display='block';msg.style.background='rgba(16,185,129,.1)';msg.style.color='var(--green)';msg.style.border='1px solid rgba(16,185,129,.25)';}
+      setTimeout(function(){window.location.reload();},600);
+    } else {
+      if(msg){msg.textContent='Failed to save. Please try again.';msg.style.display='block';msg.style.background='rgba(239,68,68,.1)';msg.style.color='var(--red)';}
+    }
+  });
+});
 
 // TOAST
 function showToast(msg){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.className='toast show';setTimeout(()=>t.classList.remove('show'),2800);}

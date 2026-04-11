@@ -46,6 +46,8 @@ export interface Profile {
   sale_id?: string;
   // Units preference
   preferred_units: UnitSystem;
+  // Language preference
+  preferred_language?: string;
   // Admin
   is_admin?: boolean;
   created_at?: string;

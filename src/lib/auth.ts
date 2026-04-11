@@ -135,6 +135,10 @@ export async function requireAuth(Astro: any): Promise<AuthResult> {
   // Advance journey day + update streak on every protected page load
   await updateCurrentDay(user!.id, db);
 
+  // Sync preferred language cookie so DashNav can read it without prop drilling
+  const lang = profile.preferred_language || 'en';
+  Astro.cookies.set('keto-lang', lang, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' });
+
   return { user: user!, profile, accessToken, db };
 }
 
