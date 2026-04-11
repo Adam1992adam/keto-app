@@ -1,5 +1,5 @@
 ---
-// src/pages/dashboard/community.astro — Elite-only community (Facebook-group style)
+// src/pages/dashboard/community.astro — Pro & Elite community (Facebook-group style)
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import Users from 'lucide-astro/Users';
@@ -17,19 +17,19 @@ const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
 const { user, profile, db } = auth;
 
-if (profile.subscription_tier !== 'elite_12') {
+if (profile.subscription_tier === 'basic_30' || !profile.subscription_tier) {
   return Astro.redirect('/dashboard/upgrade');
 }
 
 const planType  = profile.subscription_tier;
 const userName  = profile.full_name || 'Member';
-const tierLabel = '👑 Elite';
+const tierLabel = planType === 'elite_12' ? '👑 Elite' : '⚡ Pro';
 
 // Member count for the group header
 const { count: memberCount } = await db
   .from('profiles')
   .select('id', { count: 'exact', head: true })
-  .eq('subscription_tier', 'elite_12');
+  .in('subscription_tier', ['pro_6', 'elite_12']);
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -49,10 +49,10 @@ const { count: memberCount } = await db
     <div id="comCoverContent">
       <div id="comGroupIcon"><Users size={32} /></div>
       <div id="comGroupInfo">
-        <h1 id="comGroupName">Elite Keto <em>Community</em></h1>
-        <p id="comGroupDesc">Private group · {memberCount || 0} Elite members · Share your journey, recipes &amp; wins</p>
+        <h1 id="comGroupName">Keto <em>Community</em></h1>
+        <p id="comGroupDesc">Private group · {memberCount || 0} Pro &amp; Elite members · Share your journey, recipes &amp; wins</p>
         <div id="comGroupMeta">
-          <span class="com-badge"><Lock size={12} style="display:inline;vertical-align:middle;" /> Elite members only</span>
+          <span class="com-badge"><Lock size={12} style="display:inline;vertical-align:middle;" /> Pro &amp; Elite members</span>
           <span class="com-badge"><Calendar size={12} style="display:inline;vertical-align:middle;" /> 365-day journey</span>
           <span class="com-badge"><Users size={12} style="display:inline;vertical-align:middle;" /> Global community</span>
         </div>
@@ -71,9 +71,9 @@ const { count: memberCount } = await db
     <aside id="comSidebar">
       <div class="com-side-card">
         <div class="com-side-title">About this group</div>
-        <p class="com-side-body">A private space for Elite Keto Journey members to share progress, recipes, tips and motivation on the 12-month program.</p>
+        <p class="com-side-body">A private space for Pro &amp; Elite Keto Journey members to share progress, recipes, tips and motivation on their journey.</p>
         <div class="com-side-stat"><span><Trophy size={14} /></span><span>{memberCount || 0} members</span></div>
-        <div class="com-side-stat"><span><Lock size={14} /></span><span>Private · Elite only</span></div>
+        <div class="com-side-stat"><span><Lock size={14} /></span><span>Private · Pro &amp; Elite</span></div>
         <div class="com-side-stat"><span><Users size={14} /></span><span>12-month program</span></div>
       </div>
       <div class="com-side-card">

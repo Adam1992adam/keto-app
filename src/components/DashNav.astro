@@ -175,7 +175,7 @@ const groups = [
         </button>
       </li>
     )}
-    {planType === 'elite_12' && (
+    {(planType === 'elite_12' || planType === 'pro_6') && (
       <li>
         <a href="/dashboard/community"
           class={`dn-tab dn-elite${activePage === 'community' ? ' active' : ''}`}>
@@ -184,12 +184,12 @@ const groups = [
         </a>
       </li>
     )}
-    {planType !== 'elite_12' && (
+    {planType === 'basic_30' && (
       <li>
         <button
           class="dn-tab dn-locked"
           onclick="window.showFeatureUpsell && window.showFeatureUpsell('community')"
-          title="Elite only">
+          title="Pro & Elite only">
           <Users size={13} />
           Community 🔒
         </button>
