@@ -1,0 +1,254 @@
+---
+// src/pages/dashboard/recipes/[bookId].astro
+// Shows all recipes belonging to a specific recipe book
+import { requireAuth } from '../../../lib/auth';
+import DashNav from '../../../components/DashNav.astro';
+
+const auth = await requireAuth(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile, db } = auth;
+
+const planType  = profile.subscription_tier || 'basic_30';
+const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const userName  = profile.full_name?.split(' ')[0] || 'Friend';
+
+const bookId = Astro.params.bookId;
+
+// Book metadata (mirrors data in recipes.astro)
+const bookMeta: Record<string, { title: string; emoji: string; desc: string; gradient: string; accent: string }> = {
+  b1:  { title: 'Keto Eggs Mastery',        emoji: '🥚', desc: '20 egg-based breakfast recipes with full macro breakdowns', gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', accent: '#f59e0b' },
+  b2:  { title: 'Avocado Mornings',          emoji: '🥑', desc: 'Creative avocado dishes to fuel your morning',              gradient: 'linear-gradient(135deg,#10b981,#059669)', accent: '#10b981' },
+  b3:  { title: 'Keto Pancake Bible',        emoji: '🥞', desc: 'Fluffy low-carb pancakes, waffles & French toast',          gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', accent: '#f59e0b' },
+  b4:  { title: 'Power Breakfast Bowls',     emoji: '🥣', desc: 'Filling breakfast bowls packed with healthy fats',          gradient: 'linear-gradient(135deg,#6366f1,#8b5cf6)', accent: '#8b5cf6' },
+  b5:  { title: 'Bacon & Beyond',            emoji: '🥓', desc: 'Savory breakfast meats done the keto way',                 gradient: 'linear-gradient(135deg,#ef4444,#dc2626)', accent: '#ef4444' },
+  b6:  { title: 'Keto Smoothie Bowls',       emoji: '🍓', desc: 'Thick, creamy bowls under 5g net carbs each',              gradient: 'linear-gradient(135deg,#ec4899,#db2777)', accent: '#ec4899' },
+  b7:  { title: 'Overnight Keto',            emoji: '⏰', desc: 'Prep-ahead breakfasts ready in minutes',                   gradient: 'linear-gradient(135deg,#06b6d4,#0891b2)', accent: '#06b6d4' },
+  b8:  { title: "Cheese Lover's Breakfast",  emoji: '🧀', desc: 'Cheese-forward morning meals full of flavor',              gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', accent: '#f59e0b' },
+  b9:  { title: 'Keto Omelette Art',         emoji: '🍳', desc: 'Gourmet omelettes for every taste and mood',               gradient: 'linear-gradient(135deg,#10b981,#059669)', accent: '#10b981' },
+  b10: { title: 'Fat Bomb Breakfasts',       emoji: '💣', desc: 'High-fat morning starters to hit ketosis fast',            gradient: 'linear-gradient(135deg,#8b5cf6,#7c3aed)', accent: '#8b5cf6' },
+  b11: { title: 'Weekend Keto Brunch',       emoji: '☀️', desc: 'Impressive brunch recipes for special mornings',           gradient: 'linear-gradient(135deg,#f59e0b,#f97316)', accent: '#f97316' },
+  b12: { title: 'Keto Breakfast Meal Prep',  emoji: '📦', desc: "Batch-cook a week's worth of breakfasts in 2 hours",       gradient: 'linear-gradient(135deg,#10b981,#059669)', accent: '#10b981' },
+  l1:  { title: 'Keto Salad Bible',          emoji: '🥬', desc: '30+ hearty salads that actually fill you up',              gradient: 'linear-gradient(135deg,#10b981,#059669)', accent: '#10b981' },
+  d1:  { title: 'Keto Steak Nights',         emoji: '🥩', desc: 'Master every cut — ribeye, sirloin, T-bone & more',        gradient: 'linear-gradient(135deg,#ef4444,#dc2626)', accent: '#ef4444' },
+  s1:  { title: 'Keto Cheese Crisps',        emoji: '🧀', desc: 'Crunchy cheese-based snacks for any craving',              gradient: 'linear-gradient(135deg,#8b5cf6,#7c3aed)', accent: '#8b5cf6' },
+};
+
+const book = bookMeta[bookId || ''] || { title: 'Recipe Collection', emoji: '🍽️', desc: 'Keto recipes', gradient: 'linear-gradient(135deg,#10b981,#059669)', accent: '#10b981' };
+
+// Fetch recipes for this book
+const { data: recipes } = await db
+  .from('recipes')
+  .select('id, title, calories, protein, fat, net_carbs, prep_time, cook_time, image_url, tags, difficulty, servings')
+  .eq('book_id', bookId)
+  .order('title');
+
+const recipeList = recipes || [];
+
+const diffColor = (d: string) => d === 'easy' ? '#10b981' : d === 'medium' ? '#f59e0b' : '#ef4444';
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{book.title} · Keto Journey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script is:inline>(function(){ var t=localStorage.getItem('keto-theme')||'dark'; document.documentElement.setAttribute('data-theme',t); })();</script>
+  <style>
+    :root {
+      --bg:#060d09; --card:#0d1a0f; --card2:#111f13;
+      --border:rgba(16,185,129,.1); --border2:rgba(16,185,129,.22);
+      --text:#dfeedd; --soft:#4d7055; --muted:#233328;
+      --green:#10b981; --green2:#34d399; --gold:#f59e0b;
+      --radius:20px;
+    }
+    [data-theme="light"] {
+      --bg:#f0faf4; --card:#fff; --card2:#f5fdf8;
+      --border:rgba(16,185,129,.15); --border2:rgba(16,185,129,.3);
+      --text:#0f2417; --soft:#4d7055; --muted:#b0d4bc;
+    }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+    .fade-up { animation:fadeUp .5s ease both; }
+
+    .page { max-width:1100px; margin:0 auto; padding:2rem 1.25rem 5rem; }
+
+    /* ── Hero banner ── */
+    .book-hero {
+      border-radius:24px; padding:2rem 2.5rem; margin-bottom:2rem;
+      position:relative; overflow:hidden;
+      animation:fadeUp .5s ease both;
+    }
+    .book-hero-bg {
+      position:absolute; inset:0; opacity:.15;
+      background:var(--hero-grad);
+    }
+    .book-back {
+      display:inline-flex; align-items:center; gap:.4rem;
+      font-size:.8rem; color:var(--soft); font-weight:600;
+      text-decoration:none; margin-bottom:1rem;
+      transition:color .2s;
+    }
+    .book-back:hover { color:var(--green2); }
+    .book-emoji { font-size:3rem; margin-bottom:.5rem; display:block; }
+    .book-title { font-family:'Fraunces',serif; font-size:2rem; font-weight:700; margin-bottom:.4rem; }
+    .book-title em { font-style:italic; }
+    .book-desc  { color:var(--soft); font-size:.9rem; margin-bottom:1rem; }
+    .book-meta  { display:flex; gap:1rem; flex-wrap:wrap; }
+    .book-pill  {
+      display:inline-flex; align-items:center; gap:.35rem; font-size:.78rem; font-weight:600;
+      padding:.3rem .75rem; border-radius:50px;
+      background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
+    }
+
+    /* ── Grid ── */
+    .recipes-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
+      gap:1.25rem;
+    }
+
+    /* ── Recipe card ── */
+    .recipe-card {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:18px; overflow:hidden; cursor:pointer;
+      transition:all .25s; text-decoration:none; color:inherit;
+      display:flex; flex-direction:column;
+      animation:fadeUp .5s ease both;
+    }
+    .recipe-card:hover {
+      border-color:var(--border2);
+      transform:translateY(-4px);
+      box-shadow:0 12px 32px rgba(0,0,0,.3);
+    }
+    .recipe-img {
+      height:160px; overflow:hidden; position:relative;
+      background:var(--muted);
+    }
+    .recipe-img img {
+      width:100%; height:100%; object-fit:cover; display:block;
+      transition:transform .4s;
+    }
+    .recipe-card:hover .recipe-img img { transform:scale(1.07); }
+    .recipe-img-overlay {
+      position:absolute; inset:0;
+      background:linear-gradient(to top, rgba(6,13,9,.7) 0%, transparent 50%);
+    }
+    .recipe-diff {
+      position:absolute; top:.6rem; right:.6rem;
+      font-size:.65rem; font-weight:700; padding:.2rem .55rem;
+      border-radius:50px; backdrop-filter:blur(8px);
+    }
+    .recipe-body { padding:1rem; flex:1; display:flex; flex-direction:column; gap:.5rem; }
+    .recipe-title { font-weight:700; font-size:.95rem; line-height:1.3; }
+    .recipe-macros {
+      display:grid; grid-template-columns:repeat(4,1fr);
+      gap:.25rem; margin-top:auto;
+    }
+    .macro-chip { text-align:center; }
+    .macro-chip-val { font-size:.85rem; font-weight:700; line-height:1; }
+    .macro-chip-lbl { font-size:.6rem; color:var(--soft); margin-top:.15rem; text-transform:uppercase; letter-spacing:.04em; }
+    .recipe-time {
+      display:flex; align-items:center; gap:.35rem;
+      font-size:.72rem; color:var(--soft); font-weight:600;
+    }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align:center; padding:4rem 2rem; color:var(--soft);
+    }
+    .empty-title { font-size:1.1rem; font-weight:700; margin-bottom:.5rem; color:var(--text); }
+
+    @media(max-width:500px) {
+      .book-hero { padding:1.25rem; }
+      .book-title { font-size:1.5rem; }
+      .recipes-grid { grid-template-columns:1fr 1fr; gap:.75rem; }
+      .recipe-img { height:120px; }
+      .recipe-macros { grid-template-columns:repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body>
+  <DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="recipes" />
+
+  <div class="page">
+    <!-- Hero -->
+    <div class="book-hero" style={`--hero-grad:${book.gradient};border:1px solid var(--border);`}>
+      <div class="book-hero-bg" style={`background:${book.gradient};`}></div>
+      <a href="/dashboard/recipes" class="book-back">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to Recipe Books
+      </a>
+      <span class="book-emoji">{book.emoji}</span>
+      <h1 class="book-title">{book.title}</h1>
+      <p class="book-desc">{book.desc}</p>
+      <div class="book-meta">
+        <span class="book-pill">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          {recipeList.length} recipes
+        </span>
+        <span class="book-pill">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Click any recipe for full details
+        </span>
+        <span class="book-pill" style={`color:${book.accent};`}>
+          ✓ Keto approved · under 10g net carbs
+        </span>
+      </div>
+    </div>
+
+    <!-- Recipe grid -->
+    {recipeList.length > 0 ? (
+      <div class="recipes-grid">
+        {recipeList.map((r, i) => (
+          <a href={`/dashboard/recipe/${r.id}`} class="recipe-card" style={`animation-delay:${i * 0.04}s;`}>
+            <div class="recipe-img">
+              {r.image_url
+                ? <img src={r.image_url} alt={r.title} loading="lazy" />
+                : <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2.5rem;">{book.emoji}</div>
+              }
+              <div class="recipe-img-overlay"></div>
+              <div class="recipe-diff" style={`background:rgba(0,0,0,.55);color:${diffColor(r.difficulty || 'easy')};border:1px solid ${diffColor(r.difficulty || 'easy')}44;`}>
+                {(r.difficulty || 'easy').charAt(0).toUpperCase() + (r.difficulty || 'easy').slice(1)}
+              </div>
+            </div>
+            <div class="recipe-body">
+              <div class="recipe-title">{r.title}</div>
+              <div class="recipe-time">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                {(r.prep_time || 0) + (r.cook_time || 0)} min
+              </div>
+              <div class="recipe-macros">
+                <div class="macro-chip">
+                  <div class="macro-chip-val" style="color:var(--gold);">{r.calories}</div>
+                  <div class="macro-chip-lbl">kcal</div>
+                </div>
+                <div class="macro-chip">
+                  <div class="macro-chip-val" style="color:#60a5fa;">{r.protein}g</div>
+                  <div class="macro-chip-lbl">protein</div>
+                </div>
+                <div class="macro-chip">
+                  <div class="macro-chip-val" style="color:#f472b6;">{r.fat}g</div>
+                  <div class="macro-chip-lbl">fat</div>
+                </div>
+                <div class="macro-chip">
+                  <div class="macro-chip-val" style="color:var(--green2);">{r.net_carbs}g</div>
+                  <div class="macro-chip-lbl">net carbs</div>
+                </div>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+    ) : (
+      <div class="empty">
+        <div style="font-size:3rem;margin-bottom:1rem;">{book.emoji}</div>
+        <div class="empty-title">Recipes coming soon</div>
+        <p>We're adding recipes to this book. Check back shortly!</p>
+      </div>
+    )}
+  </div>
+</body>
+</html>
