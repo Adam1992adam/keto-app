@@ -21,6 +21,7 @@ export const GET: APIRoute = async ({ params, cookies }) => {
   if (type === 'checkins')     return exportCheckins(db, user.id);
   if (type === 'food')         return exportFood(db, user.id);
   if (type === 'measurements') return exportMeasurements(db, user.id, imperial);
+  if (type === 'fasting')      return exportFasting(db, user.id);
 
   return json({ error: 'Unknown export type' }, 400);
 };
@@ -141,6 +142,32 @@ async function exportMeasurements(db: any, userId: string, imperial: boolean) {
     csvEscape(r.notes || ''),
   ]);
   return csvResponse(headers, rows, 'keto-measurements.csv');
+}
+
+// ── Fasting Sessions ─────────────────────────────────────────────────────────
+async function exportFasting(db: any, userId: string) {
+  const { data, error } = await db
+    .from('fasting_sessions')
+    .select('started_at, ended_at, target_hours, protocol')
+    .eq('user_id', userId)
+    .order('started_at', { ascending: true });
+
+  if (error) return json({ error: 'Server error' }, 500);
+
+  const headers = ['Started At', 'Ended At', 'Duration (h)', 'Target Hours', 'Protocol'];
+  const rows = (data || []).map((r: any) => {
+    const durationH = r.ended_at
+      ? Math.round(((new Date(r.ended_at).getTime() - new Date(r.started_at).getTime()) / 3600000) * 10) / 10
+      : '';
+    return [
+      r.started_at ? new Date(r.started_at).toISOString().replace('T', ' ').slice(0, 16) : '',
+      r.ended_at   ? new Date(r.ended_at).toISOString().replace('T', ' ').slice(0, 16)   : 'Active',
+      durationH,
+      r.target_hours || '',
+      r.protocol || '',
+    ];
+  });
+  return csvResponse(headers, rows, 'keto-fasting.csv');
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

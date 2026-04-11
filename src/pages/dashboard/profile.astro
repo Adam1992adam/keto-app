@@ -303,6 +303,9 @@ const avatarLetter       = profile.full_name?.charAt(0)?.toUpperCase() || '?';
     .qa:hover{border-color:var(--border2);transform:translateX(3px);}
     .qa.danger{color:var(--red);}
     .qa.danger:hover{background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.25);}
+    .export-btn{display:flex;align-items:center;gap:.5rem;padding:.65rem .85rem;border-radius:11px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-weight:600;font-size:.78rem;text-decoration:none;transition:all .2s;}
+    .export-btn:hover{border-color:var(--border2);background:rgba(16,185,129,.06);transform:translateY(-1px);}
+    .export-icon{font-size:.9rem;flex-shrink:0;}
     /* MACRO RINGS */
     .macro-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.875rem;}
     .mring{text-align:center;padding:1.1rem .75rem;border-radius:13px;background:var(--surface);border:1px solid var(--border);}
@@ -626,6 +629,34 @@ const avatarLetter       = profile.full_name?.charAt(0)?.toUpperCase() || '?';
           <form action="/api/auth/logout" method="POST" style="margin:0;">
             <button type="submit" class="qa danger" style="width:100%;text-align:left;border-color:rgba(239,68,68,.15);"><LogOut size={14} style="display:inline;vertical-align:middle;" /> Logout</button>
           </form>
+        </div>
+
+        <!-- ── Data Export ─────────────────────────────────── -->
+        <div class="form-section">
+          <div class="fsec-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:.3rem;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export My Data
+          </div>
+          <p style="font-size:.75rem;color:var(--soft);margin-bottom:1rem;line-height:1.5;">Download your personal data as CSV files. Each file opens in any spreadsheet app.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+            <a href="/api/export/checkins" class="export-btn">
+              <span class="export-icon">✏️</span>
+              <span>Check-ins</span>
+            </a>
+            <a href="/api/export/weight" class="export-btn">
+              <span class="export-icon">⚖️</span>
+              <span>Weight Log</span>
+            </a>
+            <a href="/api/export/food" class="export-btn">
+              <span class="export-icon">🍽️</span>
+              <span>Food Log</span>
+            </a>
+            <a href="/api/export/measurements" class="export-btn">
+              <span class="export-icon">📏</span>
+              <span>Measurements</span>
+            </a>
+          </div>
+          <p style="font-size:.68rem;color:var(--muted);margin-top:.75rem;text-align:center;">Your data belongs to you — always exportable</p>
         </div>
       </div>
     </div>

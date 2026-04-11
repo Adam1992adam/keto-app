@@ -1,0 +1,431 @@
+---
+// src/pages/admin/analytics.astro
+// Admin analytics dashboard — engagement, retention, churn
+
+import { createClient } from '@supabase/supabase-js';
+
+const adminSession = Astro.cookies.get('admin-session')?.value;
+if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
+
+const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+const db = createClient(SUPABASE_URL, SERVICE_KEY);
+
+const today   = new Date().toISOString().split('T')[0];
+const weekAgo = new Date(Date.now() - 7  * 86400000).toISOString().split('T')[0];
+const weekAgoIso = new Date(Date.now() - 7  * 86400000).toISOString();
+const monthAgo   = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+
+const [
+  { data: allProfiles },
+  { data: allJourneys },
+  { data: todayCheckins },
+  { data: weekCheckins },
+  { data: monthCheckins },
+  { data: weekPosts },
+  { data: weekComments },
+  { data: weekEmails },
+  { data: weekSignups },
+  { data: weekFastingSessions },
+  { data: weekFoodLogs },
+] = await Promise.all([
+  db.from('profiles').select('id, subscription_status, subscription_tier, created_at'),
+  db.from('user_journey').select('user_id, current_day, streak_days, total_xp'),
+  db.from('daily_checkins').select('user_id, energy_level, water_glasses').eq('checkin_date', today),
+  db.from('daily_checkins').select('user_id, energy_level, water_glasses, mood_level').gte('checkin_date', weekAgo).lte('checkin_date', today),
+  db.from('daily_checkins').select('user_id').gte('checkin_date', monthAgo).lte('checkin_date', today),
+  db.from('community_posts').select('id').gte('created_at', weekAgoIso),
+  db.from('community_comments').select('id').gte('created_at', weekAgoIso),
+  db.from('xp_transactions').select('id').eq('action_type', 'weekly_email_sent').gte('created_at', weekAgoIso),
+  db.from('profiles').select('id').gte('created_at', weekAgoIso),
+  db.from('fasting_sessions').select('id').gte('started_at', weekAgoIso).not('ended_at', 'is', null),
+  db.from('food_logs').select('user_id').gte('logged_date', weekAgo).lte('logged_date', today),
+]);
+
+// ── Core counts ──────────────────────────────────────────────────────
+const totalUsers       = allProfiles?.length || 0;
+const activeUsers      = allProfiles?.filter(p => p.subscription_status === 'active').length || 0;
+const expiredUsers     = allProfiles?.filter(p => p.subscription_status === 'expired').length || 0;
+const churnRate        = (activeUsers + expiredUsers) > 0
+  ? Math.round((expiredUsers / (activeUsers + expiredUsers)) * 100) : 0;
+
+const dauCount = new Set(todayCheckins?.map(c => c.user_id) || []).size;
+const wauCount = new Set(weekCheckins?.map(c => c.user_id) || []).size;
+const mauCount = new Set(monthCheckins?.map(c => c.user_id) || []).size;
+
+const dau_pct = activeUsers > 0 ? Math.round((dauCount / activeUsers) * 100) : 0;
+const wau_pct = activeUsers > 0 ? Math.round((wauCount / activeUsers) * 100) : 0;
+
+// ── Average streak across active users ──────────────────────────────
+const activeJourneys = (allJourneys || []).filter(j =>
+  allProfiles?.some(p => p.id === j.user_id && p.subscription_status === 'active')
+);
+const avgStreak = activeJourneys.length > 0
+  ? Math.round(activeJourneys.reduce((s, j) => s + (j.streak_days || 0), 0) / activeJourneys.length)
+  : 0;
+const avgXP = activeJourneys.length > 0
+  ? Math.round(activeJourneys.reduce((s, j) => s + (j.total_xp || 0), 0) / activeJourneys.length)
+  : 0;
+
+// ── Retention funnel ─────────────────────────────────────────────────
+// Base = users who are at or past that day
+const retMilestones = [1, 3, 7, 14, 21, 30];
+const retCounts = retMilestones.map(d => ({
+  day: d,
+  count: (allJourneys || []).filter(j => (j.current_day || 0) >= d).length,
+  pct: totalUsers > 0
+    ? Math.round(((allJourneys || []).filter(j => (j.current_day || 0) >= d).length / totalUsers) * 100)
+    : 0,
+}));
+
+// ── Check-in frequency distribution this week ────────────────────────
+const userCheckinCounts: Record<string, number> = {};
+for (const c of (weekCheckins || [])) {
+  userCheckinCounts[c.user_id] = (userCheckinCounts[c.user_id] || 0) + 1;
+}
+const freqBuckets = [
+  { label: '0 days',  color: '#ef4444', count: activeUsers - Object.keys(userCheckinCounts).length },
+  { label: '1–3 days', color: '#f59e0b', count: Object.values(userCheckinCounts).filter(n => n >= 1 && n <= 3).length },
+  { label: '4–6 days', color: '#3b82f6', count: Object.values(userCheckinCounts).filter(n => n >= 4 && n <= 6).length },
+  { label: '7 days',  color: '#10b981', count: Object.values(userCheckinCounts).filter(n => n === 7).length },
+];
+const maxFreq = Math.max(...freqBuckets.map(b => b.count), 1);
+
+// ── Avg energy & water this week ─────────────────────────────────────
+const weekCheckinArr = weekCheckins || [];
+const avgEnergy = weekCheckinArr.length > 0
+  ? (weekCheckinArr.reduce((s, c) => s + (c.energy_level || 3), 0) / weekCheckinArr.length).toFixed(1)
+  : '—';
+const avgWater = weekCheckinArr.length > 0
+  ? (weekCheckinArr.reduce((s, c) => s + (c.water_glasses || 0), 0) / weekCheckinArr.length).toFixed(1)
+  : '—';
+
+// ── Community & email stats ──────────────────────────────────────────
+const postsThisWeek    = weekPosts?.length || 0;
+const commentsThisWeek = weekComments?.length || 0;
+const emailsThisWeek   = weekEmails?.length || 0;
+const newSignupsWeek   = weekSignups?.length || 0;
+const fastingThisWeek  = weekFastingSessions?.length || 0;
+const foodLoggersWeek  = new Set(weekFoodLogs?.map(f => f.user_id) || []).size;
+
+// ── Plan distribution ────────────────────────────────────────────────
+const planDist = [
+  { label: '🥑 Basic', tier: 'basic_30', color: '#6366f1' },
+  { label: '⚡ Pro',   tier: 'pro_6',    color: '#10b981' },
+  { label: '👑 Elite', tier: 'elite_12', color: '#f59e0b' },
+].map(p => ({
+  ...p,
+  count: allProfiles?.filter(u => u.subscription_tier === p.tier && u.subscription_status === 'active').length || 0,
+}));
+const maxPlanCount = Math.max(...planDist.map(p => p.count), 1);
+
+// ── 8-week signup trend ──────────────────────────────────────────────
+const signupTrend = Array.from({ length: 8 }, (_, i) => {
+  const wk = new Date();
+  wk.setDate(wk.getDate() - (7 - i) * 7);
+  const wkStart = new Date(wk); wkStart.setDate(wk.getDate() - 7);
+  const label = wk.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+  const count = allProfiles?.filter(p => {
+    const d = new Date(p.created_at);
+    return d >= wkStart && d < wk;
+  }).length || 0;
+  return { label, count };
+});
+const maxSignup = Math.max(...signupTrend.map(w => w.count), 1);
+---
+
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Analytics · Admin · KetoJourney</title>
+  <meta name="robots" content="noindex, nofollow"/>
+  <style>
+    :root {
+      --bg:#060d09;--bg2:#0a1510;--card:#0d1a0f;--card2:#111f13;
+      --border:rgba(16,185,129,.12);--border2:rgba(16,185,129,.25);
+      --text:#dfeedd;--soft:#4d7055;--muted:#233328;
+      --green:#10b981;--green2:#34d399;--gold:#f59e0b;--red:#ef4444;--blue:#3b82f6;--purple:#8b5cf6;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    a{color:var(--green);text-decoration:none;}
+    a:hover{text-decoration:underline;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+    .admin-nav{background:var(--card);border-bottom:1px solid var(--border);padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+    .nav-brand{display:flex;align-items:center;gap:.6rem;}
+    .nav-brand-icon{width:36px;height:36px;background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+    .nav-brand-text{font-size:1rem;font-weight:800;color:var(--text);letter-spacing:-.02em;}
+    .nav-brand-sub{font-size:.7rem;color:var(--soft);font-weight:600;}
+    .nav-links{display:flex;align-items:center;gap:.5rem;}
+    .nav-link{font-size:.82rem;font-weight:600;color:var(--soft);padding:.4rem .8rem;border-radius:8px;transition:all .2s;}
+    .nav-link:hover{color:var(--text);background:var(--muted);text-decoration:none;}
+    .nav-link.active{color:var(--green);background:rgba(16,185,129,.08);}
+    .nav-link.danger{color:#ef9494;border:1px solid rgba(239,68,68,.2);}
+    .nav-link.danger:hover{background:rgba(239,68,68,.1);color:#ef4444;}
+
+    .page{max-width:1400px;margin:0 auto;padding:2rem 1.5rem 5rem;}
+    .page-header{margin-bottom:2rem;animation:fadeUp .4s ease both;}
+    .page-title{font-size:1.6rem;font-weight:900;color:var(--text);margin-bottom:.25rem;}
+    .page-sub{font-size:.85rem;color:var(--soft);}
+
+    /* KPI cards */
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1rem;margin-bottom:2rem;}
+    .kpi{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.25rem 1.4rem;transition:all .2s;animation:fadeUp .4s ease both;}
+    .kpi:hover{border-color:var(--border2);transform:translateY(-2px);}
+    .kpi-label{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);margin-bottom:.4rem;}
+    .kpi-value{font-size:2rem;font-weight:900;line-height:1;margin-bottom:.25rem;}
+    .kpi-sub{font-size:.72rem;color:var(--soft);}
+    .kpi-trend{display:inline-block;font-size:.68rem;font-weight:700;padding:.1rem .45rem;border-radius:99px;margin-left:.4rem;}
+    .trend-up{background:rgba(16,185,129,.12);color:var(--green);}
+    .trend-down{background:rgba(239,68,68,.1);color:#ef9494;}
+
+    /* Section cards */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:1.5rem;margin-bottom:1.5rem;animation:fadeUp .4s .1s ease both;}
+    .card-title{font-size:.9rem;font-weight:800;color:var(--text);margin-bottom:1.25rem;display:flex;align-items:center;gap:.5rem;}
+
+    /* Two-col and three-col layouts */
+    .row-2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;}
+    .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;}
+    @media(max-width:900px){.row-2,.row-3{grid-template-columns:1fr;}}
+
+    /* Retention funnel */
+    .funnel-row{display:flex;align-items:center;gap:.75rem;margin-bottom:.6rem;}
+    .funnel-label{font-size:.78rem;font-weight:700;color:var(--soft);width:60px;flex-shrink:0;}
+    .funnel-bar-wrap{flex:1;height:22px;background:var(--muted);border-radius:6px;overflow:hidden;}
+    .funnel-bar{height:100%;border-radius:6px;transition:width .6s ease;display:flex;align-items:center;padding-left:.5rem;}
+    .funnel-bar-label{font-size:.68rem;font-weight:800;color:#fff;white-space:nowrap;}
+    .funnel-count{font-size:.75rem;font-weight:800;color:var(--soft);width:80px;text-align:right;flex-shrink:0;}
+
+    /* Frequency bars */
+    .freq-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;}
+    .freq-item{display:flex;flex-direction:column;align-items:center;gap:.4rem;}
+    .freq-bar-wrap{width:100%;height:80px;display:flex;align-items:flex-end;justify-content:center;}
+    .freq-bar{width:60%;border-radius:6px 6px 0 0;transition:height .6s ease;min-height:4px;}
+    .freq-label{font-size:.68rem;font-weight:700;color:var(--soft);text-align:center;}
+    .freq-count{font-size:.95rem;font-weight:900;}
+
+    /* Stat rows (community/email) */
+    .stat-row{display:flex;align-items:center;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid var(--border);}
+    .stat-row:last-child{border-bottom:none;}
+    .stat-row-label{font-size:.8rem;color:var(--soft);}
+    .stat-row-val{font-size:.9rem;font-weight:900;color:var(--text);}
+
+    /* Plan dist bars */
+    .plan-row{display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem;}
+    .plan-label{font-size:.78rem;font-weight:700;width:70px;flex-shrink:0;}
+    .plan-bar-wrap{flex:1;height:18px;background:var(--muted);border-radius:5px;overflow:hidden;}
+    .plan-bar{height:100%;border-radius:5px;transition:width .6s ease;}
+    .plan-count{font-size:.75rem;font-weight:800;color:var(--soft);width:30px;text-align:right;flex-shrink:0;}
+
+    /* Signup trend mini-bars */
+    .trend-bars{display:flex;align-items:flex-end;gap:.3rem;height:60px;margin-top:.5rem;}
+    .trend-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:.2rem;}
+    .trend-bar{width:100%;border-radius:3px 3px 0 0;min-height:3px;background:rgba(16,185,129,.3);transition:all .3s;}
+    .trend-bar.current{background:var(--green);}
+    .trend-lbl{font-size:.52rem;color:var(--soft);writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;}
+
+    /* Health metric chips */
+    .metric-chips{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem;}
+    .chip{padding:.3rem .75rem;border-radius:99px;font-size:.75rem;font-weight:700;}
+  </style>
+</head>
+<body>
+
+<nav class="admin-nav">
+  <div class="nav-brand">
+    <div class="nav-brand-icon">🔐</div>
+    <div>
+      <div class="nav-brand-text">KetoJourney Admin</div>
+      <div class="nav-brand-sub">Analytics</div>
+    </div>
+  </div>
+  <div class="nav-links">
+    <a href="/admin" class="nav-link">Dashboard</a>
+    <a href="/admin/analytics" class="nav-link active">Analytics</a>
+    <a href="/admin/moderation" class="nav-link">Moderation</a>
+    <a href="/" class="nav-link">← Site</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div class="page-header">
+    <div class="page-title">📊 Analytics</div>
+    <div class="page-sub">Live engagement, retention, and health metrics across all active users</div>
+  </div>
+
+  <!-- ── KPI Row ────────────────────────────────────────────────── -->
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-label">Daily Active (Today)</div>
+      <div class="kpi-value" style="color:var(--green);">{dauCount}</div>
+      <div class="kpi-sub">{dau_pct}% of active subscribers</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Weekly Active (7d)</div>
+      <div class="kpi-value" style="color:var(--blue);">{wauCount}</div>
+      <div class="kpi-sub">{wau_pct}% of active subscribers</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Monthly Active (30d)</div>
+      <div class="kpi-value" style="color:var(--purple);">{mauCount}</div>
+      <div class="kpi-sub">unique users who checked in</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Avg Streak</div>
+      <div class="kpi-value" style="color:var(--gold);">{avgStreak}<span style="font-size:1rem;color:var(--soft);"> d</span></div>
+      <div class="kpi-sub">across {activeJourneys.length} active users</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Churn Rate</div>
+      <div class="kpi-value" style={`color:${churnRate > 30 ? 'var(--red)' : churnRate > 15 ? 'var(--gold)' : 'var(--green)'};`}>{churnRate}%</div>
+      <div class="kpi-sub">{expiredUsers} expired / {activeUsers + expiredUsers} total</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Avg XP (Active)</div>
+      <div class="kpi-value" style="color:var(--purple);">{avgXP.toLocaleString()}</div>
+      <div class="kpi-sub">total XP per active user</div>
+    </div>
+  </div>
+
+  <!-- ── Retention + Frequency ──────────────────────────────────── -->
+  <div class="row-2">
+
+    <!-- Retention funnel -->
+    <div class="card">
+      <div class="card-title">📉 Retention Funnel</div>
+      <p style="font-size:.75rem;color:var(--soft);margin-bottom:1rem;">Users who reached each milestone day (of {totalUsers} total)</p>
+      {retCounts.map((r, i) => (
+        <div class="funnel-row">
+          <div class="funnel-label">Day {r.day}</div>
+          <div class="funnel-bar-wrap">
+            <div class="funnel-bar" style={`width:${r.pct}%;background:${i === 0 ? '#10b981' : i === 1 ? '#34d399' : i === 2 ? '#3b82f6' : i === 3 ? '#8b5cf6' : i === 4 ? '#f59e0b' : '#ef4444'};`}>
+              {r.pct > 15 && <span class="funnel-bar-label">{r.pct}%</span>}
+            </div>
+          </div>
+          <div class="funnel-count">{r.count} users</div>
+        </div>
+      ))}
+    </div>
+
+    <!-- Check-in frequency distribution -->
+    <div class="card">
+      <div class="card-title">📅 Check-in Frequency This Week</div>
+      <p style="font-size:.75rem;color:var(--soft);margin-bottom:1.25rem;">How often active users checked in (last 7 days)</p>
+      <div class="freq-grid">
+        {freqBuckets.map(b => (
+          <div class="freq-item">
+            <div class="freq-bar-wrap">
+              <div class="freq-bar" style={`height:${Math.round((b.count / maxFreq) * 80)}px;background:${b.color};`}></div>
+            </div>
+            <div class="freq-count" style={`color:${b.color};`}>{b.count}</div>
+            <div class="freq-label">{b.label}</div>
+          </div>
+        ))}
+      </div>
+      <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border);">
+        <div style="font-size:.72rem;color:var(--soft);margin-bottom:.4rem;">This week's check-in health</div>
+        <div class="metric-chips">
+          <span class="chip" style="background:rgba(16,185,129,.1);color:var(--green);">⚡ Avg energy {avgEnergy}/5</span>
+          <span class="chip" style="background:rgba(59,130,246,.1);color:var(--blue);">💧 Avg water {avgWater} gl</span>
+          <span class="chip" style="background:rgba(139,92,246,.1);color:var(--purple);">⏱️ {fastingThisWeek} fasts logged</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Plan distribution + Signups + Activity ────────────────── -->
+  <div class="row-3">
+
+    <!-- Plan distribution -->
+    <div class="card">
+      <div class="card-title">💳 Active Plan Distribution</div>
+      {planDist.map(p => (
+        <div class="plan-row">
+          <div class="plan-label" style={`color:${p.color};`}>{p.label}</div>
+          <div class="plan-bar-wrap">
+            <div class="plan-bar" style={`width:${Math.round((p.count / Math.max(maxPlanCount, 1)) * 100)}%;background:${p.color};`}></div>
+          </div>
+          <div class="plan-count">{p.count}</div>
+        </div>
+      ))}
+      <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
+        <div class="stat-row">
+          <span class="stat-row-label">Total active subscribers</span>
+          <span class="stat-row-val">{activeUsers}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-row-label">New signups this week</span>
+          <span class="stat-row-val" style="color:var(--green);">+{newSignupsWeek}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8-week signup trend -->
+    <div class="card">
+      <div class="card-title">📈 Signups — Last 8 Weeks</div>
+      <div class="trend-bars">
+        {signupTrend.map((w, i) => (
+          <div class="trend-bar-wrap">
+            <div class={`trend-bar${i === signupTrend.length - 1 ? ' current' : ''}`} style={`height:${Math.max(4, Math.round((w.count / maxSignup) * 60))}px;`} title={`${w.count} signups`}></div>
+            <div class="trend-lbl">{w.label}</div>
+          </div>
+        ))}
+      </div>
+      <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border);">
+        <div class="stat-row">
+          <span class="stat-row-label">Total users ever</span>
+          <span class="stat-row-val">{totalUsers}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-row-label">Expired / churned</span>
+          <span class="stat-row-val" style="color:var(--red);">{expiredUsers}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Community + email activity -->
+    <div class="card">
+      <div class="card-title">📣 Activity This Week</div>
+      <div class="stat-row">
+        <span class="stat-row-label">🗣️ Community posts</span>
+        <span class="stat-row-val">{postsThisWeek}</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-row-label">💬 Community comments</span>
+        <span class="stat-row-val">{commentsThisWeek}</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-row-label">📧 Weekly emails sent</span>
+        <span class="stat-row-val">{emailsThisWeek}</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-row-label">🍽️ Users who logged food</span>
+        <span class="stat-row-val">{foodLoggersWeek}</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-row-label">⏱️ Fasting sessions</span>
+        <span class="stat-row-val">{fastingThisWeek}</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-row-label">✏️ Total check-ins (7d)</span>
+        <span class="stat-row-val" style="color:var(--green);">{weekCheckins?.length || 0}</span>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script is:inline>
+function adminLogout() {
+  document.cookie = 'admin-session=; Max-Age=0; path=/';
+  window.location.href = '/admin-login';
+}
+</script>
+</body>
+</html>
