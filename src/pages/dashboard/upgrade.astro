@@ -43,6 +43,8 @@ const planCheckoutUrls: Record<string, string> = {
   elite_12: LS_ELITE_URL,
 };
 
+const appUrl = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').replace(/\/$/, '');
+
 const plans = [
   {
     id: 'basic_30',
@@ -751,7 +753,7 @@ const plans = [
 
 <div class="toast" id="toast"></div>
 
-<script is:inline define:vars={{ userEmail, userName: userFullName, userId }}>
+<script is:inline define:vars={{ userEmail, userName: userFullName, userId, appUrl }}>
 
 // ── THEME ──
 var html     = document.documentElement;
@@ -783,6 +785,8 @@ function buildCheckoutUrl(baseUrl) {
     if (userEmail) url.searchParams.set('checkout[email]', userEmail);
     if (userName)  url.searchParams.set('checkout[name]',  userName);
     if (userId)    url.searchParams.set('checkout[custom][user_id]', userId);
+    // Redirect back to dashboard after payment so existing users don't hit the signup page
+    if (userId && appUrl) url.searchParams.set('checkout[redirect_url]', appUrl + '/dashboard?upgraded=1');
     return url.toString();
   } catch(e) { return baseUrl; }
 }

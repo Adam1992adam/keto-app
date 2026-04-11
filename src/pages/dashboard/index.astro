@@ -1012,6 +1012,16 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
     </div>
   </div>
 
+  <!-- UPGRADE SUCCESS BANNER — shown after returning from LemonSqueezy checkout -->
+  <div id="upgradeBanner" style="display:none;align-items:center;gap:.9rem;padding:1rem 1.25rem;border-radius:16px;border:1.5px solid rgba(16,185,129,.35);background:rgba(16,185,129,.1);margin-bottom:1rem;animation:fadeUp .4s ease both;">
+    <div style="font-size:1.5rem;">🎉</div>
+    <div style="flex:1;">
+      <div style="font-weight:800;color:var(--green);font-size:.95rem;">Plan upgraded successfully!</div>
+      <div style="font-size:.8rem;color:var(--soft);margin-top:.15rem;">Your new plan is now active — all your data has been kept. Enjoy your upgraded features!</div>
+    </div>
+    <button onclick="document.getElementById('upgradeBanner').style.display='none'" style="background:none;border:none;color:var(--soft);font-size:1.1rem;cursor:pointer;padding:.1rem .3rem;flex-shrink:0;">×</button>
+  </div>
+
   <!-- LAPSE RECOVERY BANNER — shown when user missed 1+ days -->
   {lapseBanner && (
     <div class="lapse-banner" id="lapseBanner" style={`background:${lapseBanner.bg};border-color:${lapseBanner.border};`}>
@@ -2847,6 +2857,26 @@ async function useStreakShield() {
     btn.textContent = '🛡 Use Shield';
   }
 }
+
+// ── Upgrade success banner ─────────────────────────────────────────
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('upgraded') === '1') {
+    var banner = document.getElementById('upgradeBanner');
+    if (banner) {
+      banner.style.display = 'flex';
+      // Auto-dismiss after 8 seconds
+      setTimeout(function() {
+        banner.style.opacity = '0';
+        banner.style.transition = 'opacity .5s';
+        setTimeout(function() { banner.style.display = 'none'; }, 500);
+      }, 8000);
+    }
+    // Clean the param from the URL without a page reload
+    var clean = window.location.pathname + (params.toString().replace('upgraded=1', '').replace(/^&|&$/, '') ? '?' + params.toString().replace('upgraded=1', '').replace(/^&|&$/, '') : '');
+    window.history.replaceState({}, '', clean);
+  }
+}());
 </script>
 
 <AppTour userName={userName} />
