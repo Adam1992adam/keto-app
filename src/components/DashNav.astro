@@ -37,7 +37,7 @@ const tierCss   = planType === 'elite_12' ? 'dn-tier dn-tier--elite' : planType 
 const progressPages = ['progress', 'photos', 'checkin', 'reflections', 'ketones', 'share', 'steps'];
 const mealPages     = ['browse', 'recipes', 'food-log', 'favorites', 'meal-prep', 'scanner'];
 const planPages     = ['shopping', 'habits', 'weekly', 'fasting', 'keto-calculator'];
-const morePages     = ['learn', 'notifications', 'export', 'referrals', 'guide'];
+const morePages     = ['learn', 'notifications', 'export', 'referrals', 'guide', 'billing'];
 
 const activeGroup =
   activePage === 'dashboard'          ? 'today'     :
@@ -92,6 +92,7 @@ const groups = [
       { href: '/dashboard/notifications', key: 'notifications', label: 'Notifications' },
       { href: '/dashboard/export',        key: 'export',        label: 'Export'        },
       { href: '/dashboard/referrals',     key: 'referrals',     label: 'Refer Friends' },
+      { href: '/dashboard/billing',       key: 'billing',       label: 'My Plan & Billing' },
     ],
   },
 ];
