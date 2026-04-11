@@ -377,8 +377,8 @@ async function openPortal() {
       msg.textContent = 'No billing record found for this email. If you purchased under a different email, contact support.';
     } else {
       msg.style.display = 'block';
-      msg.style.color = '#ef4444';
-      msg.textContent = data.error || 'Unable to open billing portal. Please try again or contact support.';
+      msg.style.color = 'var(--soft)';
+      msg.innerHTML = 'To manage your purchase, visit <a href="https://app.lemonsqueezy.com/my-orders" target="_blank" rel="noopener" style="color:var(--green2);">app.lemonsqueezy.com/my-orders</a> and log in with your purchase email.';
     }
   } catch (e) {
     msg.style.display = 'block';
