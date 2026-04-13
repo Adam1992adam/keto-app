@@ -1002,8 +1002,10 @@ const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
           tier:          purchaseData.tier,
           startDate:     purchaseData.start_date,
           endDate:       purchaseData.end_date,
-          saleId:        purchaseData.sale_id,
-          referral_code: refCode || undefined,
+          saleId:         purchaseData.sale_id,
+          ls_order_id:    purchaseData.ls_order_id    || '',
+          ls_customer_id: purchaseData.ls_customer_id || '',
+          referral_code:  refCode || undefined,
         }),
       });
       var result = await res.json();

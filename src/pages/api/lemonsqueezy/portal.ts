@@ -26,25 +26,63 @@ export const POST: APIRoute = async ({ cookies, locals }) => {
   const email = user.email;
   if (!email) return json({ error: 'No email on account' }, 400);
 
-  try {
-    // Look up the LemonSqueezy customer by email + store
-    const res = await fetch(
-      `https://api.lemonsqueezy.com/v1/customers?filter[store_id]=${STORE_ID}&filter[email]=${encodeURIComponent(email)}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`,
-          'Accept': 'application/vnd.api+json',
-        },
-      },
-    );
+  // Get Supabase to look up ls_customer_id stored on the profile
+  const cfEnvSB     = (locals as any)?.runtime?.env || {};
+  const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL       || import.meta.env.PUBLIC_SUPABASE_URL       || cfEnvSB.PUBLIC_SUPABASE_URL;
+  const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY || cfEnvSB.SUPABASE_SERVICE_ROLE_KEY;
 
-    if (!res.ok) {
-      console.error('[LS Portal] API error:', res.status, await res.text());
-      return json({ error: 'Failed to reach LemonSqueezy API' }, 502);
+  let lsCustomerId: string | null = null;
+  if (SUPABASE_URL && SERVICE_KEY) {
+    const { createClient } = await import('@supabase/supabase-js');
+    const db = createClient(SUPABASE_URL, SERVICE_KEY);
+    const { data: profile } = await db
+      .from('profiles')
+      .select('ls_customer_id')
+      .eq('id', user.id)
+      .maybeSingle();
+    lsCustomerId = profile?.ls_customer_id || null;
+  }
+
+  try {
+    let customer: any = null;
+
+    // Fast path — fetch directly by stored customer ID
+    if (lsCustomerId) {
+      const res = await fetch(
+        `https://api.lemonsqueezy.com/v1/customers/${lsCustomerId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${API_KEY}`,
+            'Accept': 'application/vnd.api+json',
+          },
+        },
+      );
+      if (res.ok) {
+        const data = await res.json();
+        customer = data?.data || null;
+      }
     }
 
-    const data = await res.json();
-    const customer = data?.data?.[0];
+    // Slow path — search by email
+    if (!customer) {
+      const res = await fetch(
+        `https://api.lemonsqueezy.com/v1/customers?filter[store_id]=${STORE_ID}&filter[email]=${encodeURIComponent(email)}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${API_KEY}`,
+            'Accept': 'application/vnd.api+json',
+          },
+        },
+      );
+
+      if (!res.ok) {
+        console.error('[LS Portal] API error:', res.status, await res.text());
+        return json({ error: 'Failed to reach LemonSqueezy API' }, 502);
+      }
+
+      const data = await res.json();
+      customer = data?.data?.[0] || null;
+    }
 
     if (!customer) {
       // Customer not found — they haven't purchased through LemonSqueezy yet,

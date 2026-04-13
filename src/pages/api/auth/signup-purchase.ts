@@ -7,7 +7,7 @@ import type { APIRoute } from 'astro';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const { email, password, fullName, tier, startDate, endDate, saleId, referral_code } =
+    const { email, password, fullName, tier, startDate, endDate, saleId, ls_order_id, ls_customer_id, referral_code } =
       await request.json();
 
     // ── Validate required fields ──────────────
@@ -116,7 +116,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       subscription_status:     'active',
       subscription_start_date: subStart.toISOString(),
       subscription_end_date:   subEnd.toISOString(),
-      payhip_sale_id:          saleId || null,
+      payhip_sale_id:          saleId || ls_order_id || null,
+      ls_order_id:             ls_order_id    || null,
+      ls_customer_id:          ls_customer_id || null,
       preferred_units:         'imperial',
       created_at:              new Date().toISOString(),
       updated_at:              new Date().toISOString(),

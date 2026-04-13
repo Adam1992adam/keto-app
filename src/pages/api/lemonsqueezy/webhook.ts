@@ -1,11 +1,19 @@
 // POST /api/lemonsqueezy/webhook
-// Handles LemonSqueezy order events and keeps subscriptions in sync.
+// Handles all LemonSqueezy events for live production mode.
 //
-// Supported events:
-//   order_created   → activate subscription (direct if user_id in custom_data, else pending)
+// One-time orders:
+//   order_created   → activate subscription
 //   order_refunded  → cancel subscription
 //
-// All DB writes use the service role key to bypass RLS.
+// Recurring subscriptions:
+//   subscription_created         → activate subscription
+//   subscription_updated         → sync tier / status changes
+//   subscription_cancelled       → mark cancelled (stays active until ends_at)
+//   subscription_expired         → deactivate account
+//   subscription_payment_success → extend subscription_end_date
+//   subscription_payment_failed  → flag account (grace period)
+//   subscription_payment_recovered → restore after failed payment
+//   subscription_resumed         → restore after pause/cancel
 
 import type { APIRoute } from 'astro';
 
@@ -25,37 +33,49 @@ async function verifySignature(secret: string, body: string, signature: string):
 }
 
 // ─── Tier detection ───────────────────────────────────────────────────────────
-function detectTier(variantName: string, priceCents: number): { tier: string; days: number } {
-  const name = (variantName || '').toLowerCase();
-  if (name.includes('elite'))               return { tier: 'elite_12', days: 360 };
-  if (name.includes('pro'))                 return { tier: 'pro_6',    days: 90  };
-  if (name.includes('basic'))               return { tier: 'basic_30', days: 30  };
-  // Price fallback (cents): Elite ≥ $130, Pro ≥ $50, else Basic
-  if (priceCents >= 13000)                  return { tier: 'elite_12', days: 360 };
-  if (priceCents >= 5000)                   return { tier: 'pro_6',    days: 90  };
+// Matches product/variant name (case-insensitive) or falls back to price.
+function detectTier(productName: string, variantName: string, priceCents: number): { tier: string; days: number } {
+  const name = `${productName} ${variantName}`.toLowerCase();
+  if (name.includes('elite'))  return { tier: 'elite_12', days: 360 };
+  if (name.includes('pro'))    return { tier: 'pro_6',    days: 90  };
+  if (name.includes('basic'))  return { tier: 'basic_30', days: 30  };
+  // Price fallback (cents)
+  if (priceCents >= 13000)     return { tier: 'elite_12', days: 360 };
+  if (priceCents >= 5000)      return { tier: 'pro_6',    days: 90  };
   return { tier: 'basic_30', days: 30 };
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function json(data: any, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status, headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+function getEnv(key: string, locals: any): string {
+  const cfEnv = locals?.runtime?.env || {};
+  return process.env[key] || import.meta.env[key] || cfEnv[key] || '';
 }
 
 // ─── Route ───────────────────────────────────────────────────────────────────
 export const POST: APIRoute = async ({ request, locals }) => {
+  let rawBody = '';
   try {
-    const rawBody  = await request.text();
+    rawBody = await request.text();
     const signature = request.headers.get('x-signature') || '';
 
-    // Read env — process.env (Vercel runtime) → import.meta.env (build-time) → Cloudflare locals
-    const cfEnv      = (locals as any)?.runtime?.env || {};
-    const SECRET     = process.env.LEMONSQUEEZY_SECRET    || import.meta.env.LEMONSQUEEZY_SECRET    || cfEnv.LEMONSQUEEZY_SECRET    || '';
-    const SUPABASE_URL  = process.env.PUBLIC_SUPABASE_URL       || import.meta.env.PUBLIC_SUPABASE_URL       || cfEnv.PUBLIC_SUPABASE_URL;
-    const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY || cfEnv.SUPABASE_SERVICE_ROLE_KEY;
+    const SECRET      = getEnv('LEMONSQUEEZY_WEBHOOK_SECRET', locals);
+    const SUPABASE_URL = getEnv('PUBLIC_SUPABASE_URL', locals);
+    const SERVICE_KEY  = getEnv('SUPABASE_SERVICE_ROLE_KEY', locals);
 
-    // Signature verification is MANDATORY — reject if secret is not configured
     if (!SECRET) {
-      console.error('[LS Webhook] LEMONSQUEEZY_SECRET not configured — rejecting request');
+      console.error('[LS Webhook] LEMONSQUEEZY_WEBHOOK_SECRET not set — rejecting');
       return json({ error: 'Server configuration error' }, 500);
     }
+
     const valid = await verifySignature(SECRET, rawBody, signature);
     if (!valid) {
-      console.error('[LS Webhook] Invalid signature — possible spoofed request');
+      console.error('[LS Webhook] Invalid signature');
       return json({ error: 'Invalid signature' }, 401);
     }
 
@@ -67,70 +87,65 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { createClient } = await import('@supabase/supabase-js');
     const db = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    const payload   = JSON.parse(rawBody);
-    const eventName = payload.meta?.event_name as string;
+    const payload    = JSON.parse(rawBody);
+    const eventName  = payload.meta?.event_name as string;
+    const customData = payload.meta?.custom_data || {};
+    const attrs      = payload.data?.attributes  || {};
+
     console.log(`[LS Webhook] Event: ${eventName}`);
 
-    // ── order_created ─────────────────────────────────────────────────────────
+    // ══════════════════════════════════════════════════════════════════════════
+    // ORDER EVENTS (one-time purchases)
+    // ══════════════════════════════════════════════════════════════════════════
+
     if (eventName === 'order_created') {
-      const attrs        = payload.data?.attributes || {};
-      const buyerEmail   = (attrs.user_email || '').trim().toLowerCase();
-      const orderId      = String(payload.data?.id || '');
-      const customerId   = String(attrs.customer_id || '');
-      const priceCents   = attrs.total || 0;
-      const orderStatus  = attrs.status;
-      const firstItem    = attrs.first_order_item || {};
-      const variantName  = firstItem.variant_name || firstItem.product_name || '';
-      const customData   = payload.meta?.custom_data || {};
-      const userId       = customData.user_id || null;   // present when upgrading from dashboard
+      const buyerEmail  = (attrs.user_email || '').trim().toLowerCase();
+      const orderId     = String(payload.data?.id || '');
+      const customerId  = String(attrs.customer_id || '');
+      const priceCents  = attrs.total || 0;
+      const orderStatus = attrs.status;
+      const firstItem   = attrs.first_order_item || {};
+      const productName = firstItem.product_name || '';
+      const variantName = firstItem.variant_name || '';
+      const userId      = customData.user_id || null;
 
       if (!buyerEmail) return json({ error: 'Missing email' }, 400);
       if (orderStatus !== 'paid') {
-        console.log(`[LS Webhook] Skipping — status: ${orderStatus}`);
         return json({ received: true, skipped: true, reason: 'not_paid' });
       }
 
-      // Idempotency: skip if this exact order ID was already processed
+      // Idempotency — check both profiles and pending_activations
       if (orderId) {
-        const { data: alreadyDone } = await db
-          .from('profiles')
-          .select('id')
-          .eq('sale_id', orderId)
-          .maybeSingle();
-        if (alreadyDone) {
-          console.log(`[LS Webhook] Duplicate order ${orderId} — already processed, skipping`);
-          return json({ received: true, skipped: true, reason: 'duplicate_order' });
-        }
-        const { data: alreadyPending } = await db
-          .from('pending_activations')
-          .select('id')
-          .eq('payhip_sale_id', orderId)
-          .maybeSingle();
-        if (alreadyPending) {
-          console.log(`[LS Webhook] Duplicate order ${orderId} — already in pending, skipping`);
-          return json({ received: true, skipped: true, reason: 'duplicate_order' });
+        const [{ data: already }, { data: alreadyPending }] = await Promise.all([
+          db.from('profiles').select('id').eq('ls_order_id', orderId).maybeSingle(),
+          db.from('pending_activations').select('id').eq('ls_order_id', orderId).maybeSingle(),
+        ]);
+        if (already || alreadyPending) {
+          console.log(`[LS Webhook] Duplicate order ${orderId} — skipping`);
+          return json({ received: true, skipped: true, reason: 'duplicate' });
         }
       }
 
-      const { tier, days } = detectTier(variantName, priceCents);
-      const startDate      = new Date().toISOString();
-      const endDate        = new Date();
-      endDate.setDate(endDate.getDate() + days);
-      const endISO = endDate.toISOString();
+      const { tier, days } = detectTier(productName, variantName, priceCents);
+      const startISO = new Date().toISOString();
+      const endISO   = new Date(Date.now() + days * 86400000).toISOString();
 
       console.log(`[LS Webhook] order_created → tier: ${tier}, email: ${buyerEmail}, user_id: ${userId || 'none'}`);
 
-      // Path A — logged-in user upgrading (user_id in custom_data)
-      if (userId) {
-        const { error } = await db.from('profiles').update({
-          subscription_tier:       tier,
-          subscription_status:     'active',
-          subscription_start_date: startDate,
-          subscription_end_date:   endISO,
-          sale_id:                 orderId,
-          updated_at:              new Date().toISOString(),
-        }).eq('id', userId);
+      const profileUpdate = {
+        subscription_tier:       tier,
+        subscription_status:     'active',
+        subscription_start_date: startISO,
+        subscription_end_date:   endISO,
+        payhip_sale_id:          orderId,   // keep legacy field populated
+        ls_order_id:             orderId,
+        ls_customer_id:          customerId || null,
+        updated_at:              new Date().toISOString(),
+      };
 
+      // Path A — logged-in user upgrading (user_id passed in checkout custom_data)
+      if (userId) {
+        const { error } = await db.from('profiles').update(profileUpdate).eq('id', userId);
         if (error) {
           console.error('[LS Webhook] Profile update error:', error.message);
           return json({ error: error.message }, 500);
@@ -139,24 +154,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return json({ success: true, status: 'upgraded', tier });
       }
 
-      // Path B — new user (no account yet) or email-only upgrade
-      // First check if an account already exists for this email
+      // Path B — check if account already exists for this email
       const { data: existing } = await db
-        .from('profiles')
-        .select('id, subscription_tier')
-        .ilike('email', buyerEmail)
-        .maybeSingle();
+        .from('profiles').select('id').ilike('email', buyerEmail).maybeSingle();
 
       if (existing) {
-        const { error } = await db.from('profiles').update({
-          subscription_tier:       tier,
-          subscription_status:     'active',
-          subscription_start_date: startDate,
-          subscription_end_date:   endISO,
-          sale_id:                 orderId,
-          updated_at:              new Date().toISOString(),
-        }).eq('id', existing.id);
-
+        const { error } = await db.from('profiles').update(profileUpdate).eq('id', existing.id);
         if (error) {
           console.error('[LS Webhook] Email-based update error:', error.message);
           return json({ error: error.message }, 500);
@@ -165,60 +168,334 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return json({ success: true, status: 'upgraded_by_email', tier });
       }
 
-      // No account found — save to pending_activations for when they sign up
-      const { error: upsertErr } = await db.from('pending_activations').upsert({
+      // Path C — new buyer, no account yet → pending
+      const { error: pendingErr } = await db.from('pending_activations').upsert({
         email:                   buyerEmail,
         subscription_tier:       tier,
-        subscription_start_date: startDate,
+        subscription_start_date: startISO,
         subscription_end_date:   endISO,
         payhip_sale_id:          orderId,
+        ls_order_id:             orderId,
+        ls_customer_id:          customerId || null,
         payhip_data:             payload,
         activated:               false,
         created_at:              new Date().toISOString(),
       }, { onConflict: 'email' });
 
-      if (upsertErr) {
-        console.error('[LS Webhook] pending_activations upsert error:', upsertErr.message);
-        return json({ error: upsertErr.message }, 500);
+      if (pendingErr) {
+        console.error('[LS Webhook] pending_activations error:', pendingErr.message);
+        return json({ error: pendingErr.message }, 500);
       }
 
       console.log(`[LS Webhook] ✅ Saved to pending: ${buyerEmail} → ${tier}`);
       return json({ success: true, status: 'pending', tier });
     }
 
-    // ── order_refunded ────────────────────────────────────────────────────────
+    // ─── order_refunded ───────────────────────────────────────────────────────
     if (eventName === 'order_refunded') {
-      const attrs      = payload.data?.attributes || {};
       const buyerEmail = (attrs.user_email || '').trim().toLowerCase();
-      const customData = payload.meta?.custom_data || {};
+      const orderId    = String(payload.data?.id || '');
       const userId     = customData.user_id || null;
 
-      console.log(`[LS Webhook] order_refunded → email: ${buyerEmail}, user_id: ${userId || 'none'}`);
+      console.log(`[LS Webhook] order_refunded → email: ${buyerEmail}`);
+
+      const cancelUpdate = {
+        subscription_status:       'cancelled',
+        subscription_cancelled_at: new Date().toISOString(),
+        updated_at:                new Date().toISOString(),
+      };
 
       if (userId) {
-        await db.from('profiles').update({
-          subscription_status: 'cancelled',
-          updated_at: new Date().toISOString(),
-        }).eq('id', userId);
+        await db.from('profiles').update(cancelUpdate).eq('id', userId);
       } else if (buyerEmail) {
-        await db.from('profiles').update({
-          subscription_status: 'cancelled',
-          updated_at: new Date().toISOString(),
-        }).ilike('email', buyerEmail);
+        await db.from('profiles').update(cancelUpdate).ilike('email', buyerEmail);
       }
 
-      // Also remove from pending_activations if they haven't signed up yet
+      // Remove from pending if they never signed up
       if (buyerEmail) {
         await db.from('pending_activations').delete().ilike('email', buyerEmail);
       }
 
-      console.log(`[LS Webhook] ✅ Cancelled subscription for ${userId || buyerEmail}`);
+      console.log(`[LS Webhook] ✅ Cancelled order for ${userId || buyerEmail}`);
       return json({ success: true, status: 'cancelled' });
     }
 
-    // Unhandled event — acknowledge receipt so LS doesn't retry
+    // ══════════════════════════════════════════════════════════════════════════
+    // SUBSCRIPTION EVENTS (recurring billing)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    if (eventName === 'subscription_created') {
+      const buyerEmail    = (attrs.user_email || '').trim().toLowerCase();
+      const subscriptionId = String(payload.data?.id || '');
+      const customerId    = String(attrs.customer_id || '');
+      const productName   = attrs.product_name || '';
+      const variantName   = attrs.variant_name || '';
+      const priceCents    = attrs.first_subscription_item?.price || 0;
+      const endsAt        = attrs.ends_at || null;
+      const userId        = customData.user_id || null;
+
+      if (!buyerEmail) return json({ error: 'Missing email' }, 400);
+
+      const { tier, days } = detectTier(productName, variantName, priceCents);
+      const startISO = new Date().toISOString();
+      const endISO   = endsAt || new Date(Date.now() + days * 86400000).toISOString();
+
+      console.log(`[LS Webhook] subscription_created → tier: ${tier}, email: ${buyerEmail}`);
+
+      const profileUpdate = {
+        subscription_tier:       tier,
+        subscription_status:     'active',
+        subscription_start_date: startISO,
+        subscription_end_date:   endISO,
+        ls_subscription_id:      subscriptionId,
+        ls_customer_id:          customerId || null,
+        updated_at:              new Date().toISOString(),
+      };
+
+      if (userId) {
+        await db.from('profiles').update(profileUpdate).eq('id', userId);
+        console.log(`[LS Webhook] ✅ Subscription activated for user ${userId} → ${tier}`);
+        return json({ success: true, status: 'activated', tier });
+      }
+
+      const { data: existing } = await db
+        .from('profiles').select('id').ilike('email', buyerEmail).maybeSingle();
+
+      if (existing) {
+        await db.from('profiles').update(profileUpdate).eq('id', existing.id);
+        console.log(`[LS Webhook] ✅ Subscription activated by email: ${buyerEmail} → ${tier}`);
+        return json({ success: true, status: 'activated', tier });
+      }
+
+      // New buyer — store in pending
+      await db.from('pending_activations').upsert({
+        email:                   buyerEmail,
+        subscription_tier:       tier,
+        subscription_start_date: startISO,
+        subscription_end_date:   endISO,
+        ls_order_id:             subscriptionId,
+        ls_customer_id:          customerId || null,
+        payhip_sale_id:          subscriptionId,
+        payhip_data:             payload,
+        activated:               false,
+        created_at:              new Date().toISOString(),
+      }, { onConflict: 'email' });
+
+      console.log(`[LS Webhook] ✅ Subscription pending: ${buyerEmail} → ${tier}`);
+      return json({ success: true, status: 'pending', tier });
+    }
+
+    // ─── subscription_updated ─────────────────────────────────────────────────
+    if (eventName === 'subscription_updated') {
+      const subscriptionId = String(payload.data?.id || '');
+      const buyerEmail     = (attrs.user_email || '').trim().toLowerCase();
+      const status         = attrs.status || 'active';
+      const productName    = attrs.product_name || '';
+      const variantName    = attrs.variant_name || '';
+      const endsAt         = attrs.ends_at || null;
+      const cancelled      = attrs.cancelled === true;
+
+      console.log(`[LS Webhook] subscription_updated → sub: ${subscriptionId}, status: ${status}`);
+
+      const { tier } = detectTier(productName, variantName, 0);
+
+      const update: any = {
+        subscription_tier:    tier,
+        subscription_status:  cancelled ? 'cancelled' : status === 'active' ? 'active' : status,
+        updated_at:           new Date().toISOString(),
+      };
+      if (endsAt) update.subscription_end_date = endsAt;
+      if (cancelled) update.subscription_cancelled_at = new Date().toISOString();
+
+      // Look up by subscription ID first, then email
+      let matched = false;
+      if (subscriptionId) {
+        const { data } = await db.from('profiles').select('id').eq('ls_subscription_id', subscriptionId).maybeSingle();
+        if (data) {
+          await db.from('profiles').update(update).eq('id', data.id);
+          matched = true;
+        }
+      }
+      if (!matched && buyerEmail) {
+        await db.from('profiles').update(update).ilike('email', buyerEmail);
+      }
+
+      console.log(`[LS Webhook] ✅ Subscription updated → ${tier} / ${update.subscription_status}`);
+      return json({ success: true, status: 'updated' });
+    }
+
+    // ─── subscription_cancelled ───────────────────────────────────────────────
+    if (eventName === 'subscription_cancelled') {
+      const subscriptionId = String(payload.data?.id || '');
+      const buyerEmail     = (attrs.user_email || '').trim().toLowerCase();
+      const endsAt         = attrs.ends_at || null;
+
+      console.log(`[LS Webhook] subscription_cancelled → sub: ${subscriptionId}`);
+
+      // Cancelled = still active until endsAt, just won't renew
+      const update: any = {
+        subscription_status:       'cancelled',
+        subscription_cancelled_at: new Date().toISOString(),
+        updated_at:                new Date().toISOString(),
+      };
+      if (endsAt) update.subscription_end_date = endsAt;
+
+      if (subscriptionId) {
+        const { data } = await db.from('profiles').select('id').eq('ls_subscription_id', subscriptionId).maybeSingle();
+        if (data) {
+          await db.from('profiles').update(update).eq('id', data.id);
+          console.log(`[LS Webhook] ✅ Marked cancelled (active until ${endsAt})`);
+          return json({ success: true, status: 'cancelled' });
+        }
+      }
+      if (buyerEmail) {
+        await db.from('profiles').update(update).ilike('email', buyerEmail);
+      }
+
+      return json({ success: true, status: 'cancelled' });
+    }
+
+    // ─── subscription_expired ─────────────────────────────────────────────────
+    if (eventName === 'subscription_expired') {
+      const subscriptionId = String(payload.data?.id || '');
+      const buyerEmail     = (attrs.user_email || '').trim().toLowerCase();
+
+      console.log(`[LS Webhook] subscription_expired → sub: ${subscriptionId}`);
+
+      const update = {
+        subscription_status: 'expired',
+        updated_at:          new Date().toISOString(),
+      };
+
+      if (subscriptionId) {
+        const { data } = await db.from('profiles').select('id').eq('ls_subscription_id', subscriptionId).maybeSingle();
+        if (data) {
+          await db.from('profiles').update(update).eq('id', data.id);
+          console.log(`[LS Webhook] ✅ Subscription expired for ${data.id}`);
+          return json({ success: true, status: 'expired' });
+        }
+      }
+      if (buyerEmail) {
+        await db.from('profiles').update(update).ilike('email', buyerEmail);
+      }
+
+      return json({ success: true, status: 'expired' });
+    }
+
+    // ─── subscription_payment_success ─────────────────────────────────────────
+    if (eventName === 'subscription_payment_success') {
+      const subscriptionId = String(attrs.subscription_id || payload.data?.id || '');
+      const buyerEmail     = (attrs.user_email || '').trim().toLowerCase();
+      const nextBillingAt  = attrs.next_billing_date || null;
+
+      console.log(`[LS Webhook] subscription_payment_success → sub: ${subscriptionId}`);
+
+      const update: any = {
+        subscription_status: 'active',
+        updated_at:          new Date().toISOString(),
+      };
+      // Extend end date to next billing cycle
+      if (nextBillingAt) update.subscription_end_date = nextBillingAt;
+
+      if (subscriptionId) {
+        const { data } = await db.from('profiles').select('id').eq('ls_subscription_id', subscriptionId).maybeSingle();
+        if (data) {
+          await db.from('profiles').update(update).eq('id', data.id);
+          console.log(`[LS Webhook] ✅ Payment success — renewed until ${nextBillingAt}`);
+          return json({ success: true, status: 'renewed' });
+        }
+      }
+      if (buyerEmail) {
+        await db.from('profiles').update(update).ilike('email', buyerEmail);
+      }
+
+      return json({ success: true, status: 'renewed' });
+    }
+
+    // ─── subscription_payment_failed ─────────────────────────────────────────
+    if (eventName === 'subscription_payment_failed') {
+      const subscriptionId = String(attrs.subscription_id || payload.data?.id || '');
+      const buyerEmail     = (attrs.user_email || '').trim().toLowerCase();
+
+      console.log(`[LS Webhook] subscription_payment_failed → sub: ${subscriptionId}, email: ${buyerEmail}`);
+
+      // Mark as past_due — do not deactivate yet (LemonSqueezy retries)
+      const update = {
+        subscription_status: 'past_due',
+        updated_at:          new Date().toISOString(),
+      };
+
+      if (subscriptionId) {
+        const { data } = await db.from('profiles').select('id').eq('ls_subscription_id', subscriptionId).maybeSingle();
+        if (data) {
+          await db.from('profiles').update(update).eq('id', data.id);
+        }
+      } else if (buyerEmail) {
+        await db.from('profiles').update(update).ilike('email', buyerEmail);
+      }
+
+      console.log(`[LS Webhook] ⚠️ Payment failed — marked past_due`);
+      return json({ success: true, status: 'past_due' });
+    }
+
+    // ─── subscription_payment_recovered ──────────────────────────────────────
+    if (eventName === 'subscription_payment_recovered') {
+      const subscriptionId = String(attrs.subscription_id || payload.data?.id || '');
+      const buyerEmail     = (attrs.user_email || '').trim().toLowerCase();
+      const nextBillingAt  = attrs.next_billing_date || null;
+
+      console.log(`[LS Webhook] subscription_payment_recovered → sub: ${subscriptionId}`);
+
+      const update: any = {
+        subscription_status: 'active',
+        updated_at:          new Date().toISOString(),
+      };
+      if (nextBillingAt) update.subscription_end_date = nextBillingAt;
+
+      if (subscriptionId) {
+        const { data } = await db.from('profiles').select('id').eq('ls_subscription_id', subscriptionId).maybeSingle();
+        if (data) {
+          await db.from('profiles').update(update).eq('id', data.id);
+        }
+      } else if (buyerEmail) {
+        await db.from('profiles').update(update).ilike('email', buyerEmail);
+      }
+
+      console.log(`[LS Webhook] ✅ Payment recovered — restored to active`);
+      return json({ success: true, status: 'recovered' });
+    }
+
+    // ─── subscription_resumed ─────────────────────────────────────────────────
+    if (eventName === 'subscription_resumed') {
+      const subscriptionId = String(payload.data?.id || '');
+      const buyerEmail     = (attrs.user_email || '').trim().toLowerCase();
+      const endsAt         = attrs.ends_at || null;
+
+      console.log(`[LS Webhook] subscription_resumed → sub: ${subscriptionId}`);
+
+      const update: any = {
+        subscription_status:       'active',
+        subscription_cancelled_at: null,
+        updated_at:                new Date().toISOString(),
+      };
+      if (endsAt) update.subscription_end_date = endsAt;
+
+      if (subscriptionId) {
+        const { data } = await db.from('profiles').select('id').eq('ls_subscription_id', subscriptionId).maybeSingle();
+        if (data) {
+          await db.from('profiles').update(update).eq('id', data.id);
+        }
+      } else if (buyerEmail) {
+        await db.from('profiles').update(update).ilike('email', buyerEmail);
+      }
+
+      console.log(`[LS Webhook] ✅ Subscription resumed`);
+      return json({ success: true, status: 'resumed' });
+    }
+
+    // Unhandled — acknowledge so LemonSqueezy does not retry
     console.log(`[LS Webhook] Unhandled event: ${eventName}`);
-    return json({ received: true, skipped: true });
+    return json({ received: true, skipped: true, event: eventName });
 
   } catch (err) {
     console.error('[LS Webhook] Uncaught error:', err);
@@ -226,12 +503,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 
-// Health-check endpoint
+// Health check
 export const GET: APIRoute = async () =>
-  json({ status: 'ready', endpoint: '/api/lemonsqueezy/webhook' });
-
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status, headers: { 'Content-Type': 'application/json' },
-  });
-}
+  json({ status: 'ready', endpoint: '/api/lemonsqueezy/webhook', version: 'live-v2' });
