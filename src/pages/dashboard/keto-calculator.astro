@@ -143,17 +143,23 @@ const prefillWeightDisplay = units === 'imperial'
         <label class="field-label">Goal</label>
         <div class="goal-grid" id="goalSeg">
           <button class="goal-btn" data-val="lose" onclick="setGoal('lose')">
-            <span class="goal-icon">🔥</span>
+            <span class="goal-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+            </span>
             <span class="goal-label">Lose Fat</span>
             <span class="goal-note">−20% calories</span>
           </button>
           <button class="goal-btn" data-val="maintain" onclick="setGoal('maintain')">
-            <span class="goal-icon">⚖️</span>
+            <span class="goal-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><polyline points="8 8 4 12 8 16"/><polyline points="16 8 20 12 16 16"/></svg>
+            </span>
             <span class="goal-label">Maintain</span>
             <span class="goal-note">maintenance calories</span>
           </button>
           <button class="goal-btn" data-val="gain" onclick="setGoal('gain')">
-            <span class="goal-icon">💪</span>
+            <span class="goal-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+            </span>
             <span class="goal-label">Build Muscle</span>
             <span class="goal-note">+10% calories</span>
           </button>
@@ -430,7 +436,7 @@ const prefillWeightDisplay = units === 'imperial'
   border-color: var(--green); background: var(--green-bg);
   box-shadow: 0 0 0 3px var(--green-ring);
 }
-.goal-icon { font-size: 1.3rem; }
+.goal-icon { display:flex; align-items:center; justify-content:center; font-size: 1.3rem; }
 .goal-label { font-size: .78rem; font-weight: 700; color: var(--text); }
 .goal-note { font-size: .68rem; color: var(--soft); text-align: center; }
 

@@ -3,14 +3,17 @@
 import { getUserJourney } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
-import Gift    from 'lucide-astro/Gift';
-import Copy    from 'lucide-astro/Copy';
-import Share2  from 'lucide-astro/Share2';
-import Zap     from 'lucide-astro/Zap';
-import Users   from 'lucide-astro/Users';
-import Trophy  from 'lucide-astro/Trophy';
-import Check   from 'lucide-astro/Check';
-import Link    from 'lucide-astro/Link';
+import Gift        from 'lucide-astro/Gift';
+import Copy        from 'lucide-astro/Copy';
+import Share2      from 'lucide-astro/Share2';
+import Zap         from 'lucide-astro/Zap';
+import Users       from 'lucide-astro/Users';
+import Trophy      from 'lucide-astro/Trophy';
+import Check       from 'lucide-astro/Check';
+import Link        from 'lucide-astro/Link';
+import MessageCircle from 'lucide-astro/MessageCircle';
+import Mail        from 'lucide-astro/Mail';
+import Upload      from 'lucide-astro/Upload';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -142,19 +145,19 @@ const previewUses    = codeRow?.uses_count || 0;
 
         <div class="share-btns">
           <button class="share-btn whatsapp" onclick="shareWhatsApp()">
-            <span class="share-icon">💬</span>
+            <MessageCircle size={15} />
             WhatsApp
           </button>
           <button class="share-btn twitter" onclick="shareTwitter()">
-            <span class="share-icon">𝕏</span>
+            <span class="share-icon" style="font-weight:900;font-size:.9rem;line-height:1;">𝕏</span>
             Twitter / X
           </button>
           <button class="share-btn email-btn" onclick="shareEmail()">
-            <span class="share-icon">✉️</span>
+            <Mail size={15} />
             Email
           </button>
           <button class="share-btn native" id="nativeShareBtn" onclick="nativeShare()" style="display:none">
-            <span class="share-icon">📤</span>
+            <Upload size={15} />
             Share
           </button>
         </div>
@@ -204,7 +207,7 @@ const previewUses    = codeRow?.uses_count || 0;
         <div id="historyList">
           {refList.length === 0 && (
             <div class="empty-state">
-              <div class="empty-icon">🔗</div>
+              <div class="empty-icon"><Link size={28} /></div>
               <p class="empty-title">No referrals yet</p>
               <p class="empty-sub">Share your code above and your referrals will appear here.</p>
             </div>
@@ -416,7 +419,7 @@ const previewUses    = codeRow?.uses_count || 0;
   padding: .15rem .55rem; border-radius: 99px;
 }
 .empty-state { text-align: center; padding: 2.5rem 1rem; }
-.empty-icon  { font-size: 2.5rem; margin-bottom: .75rem; }
+.empty-icon  { font-size: 2.5rem; margin-bottom: .75rem; display:flex; justify-content:center; color:var(--soft); }
 .empty-title { font-weight: 700; color: var(--text); font-size: .95rem; margin-bottom: .4rem; }
 .empty-sub   { color: var(--soft); font-size: .82rem; line-height: 1.5; }
 

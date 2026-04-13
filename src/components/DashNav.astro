@@ -20,6 +20,8 @@ import Utensils     from 'lucide-astro/Utensils';
 import ClipboardList from 'lucide-astro/ClipboardList';
 import User         from 'lucide-astro/User';
 import HelpCircle   from 'lucide-astro/HelpCircle';
+import Crown        from 'lucide-astro/Crown';
+import Leaf         from 'lucide-astro/Leaf';
 
 interface Props {
   userId:    string;
@@ -35,7 +37,6 @@ const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
 
 const initials  = (userName[0] || 'U').toUpperCase();
-const tierText  = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const tierCss   = planType === 'elite_12' ? 'dn-tier dn-tier--elite' : planType === 'pro_6' ? 'dn-tier dn-tier--pro' : 'dn-tier dn-tier--basic';
 
 const progressPages = ['progress', 'photos', 'checkin', 'reflections', 'ketones', 'share', 'steps'];
@@ -228,7 +229,12 @@ const groups = [
 
   <!-- ── Right controls ─────────────────────────────────── -->
   <div class="dn-right">
-    <span class={tierCss}>{tierText}</span>
+    <span class={tierCss}>
+      {planType === 'elite_12' && <Crown size={11} />}
+      {planType === 'pro_6'    && <Zap   size={11} />}
+      {planType === 'basic_30' && <Leaf  size={11} />}
+      {planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic'}
+    </span>
 
     <button class="dn-icon-btn" id="dnThemeBtn" title="Toggle theme" aria-label="Toggle theme">
       <Moon size={15} class="icon-moon" />
@@ -530,11 +536,13 @@ body {
 
 /* Tier badge */
 .dn-tier {
+  display: inline-flex; align-items: center; gap: .3rem;
   font-size: .68rem; font-weight: 800; letter-spacing: .02em;
   text-transform: uppercase;
   padding: .22rem .72rem; border-radius: var(--r-full);
   white-space: nowrap; flex-shrink: 0;
 }
+.dn-tier svg { flex-shrink: 0; }
 .dn-tier--basic {
   background: rgba(16,185,129,.12);
   border: 1.5px solid rgba(16,185,129,.3);

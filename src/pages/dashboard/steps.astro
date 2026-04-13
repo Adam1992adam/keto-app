@@ -306,8 +306,14 @@ const ringStroke = `${CIRC}`;
       </div>
       <div class="import-row">
         <input type="file" id="csvFile" accept=".csv" style="display:none;" onchange="window.importCSV(this)" />
-        <button class="btn-import" onclick="document.getElementById('csvFile').click()">📂 Choose CSV File</button>
-        <button class="btn-import" onclick="window.downloadTemplate()">⬇️ Download Template</button>
+        <button class="btn-import" onclick="document.getElementById('csvFile').click()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:.3rem;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          Choose CSV File
+        </button>
+        <button class="btn-import" onclick="window.downloadTemplate()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:.3rem;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download Template
+        </button>
       </div>
       <div id="importStatus" style="font-size:.78rem;color:var(--green2);margin-top:.6rem;display:none;"></div>
     </div>

@@ -299,15 +299,15 @@ const userName  = profile.full_name || 'Member';
         <div class="guide-title">Based on net carbs per 100g</div>
         <div class="guide-row">
           <div class="guide-dot green"></div>
-          <div class="guide-text"><strong>Keto ✅</strong> — Under 5g net carbs · Safe to eat freely</div>
+          <div class="guide-text"><strong>Keto Friendly</strong> — Under 5g net carbs · Safe to eat freely</div>
         </div>
         <div class="guide-row">
           <div class="guide-dot yellow"></div>
-          <div class="guide-text"><strong>Caution ⚠️</strong> — 5g to 10g net carbs · Eat in moderation</div>
+          <div class="guide-text"><strong>Caution</strong> — 5g to 10g net carbs · Eat in moderation</div>
         </div>
         <div class="guide-row">
           <div class="guide-dot red"></div>
-          <div class="guide-text"><strong>Not Keto ❌</strong> — Over 10g net carbs · Avoid or limit severely</div>
+          <div class="guide-text"><strong>Not Keto</strong> — Over 10g net carbs · Avoid or limit severely</div>
         </div>
       </div>
     </div>
@@ -342,7 +342,7 @@ const userName  = profile.full_name || 'Member';
     // ── Camera ───────────────────────────────────────────────
     window.startCamera = function() {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        toast('❌ Camera not supported on this browser');
+        toast('Camera not supported on this browser');
         return;
       }
       navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
@@ -367,12 +367,12 @@ const userName  = profile.full_name || 'Member';
               }
             }, 400);
           } else {
-            toast('⚠️ Auto-detect unavailable — enter barcode manually');
+            toast('Auto-detect unavailable — enter barcode manually');
           }
         })
         .catch(function(err) {
-          if (err.name === 'NotAllowedError') toast('❌ Camera permission denied');
-          else toast('❌ Could not access camera');
+          if (err.name === 'NotAllowedError') toast('Camera permission denied');
+          else toast('Could not access camera');
         });
     };
 
@@ -401,18 +401,18 @@ const userName  = profile.full_name || 'Member';
 
     // ── Barcode Lookup ───────────────────────────────────────
     function lookupBarcode(code) {
-      toast('🔍 Looking up product…');
+      toast('Looking up product…');
       var url = 'https://world.openfoodfacts.org/api/v0/product/' + encodeURIComponent(code) + '.json?fields=product_name,brands,nutriments,serving_quantity,serving_size';
       fetch(url)
         .then(function(r) { return r.json(); })
         .then(function(data) {
           if (data.status !== 1 || !data.product) {
-            toast('❌ Product not found in database');
+            toast('Product not found in database');
             return;
           }
           showResult(data.product, code);
         })
-        .catch(function() { toast('❌ Lookup failed — check your connection'); });
+        .catch(function() { toast('Lookup failed — check your connection'); });
     }
 
     // ── Show Result ──────────────────────────────────────────
@@ -429,20 +429,23 @@ const userName  = profile.full_name || 'Member';
       var serving = p.serving_size || '100g';
 
       // Verdict
-      var verdict, verdictClass;
+      var verdict, verdictClass, verdictIcon;
       if (netCarbs <= 5) {
-        verdict = '✅ Keto Friendly';
+        verdict = 'Keto Friendly';
         verdictClass = 'verdict-keto';
+        verdictIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
       } else if (netCarbs <= 10) {
-        verdict = '⚠️ Eat with Caution';
+        verdict = 'Eat with Caution';
         verdictClass = 'verdict-caution';
+        verdictIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
       } else {
-        verdict = '❌ Not Keto';
+        verdict = 'Not Keto';
         verdictClass = 'verdict-not';
+        verdictIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
       }
 
       // Fill card
-      document.getElementById('resultVerdict').textContent = verdict;
+      document.getElementById('resultVerdict').innerHTML = verdictIcon + ' ' + verdict;
       document.getElementById('resultVerdict').className   = 'result-verdict ' + verdictClass;
       document.getElementById('resultName').textContent    = name;
       document.getElementById('resultBrand').textContent   = brand;

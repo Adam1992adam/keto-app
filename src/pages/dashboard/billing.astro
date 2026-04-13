@@ -2,6 +2,12 @@
 import { requireAuth } from '../../lib/auth';
 import { getUserJourney, getMaxJourneyDays } from '../../lib/supabase';
 import DashNav from '../../components/DashNav.astro';
+import Zap          from 'lucide-astro/Zap';
+import ShieldCheck  from 'lucide-astro/ShieldCheck';
+import Receipt      from 'lucide-astro/Receipt';
+import MessageCircle from 'lucide-astro/MessageCircle';
+import FileText     from 'lucide-astro/FileText';
+import AlertTriangle from 'lucide-astro/AlertTriangle';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -179,7 +185,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
       border-radius:20px; padding:1.5rem;
       display:flex; flex-direction:column; gap:.75rem;
     }
-    .action-card-icon { font-size:1.5rem; }
+    .action-card-icon { display:flex; align-items:center; justify-content:center; width:2.25rem; height:2.25rem; border-radius:10px; background:var(--card2); border:1px solid var(--border); color:var(--green); margin-bottom:.75rem; }
     .action-card-title { font-size:.95rem; font-weight:700; color:var(--text); }
     .action-card-body { font-size:.82rem; color:var(--soft); line-height:1.6; flex:1; }
     .action-btn {
@@ -283,7 +289,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
     <!-- Upgrade (hidden for Elite) -->
     {!isElite && (
       <div class="action-card">
-        <div class="action-card-icon">⚡</div>
+        <div class="action-card-icon"><Zap size={18} /></div>
         <div class="action-card-title">Upgrade your plan</div>
         <div class="action-card-body">
           {isPro
@@ -298,7 +304,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
 
     <!-- Refund -->
     <div class="action-card">
-      <div class="action-card-icon">🛡️</div>
+      <div class="action-card-icon"><ShieldCheck size={18} /></div>
       <div class="action-card-title">30-Day Money-Back Guarantee</div>
       <div class="action-card-body">
         {refundEligible
@@ -317,14 +323,14 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
       )}
       {refundEligible && (
         <div class="refund-warning">
-          ⚠️ Requesting a refund will cancel your access immediately.
+          <AlertTriangle size={13} style="display:inline;vertical-align:middle;margin-right:.3rem;" /> Requesting a refund will cancel your access immediately.
         </div>
       )}
     </div>
 
     <!-- Customer Portal -->
     <div class="action-card">
-      <div class="action-card-icon">🧾</div>
+      <div class="action-card-icon"><Receipt size={18} /></div>
       <div class="action-card-title">Billing Portal</div>
       <div class="action-card-body">
         View your order, download your invoice, or manage your purchase directly through our billing provider.
@@ -337,7 +343,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
 
     <!-- Support -->
     <div class="action-card">
-      <div class="action-card-icon">💬</div>
+      <div class="action-card-icon"><MessageCircle size={18} /></div>
       <div class="action-card-title">Contact Support</div>
       <div class="action-card-body">
         Questions about your plan, billing, or the app? Our team typically responds within 1–2 business days.
@@ -349,7 +355,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
 
     <!-- View policy -->
     <div class="action-card">
-      <div class="action-card-icon">📄</div>
+      <div class="action-card-icon"><FileText size={18} /></div>
       <div class="action-card-title">Refund Policy</div>
       <div class="action-card-body">
         Read the full details of our 30-day money-back guarantee, eligibility criteria, and processing timeline.
