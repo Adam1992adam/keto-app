@@ -150,9 +150,11 @@ const mealIcons: Record<string, string> = {
     .fl-mk{background:rgba(239,68,68,.1);color:var(--red);}
     .fl-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:.25rem .5rem;min-width:36px;min-height:36px;border-radius:8px;transition:color .15s;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
     .fl-del:hover{color:var(--red);}
+    .fl-edit{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.82rem;padding:.25rem .45rem;min-width:30px;min-height:30px;border-radius:8px;transition:all .15s;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+    .fl-edit:hover{color:var(--blue);background:rgba(59,130,246,.1);}
     .fl-swap{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.75rem;padding:.25rem .45rem;min-width:30px;min-height:30px;border-radius:8px;transition:all .15s;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;}
     .fl-swap:hover{color:var(--green);background:rgba(16,185,129,.1);}
-    @media(max-width:640px){.fl-del{min-width:44px;min-height:44px;}}
+    @media(max-width:640px){.fl-del,.fl-edit{min-width:44px;min-height:44px;}}
 
     /* SWAP MODAL */
     .swap-modal-backdrop{display:none;position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);align-items:flex-end;justify-content:center;padding:0;}
@@ -371,6 +373,16 @@ const mealIcons: Record<string, string> = {
                 <span class="fl-m fl-mf">{f.fat_g}F</span>
                 <span class="fl-m fl-mk">{f.carbs_g}C</span>
               </div>
+              <button class="fl-edit"
+                data-id={f.id}
+                data-name={f.food_name}
+                data-cal={f.calories}
+                data-prot={f.protein_g}
+                data-fat={f.fat_g}
+                data-carb={f.carbs_g}
+                data-meal={f.meal_type || 'other'}
+                onclick="window.editEntry(this)"
+                title="Edit entry">✏</button>
               <button class="fl-swap"
                 data-id={f.id}
                 data-name={f.food_name}
@@ -407,7 +419,7 @@ const mealIcons: Record<string, string> = {
 <div class="modal-backdrop" id="addModal">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Log Food</div>
+    <div class="modal-title" id="modalTitle">Log Food</div>
 
     <!-- Search row -->
     <div class="search-row">
@@ -469,6 +481,7 @@ const mealIcons: Record<string, string> = {
     <div class="fm-actions">
       <button class="btn-cancel" onclick="window.closeAdd()">Cancel</button>
       <button class="btn-save" id="flSaveBtn" onclick="window.saveEntry()">Log Food</button>
+      <button class="btn-save" id="flUpdateBtn" onclick="window.updateEntry()" style="display:none;background:linear-gradient(135deg,var(--blue),#2563eb);">Save Changes</button>
     </div>
   </div>
 </div>
@@ -516,16 +529,100 @@ window.closeAdd = function() {
   resetModal();
 };
 
+// ── Edit mode state ───────────────────────────────
+var __editId = null;
+
 function resetModal() {
   document.getElementById('flSearch').value = '';
   document.getElementById('searchResults').className = 'search-results';
   document.getElementById('searchResults').innerHTML = '';
   document.getElementById('servingRow').style.display = 'none';
   __selectedPer100 = null;
+  __editId = null;
   ['flName','flCal','flProt','flFat','flCarb','flFiber'].forEach(function(id){
     var el = document.getElementById(id); if (el) el.value = '';
   });
+  // Restore add-mode UI
+  document.getElementById('modalTitle').textContent = 'Log Food';
+  document.getElementById('flSaveBtn').style.display = '';
+  document.getElementById('flUpdateBtn').style.display = 'none';
+  var searchRow = document.querySelector('.search-row');
+  if (searchRow) searchRow.style.display = '';
+  var divider = document.querySelector('.divider');
+  if (divider) divider.style.display = '';
 }
+
+// ── Open in edit mode ─────────────────────────────
+window.editEntry = function(btn) {
+  __editId = btn.getAttribute('data-id');
+  var name = btn.getAttribute('data-name') || '';
+  var cal  = btn.getAttribute('data-cal')  || '0';
+  var prot = btn.getAttribute('data-prot') || '0';
+  var fat  = btn.getAttribute('data-fat')  || '0';
+  var carb = btn.getAttribute('data-carb') || '0';
+  var meal = btn.getAttribute('data-meal') || 'other';
+
+  // Switch modal to edit mode
+  document.getElementById('modalTitle').textContent = 'Edit Entry';
+  document.getElementById('flSaveBtn').style.display = 'none';
+  document.getElementById('flUpdateBtn').style.display = '';
+  // Hide search row and divider (edit mode = manual fields only)
+  var searchRow = document.querySelector('.search-row');
+  if (searchRow) searchRow.style.display = 'none';
+  var divider = document.querySelector('.divider');
+  if (divider) divider.style.display = 'none';
+  document.getElementById('servingRow').style.display = 'none';
+
+  // Pre-fill fields
+  document.getElementById('flName').value = name;
+  document.getElementById('flCal').value  = cal;
+  document.getElementById('flProt').value = prot;
+  document.getElementById('flFat').value  = fat;
+  document.getElementById('flCarb').value = carb;
+  var mealEl = document.getElementById('flMeal');
+  if (mealEl) mealEl.value = meal;
+
+  document.getElementById('addModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('flName').focus(); }, 80);
+};
+
+// ── Update (save edit) ────────────────────────────
+window.updateEntry = function() {
+  if (!__editId) return;
+  var name  = document.getElementById('flName').value.trim();
+  if (!name) { document.getElementById('flName').focus(); return; }
+  var cal   = parseFloat(document.getElementById('flCal').value)   || 0;
+  var prot  = parseFloat(document.getElementById('flProt').value)  || 0;
+  var fat   = parseFloat(document.getElementById('flFat').value)   || 0;
+  var carb  = parseFloat(document.getElementById('flCarb').value)  || 0;
+  var fiber = parseFloat(document.getElementById('flFiber').value) || 0;
+  var meal  = document.getElementById('flMeal').value || 'other';
+  var netCarb = Math.max(0, carb - fiber);
+
+  var btn = document.getElementById('flUpdateBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  fetch('/api/food-log/update', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: __editId, food_name: name, calories: cal, protein_g: prot, fat_g: fat, carbs_g: netCarb, meal_type: meal }),
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (d.success) {
+      showToast('✅ Entry updated!');
+      window.closeAdd();
+      setTimeout(function(){ window.location.reload(); }, 400);
+    } else {
+      btn.disabled = false; btn.textContent = 'Save Changes';
+      showToast('❌ ' + (d.error || 'Failed to update'));
+    }
+  })
+  .catch(function(){
+    btn.disabled = false; btn.textContent = 'Save Changes';
+    showToast('❌ Connection error');
+  });
+};
 
 // ── Search (Open Food Facts) ──────────────────────
 var __searchTimer = null;
