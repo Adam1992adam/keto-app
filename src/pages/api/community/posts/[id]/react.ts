@@ -17,6 +17,12 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
     if (!['like', 'fire', 'clap'].includes(reaction_type))
       return json({ error: 'reaction_type must be like, fire, or clap' }, 400);
 
+    // Block community-banned users
+    const { data: reactorProfile } = await db
+      .from('profiles').select('community_banned').eq('id', user.id).maybeSingle();
+    if (reactorProfile?.community_banned)
+      return json({ error: 'You are banned from the community.' }, 403);
+
     // Toggle: if exists remove, else add
     const { data: existing } = await db
       .from('community_reactions')
