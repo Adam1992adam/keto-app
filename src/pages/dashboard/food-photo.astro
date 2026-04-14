@@ -1,0 +1,641 @@
+---
+// src/pages/dashboard/food-photo.astro
+// AI Food Photo Analyzer — snap or upload a meal photo to get nutritional info
+import { requireAuth } from '../../lib/auth';
+import DashNav from '../../components/DashNav.astro';
+import { getTranslator, normaliseLang } from '../../lib/i18n';
+import Camera from 'lucide-astro/Camera';
+import Upload from 'lucide-astro/Upload';
+import Sparkles from 'lucide-astro/Sparkles';
+import Flame from 'lucide-astro/Flame';
+import Beef from 'lucide-astro/Beef';
+import Droplets from 'lucide-astro/Droplets';
+import Zap from 'lucide-astro/Zap';
+import BookOpen from 'lucide-astro/BookOpen';
+import CheckCircle from 'lucide-astro/CheckCircle';
+import AlertTriangle from 'lucide-astro/AlertTriangle';
+import XCircle from 'lucide-astro/XCircle';
+import RefreshCw from 'lucide-astro/RefreshCw';
+
+const auth = await requireAuth(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile } = auth;
+
+const planType  = profile.subscription_tier || 'basic_30';
+const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
+const userName  = profile.full_name?.split(' ')[0] || 'there';
+const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
+const t    = getTranslator(lang);
+
+const today = new Date().toISOString().split('T')[0];
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Food Photo Analyzer — Keto Journey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script is:inline>(function(){ var t=localStorage.getItem('keto-theme')||'dark'; document.documentElement.setAttribute('data-theme',t); })();</script>
+  <style>
+    :root {
+      --bg:#060d09; --card:#0d1a0f; --card2:#111f13;
+      --border:rgba(16,185,129,.1); --border2:rgba(16,185,129,.22);
+      --text:#dfeedd; --soft:#4d7055; --muted:#233328;
+      --green:#10b981; --green2:#34d399; --gold:#f59e0b;
+      --red:#ef4444; --red2:#fca5a5; --purple:#8b5cf6;
+      --blue:#3b82f6; --radius:20px;
+    }
+    [data-theme="light"] {
+      --bg:#f0faf4; --card:#fff; --card2:#f5fdf8;
+      --border:rgba(16,185,129,.15); --border2:rgba(16,185,129,.3);
+      --text:#0f2417; --soft:#4d7055; --muted:#b0d4bc;
+    }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+    @keyframes spin   { to{transform:rotate(360deg)} }
+    .fade-up { animation:fadeUp .5s ease both; }
+    .d1{animation-delay:.07s} .d2{animation-delay:.14s} .d3{animation-delay:.21s}
+
+    .page { max-width:720px; margin:0 auto; padding:2rem 1.25rem 5rem; }
+    .page-title { font-family:'Fraunces',serif; font-size:2rem; font-weight:700; margin-bottom:.3rem; }
+    .page-title em { font-style:italic; color:var(--green2); }
+    .page-sub { color:var(--soft); font-size:.88rem; margin-bottom:2rem; }
+
+    /* ── Upload Zone ── */
+    .upload-zone {
+      background:var(--card); border:2px dashed var(--border2);
+      border-radius:var(--radius); padding:2.5rem 1.5rem;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:1rem; cursor:pointer; transition:all .2s;
+      margin-bottom:1.25rem; position:relative; overflow:hidden;
+    }
+    .upload-zone:hover { border-color:var(--green); background:var(--card2); }
+    .upload-zone.has-image { padding:0; border-style:solid; }
+    .upload-zone.dragover { border-color:var(--green2); background:rgba(16,185,129,.05); }
+    .upload-icon {
+      width:52px; height:52px; border-radius:50%;
+      background:rgba(16,185,129,.12); display:flex; align-items:center; justify-content:center;
+      color:var(--green2);
+    }
+    .upload-title { font-weight:700; font-size:1rem; }
+    .upload-sub { font-size:.8rem; color:var(--soft); text-align:center; }
+    #previewImg {
+      width:100%; max-height:360px; object-fit:cover;
+      border-radius:calc(var(--radius) - 2px); display:block;
+    }
+    .preview-overlay {
+      position:absolute; inset:0; background:rgba(0,0,0,.5);
+      display:flex; align-items:center; justify-content:center; gap:.75rem;
+      opacity:0; transition:opacity .2s; border-radius:calc(var(--radius) - 2px);
+    }
+    .upload-zone.has-image:hover .preview-overlay { opacity:1; }
+    .overlay-btn {
+      background:rgba(255,255,255,.15); backdrop-filter:blur(6px);
+      border:1px solid rgba(255,255,255,.25); color:#fff;
+      border-radius:10px; padding:.5rem 1rem; font-size:.8rem; font-weight:600;
+      cursor:pointer; display:flex; align-items:center; gap:.35rem;
+    }
+
+    /* ── Action buttons ── */
+    .btn-row { display:flex; gap:.75rem; margin-bottom:1.25rem; flex-wrap:wrap; }
+    .btn-primary {
+      flex:1; min-width:140px; background:var(--green); color:#fff;
+      border:none; border-radius:12px; padding:.8rem 1.5rem;
+      font-family:'DM Sans',sans-serif; font-size:.95rem; font-weight:700;
+      cursor:pointer; display:flex; align-items:center; justify-content:center; gap:.5rem;
+      transition:all .2s; min-height:48px;
+    }
+    .btn-primary:hover:not(:disabled) { background:var(--green2); transform:translateY(-2px); }
+    .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-secondary {
+      flex:1; min-width:140px; background:transparent; color:var(--text);
+      border:1px solid var(--border2); border-radius:12px; padding:.8rem 1.5rem;
+      font-family:'DM Sans',sans-serif; font-size:.95rem; font-weight:600;
+      cursor:pointer; display:flex; align-items:center; justify-content:center; gap:.5rem;
+      transition:all .2s; min-height:48px;
+    }
+    .btn-secondary:hover { border-color:var(--green); color:var(--green2); }
+    .spinner { animation:spin 1s linear infinite; }
+
+    /* ── Camera capture ── */
+    #cameraSection { display:none; margin-bottom:1.25rem; }
+    #cameraSection.active { display:block; }
+    .cam-wrap {
+      background:#000; border-radius:var(--radius); overflow:hidden;
+      aspect-ratio:4/3; position:relative;
+    }
+    #videoEl { width:100%; height:100%; object-fit:cover; display:block; }
+    .cam-actions { display:flex; gap:.75rem; margin-top:.75rem; }
+    .btn-capture {
+      flex:1; background:var(--green); color:#fff; border:none;
+      border-radius:12px; padding:.85rem; font-size:.95rem; font-weight:700;
+      cursor:pointer; min-height:48px; font-family:'DM Sans',sans-serif;
+      display:flex; align-items:center; justify-content:center; gap:.5rem;
+    }
+    .btn-cancel {
+      background:var(--card2); color:var(--text); border:1px solid var(--border2);
+      border-radius:12px; padding:.85rem 1.25rem; font-size:.9rem; font-weight:600;
+      cursor:pointer; min-height:48px; font-family:'DM Sans',sans-serif;
+    }
+
+    /* ── Result card ── */
+    #resultCard { display:none; margin-bottom:1.25rem; }
+    #resultCard.show { display:block; }
+    .result-card {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--radius); overflow:hidden; animation:fadeUp .4s ease;
+    }
+    .result-header {
+      padding:1.25rem 1.5rem;
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:1rem;
+    }
+    .result-food-name { font-weight:700; font-size:1.15rem; }
+    .result-serving { font-size:.82rem; color:var(--soft); margin-top:.2rem; }
+    .verdict-badge {
+      flex-shrink:0; padding:.35rem .85rem; border-radius:20px;
+      font-size:.78rem; font-weight:700; display:flex; align-items:center; gap:.3rem;
+    }
+    .verdict-badge.keto_friendly { background:rgba(16,185,129,.15); color:var(--green2); border:1px solid rgba(16,185,129,.3); }
+    .verdict-badge.caution       { background:rgba(245,158,11,.15); color:var(--gold);   border:1px solid rgba(245,158,11,.3); }
+    .verdict-badge.not_keto      { background:rgba(239,68,68,.15);  color:var(--red2);   border:1px solid rgba(239,68,68,.3); }
+
+    .macro-grid {
+      display:grid; grid-template-columns:repeat(5,1fr);
+      gap:0; border-bottom:1px solid var(--border);
+    }
+    @media(max-width:480px) { .macro-grid { grid-template-columns:repeat(3,1fr); } }
+    .macro-cell { padding:1rem .75rem; text-align:center; border-right:1px solid var(--border); }
+    .macro-cell:last-child { border-right:none; }
+    .macro-val { font-weight:800; font-size:1.35rem; font-family:'Fraunces',serif; }
+    .macro-val.calories  { color:var(--gold); }
+    .macro-val.protein   { color:#60a5fa; }
+    .macro-val.fat       { color:#f97316; }
+    .macro-val.carbs     { color:#a78bfa; }
+    .macro-val.net-carbs { color:var(--green2); }
+    .macro-lbl { font-size:.68rem; color:var(--soft); margin-top:.2rem; text-transform:uppercase; letter-spacing:.04em; }
+
+    .result-body { padding:1.25rem 1.5rem; }
+    .result-notes {
+      background:var(--card2); border-radius:12px; padding:.85rem 1rem;
+      font-size:.82rem; color:var(--soft); margin-bottom:1rem;
+      display:flex; gap:.5rem; align-items:flex-start;
+    }
+    .result-notes svg { flex-shrink:0; color:var(--green); margin-top:.1rem; }
+    .ingredients-list {
+      display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:1.25rem;
+    }
+    .ingredient-tag {
+      background:var(--card2); border:1px solid var(--border);
+      border-radius:8px; padding:.25rem .65rem; font-size:.75rem; color:var(--soft);
+    }
+    .confidence-row {
+      font-size:.75rem; color:var(--soft); display:flex; align-items:center; gap:.4rem;
+      margin-bottom:1.25rem;
+    }
+    .conf-dot {
+      width:7px; height:7px; border-radius:50%; flex-shrink:0;
+    }
+    .conf-dot.high   { background:var(--green); }
+    .conf-dot.medium { background:var(--gold); }
+    .conf-dot.low    { background:var(--red); }
+
+    /* ── Log section ── */
+    .log-section {
+      display:flex; flex-wrap:wrap; gap:.75rem; align-items:center;
+    }
+    .log-select {
+      background:var(--card2); border:1px solid var(--border2); color:var(--text);
+      border-radius:10px; padding:.6rem .9rem; font-size:.88rem;
+      font-family:'DM Sans',sans-serif; min-height:44px;
+    }
+    .btn-log {
+      flex:1; min-width:140px; background:var(--green); color:#fff;
+      border:none; border-radius:12px; padding:.7rem 1.25rem;
+      font-family:'DM Sans',sans-serif; font-size:.9rem; font-weight:700;
+      cursor:pointer; display:flex; align-items:center; justify-content:center; gap:.5rem;
+      transition:all .2s; min-height:44px;
+    }
+    .btn-log:hover:not(:disabled) { background:var(--green2); }
+    .btn-log:disabled { opacity:.5; cursor:not-allowed; }
+    .log-success {
+      color:var(--green2); font-size:.85rem; font-weight:600;
+      display:flex; align-items:center; gap:.35rem;
+    }
+
+    /* ── Tips card ── */
+    .tips-card {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:var(--radius); padding:1.5rem;
+    }
+    .tips-title {
+      font-weight:700; font-size:.85rem; color:var(--soft);
+      text-transform:uppercase; letter-spacing:.06em; margin-bottom:1rem;
+      display:flex; align-items:center; gap:.4rem;
+    }
+    .tips-title svg { color:var(--green); }
+    .tip-row { display:flex; gap:.65rem; align-items:flex-start; margin-bottom:.75rem; font-size:.83rem; }
+    .tip-row:last-child { margin-bottom:0; }
+    .tip-icon { font-size:1rem; flex-shrink:0; margin-top:.05rem; }
+
+    /* ── Toast ── */
+    #photoToast {
+      position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px);
+      background:var(--card2); border:1px solid var(--border2); border-radius:12px;
+      padding:.7rem 1.25rem; font-size:.85rem; font-weight:600;
+      opacity:0; transition:all .3s; pointer-events:none; white-space:nowrap; z-index:200;
+    }
+    #photoToast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+    @media(max-width:480px) {
+      .page-title { font-size:1.6rem; }
+      .btn-row { flex-direction:column; }
+      .btn-primary, .btn-secondary { min-width:100%; }
+      input, select { font-size:16px !important; }
+    }
+  </style>
+</head>
+<body>
+  <DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="food_log" />
+
+  <div class="page">
+    <h1 class="page-title fade-up">Food <em>Photo</em> Analyzer</h1>
+    <p class="page-sub fade-up d1">Snap or upload a photo of any meal — AI will estimate the nutritional values instantly.</p>
+
+    <!-- Upload zone -->
+    <div class="upload-zone fade-up d1" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </div>
+      <div class="upload-title">Drop a food photo here</div>
+      <div class="upload-sub">or click to browse · JPG, PNG, WEBP up to 10MB</div>
+      <img id="previewImg" style="display:none;" alt="Food preview" />
+      <div class="preview-overlay" id="previewOverlay">
+        <button class="overlay-btn" onclick="event.stopPropagation(); clearImage()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Remove
+        </button>
+        <button class="overlay-btn" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Change
+        </button>
+      </div>
+    </div>
+
+    <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="window.handleFileSelect(this)" />
+
+    <!-- Camera section -->
+    <div id="cameraSection">
+      <div class="cam-wrap">
+        <video id="videoEl" autoplay playsinline muted></video>
+      </div>
+      <div class="cam-actions">
+        <button class="btn-capture" onclick="window.capturePhoto()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Take Photo
+        </button>
+        <button class="btn-cancel" onclick="window.stopCamera()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="btn-row fade-up d2">
+      <button class="btn-secondary" id="btnCamera" onclick="window.startCamera()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Use Camera
+      </button>
+      <button class="btn-primary" id="btnAnalyze" onclick="window.analyzePhoto()" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <span id="analyzeLabel">Analyze Food</span>
+      </button>
+    </div>
+
+    <!-- Result card -->
+    <div id="resultCard">
+      <div class="result-card">
+        <div class="result-header">
+          <div>
+            <div class="result-food-name" id="resFoodName">—</div>
+            <div class="result-serving" id="resServing">—</div>
+          </div>
+          <div class="verdict-badge" id="resVerdict">—</div>
+        </div>
+
+        <div class="macro-grid">
+          <div class="macro-cell">
+            <div class="macro-val calories" id="resCal">—</div>
+            <div class="macro-lbl">kcal</div>
+          </div>
+          <div class="macro-cell">
+            <div class="macro-val protein" id="resProt">—</div>
+            <div class="macro-lbl">Protein g</div>
+          </div>
+          <div class="macro-cell">
+            <div class="macro-val fat" id="resFat">—</div>
+            <div class="macro-lbl">Fat g</div>
+          </div>
+          <div class="macro-cell">
+            <div class="macro-val carbs" id="resCarbs">—</div>
+            <div class="macro-lbl">Carbs g</div>
+          </div>
+          <div class="macro-cell">
+            <div class="macro-val net-carbs" id="resNet">—</div>
+            <div class="macro-lbl">Net Carbs</div>
+          </div>
+        </div>
+
+        <div class="result-body">
+          <!-- Notes -->
+          <div class="result-notes" id="resNotesWrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span id="resNotes">—</span>
+          </div>
+
+          <!-- Ingredients -->
+          <div id="resIngredientsWrap" style="display:none;">
+            <div style="font-size:.75rem;color:var(--soft);text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:.5rem;">Detected Ingredients</div>
+            <div class="ingredients-list" id="resIngredients"></div>
+          </div>
+
+          <!-- Confidence -->
+          <div class="confidence-row" id="resConfidence">
+            <span class="conf-dot" id="confDot"></span>
+            <span id="confText">—</span>
+          </div>
+
+          <!-- Log to diary -->
+          <div class="log-section">
+            <select class="log-select" id="mealTypeSelect">
+              <option value="breakfast">Breakfast</option>
+              <option value="lunch">Lunch</option>
+              <option value="dinner" selected>Dinner</option>
+              <option value="snack">Snack</option>
+              <option value="other">Other</option>
+            </select>
+            <button class="btn-log" id="btnLog" onclick="window.logFood()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Log to Diary
+            </button>
+            <div class="log-success" id="logSuccess" style="display:none;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Saved!
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tips card -->
+    <div class="tips-card fade-up d3">
+      <div class="tips-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Tips for best results
+      </div>
+      <div class="tip-row">
+        <div class="tip-icon">📸</div>
+        <div>Take the photo from directly above the plate for the most accurate portion estimate.</div>
+      </div>
+      <div class="tip-row">
+        <div class="tip-icon">💡</div>
+        <div>Good lighting makes a big difference — avoid dark or heavily shadowed photos.</div>
+      </div>
+      <div class="tip-row">
+        <div class="tip-icon">🍽️</div>
+        <div>Include the whole plate in the frame so the AI can judge portion size.</div>
+      </div>
+      <div class="tip-row">
+        <div class="tip-icon">⚖️</div>
+        <div>Results are estimates. For precise tracking, weigh your food with a kitchen scale.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="photoToast"></div>
+  <canvas id="captureCanvas" style="display:none;"></canvas>
+
+  <script is:inline define:vars={{ today }}>
+  (function() {
+    var imageBase64 = null;
+    var imageType   = 'image/jpeg';
+    var currentNutrition = null;
+    var stream = null;
+
+    // ── Toast ──────────────────────────────────────────────────
+    function toast(msg) {
+      var el = document.getElementById('photoToast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(function() { el.classList.remove('show'); }, 3000);
+    }
+
+    // ── File select ────────────────────────────────────────────
+    window.handleFileSelect = function(input) {
+      var file = input.files[0];
+      if (!file) return;
+      if (file.size > 10 * 1024 * 1024) { toast('Image too large — max 10MB'); return; }
+      imageType = file.type || 'image/jpeg';
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var dataUrl = e.target.result;
+        showPreview(dataUrl);
+        // Strip the data:...;base64, prefix — API wants raw base64
+        imageBase64 = dataUrl.split(',')[1];
+        document.getElementById('btnAnalyze').disabled = false;
+      };
+      reader.readAsDataURL(file);
+    };
+
+    function showPreview(dataUrl) {
+      var zone = document.getElementById('uploadZone');
+      var img  = document.getElementById('previewImg');
+      img.src  = dataUrl;
+      img.style.display = 'block';
+      zone.classList.add('has-image');
+      zone.querySelector('.upload-icon').style.display = 'none';
+      zone.querySelector('.upload-title').style.display = 'none';
+      zone.querySelector('.upload-sub').style.display = 'none';
+    }
+
+    window.clearImage = function() {
+      var zone = document.getElementById('uploadZone');
+      var img  = document.getElementById('previewImg');
+      img.src  = '';
+      img.style.display = 'none';
+      zone.classList.remove('has-image');
+      zone.querySelector('.upload-icon').style.display = '';
+      zone.querySelector('.upload-title').style.display = '';
+      zone.querySelector('.upload-sub').style.display = '';
+      imageBase64 = null;
+      document.getElementById('btnAnalyze').disabled = true;
+      document.getElementById('resultCard').classList.remove('show');
+      document.getElementById('fileInput').value = '';
+    };
+
+    // ── Drag & drop ────────────────────────────────────────────
+    var zone = document.getElementById('uploadZone');
+    zone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      zone.classList.add('dragover');
+    });
+    zone.addEventListener('dragleave', function() { zone.classList.remove('dragover'); });
+    zone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      zone.classList.remove('dragover');
+      var file = e.dataTransfer.files[0];
+      if (!file || !file.type.startsWith('image/')) { toast('Please drop an image file'); return; }
+      var dt = new DataTransfer();
+      dt.items.add(file);
+      var input = document.getElementById('fileInput');
+      input.files = dt.files;
+      window.handleFileSelect(input);
+    });
+
+    // ── Camera ─────────────────────────────────────────────────
+    window.startCamera = function() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast('Camera not available on this device');
+        return;
+      }
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+        .then(function(s) {
+          stream = s;
+          document.getElementById('videoEl').srcObject = s;
+          document.getElementById('cameraSection').classList.add('active');
+          document.getElementById('btnCamera').style.display = 'none';
+        })
+        .catch(function() { toast('Camera permission denied'); });
+    };
+
+    window.stopCamera = function() {
+      if (stream) { stream.getTracks().forEach(function(t) { t.stop(); }); stream = null; }
+      document.getElementById('cameraSection').classList.remove('active');
+      document.getElementById('btnCamera').style.display = '';
+    };
+
+    window.capturePhoto = function() {
+      var video  = document.getElementById('videoEl');
+      var canvas = document.getElementById('captureCanvas');
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      imageBase64 = dataUrl.split(',')[1];
+      imageType   = 'image/jpeg';
+      showPreview(dataUrl);
+      document.getElementById('btnAnalyze').disabled = false;
+      window.stopCamera();
+    };
+
+    // ── Analyze ────────────────────────────────────────────────
+    window.analyzePhoto = function() {
+      if (!imageBase64) { toast('Please select a photo first'); return; }
+
+      var btn   = document.getElementById('btnAnalyze');
+      var label = document.getElementById('analyzeLabel');
+      btn.disabled = true;
+      label.innerHTML = '<svg class="spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" opacity=".25"/><path d="M21 12a9 9 0 0 1-9 9" /></svg> Analyzing…';
+
+      fetch('/api/food/analyze-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: imageBase64, imageType: imageType }),
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.error) { toast(d.error); return; }
+        currentNutrition = d.nutrition;
+        renderResult(d.nutrition);
+      })
+      .catch(function() { toast('Network error — please try again'); })
+      .finally(function() {
+        btn.disabled = false;
+        label.textContent = 'Analyze Food';
+      });
+    };
+
+    function renderResult(n) {
+      document.getElementById('resFoodName').textContent = n.food_name;
+      document.getElementById('resServing').textContent  = n.serving_size;
+      document.getElementById('resCal').textContent      = n.calories;
+      document.getElementById('resProt').textContent     = n.protein_g;
+      document.getElementById('resFat').textContent      = n.fat_g;
+      document.getElementById('resCarbs').textContent    = n.carbs_g;
+      document.getElementById('resNet').textContent      = n.net_carbs_g;
+      document.getElementById('resNotes').textContent    = n.notes || 'No additional notes.';
+
+      // Verdict badge
+      var vb = document.getElementById('resVerdict');
+      vb.className = 'verdict-badge ' + n.keto_verdict;
+      var verdictMap = { keto_friendly: '✓ Keto Friendly', caution: '⚠ Caution', not_keto: '✗ Not Keto' };
+      vb.textContent = verdictMap[n.keto_verdict] || n.keto_verdict;
+
+      // Confidence
+      var dot  = document.getElementById('confDot');
+      var conf = document.getElementById('confText');
+      dot.className = 'conf-dot ' + n.confidence;
+      var confMap = { high: 'High confidence estimate', medium: 'Medium confidence — photo was partially unclear', low: 'Low confidence — photo may be unclear or uncommon food' };
+      conf.textContent = confMap[n.confidence] || n.confidence;
+
+      // Ingredients
+      if (n.ingredients && n.ingredients.length) {
+        var list = document.getElementById('resIngredients');
+        list.innerHTML = n.ingredients.map(function(i) {
+          return '<span class="ingredient-tag">' + i + '</span>';
+        }).join('');
+        document.getElementById('resIngredientsWrap').style.display = '';
+      } else {
+        document.getElementById('resIngredientsWrap').style.display = 'none';
+      }
+
+      // Reset log button
+      document.getElementById('btnLog').disabled = false;
+      document.getElementById('logSuccess').style.display = 'none';
+
+      // Show card
+      document.getElementById('resultCard').classList.add('show');
+      document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ── Log to diary ───────────────────────────────────────────
+    window.logFood = function() {
+      if (!imageBase64 || !currentNutrition) { toast('Analyze a photo first'); return; }
+      var mealType = document.getElementById('mealTypeSelect').value;
+      var btn = document.getElementById('btnLog');
+      btn.disabled = true;
+      btn.innerHTML = '<svg class="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" opacity=".25"/><path d="M21 12a9 9 0 0 1-9 9" /></svg> Saving…';
+
+      fetch('/api/food/analyze-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: imageBase64,
+          imageType:   imageType,
+          saveTo:      true,
+          mealType:    mealType,
+          date:        today,
+        }),
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.error) { toast(d.error); return; }
+        btn.style.display = 'none';
+        document.getElementById('logSuccess').style.display = 'flex';
+        toast('Logged to your food diary!');
+      })
+      .catch(function() { toast('Could not save — please try again'); })
+      .finally(function() {
+        if (btn.style.display !== 'none') {
+          btn.disabled = false;
+          btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Log to Diary';
+        }
+      });
+    };
+
+  })();
+  </script>
+</body>
+</html>

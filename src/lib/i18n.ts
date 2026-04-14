@@ -44,6 +44,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'nav.favorites':      'Favorites',
     'nav.meal_prep':      'Meal Prep',
     'nav.scanner':        'Keto Scanner',
+    'nav.food_photo':     'Photo Analyzer',
 
     // Nav links — Plan
     'nav.shopping':       'Shopping',
@@ -361,6 +362,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'nav.favorites':      'Favoris',
     'nav.meal_prep':      'Préparation des repas',
     'nav.scanner':        'Scanner Keto',
+    'nav.food_photo':     'Analyse Photo',
 
     'nav.shopping':       'Courses',
     'nav.habits':         'Habitudes',
@@ -625,6 +627,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'nav.favorites':      'Favoriten',
     'nav.meal_prep':      'Mahlzeitenvorbereitung',
     'nav.scanner':        'Keto-Scanner',
+    'nav.food_photo':     'Foto-Analyse',
 
     'nav.shopping':       'Einkauf',
     'nav.habits':         'Gewohnheiten',
@@ -889,6 +892,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'nav.favorites':      'Favoritos',
     'nav.meal_prep':      'Preparación de comidas',
     'nav.scanner':        'Escáner Keto',
+    'nav.food_photo':     'Analizador de fotos',
 
     'nav.shopping':       'Compras',
     'nav.habits':         'Hábitos',
@@ -1153,6 +1157,7 @@ const translations: Record<Lang, Record<string, string>> = {
     'nav.favorites':      'Favoritos',
     'nav.meal_prep':      'Preparação de refeições',
     'nav.scanner':        'Scanner Keto',
+    'nav.food_photo':     'Analisador de fotos',
 
     'nav.shopping':       'Compras',
     'nav.habits':         'Hábitos',
