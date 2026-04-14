@@ -9,12 +9,29 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     const { protocol, target_hours, started_at } = await request.json();
 
-    // Close any open sessions first
-    await supabase
+    // Idempotency guard: if an active session was started within the last 60 s,
+    // return it directly — prevents double-click / retry from creating duplicates.
+    const { data: existing } = await supabase
       .from('fasting_sessions')
-      .update({ ended_at: new Date().toISOString(), completed: false })
+      .select('id, started_at')
       .eq('user_id', user.id)
-      .is('ended_at', null);
+      .is('ended_at', null)
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      const ageMs = Date.now() - new Date(existing.started_at).getTime();
+      if (ageMs < 60_000) {
+        // Same fast — return the existing session (idempotent)
+        return json({ success: true, id: existing.id });
+      }
+      // Intentional restart: close the old session then fall through to insert
+      await supabase
+        .from('fasting_sessions')
+        .update({ ended_at: new Date().toISOString(), completed: false })
+        .eq('id', existing.id);
+    }
 
     const { data, error } = await supabase
       .from('fasting_sessions')
@@ -30,7 +47,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     if (error) throw error;
 
-    return json({ success: true, id: data.id });
+    return json({ success: true, id: data?.id });
 
   } catch (err: any) {
     return json({ error: 'Server error' }, 500);
