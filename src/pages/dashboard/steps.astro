@@ -2,14 +2,17 @@
 // src/pages/dashboard/steps.astro — Daily Steps Tracker
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
+import { getTranslator, normaliseLang } from '../../lib/i18n';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
 const { user, profile, db } = auth;
 
 const planType  = profile.subscription_tier || 'basic_30';
-const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 const userName  = profile.full_name || 'Member';
+const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
+const t    = getTranslator(lang);
 
 const today        = new Date().toISOString().slice(0, 10);
 const sevenDaysAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
@@ -65,7 +68,7 @@ const ringStroke = `${CIRC}`;
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Steps Tracker · Keto Journey</title>
+  <title>{t('steps.title')} · Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script is:inline>(function(){ var t=localStorage.getItem('keto-theme')||'dark'; document.documentElement.setAttribute('data-theme',t); })();</script>
@@ -196,15 +199,15 @@ const ringStroke = `${CIRC}`;
     <div class="stats-row fade-up d1">
       <div class="stat-cell">
         <div class="stat-val" id="statToday">{todaySteps.toLocaleString()}</div>
-        <div class="stat-lbl">Today</div>
+        <div class="stat-lbl">{t('steps.today')}</div>
       </div>
       <div class="stat-cell">
         <div class="stat-val">{weekAvg.toLocaleString()}</div>
-        <div class="stat-lbl">7-day avg</div>
+        <div class="stat-lbl">{t('steps.week_avg')}</div>
       </div>
       <div class="stat-cell">
         <div class="stat-val">{weekTotal.toLocaleString()}</div>
-        <div class="stat-lbl">This week</div>
+        <div class="stat-lbl">{t('steps.this_week')}</div>
       </div>
     </div>
 
@@ -213,7 +216,7 @@ const ringStroke = `${CIRC}`;
       <div class="card fade-up d2">
         <div class="card-title">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Today's Progress
+          {t('steps.title')}
         </div>
         <div class="ring-wrap">
           <svg width="120" height="120" viewBox="0 0 120 120" style="overflow:visible;">
@@ -237,12 +240,12 @@ const ringStroke = `${CIRC}`;
       <div class="card fade-up d2">
         <div class="card-title">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Log Steps
+          {t('steps.log')}
         </div>
 
         <button class="btn-auto" id="btnAutoCount" onclick="window.toggleAutoCount()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-          <span id="btnAutoLabel">Start Auto-Counting</span>
+          <span id="btnAutoLabel">{t('steps.auto_count')}</span>
         </button>
 
         <div style="font-size:.78rem;color:var(--soft);margin-bottom:.5rem;">Manual entry</div>
@@ -293,7 +296,7 @@ const ringStroke = `${CIRC}`;
     <div class="card fade-up d4">
       <div class="card-title">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Import from Apple Health (Mac / iPhone)
+        {t('steps.import')} (Mac / iPhone)
       </div>
       <div class="import-note">
         <strong>How to export from iPhone:</strong>
@@ -321,7 +324,7 @@ const ringStroke = `${CIRC}`;
 
   <div id="stepsToast"></div>
 
-  <script is:inline define:vars={{ todaySteps, stepGoal, today, CIRC }}>
+  <script is:inline define:vars={{ todaySteps, stepGoal, today, CIRC, autoCountLabel: t('steps.auto_count') }}>
   (function() {
     var currentSteps = todaySteps;
     var currentGoal  = stepGoal;
@@ -413,7 +416,7 @@ const ringStroke = `${CIRC}`;
       window.removeEventListener('devicemotion', onMotion);
       var btn = document.getElementById('btnAutoCount');
       btn.classList.remove('active');
-      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><span>Start Auto-Counting</span>';
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><span>' + autoCountLabel + '</span>';
       var newTotal = currentSteps + motionCount;
       document.getElementById('stepsInput').value = newTotal;
       window.saveSteps(newTotal, 'auto');
