@@ -25,12 +25,17 @@ const today = new Date().toISOString().split('T')[0];
 
 // Load habits
 const thirtyAgo = new Date(Date.now() - 29 * 86400000).toISOString().split('T')[0];
-const [{ data: habitsRaw }, { data: completionsRaw }] = await Promise.all([
-  db.from('habits').select('*').eq('user_id', user.id).eq('is_active', true).order('sort_order').order('created_at'),
-  db.from('habit_completions').select('habit_id, completed_date').eq('user_id', user.id).gte('completed_date', thirtyAgo),
-]);
-const habits = habitsRaw || [];
-const completions = completionsRaw || [];
+let habits = [], completions = [];
+try {
+  const [habitsRes, completionsRes] = await Promise.allSettled([
+    db.from('habits').select('*').eq('user_id', user.id).eq('is_active', true).order('sort_order').order('created_at'),
+    db.from('habit_completions').select('habit_id, completed_date').eq('user_id', user.id).gte('completed_date', thirtyAgo),
+  ]);
+  habits      = habitsRes.status      === 'fulfilled' ? (habitsRes.value?.data      || []) : [];
+  completions = completionsRes.status === 'fulfilled' ? (completionsRes.value?.data || []) : [];
+} catch (e) {
+  console.error('[Habits] DB error:', e);
+}
 
 // Build lookup: habit_id → Set<date>
 const doneMap = {};

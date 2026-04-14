@@ -8,8 +8,17 @@ if ('redirect' in auth) return Astro.redirect(auth.redirect);
 const { user, profile, db } = auth;
 
 // Fetch onboarding data for personalization
-const { data: onboarding } = await db
-  .from('onboarding_data').select('*').eq('user_id', user.id).maybeSingle();
+let onboarding = null;
+try {
+  const { data } = await db.from('onboarding_data').select('*').eq('user_id', user.id).maybeSingle();
+  onboarding = data;
+} catch (e) {
+  console.error('[Welcome] DB error:', e);
+  return new Response(
+    `<!DOCTYPE html><html><head><title>Temporarily Unavailable</title><meta http-equiv="refresh" content="15;url=/dashboard/welcome"></head><body style="background:#060d09;color:#dfeedd;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:1.2rem;text-align:center;padding:2rem"><h2 style="font-family:Fraunces,serif;font-size:1.6rem;margin:0;color:#10b981">Keto Journey</h2><p style="font-size:1.1rem;margin:0">Page temporarily unavailable</p><p style="color:#4d7055;margin:0;font-size:.9rem">Retrying automatically in 15 seconds…</p><a href="/dashboard/welcome" style="color:#10b981;font-size:.9rem;margin-top:.5rem">Retry now</a></body></html>`,
+    { status: 503, headers: { 'Content-Type': 'text/html' } }
+  );
+}
 
 // If no onboarding, send to onboarding
 if (!onboarding) return Astro.redirect('/dashboard/onboarding');

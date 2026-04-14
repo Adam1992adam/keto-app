@@ -18,24 +18,33 @@ const firstName = profile.full_name?.split(' ')[0] || 'there';
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
 
-const journey    = await getUserJourney(user.id, db);
+const today = new Date().toISOString().split('T')[0];
+
+// All queries fire in parallel — each fails independently
+let journey = null, onboarding = null, hasCheckedIn = false, hasLoggedWeight = false, hasFasted = false;
+try {
+  const [jRes, obRes, ciRes, wlRes, fsRes] = await Promise.allSettled([
+    getUserJourney(user.id, db),
+    db.from('onboarding_data').select('goal').eq('user_id', user.id).maybeSingle(),
+    db.from('daily_checkins').select('id').eq('user_id', user.id).eq('checkin_date', today).maybeSingle(),
+    db.from('weight_logs').select('id').eq('user_id', user.id).limit(1),
+    db.from('fasting_sessions').select('id').eq('user_id', user.id).limit(1),
+  ]);
+  journey         = jRes.status  === 'fulfilled' ? jRes.value                          : null;
+  onboarding      = obRes.status === 'fulfilled' ? obRes.value?.data                   : null;
+  hasCheckedIn    = ciRes.status === 'fulfilled' ? !!ciRes.value?.data                 : false;
+  hasLoggedWeight = wlRes.status === 'fulfilled' ? (wlRes.value?.data?.length || 0) > 0 : false;
+  hasFasted       = fsRes.status === 'fulfilled' ? (fsRes.value?.data?.length || 0) > 0 : false;
+} catch (e) {
+  console.error('[Guide] DB error:', e);
+}
+
 const currentDay = journey?.current_day || 1;
 const totalXP    = journey?.total_xp    || 0;
 const level      = journey?.level       || 1;
 const streak     = journey?.streak_days || 0;
 
-// What the user has already done — to personalize the guide
-const { data: onboarding } = await db.from('onboarding_data').select('goal').eq('user_id', user.id).maybeSingle();
-const { data: todayCheckin } = await db.from('daily_checkins')
-  .select('id').eq('user_id', user.id)
-  .eq('checkin_date', new Date().toISOString().split('T')[0]).maybeSingle();
-const { data: weightLogs } = await db.from('weight_logs').select('id').eq('user_id', user.id).limit(1);
-const { data: fastingSessions } = await db.from('fasting_sessions').select('id').eq('user_id', user.id).limit(1);
-
-const hasOnboarded  = !!onboarding;
-const hasCheckedIn  = !!todayCheckin;
-const hasLoggedWeight = (weightLogs?.length || 0) > 0;
-const hasFasted     = (fastingSessions?.length || 0) > 0;
+const hasOnboarded = !!onboarding;
 
 const isElite = planType === 'elite_12';
 const isPro   = planType === 'pro_6' || isElite;

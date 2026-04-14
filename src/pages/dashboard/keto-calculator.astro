@@ -21,12 +21,18 @@ const userName  = profile.full_name?.split(' ')[0] || 'there';
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
 
-// Pre-fill from onboarding
-const { data: onboarding } = await db
-  .from('onboarding_data')
-  .select('current_weight, target_weight, goal, fasting_protocol')
-  .eq('user_id', user.id)
-  .maybeSingle();
+// Pre-fill from onboarding — graceful fallback to profile/defaults if DB unavailable
+let onboarding = null;
+try {
+  const { data } = await db
+    .from('onboarding_data')
+    .select('current_weight, target_weight, goal, fasting_protocol')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  onboarding = data;
+} catch (e) {
+  console.error('[KetoCalc] DB error:', e);
+}
 
 const prefillWeight = onboarding?.current_weight || profile.weight_kg || 70;
 const prefillGoal   = onboarding?.goal === 'gain_muscle' ? 'gain' : onboarding?.goal === 'maintain' ? 'maintain' : 'lose';
