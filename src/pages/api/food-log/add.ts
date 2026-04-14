@@ -22,25 +22,27 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .from('user_journey').select('current_day').eq('user_id', user.id).maybeSingle();
     const dayNumber = journey?.current_day || 1;
 
+    const validMeals = new Set(['breakfast', 'lunch', 'dinner', 'snack', 'other']);
+    const meal = validMeals.has(meal_type) ? meal_type : 'other';
+
     const { data, error } = await db.from('food_logs').insert({
       user_id:     user.id,
       logged_date: today,
       day_number:  dayNumber,
-      meal_type:   meal_type || 'other',
+      meal_type:   meal,
       food_name:   food_name.trim(),
-      calories:    Math.round(Math.max(0, calories || 0)),
-      protein_g:   Math.max(0, parseFloat(protein_g) || 0),
-      fat_g:       Math.max(0, parseFloat(fat_g)     || 0),
-      carbs_g:     Math.max(0, parseFloat(carbs_g)   || 0),
+      calories:    Math.min(Math.round(Math.max(0, calories  || 0)), 9999),
+      protein_g:   Math.min(Math.max(0, parseFloat(protein_g) || 0), 500),
+      fat_g:       Math.min(Math.max(0, parseFloat(fat_g)     || 0), 500),
+      carbs_g:     Math.min(Math.max(0, parseFloat(carbs_g)   || 0), 500),
       notes:       notes || null,
     }).select().maybeSingle();
 
     if (error) throw error;
 
     // Auto-complete the matching daily task when a meal is logged
-    const mt = meal_type || 'other';
-    if (MEAL_TASK_TYPES.has(mt)) {
-      await autoCompleteTask(user.id, mt, dayNumber, accessToken);
+    if (MEAL_TASK_TYPES.has(meal)) {
+      await autoCompleteTask(user.id, meal, dayNumber, accessToken);
     }
 
     return json({ success: true, entry: data });
