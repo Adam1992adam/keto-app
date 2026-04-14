@@ -3,8 +3,9 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import CookieConsent from '../components/CookieConsent.astro';
 
-const error   = Astro.url.searchParams.get('error');
-const message = Astro.url.searchParams.get('message');
+const error      = Astro.url.searchParams.get('error');
+const message    = Astro.url.searchParams.get('message');
+const retryAfter = Astro.url.searchParams.get('retry');
 const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').replace(/\/$/, '');
 ---
 
@@ -286,9 +287,10 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
     <div class="alert alert-error">
       <span>⚠️</span>
       <span>
-        {error === 'invalid' && 'Wrong email or password. Please try again.'}
-        {error === 'auth'    && 'Authentication error. Please try again.'}
-        {error !== 'invalid' && error !== 'auth' && 'Something went wrong. Please try again.'}
+        {error === 'invalid'     && 'Wrong email or password. Please try again.'}
+        {error === 'auth'        && 'Authentication error. Please try again.'}
+        {error === 'ratelimited' && `Too many login attempts. Please wait ${retryAfter ? `${retryAfter} seconds` : 'a few minutes'} before trying again.`}
+        {error !== 'invalid' && error !== 'auth' && error !== 'ratelimited' && 'Something went wrong. Please try again.'}
       </span>
     </div>
   )}

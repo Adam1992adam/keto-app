@@ -1,6 +1,17 @@
 import type { APIRoute } from 'astro';
+import { checkRateLimit, getClientIp } from '../../../lib/rateLimit';
 
 export const POST: APIRoute = async ({ request, locals, cookies }) => {
+  // Rate limit: 5 attempts per 15 minutes per IP
+  const ip = getClientIp(request);
+  const { allowed, retryAfterSec } = checkRateLimit(`admin-verify:${ip}`, 5, 15 * 60 * 1000);
+  if (!allowed) {
+    return new Response(JSON.stringify({ success: false, error: `Too many attempts. Try again in ${retryAfterSec}s.` }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json', 'Retry-After': String(retryAfterSec) },
+    });
+  }
+
   try {
     const env = (locals as any)?.runtime?.env || {};
     const ADMIN_PASSWORD = env.ADMIN_PASSWORD || import.meta.env.ADMIN_PASSWORD;

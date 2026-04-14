@@ -1,7 +1,15 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit, getClientIp } from '../../../lib/rateLimit';
 
 export const POST: APIRoute = async ({ request, redirect }) => {
+  // Rate limit: 3 attempts per 15 minutes per IP
+  const ip = getClientIp(request);
+  const { allowed } = checkRateLimit(`forgot:${ip}`, 3, 15 * 60 * 1000);
+  if (!allowed) {
+    return redirect('/forgot-password?error=ratelimited');
+  }
+
   const formData = await request.formData();
   const email = formData.get('email')?.toString()?.trim().toLowerCase();
 

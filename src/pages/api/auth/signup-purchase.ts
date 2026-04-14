@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { checkRateLimit, getClientIp } from '../../../lib/rateLimit';
 
 // ═══════════════════════════════════════
 // SIGNUP AFTER PURCHASE VERIFICATION
@@ -6,6 +7,16 @@ import type { APIRoute } from 'astro';
 // ═══════════════════════════════════════
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: 5 signups per 10 minutes per IP (prevent resource abuse)
+  const ip = getClientIp(request);
+  const { allowed, retryAfterSec } = checkRateLimit(`signup:${ip}`, 5, 10 * 60 * 1000);
+  if (!allowed) {
+    return new Response(JSON.stringify({ error: `Too many requests. Try again in ${retryAfterSec}s.` }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json', 'Retry-After': String(retryAfterSec) },
+    });
+  }
+
   try {
     const { email, password, fullName, tier, startDate, endDate, saleId, ls_order_id, ls_customer_id, referral_code } =
       await request.json();
