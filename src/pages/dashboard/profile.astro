@@ -41,17 +41,35 @@ const units: UnitSystem = (profile.preferred_units as UnitSystem) || 'imperial';
 const wLabel = weightLabel(units);
 const plan = getPlan(profile.subscription_tier);
 
-const journey = await getUserJourney(user.id, db);
+// Journey first — currentDay is needed for getDailyTasks + getWaterIntake
+const journey    = await getUserJourney(user.id, db).catch(() => null);
 const currentDay = journey?.current_day || 1;
-const dailyTasks = await getDailyTasks(user.id, currentDay, db);
-await getWaterIntake(user.id, currentDay, db);
+
+// All remaining queries fire in parallel
+const [tasksRes, , weightRes, allTasksRes, xpRes, bmiRes, calRes, waterRes] =
+  await Promise.allSettled([
+    getDailyTasks(user.id, currentDay, db),
+    getWaterIntake(user.id, currentDay, db),       // side-effect only, result unused
+    getWeightLogs(user.id, 30, db),
+    db.from('daily_tasks').select('*').eq('user_id', user.id).order('day_number', { ascending: true }),
+    getXPTransactions(user.id, 30, db),
+    calculateBMI(profile.weight_kg, profile.height_cm),
+    calculateCalorieTarget(profile),
+    db.from('water_intake').select('glasses_count').eq('user_id', user.id),
+  ]);
+
+const dailyTasks     = tasksRes.status     === 'fulfilled' ? tasksRes.value        : [];
+const weightLogs     = weightRes.status    === 'fulfilled' ? weightRes.value       : [];
+const allTasks       = allTasksRes.status  === 'fulfilled' ? allTasksRes.value?.data : null;
+const xpTransactions = xpRes.status        === 'fulfilled' ? xpRes.value          : [];
+const bmi            = bmiRes.status        === 'fulfilled' ? bmiRes.value         : null;
+const calorieTarget  = calRes.status        === 'fulfilled' ? calRes.value         : 2000;
+const totalWaterGlasses = waterRes.status  === 'fulfilled'
+  ? (waterRes.value?.data?.reduce((s, w) => s + w.glasses_count, 0) || 0) : 0;
+
 const incompleteTasks = dailyTasks?.filter(
   t => t.task_type !== 'reflection' && t.task_type !== 'weight' && !t.completed
 ) || [];
-
-const weightLogs = await getWeightLogs(user.id, 30, db);
-const { data: allTasks } = await db.from('daily_tasks').select('*').eq('user_id', user.id).order('day_number', { ascending: true });
-const xpTransactions = await getXPTransactions(user.id, 30, db);
 
 const maxDay = Math.min(journey?.current_day || 1, 30);
 const completionData = Array.from({ length: maxDay }, (_, i) => {
@@ -82,14 +100,12 @@ const targetWeight  = profile.target_weight_kg || currentWeight - 5;
 const weightToLose  = Math.max(0.001, currentWeight - targetWeight);
 const progressPercent = Math.min(100, Math.max(0, ((startWeight - currentWeight) / (startWeight - targetWeight)) * 100));
 
-const bmi = profile.weight_kg && profile.height_cm ? await calculateBMI(profile.weight_kg, profile.height_cm) : null;
 const bmiCategory = !bmi ? { label:'Not set', color:'#8a9ab0', tip:'Add your height & weight to calculate BMI' }
   : bmi < 18.5 ? { label:'Underweight', color:'#3b82f6',  tip:'Building healthy muscle mass is a great goal' }
   : bmi < 25   ? { label:'Healthy',     color:'#10b981',  tip:'You\'re in the healthy range — keep it up!' }
   : bmi < 30   ? { label:'Above range', color:'#f59e0b',  tip:'Keto is one of the most effective ways to reach a healthy BMI' }
   : { label:'Working on it', color:'#f59e0b', tip:'Many people in your range have transformed with keto — you\'re in the right place' };
 
-const calorieTarget = await calculateCalorieTarget(profile);
 const fatGrams     = Math.round((calorieTarget * 0.70) / 9);
 const proteinGrams = Math.round((calorieTarget * 0.25) / 4);
 const carbGrams    = Math.round((calorieTarget * 0.05) / 4);
@@ -99,8 +115,6 @@ const daysLeft = profile.subscription_end_date
 
 const totalTasksCompleted = allTasks?.filter(t => t.completed).length || 0;
 const totalMealsCompleted = allTasks?.filter(t => t.completed && ['breakfast','lunch','dinner','snack'].includes(t.task_type)).length || 0;
-const { data: waterData } = await db.from('water_intake').select('glasses_count').eq('user_id', user.id);
-const totalWaterGlasses = waterData?.reduce((s,w) => s + w.glasses_count, 0) || 0;
 
 const displayWeight       = formatWeight(currentWeight, units);
 const displayTargetWeight = formatWeight(targetWeight, units);

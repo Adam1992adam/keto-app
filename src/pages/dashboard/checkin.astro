@@ -29,40 +29,26 @@ const t    = getTranslator(lang);
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 
-const journey = await getUserJourney(user.id, db);
+// All 5 queries fire in parallel — none depend on each other
+const today = new Date().toISOString().split('T')[0];
+const [journeyRes, existingCheckinRes, macroGoalsRes, onboardingRes, recentCheckinsRes] =
+  await Promise.allSettled([
+    getUserJourney(user.id, db),
+    db.from('daily_checkins').select('*').eq('user_id', user.id).eq('checkin_date', today).maybeSingle(),
+    db.from('macro_goals').select('*').eq('user_id', user.id).maybeSingle(),
+    db.from('onboarding_data').select('fasting_protocol, goal, feature_electrolytes').eq('user_id', user.id).maybeSingle(),
+    db.from('daily_checkins').select('checkin_date, energy_level, mood_level, followed_meals')
+      .eq('user_id', user.id).order('checkin_date', { ascending: false }).limit(7),
+  ]);
+
+const journey       = journeyRes.status        === 'fulfilled' ? journeyRes.value              : null;
+const existingCheckin = existingCheckinRes.status === 'fulfilled' ? existingCheckinRes.value?.data : null;
+const macroGoals    = macroGoalsRes.status     === 'fulfilled' ? macroGoalsRes.value?.data     : null;
+const onboarding    = onboardingRes.status     === 'fulfilled' ? onboardingRes.value?.data     : null;
+const recentCheckins = recentCheckinsRes.status === 'fulfilled' ? recentCheckinsRes.value?.data : null;
+
 const currentDay = journey?.current_day || 1;
 const isFirstWeek = currentDay <= 7;
-
-// Check if already checked in today
-const today = new Date().toISOString().split('T')[0];
-const { data: existingCheckin } = await db
-  .from('daily_checkins')
-  .select('*')
-  .eq('user_id', user.id)
-  .eq('checkin_date', today)
-  .maybeSingle();
-
-// Get macro goals
-const { data: macroGoals } = await db
-  .from('macro_goals')
-  .select('*')
-  .eq('user_id', user.id)
-  .maybeSingle();
-
-// Get onboarding data for fasting protocol
-const { data: onboarding } = await db
-  .from('onboarding_data')
-  .select('fasting_protocol, goal, feature_electrolytes')
-  .eq('user_id', user.id)
-  .maybeSingle();
-
-// Get last 7 check-ins for streak/trend
-const { data: recentCheckins } = await db
-  .from('daily_checkins')
-  .select('checkin_date, energy_level, mood_level, followed_meals')
-  .eq('user_id', user.id)
-  .order('checkin_date', { ascending: false })
-  .limit(7);
 
 const userName = profile.full_name?.split(' ')[0] || 'there';
 const fastingProtocol = onboarding?.fasting_protocol || 'none';
