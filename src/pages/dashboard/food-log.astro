@@ -150,7 +150,34 @@ const mealIcons: Record<string, string> = {
     .fl-mk{background:rgba(239,68,68,.1);color:var(--red);}
     .fl-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:.25rem .5rem;min-width:36px;min-height:36px;border-radius:8px;transition:color .15s;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
     .fl-del:hover{color:var(--red);}
+    .fl-swap{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.75rem;padding:.25rem .45rem;min-width:30px;min-height:30px;border-radius:8px;transition:all .15s;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;}
+    .fl-swap:hover{color:var(--green);background:rgba(16,185,129,.1);}
     @media(max-width:640px){.fl-del{min-width:44px;min-height:44px;}}
+
+    /* SWAP MODAL */
+    .swap-modal-backdrop{display:none;position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);align-items:flex-end;justify-content:center;padding:0;}
+    .swap-modal-backdrop.open{display:flex;}
+    @media(min-width:640px){.swap-modal-backdrop{align-items:center;padding:1rem;}}
+    .swap-modal{background:var(--card);border:1px solid var(--border2);border-radius:24px 24px 0 0;padding:1.25rem 1.25rem 2rem;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;display:flex;flex-direction:column;gap:.75rem;}
+    @media(min-width:640px){.swap-modal{border-radius:24px;max-height:85vh;}}
+    .swap-modal-title{font-family:'Fraunces',serif;font-size:1.1rem;font-weight:900;}
+    .swap-current{background:rgba(16,185,129,.06);border:1px solid var(--border);border-radius:12px;padding:.65rem .9rem;font-size:.78rem;}
+    .swap-current-name{font-weight:800;margin-bottom:.2rem;color:var(--text);}
+    .swap-current-macros{color:var(--soft);font-size:.7rem;}
+    .swap-list{display:flex;flex-direction:column;gap:.55rem;}
+    .swap-card{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:.75rem 1rem;display:flex;align-items:center;gap:.85rem;cursor:default;transition:border-color .2s;}
+    .swap-card:hover{border-color:var(--border2);}
+    .swap-card-img{width:44px;height:44px;border-radius:10px;object-fit:cover;flex-shrink:0;background:var(--muted);}
+    .swap-card-img-placeholder{width:44px;height:44px;border-radius:10px;flex-shrink:0;background:rgba(16,185,129,.1);display:flex;align-items:center;justify-content:center;font-size:1.4rem;}
+    .swap-card-info{flex:1;min-width:0;}
+    .swap-card-name{font-weight:800;font-size:.82rem;line-height:1.3;margin-bottom:.25rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .swap-card-macros{display:flex;gap:.35rem;flex-wrap:wrap;}
+    .swap-card-m{font-size:.62rem;font-weight:700;padding:.1rem .35rem;border-radius:5px;}
+    .swap-use-btn{flex-shrink:0;padding:.45rem .85rem;border-radius:10px;background:linear-gradient(135deg,var(--green),var(--green2));border:none;color:#fff;font-weight:800;font-size:.75rem;cursor:pointer;transition:opacity .2s;}
+    .swap-use-btn:hover{opacity:.88;}
+    .swap-use-btn:disabled{opacity:.5;cursor:not-allowed;}
+    .swap-spinner{text-align:center;padding:2rem;color:var(--soft);font-size:.85rem;}
+    .swap-empty{text-align:center;padding:1.5rem;color:var(--soft);font-size:.82rem;}
 
     /* EMPTY */
     .empty{text-align:center;padding:3rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:18px;animation:fadeUp .35s ease both;}
@@ -344,6 +371,16 @@ const mealIcons: Record<string, string> = {
                 <span class="fl-m fl-mf">{f.fat_g}F</span>
                 <span class="fl-m fl-mk">{f.carbs_g}C</span>
               </div>
+              <button class="fl-swap"
+                data-id={f.id}
+                data-name={f.food_name}
+                data-cal={f.calories}
+                data-prot={f.protein_g}
+                data-fat={f.fat_g}
+                data-carb={f.carbs_g}
+                data-meal={f.meal_type || 'other'}
+                onclick="window.openSwap(this)"
+                title="Suggest alternatives">⇄</button>
               <button class="fl-del" data-id={f.id} onclick="window.deleteEntry(this)" title="Remove">×</button>
             </div>
           ))}
@@ -444,6 +481,19 @@ const mealIcons: Record<string, string> = {
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- ── SWAP SUGGESTIONS MODAL ───────────────────────────────── -->
+<div class="swap-modal-backdrop" id="swapModal">
+  <div class="swap-modal">
+    <div class="modal-handle"></div>
+    <div class="swap-modal-title">Suggest Alternatives</div>
+    <div class="swap-current" id="swapCurrentInfo"></div>
+    <div id="swapList" class="swap-list">
+      <div class="swap-spinner">Loading suggestions…</div>
+    </div>
+    <button class="btn-cancel" onclick="window.closeSwap()" style="margin-top:.25rem;">Cancel</button>
+  </div>
+</div>
 
 <script is:inline define:vars={{ viewDate }}>
 // ── Per-100g data stored when a result is selected
@@ -739,6 +789,118 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── Swap suggestions ──────────────────────────────
+var __swapLogId   = null;
+var __swapLogMeal = 'other';
+
+window.openSwap = function(btn) {
+  __swapLogId   = btn.getAttribute('data-id');
+  __swapLogMeal = btn.getAttribute('data-meal') || 'other';
+  var name  = btn.getAttribute('data-name')  || '';
+  var cal   = btn.getAttribute('data-cal')   || '0';
+  var prot  = btn.getAttribute('data-prot')  || '0';
+  var fat   = btn.getAttribute('data-fat')   || '0';
+  var carb  = btn.getAttribute('data-carb')  || '0';
+
+  var infoEl = document.getElementById('swapCurrentInfo');
+  infoEl.innerHTML =
+    '<div class="swap-current-name">' + escHtml(name) + '</div>' +
+    '<div class="swap-current-macros">' + cal + ' kcal · ' + prot + 'g P · ' + fat + 'g F · ' + carb + 'g C</div>';
+
+  document.getElementById('swapList').innerHTML = '<div class="swap-spinner"><div class="spinner" style="display:inline-block;"></div> Loading suggestions…</div>';
+  document.getElementById('swapModal').classList.add('open');
+
+  var params = new URLSearchParams({ calories: cal, protein_g: prot, fat_g: fat, carbs_g: carb });
+  fetch('/api/food/suggest-swaps?' + params.toString())
+    .then(function(r){ return r.json(); })
+    .then(function(d){ renderSwaps(d.suggestions || [], name, cal, prot, fat, carb); })
+    .catch(function(){ renderSwaps([], name, cal, prot, fat, carb); });
+};
+
+function renderSwaps(suggestions, origName, origCal, origProt, origFat, origCarb) {
+  var list = document.getElementById('swapList');
+  if (!suggestions.length) {
+    list.innerHTML = '<div class="swap-empty">No similar recipes found in the database.<br>Try logging a different food.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  suggestions.forEach(function(r) {
+    var card = document.createElement('div');
+    card.className = 'swap-card';
+    var imgHtml = r.image_url
+      ? '<img class="swap-card-img" src="' + escHtml(r.image_url) + '" alt="" loading="lazy">'
+      : '<div class="swap-card-img-placeholder">🥗</div>';
+    var cal    = Math.round(r.calories  || 0);
+    var prot   = Math.round(r.protein   || 0);
+    var fat    = Math.round(r.fat       || 0);
+    var carbs  = Math.round(r.net_carbs || 0);
+    var time   = (r.prep_time || 0) + (r.cook_time || 0);
+    var timeTxt= time ? time + 'min' : '';
+    card.innerHTML =
+      imgHtml +
+      '<div class="swap-card-info">' +
+        '<div class="swap-card-name">' + escHtml(r.title) + (timeTxt ? ' <span style="color:var(--soft);font-weight:600;font-size:.68rem;">· ' + timeTxt + '</span>' : '') + '</div>' +
+        '<div class="swap-card-macros">' +
+          '<span class="swap-card-m" style="background:rgba(16,185,129,.1);color:var(--green);">' + cal + ' cal</span>' +
+          '<span class="swap-card-m" style="background:rgba(59,130,246,.1);color:var(--blue);">' + prot + 'P</span>' +
+          '<span class="swap-card-m" style="background:rgba(245,158,11,.1);color:var(--gold);">' + fat + 'F</span>' +
+          '<span class="swap-card-m" style="background:rgba(239,68,68,.1);color:var(--red);">' + carbs + 'C</span>' +
+        '</div>' +
+      '</div>' +
+      '<button class="swap-use-btn" onclick="window.applySwap(this,' +
+        JSON.stringify(r.title) + ',' + cal + ',' + prot + ',' + fat + ',' + carbs +
+        ')">Use</button>';
+    list.appendChild(card);
+  });
+}
+
+window.applySwap = function(btn, recipeName, cal, prot, fat, carbs) {
+  if (!__swapLogId) return;
+  btn.disabled = true; btn.textContent = '…';
+  var logId   = __swapLogId;
+  var mealType= __swapLogMeal;
+
+  // Delete old entry then add new one
+  fetch('/api/food-log/delete', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: logId }),
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    if (!d.success) throw new Error('Delete failed');
+    return fetch('/api/food-log/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ food_name: recipeName, calories: cal, protein_g: prot, fat_g: fat, carbs_g: carbs, meal_type: mealType }),
+    });
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d) {
+    if (d.success) {
+      showToast('✅ Swapped to ' + recipeName);
+      window.closeSwap();
+      setTimeout(function(){ window.location.reload(); }, 500);
+    } else {
+      btn.disabled = false; btn.textContent = 'Use';
+      showToast('❌ Swap failed');
+    }
+  })
+  .catch(function() {
+    btn.disabled = false; btn.textContent = 'Use';
+    showToast('❌ Error during swap');
+  });
+};
+
+window.closeSwap = function() {
+  document.getElementById('swapModal').classList.remove('open');
+  __swapLogId = null;
+};
+
+document.getElementById('swapModal').addEventListener('click', function(e){
+  if (e.target === this) window.closeSwap();
+});
+
 // Close modal on backdrop click
 document.getElementById('addModal').addEventListener('click', function(e){
   if (e.target === this) window.closeAdd();
@@ -752,6 +914,7 @@ document.addEventListener('keydown', function(e){
   if (e.key === 'Escape') {
     window.closeAdd();
     window.closeScanner();
+    window.closeSwap();
   }
 });
 </script>

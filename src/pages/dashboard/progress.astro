@@ -11,7 +11,7 @@ const { user, profile, db } = auth;
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
 const planType  = profile.subscription_tier || 'basic_30';
-const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 
 let journey = null;
 try {
@@ -452,6 +452,78 @@ const goalBarColor = goalPctDone >= 75
 
 const goalHasTarget = goalWeight > 0 && goalStartWeight > 0 && goalTotalToLose !== 0;
 
+// ── Weight Projection Chart ───────────────────────────────────────────────────
+const projHasData     = goalHasTarget && (weightLogs?.length || 0) >= 2;
+const projFirstLog    = weightLogs?.[0] || null;
+const projLastLog     = weightLogs?.[(weightLogs?.length || 0) - 1] || null;
+const projElapsedDays = (projHasData && projFirstLog && projLastLog)
+  ? Math.max(1, Math.round((new Date(projLastLog.logged_date).getTime() - new Date(projFirstLog.logged_date).getTime()) / 86400000))
+  : 1;
+const projLostSoFar     = (projHasData && projFirstLog && projLastLog) ? (projFirstLog.weight - projLastLog.weight) : 0;
+const projRatePerDay    = projElapsedDays > 0 ? projLostSoFar / projElapsedDays : 0;
+const projRatePerWeekKg = Math.round(projRatePerDay * 7 * 100) / 100;
+const projRateWeekDisp  = projRatePerWeekKg ? (units === 'imperial' ? Math.round(projRatePerWeekKg * 2.20462 * 10) / 10 : projRatePerWeekKg) : 0;
+const projIsLosing      = projRatePerDay > 0 && goalTotalToLose > 0;
+const projDaysToGoal    = (projIsLosing && projRatePerDay > 0) ? Math.ceil(goalKgToGo / projRatePerDay) : null;
+const projGoalDateMs    = projDaysToGoal ? Date.now() + projDaysToGoal * 86400000 : null;
+const projGoalDateStr   = projGoalDateMs
+  ? new Date(projGoalDateMs).toLocaleDateString('en', { month: 'long', day: 'numeric', year: 'numeric' })
+  : null;
+const projWeeksLeft = projDaysToGoal ? Math.ceil(projDaysToGoal / 7) : null;
+
+const PROJ_W  = 560;
+const PROJ_H  = 160;
+const PROJ_PL = 48;
+const PROJ_PR = 24;
+const PROJ_PT = 18;
+const PROJ_PB = 32;
+
+const projAllWeights = projHasData ? (weightLogs || []).map(w => w.weight) : [goalStartWeight, goalCurrentWeight];
+const projMinW = Math.min(goalWeight, ...projAllWeights);
+const projMaxW = Math.max(...projAllWeights);
+const projWRange = (projMaxW - projMinW) || 1;
+const projWPad   = projWRange * 0.15;
+const projWLow   = Math.max(0, projMinW - projWPad);
+const projWHigh  = projMaxW + projWPad;
+const projWSpan  = projWHigh - projWLow || 1;
+
+const projTodayMs = Date.now();
+const projFirstMs = (projHasData && projFirstLog) ? new Date(projFirstLog.logged_date).getTime() : projTodayMs;
+const projEndMs   = projGoalDateMs || (projTodayMs + 60 * 86400000);
+const projTotalMs = Math.max(projEndMs - projFirstMs, 1);
+
+const projXfn = (ms) => PROJ_PL + Math.round(((ms - projFirstMs) / projTotalMs) * (PROJ_W - PROJ_PL - PROJ_PR));
+const projYfn = (kg) => PROJ_PT + Math.round(((projWHigh - kg) / projWSpan) * (PROJ_H - PROJ_PT - PROJ_PB));
+
+const projHistPts = projHasData ? (weightLogs || []).map(w => ({
+  x: projXfn(new Date(w.logged_date).getTime()),
+  y: projYfn(w.weight),
+  weightDisp: toW(w.weight),
+  date: new Date(w.logged_date + 'T12:00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+})) : [];
+const projHistPath  = buildBezierPath(projHistPts);
+const projLastX     = projHistPts.length > 0 ? projHistPts[projHistPts.length - 1].x : PROJ_PL;
+const projLastY     = projHistPts.length > 0 ? projHistPts[projHistPts.length - 1].y : projYfn(goalCurrentWeight);
+const projGoalSvgX  = projGoalDateMs ? projXfn(projGoalDateMs) : PROJ_W - PROJ_PR;
+const projGoalSvgY  = projYfn(goalWeight);
+const projTodayX    = projXfn(projTodayMs);
+const projTargetY   = projYfn(goalWeight);
+const projGoalDisp  = toW(goalWeight);
+
+const projXLabel1 = (projHasData && projFirstLog)
+  ? new Date(projFirstLog.logged_date + 'T12:00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' })
+  : '';
+const projXLabel2 = projGoalDateMs
+  ? new Date(projGoalDateMs).toLocaleDateString('en', { month: 'short', year: '2-digit' })
+  : '';
+
+const projYTicks = Array.from({ length: 4 }, (_, i) => {
+  const weight = projWLow + (projWSpan * i / 3);
+  return { valDisp: toW(Math.round(weight * 10) / 10), y: projYfn(weight) };
+}).reverse();
+
+const showProjection = projIsLosing && projHasData;
+
 // Pre-compute achievement display data to avoid const-in-map
 const achievementsDisplay = achievements.map(a => ({
   icon:       a.icon || '🏅',
@@ -790,6 +862,77 @@ const initialPhotos = progressPhotos || [];
           <span class="gs-item"><strong>{goalPctDone}%</strong> complete</span>
         </div>
 
+      </div>
+    </div>
+  )}
+
+  <!-- WEIGHT GOAL PROJECTION CHART -->
+  {showProjection && (
+    <div class="card" style="animation-delay:.22s;margin-bottom:1.75rem;">
+      <div class="ch">
+        <div class="ch-ic" style="background:linear-gradient(135deg,#10b981,#f59e0b);box-shadow:0 4px 10px rgba(245,158,11,.18);">📈</div>
+        <div style="flex:1;">
+          <div class="ch-tt">Weight Projection</div>
+          <div class="ch-sub">Trajectory to goal · {projRateWeekDisp} {wUnit}/week loss</div>
+        </div>
+        {projWeeksLeft && <div style="font-size:.72rem;font-weight:800;color:var(--gold);white-space:nowrap;">~{projWeeksLeft}w left</div>}
+      </div>
+      <div class="cb">
+        {projGoalDateStr && (
+          <div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.18);border-radius:12px;padding:.7rem 1rem;margin-bottom:1.1rem;display:flex;align-items:center;gap:.75rem;">
+            <span style="font-size:1.3rem;">🎯</span>
+            <div>
+              <div style="font-size:.8rem;font-weight:800;color:var(--gold);">Estimated goal date: {projGoalDateStr}</div>
+              <div style="font-size:.72rem;color:var(--soft);margin-top:.1rem;">At {projRateWeekDisp} {wUnit}/week · {projWeeksLeft} weeks away · Goal: {projGoalDisp} {wUnit}</div>
+            </div>
+          </div>
+        )}
+        <svg width="100%" viewBox={`0 0 ${PROJ_W} ${PROJ_H}`} preserveAspectRatio="xMidYMid meet" style="overflow:visible;display:block;">
+          <defs>
+            <linearGradient id="projAreaGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#10b981" stop-opacity="0.22" />
+              <stop offset="100%" stop-color="#10b981" stop-opacity="0" />
+            </linearGradient>
+          </defs>
+          {projYTicks.map(tk => (
+            <g key={tk.y}>
+              <line x1={PROJ_PL} y1={tk.y} x2={PROJ_W - PROJ_PR} y2={tk.y} stroke="rgba(255,255,255,0.05)" stroke-width="1" />
+              <text x={PROJ_PL - 5} y={tk.y + 4} text-anchor="end" font-size="9" fill="var(--soft)">{tk.valDisp}</text>
+            </g>
+          ))}
+          <line x1={PROJ_PL} y1={projTargetY} x2={PROJ_W - PROJ_PR} y2={projTargetY}
+            stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="5 3" opacity="0.45" />
+          <text x={PROJ_W - PROJ_PR + 3} y={projTargetY + 4} font-size="9" fill="#f59e0b" opacity="0.8">goal</text>
+          <line x1={projTodayX} y1={PROJ_PT} x2={projTodayX} y2={PROJ_H - PROJ_PB}
+            stroke="var(--green)" stroke-width="1" stroke-dasharray="3 3" opacity="0.4" />
+          <text x={projTodayX} y={PROJ_H - PROJ_PB + 16} text-anchor="middle" font-size="8" fill="var(--green)" opacity="0.65">today</text>
+          {projHistPts.length > 1 && (
+            <path
+              d={`${projHistPath} L ${projHistPts[projHistPts.length-1].x} ${PROJ_H - PROJ_PB + 2} L ${projHistPts[0].x} ${PROJ_H - PROJ_PB + 2} Z`}
+              fill="url(#projAreaGrad)" />
+          )}
+          {projHistPts.length > 1 && (
+            <path d={projHistPath} fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+          )}
+          {projGoalDateMs && (
+            <line x1={projLastX} y1={projLastY} x2={projGoalSvgX} y2={projGoalSvgY}
+              stroke="#f59e0b" stroke-width="2" stroke-dasharray="7 4" stroke-linecap="round" opacity="0.75" />
+          )}
+          {projHistPts.map(p => (
+            <circle key={p.date} cx={p.x} cy={p.y} r="3.5" fill="#10b981" stroke="#34d399" stroke-width="1.5">
+              <title>{p.weightDisp} {wUnit} — {p.date}</title>
+            </circle>
+          ))}
+          {projGoalDateMs && (
+            <circle cx={projGoalSvgX} cy={projGoalSvgY} r="5" fill="#f59e0b" stroke="#fbbf24" stroke-width="1.5" opacity="0.9">
+              <title>Goal: {projGoalDisp} {wUnit} — {projGoalDateStr}</title>
+            </circle>
+          )}
+          <text x={PROJ_PL} y={PROJ_H - PROJ_PB + 28} text-anchor="middle" font-size="9" fill="var(--soft)">{projXLabel1}</text>
+          {projGoalDateMs && (
+            <text x={projGoalSvgX} y={PROJ_H - PROJ_PB + 28} text-anchor="middle" font-size="9" fill="#f59e0b" opacity="0.75">{projXLabel2}</text>
+          )}
+        </svg>
       </div>
     </div>
   )}
