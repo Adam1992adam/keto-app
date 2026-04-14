@@ -5,19 +5,33 @@ import { requireLogin } from '../../lib/auth';
 
 const auth = await requireLogin(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { profile } = auth;
+const { user, profile } = auth;
 
 if (profile.subscription_status === 'active' && profile.subscription_end_date && new Date(profile.subscription_end_date) > new Date()) {
   return Astro.redirect('/dashboard/');
 }
 
 const currentTier = profile.subscription_tier as string;
-const userName = profile.full_name?.split(' ')[0] || 'Friend';
+const userName    = profile.full_name?.split(' ')[0] || 'Friend';
+const userFullName = profile.full_name || '';
+const userEmail   = user?.email || '';
+const userId      = user?.id    || '';
+const appUrl      = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').replace(/\/$/, '');
+
 const endDate = profile.subscription_end_date
   ? new Date(profile.subscription_end_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
   : 'recently';
 
-const LS_URL = import.meta.env.LEMON_SQUEEZY_CHECKOUT_URL || "https://new-keto-plan.lemonsqueezy.com/checkout/buy/b975765f-a640-4cec-b3ef-44112acc9f75";
+// Per-plan checkout URLs — same env vars as upgrade.astro
+const LS_BASIC_URL = import.meta.env.LEMONSQUEEZY_BASIC_URL  || '';
+const LS_PRO_URL   = import.meta.env.LEMONSQUEEZY_PRO_URL    || '';
+const LS_ELITE_URL = import.meta.env.LEMONSQUEEZY_ELITE_URL  || '';
+
+const planCheckoutUrls: Record<string, string> = {
+  basic_30: LS_BASIC_URL,
+  pro_6:    LS_PRO_URL,
+  elite_12: LS_ELITE_URL,
+};
 
 const allPlans = [
   {
@@ -30,6 +44,7 @@ const allPlans = [
     gradient: 'linear-gradient(135deg,#10b981,#34d399)',
     perks: ['30-day meal plan', '30 keto recipes', '4 eBooks', 'Basic tracking'],
     popular: false,
+    checkoutUrl: LS_BASIC_URL,
   },
   {
     id: 'pro_6',
@@ -41,6 +56,7 @@ const allPlans = [
     gradient: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
     perks: ['6-month meal plan', '87+ recipes', '8 eBooks', 'Advanced analytics', 'Priority support'],
     popular: true,
+    checkoutUrl: LS_PRO_URL,
   },
   {
     id: 'elite_12',
@@ -52,6 +68,7 @@ const allPlans = [
     gradient: 'linear-gradient(135deg,#f59e0b,#fbbf24)',
     perks: ['12-month meal plan', 'Unlimited recipes', '12 eBooks', 'AI Keto Coach', '24/7 support', 'Community access'],
     popular: false,
+    checkoutUrl: LS_ELITE_URL,
   },
 ];
 
@@ -404,7 +421,7 @@ const defaultSelected = suggestedPlans.find(p => p.popular)?.id || suggestedPlan
 
 </div>
 
-<script is:inline define:vars={{ LS_URL, plansJson, defaultSelected }}>
+<script is:inline define:vars={{ plansJson, defaultSelected, userEmail, userFullName, userId, appUrl }}>
   const plans = JSON.parse(plansJson);
   let sel = defaultSelected;
 
@@ -414,33 +431,55 @@ const defaultSelected = suggestedPlans.find(p => p.popular)?.id || suggestedPlan
     elite_12: 'Go Elite — Full Year',
   };
 
+  // Build checkout URL with prefilled user data so the webhook upgrades the
+  // existing account directly — no re-registration required.
+  function buildCheckoutUrl(baseUrl) {
+    if (!baseUrl) return '';
+    try {
+      var url = new URL(baseUrl);
+      if (userEmail)    url.searchParams.set('checkout[email]', userEmail);
+      if (userFullName) url.searchParams.set('checkout[name]',  userFullName);
+      if (userId)       url.searchParams.set('checkout[custom][user_id]', userId);
+      // Redirect back to dashboard after payment
+      if (userId && appUrl) url.searchParams.set('checkout[redirect_url]', appUrl + '/dashboard?upgraded=1');
+      return url.toString();
+    } catch(e) { return baseUrl; }
+  }
+
   function pick(id) {
     sel = id;
-    const plan = plans.find(p => p.id === id);
+    const plan = plans.find(function(p) { return p.id === id; });
 
-    plans.forEach(p => {
-      const card = document.getElementById('pc-' + p.id);
+    plans.forEach(function(p) {
+      var card = document.getElementById('pc-' + p.id);
       if (!card) return;
       card.classList.remove('sel');
-      const btn = card.querySelector('.psel-btn');
+      var btn = card.querySelector('.psel-btn');
       btn.textContent = 'Select';
       btn.style = '';
     });
 
-    const card = document.getElementById('pc-' + id);
+    var card = document.getElementById('pc-' + id);
     if (card) {
       card.classList.add('sel');
-      const btn = card.querySelector('.psel-btn');
+      var btn = card.querySelector('.psel-btn');
       btn.textContent = '✓ Selected';
-      btn.style = `background:${plan.gradient};border-color:transparent;`;
+      btn.style = 'background:' + (plan ? plan.gradient : '') + ';border-color:transparent;';
     }
 
     document.getElementById('ctaText').textContent = ctaLabels[id] || 'Continue Your Journey';
   }
   window.pick = pick;
 
-  document.getElementById('btnGo').addEventListener('click', () => {
-    window.location.href = LS_URL;
+  document.getElementById('btnGo').addEventListener('click', function() {
+    var plan = plans.find(function(p) { return p.id === sel; });
+    var baseUrl = plan ? plan.checkoutUrl : '';
+    var url = buildCheckoutUrl(baseUrl);
+    if (!url) {
+      alert('Checkout not configured. Please contact support.');
+      return;
+    }
+    window.location.href = url;
   });
 
   // Init
