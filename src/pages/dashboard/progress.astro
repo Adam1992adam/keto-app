@@ -3,10 +3,13 @@ import { getUserJourney, getMaxJourneyDays, getAchievements, kgToLbs, cmToInches
 import { requireAuth } from '../../lib/auth';
 import { generateInsights } from '../../lib/insights';
 import DashNav from '../../components/DashNav.astro';
+import { getTranslator, normaliseLang } from '../../lib/i18n';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
 const { user, profile, db } = auth;
+const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
+const t    = getTranslator(lang);
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 
@@ -465,7 +468,7 @@ const initialPhotos = progressPhotos || [];
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>My Progress — Keto Journey</title>
+  <title>{t('progress.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
@@ -520,6 +523,17 @@ const initialPhotos = progressPhotos || [];
     .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;}
     @media(max-width:1060px){.grid2{grid-template-columns:1fr;}}
     @media(max-width:700px){.grid3{grid-template-columns:1fr 1fr;}.hero-stats{grid-template-columns:1fr 1fr;}}
+    @media(max-width:480px){
+      .grid3{grid-template-columns:1fr;}
+      .hero-stats{grid-template-columns:1fr 1fr;}
+      .page{padding-left:1rem;padding-right:1rem;padding-bottom:5.5rem;}
+      .card .cb{padding:1rem;}
+      .ch{padding:.9rem 1rem;}
+      /* iOS Safari input zoom prevention */
+      input[type="number"],input[type="date"],input[type="text"],textarea,select{font-size:16px!important;min-height:44px;}
+      /* Measurement grid → 2 cols on small screens */
+      .meas-grid,[style*="grid-template-columns:repeat(3"]{grid-template-columns:1fr 1fr!important;}
+    }
     /* CARD */
     .card{background:var(--card);border:1px solid var(--border);border-radius:20px;overflow:hidden;transition:border-color .25s;animation:fadeUp .4s ease both;}
     .card:hover{border-color:var(--border2);}
@@ -829,8 +843,8 @@ const initialPhotos = progressPhotos || [];
       <div class="card" style="animation-delay:.1s;">
         <div class="ch">
           <div class="ch-ic" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(59,130,246,.2);">⚖️</div>
-          <div style="flex:1;"><div class="ch-tt">Weight History</div><div class="ch-sub">{wChartPts.length} measurements logged</div></div>
-          <button id="openWeightModal" style="font-size:.72rem;font-weight:800;color:var(--green);background:none;border:none;cursor:pointer;padding:0;">+ Log weight</button>
+          <div style="flex:1;"><div class="ch-tt">{t('progress.weight')} History</div><div class="ch-sub">{wChartPts.length} measurements logged</div></div>
+          <button id="openWeightModal" style="font-size:.72rem;font-weight:800;color:var(--green);background:none;border:none;cursor:pointer;padding:0;">+ {t('progress.log_weight')}</button>
         </div>
         <div class="cb">
           {wChartPts.length > 0 ? (
@@ -894,7 +908,7 @@ const initialPhotos = progressPhotos || [];
               <div style="font-size:2.5rem;margin-bottom:.75rem;">⚖️</div>
               <div style="font-weight:700;margin-bottom:.3rem;">No weight logs yet</div>
               <div style="font-size:.78rem;">Log your first weight to start tracking progress</div>
-              <button id="openWeightModalEmpty" style="display:inline-block;margin-top:1rem;padding:.6rem 1.4rem;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;border-radius:10px;font-weight:800;font-size:.8rem;border:none;cursor:pointer;">+ Log First Weight</button>
+              <button id="openWeightModalEmpty" style="display:inline-block;margin-top:1rem;padding:.6rem 1.4rem;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;border-radius:10px;font-weight:800;font-size:.8rem;border:none;cursor:pointer;">+ {t('progress.log_weight')}</button>
             </div>
           )}
         </div>
@@ -1198,7 +1212,7 @@ const initialPhotos = progressPhotos || [];
   <div class="card" style="animation-delay:.2s;">
     <div class="ch">
       <div class="ch-ic" style="background:linear-gradient(135deg,#f97316,#ea580c);box-shadow:0 4px 10px rgba(249,115,22,.2);">📏</div>
-      <div style="flex:1;"><div class="ch-tt">Body Measurements</div><div class="ch-sub">{latestMeasurements ? `Last logged ${new Date(latestMeasurements.logged_date).toLocaleDateString('en',{month:'short',day:'numeric'})}` : 'No measurements yet'}</div></div>
+      <div style="flex:1;"><div class="ch-tt">{t('progress.measurements')}</div><div class="ch-sub">{latestMeasurements ? `Last logged ${new Date(latestMeasurements.logged_date).toLocaleDateString('en',{month:'short',day:'numeric'})}` : 'No measurements yet'}</div></div>
       <button id="openMeasModal" style="font-size:.72rem;font-weight:800;color:var(--green);background:none;border:none;cursor:pointer;padding:0;">+ Log</button>
     </div>
     <div class="cb">
@@ -1220,12 +1234,12 @@ const initialPhotos = progressPhotos || [];
                 style="font-size:.68rem;font-weight:800;color:#f97316;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.25);border-radius:7px;padding:.2rem .55rem;cursor:pointer;">✏️ Edit</button>
             </div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;">
-              {latestMeasurements.waist_cm && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.waist_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">Waist</div></div>}
-              {latestMeasurements.hips_cm  && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.hips_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">Hips</div></div>}
-              {latestMeasurements.chest_cm && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.chest_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">Chest</div></div>}
-              {latestMeasurements.neck_cm  && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.neck_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">Neck</div></div>}
-              {latestMeasurements.arm_cm   && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.arm_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">Arm</div></div>}
-              {latestMeasurements.thigh_cm && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.thigh_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">Thigh</div></div>}
+              {latestMeasurements.waist_cm && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.waist_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.waist')}</div></div>}
+              {latestMeasurements.hips_cm  && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.hips_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.hips')}</div></div>}
+              {latestMeasurements.chest_cm && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.chest_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.chest')}</div></div>}
+              {latestMeasurements.neck_cm  && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.neck_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.neck')}</div></div>}
+              {latestMeasurements.arm_cm   && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.arm_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.arm')}</div></div>}
+              {latestMeasurements.thigh_cm && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.thigh_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.thigh')}</div></div>}
             </div>
           </div>
           <!-- Previous entry (if any) -->
@@ -1245,12 +1259,12 @@ const initialPhotos = progressPhotos || [];
                   style="font-size:.68rem;font-weight:800;color:#f97316;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.25);border-radius:7px;padding:.2rem .55rem;cursor:pointer;">✏️ Edit</button>
               </div>
               <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;">
-                {prevMeasurements.waist_cm && <div style="text-align:center;padding:.5rem;background:rgba(249,115,22,.04);border:1px solid rgba(249,115,22,.1);border-radius:10px;"><div style="font-size:1rem;font-weight:900;color:#f97316;">{toM(prevMeasurements.waist_cm)}<span style="font-size:.6rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.15rem;">Waist</div></div>}
-                {prevMeasurements.hips_cm  && <div style="text-align:center;padding:.5rem;background:rgba(249,115,22,.04);border:1px solid rgba(249,115,22,.1);border-radius:10px;"><div style="font-size:1rem;font-weight:900;color:#f97316;">{toM(prevMeasurements.hips_cm)}<span style="font-size:.6rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.15rem;">Hips</div></div>}
-                {prevMeasurements.chest_cm && <div style="text-align:center;padding:.5rem;background:rgba(249,115,22,.04);border:1px solid rgba(249,115,22,.1);border-radius:10px;"><div style="font-size:1rem;font-weight:900;color:#f97316;">{toM(prevMeasurements.chest_cm)}<span style="font-size:.6rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.15rem;">Chest</div></div>}
-                {prevMeasurements.neck_cm  && <div style="text-align:center;padding:.5rem;background:rgba(249,115,22,.04);border:1px solid rgba(249,115,22,.1);border-radius:10px;"><div style="font-size:1rem;font-weight:900;color:#f97316;">{toM(prevMeasurements.neck_cm)}<span style="font-size:.6rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.15rem;">Neck</div></div>}
-                {prevMeasurements.arm_cm   && <div style="text-align:center;padding:.5rem;background:rgba(249,115,22,.04);border:1px solid rgba(249,115,22,.1);border-radius:10px;"><div style="font-size:1rem;font-weight:900;color:#f97316;">{toM(prevMeasurements.arm_cm)}<span style="font-size:.6rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.15rem;">Arm</div></div>}
-                {prevMeasurements.thigh_cm && <div style="text-align:center;padding:.5rem;background:rgba(249,115,22,.04);border:1px solid rgba(249,115,22,.1);border-radius:10px;"><div style="font-size:1rem;font-weight:900;color:#f97316;">{toM(prevMeasurements.thigh_cm)}<span style="font-size:.6rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.15rem;">Thigh</div></div>}
+                {prevMeasurements.waist_cm && <div style="text-align:center;padding:.5rem;background:rgba(249,115,22,.04);border:1px solid rgba(249,115,22,.1);border-radius:10px;"><div style="font-size:1rem;font-weight:900;color:#f97316;">{toM(prevMeasurements.waist_cm)}<span style="font-size:.6rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.15rem;">{t('progress.waist')}</div></div>}
+                {prevMeasurements.hips_cm  && <div style="text-align:center;padding:.5rem;background:rgba(249,115,22,.04);border:1px solid rgba(249,115,22,.1);border-radius:10px;"><div style="font-size:1rem;font-weight:900;color:#f97316;">{toM(prevMeasurements.hips_cm)}<span style="font-size:.6rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.15rem;">{t('progress.hips')}</div></div>}
+                {prevMeasurements.chest_cm && <div style="text-align:center;padding:.5rem;background:rgba(249,115,22,.04);border:1px solid rgba(249,115,22,.1);border-radius:10px;"><div style="font-size:1rem;font-weight:900;color:#f97316;">{toM(prevMeasurements.chest_cm)}<span style="font-size:.6rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.15rem;">{t('progress.chest')}</div></div>}
+                {prevMeasurements.neck_cm  && <div style="text-align:center;padding:.5rem;background:rgba(249,115,22,.04);border:1px solid rgba(249,115,22,.1);border-radius:10px;"><div style="font-size:1rem;font-weight:900;color:#f97316;">{toM(prevMeasurements.neck_cm)}<span style="font-size:.6rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.15rem;">{t('progress.neck')}</div></div>}
+                {prevMeasurements.arm_cm   && <div style="text-align:center;padding:.5rem;background:rgba(249,115,22,.04);border:1px solid rgba(249,115,22,.1);border-radius:10px;"><div style="font-size:1rem;font-weight:900;color:#f97316;">{toM(prevMeasurements.arm_cm)}<span style="font-size:.6rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.15rem;">{t('progress.arm')}</div></div>}
+                {prevMeasurements.thigh_cm && <div style="text-align:center;padding:.5rem;background:rgba(249,115,22,.04);border:1px solid rgba(249,115,22,.1);border-radius:10px;"><div style="font-size:1rem;font-weight:900;color:#f97316;">{toM(prevMeasurements.thigh_cm)}<span style="font-size:.6rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.15rem;">{t('progress.thigh')}</div></div>}
               </div>
             </div>
           )}
@@ -1399,7 +1413,7 @@ const initialPhotos = progressPhotos || [];
     <div class="card" style="animation-delay:.25s;">
       <div class="ch">
         <div class="ch-ic" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.2);">🏆</div>
-        <div style="flex:1;"><div class="ch-tt">Achievements Earned</div><div class="ch-sub">{achievements.length} badge{achievements.length !== 1 ? 's' : ''} unlocked</div></div>
+        <div style="flex:1;"><div class="ch-tt">{t('progress.achievements')}</div><div class="ch-sub">{achievements.length} badge{achievements.length !== 1 ? 's' : ''} unlocked</div></div>
       </div>
       <div class="cb">
         <div class="ach-grid">
@@ -1481,15 +1495,15 @@ const initialPhotos = progressPhotos || [];
     </div>
     <div id="measModalError" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:.6rem .9rem;font-size:.78rem;color:#ef4444;margin-bottom:1rem;"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem;">
-      <div><label style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);display:block;margin-bottom:.35rem;">Waist ({mUnit})</label><input id="mWaist"  type="number" step="0.1" min={units==='imperial'?'16':'40'} max={units==='imperial'?'79':'200'} placeholder={units==='imperial'?'e.g. 32':'e.g. 81'} style="width:100%;padding:.6rem .8rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:.88rem;box-sizing:border-box;" /></div>
-      <div><label style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);display:block;margin-bottom:.35rem;">Hips ({mUnit})</label><input id="mHips"   type="number" step="0.1" min={units==='imperial'?'16':'40'} max={units==='imperial'?'79':'200'} placeholder={units==='imperial'?'e.g. 38':'e.g. 97'} style="width:100%;padding:.6rem .8rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:.88rem;box-sizing:border-box;" /></div>
-      <div><label style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);display:block;margin-bottom:.35rem;">Chest ({mUnit})</label><input id="mChest"  type="number" step="0.1" min={units==='imperial'?'16':'40'} max={units==='imperial'?'79':'200'} placeholder={units==='imperial'?'e.g. 35':'e.g. 89'} style="width:100%;padding:.6rem .8rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:.88rem;box-sizing:border-box;" /></div>
-      <div><label style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);display:block;margin-bottom:.35rem;">Neck ({mUnit})</label><input id="mNeck"   type="number" step="0.1" min={units==='imperial'?'8':'20'}  max={units==='imperial'?'32':'81'} placeholder={units==='imperial'?'e.g. 15':'e.g. 38'} style="width:100%;padding:.6rem .8rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:.88rem;box-sizing:border-box;" /></div>
-      <div><label style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);display:block;margin-bottom:.35rem;">Arm ({mUnit})</label><input id="mArm"    type="number" step="0.1" min={units==='imperial'?'6':'15'}  max={units==='imperial'?'32':'81'} placeholder={units==='imperial'?'e.g. 13':'e.g. 33'} style="width:100%;padding:.6rem .8rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:.88rem;box-sizing:border-box;" /></div>
-      <div><label style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);display:block;margin-bottom:.35rem;">Thigh ({mUnit})</label><input id="mThigh"  type="number" step="0.1" min={units==='imperial'?'8':'20'}  max={units==='imperial'?'47':'120'} placeholder={units==='imperial'?'e.g. 22':'e.g. 56'} style="width:100%;padding:.6rem .8rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:.88rem;box-sizing:border-box;" /></div>
+      <div><label style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);display:block;margin-bottom:.35rem;">{t('progress.waist')} ({mUnit})</label><input id="mWaist"  type="number" step="0.1" min={units==='imperial'?'16':'40'} max={units==='imperial'?'79':'200'} placeholder={units==='imperial'?'e.g. 32':'e.g. 81'} style="width:100%;padding:.6rem .8rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:.88rem;box-sizing:border-box;" /></div>
+      <div><label style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);display:block;margin-bottom:.35rem;">{t('progress.hips')} ({mUnit})</label><input id="mHips"   type="number" step="0.1" min={units==='imperial'?'16':'40'} max={units==='imperial'?'79':'200'} placeholder={units==='imperial'?'e.g. 38':'e.g. 97'} style="width:100%;padding:.6rem .8rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:.88rem;box-sizing:border-box;" /></div>
+      <div><label style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);display:block;margin-bottom:.35rem;">{t('progress.chest')} ({mUnit})</label><input id="mChest"  type="number" step="0.1" min={units==='imperial'?'16':'40'} max={units==='imperial'?'79':'200'} placeholder={units==='imperial'?'e.g. 35':'e.g. 89'} style="width:100%;padding:.6rem .8rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:.88rem;box-sizing:border-box;" /></div>
+      <div><label style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);display:block;margin-bottom:.35rem;">{t('progress.neck')} ({mUnit})</label><input id="mNeck"   type="number" step="0.1" min={units==='imperial'?'8':'20'}  max={units==='imperial'?'32':'81'} placeholder={units==='imperial'?'e.g. 15':'e.g. 38'} style="width:100%;padding:.6rem .8rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:.88rem;box-sizing:border-box;" /></div>
+      <div><label style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);display:block;margin-bottom:.35rem;">{t('progress.arm')} ({mUnit})</label><input id="mArm"    type="number" step="0.1" min={units==='imperial'?'6':'15'}  max={units==='imperial'?'32':'81'} placeholder={units==='imperial'?'e.g. 13':'e.g. 33'} style="width:100%;padding:.6rem .8rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:.88rem;box-sizing:border-box;" /></div>
+      <div><label style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);display:block;margin-bottom:.35rem;">{t('progress.thigh')} ({mUnit})</label><input id="mThigh"  type="number" step="0.1" min={units==='imperial'?'8':'20'}  max={units==='imperial'?'47':'120'} placeholder={units==='imperial'?'e.g. 22':'e.g. 56'} style="width:100%;padding:.6rem .8rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:.88rem;box-sizing:border-box;" /></div>
     </div>
     <div style="margin-bottom:.75rem;"><label style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);display:block;margin-bottom:.35rem;">Date</label><input id="mDate" type="date" style="width:100%;padding:.6rem .8rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:.88rem;box-sizing:border-box;" /></div>
-    <button id="saveMeasBtn" style="width:100%;padding:.85rem;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;border:none;border-radius:12px;font-weight:800;font-size:.9rem;cursor:pointer;">Save Measurements</button>
+    <button id="saveMeasBtn" style="width:100%;padding:.85rem;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;border:none;border-radius:12px;font-weight:800;font-size:.9rem;cursor:pointer;">{t('common.save')} Measurements</button>
   </div>
 </div>
 
@@ -1497,7 +1511,7 @@ const initialPhotos = progressPhotos || [];
 <div id="weightModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:1rem;">
   <div style="background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:1.75rem;width:100%;max-width:360px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:900;">⚖️ Log Weight</div>
+      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:900;">⚖️ {t('progress.log_weight')}</div>
       <button id="closeWeightModal" style="background:none;border:none;color:var(--soft);font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
     </div>
     <div id="weightModalError" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:.6rem .9rem;font-size:.78rem;color:#ef4444;margin-bottom:1rem;"></div>
@@ -1512,7 +1526,7 @@ const initialPhotos = progressPhotos || [];
         <input id="weightDate" type="date"
           style="width:100%;padding:.7rem 1rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:12px;color:var(--text);font-size:.95rem;font-family:'DM Sans',sans-serif;box-sizing:border-box;" />
       </div>
-      <button id="saveWeightBtn" style="width:100%;padding:.85rem;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;border:none;border-radius:12px;font-weight:800;font-size:.9rem;cursor:pointer;margin-top:.25rem;">Save Weight</button>
+      <button id="saveWeightBtn" style="width:100%;padding:.85rem;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;border:none;border-radius:12px;font-weight:800;font-size:.9rem;cursor:pointer;margin-top:.25rem;">{t('common.save')} {t('progress.weight')}</button>
     </div>
   </div>
 </div>

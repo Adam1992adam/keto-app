@@ -2,6 +2,7 @@
 // src/pages/dashboard/checkin.astro
 import { getUserJourney, getDailyTasks } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
+import { getTranslator, normaliseLang } from '../../lib/i18n';
 import DashNav from '../../components/DashNav.astro';
 import CheckCircle from 'lucide-astro/CheckCircle';
 import Zap from 'lucide-astro/Zap';
@@ -23,6 +24,8 @@ import Moon from 'lucide-astro/Moon';
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
 const { user, profile, db } = auth;
+const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
+const t    = getTranslator(lang);
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 
@@ -104,7 +107,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Daily Check-in — Keto Journey</title>
+  <title>{t('checkin.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
@@ -696,6 +699,14 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
       .hero-stats{display:none;}
       .pill-toggle-grid{grid-template-columns:1fr;}
     }
+    @media(max-width:480px){
+      .page{padding-left:1rem;padding-right:1rem;padding-bottom:5.5rem;}
+      .symptom-grid{grid-template-columns:1fr 1fr;}
+      .elec-grid{grid-template-columns:1fr 1fr;}
+      textarea,input[type="text"],input[type="number"],input[type="date"]{font-size:16px!important;}
+      .submit-btn,.ci-submit{min-height:52px;font-size:1rem;}
+      .flu-grid{grid-template-columns:1fr 1fr;}
+    }
   </style>
 </head>
 <body>
@@ -713,7 +724,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
     <div style="background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(52,211,153,.08));border:1px solid rgba(16,185,129,.35);border-radius:16px;padding:1rem 1.25rem;display:flex;align-items:center;gap:.875rem;margin-bottom:1rem;">
       <CheckCircle size={24} color="var(--green2)" />
       <div>
-        <div style="font-weight:700;color:var(--green2);font-size:.9rem;">Already checked in today</div>
+        <div style="font-weight:700;color:var(--green2);font-size:.9rem;">{t('checkin.already_done')}</div>
         <div style="font-size:.8rem;color:var(--soft);">You can update your check-in anytime — changes save instantly.</div>
       </div>
     </div>
@@ -736,11 +747,11 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
     <div class="ci-steps" id="ciSteps">
       <div class="ci-step active" data-step="0">
         <div class="ci-step-dot" id="dot-0">1</div>
-        <span class="ci-step-lbl">Energy</span>
+        <span class="ci-step-lbl">{t('checkin.energy')}</span>
       </div>
       <div class="ci-step" data-step="1">
         <div class="ci-step-dot" id="dot-1">2</div>
-        <span class="ci-step-lbl">Mood</span>
+        <span class="ci-step-lbl">{t('checkin.mood')}</span>
       </div>
       <div class="ci-step" data-step="2">
         <div class="ci-step-dot" id="dot-2">3</div>
@@ -752,7 +763,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
       </div>
       <div class="ci-step" data-step="4">
         <div class="ci-step-dot" id="dot-4">5</div>
-        <span class="ci-step-lbl">Submit</span>
+        <span class="ci-step-lbl">{t('checkin.submit')}</span>
       </div>
     </div>
   </div>
@@ -802,7 +813,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
         <div class="slider-left">
           <span class="slider-big-emoji" id="energyEmoji">😐</span>
           <div>
-            <div class="slider-label">Energy Level</div>
+            <div class="slider-label">{t('checkin.energy')}</div>
             <div class="slider-sub">How energetic do you feel?</div>
           </div>
         </div>
@@ -826,7 +837,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
         <div class="slider-left">
           <span class="slider-big-emoji" id="moodEmoji">😐</span>
           <div>
-            <div class="slider-label">Mood</div>
+            <div class="slider-label">{t('checkin.mood')}</div>
             <div class="slider-sub">Mental and emotional state</div>
           </div>
         </div>
@@ -850,7 +861,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
         <div class="slider-left">
           <span class="slider-big-emoji" id="hungerEmoji">😐</span>
           <div>
-            <div class="slider-label">Hunger Level</div>
+            <div class="slider-label">{t('checkin.hunger')}</div>
             <div class="slider-sub">How hungry are you? (5 = very hungry)</div>
           </div>
         </div>
@@ -943,7 +954,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
       <div class="compliance-grid">
         <div class="comp-card" id="comp-meals" onclick="toggleComp(this,'meals')">
           <div class="cc-icon">🍽️</div>
-          <div class="cc-label">Followed Meals</div>
+          <div class="cc-label">{t('checkin.meals')}</div>
           <div class="cc-sub">Ate according to plan</div>
         </div>
         <div class="comp-card" id="comp-carbs" onclick="toggleComp(this,'carbs')">
@@ -954,7 +965,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
         {hasFasting && (
           <div class="comp-card" id="comp-fast" onclick="toggleComp(this,'fast')">
             <div class="cc-icon">⏰</div>
-            <div class="cc-label">Completed Fast</div>
+            <div class="cc-label">{t('checkin.fasted')}</div>
             <div class="cc-sub">{fastingProtocol.replace('_',':')} protocol</div>
           </div>
         )}
@@ -971,7 +982,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
   <div class="section" style="animation-delay:.2s;">
     <div class="section-head">
       <div class="sh-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2);box-shadow:0 4px 10px rgba(6,182,212,.25);"><Droplets size={18} /></div>
-      <div class="sh-title">Water Intake</div>
+      <div class="sh-title">{t('checkin.water')}</div>
       <div class="sh-chip" style="background:rgba(6,182,212,.1);border-color:rgba(6,182,212,.2);color:var(--cyan);" id="waterChip">0 / 8 glasses</div>
     </div>
     <div class="section-body">
@@ -1025,7 +1036,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
   <div class="section" style="animation-delay:.3s;">
     <div class="section-head">
       <div class="sh-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(59,130,246,.25);"><Edit3 size={18} /></div>
-      <div class="sh-title">Today's Note</div>
+      <div class="sh-title">{t('checkin.notes')}</div>
       <div class="sh-chip" style="background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.2);color:var(--blue);">Optional</div>
     </div>
     <div class="section-body">
@@ -1081,7 +1092,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
     </div>
     <button class="btn-save-big" id="saveBtn" onclick="saveCheckin()" style="flex-shrink:0;max-width:260px;">
       <div class="btn-spin" id="saveSpin"></div>
-      <span id="saveTxt">{alreadyDone ? 'Update Check-in' : 'Complete Check-in · +50 XP'}</span>
+      <span id="saveTxt">{alreadyDone ? t('checkin.submit') : t('checkin.submit') + ' · +50 XP'}</span>
     </button>
   </div>
 
@@ -1091,7 +1102,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
 <!-- SUCCESS OVERLAY -->
 <div class="success-overlay" id="successOverlay">
   <div class="so-icon"><CheckCircle size={72} color="var(--green)" /></div>
-  <h2 class="so-title">Day <em id="soDay">{currentDay}</em> complete!</h2>
+  <h2 class="so-title">{t('checkin.done')} <em id="soDay">{currentDay}</em></h2>
   <div class="so-xp"><Star size={18} style="display:inline;vertical-align:middle;" /> +<span id="soXP">30</span> XP earned</div>
   <p class="so-sub" id="soSub">Great work staying consistent. Every check-in is one step closer to your goal.</p>
   <div class="so-insights">
@@ -1099,7 +1110,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
     <div id="soInsightsList"></div>
   </div>
   <a href="/dashboard" style="display:inline-flex;align-items:center;gap:.5rem;padding:.875rem 2rem;border-radius:13px;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;font-weight:800;font-size:.9rem;text-decoration:none;box-shadow:0 4px 16px rgba(16,185,129,.3);">
-    <Home size={16} /> Back to Dashboard
+    <Home size={16} /> {t('common.back')}
   </a>
 </div>
 

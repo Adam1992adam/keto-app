@@ -2,6 +2,7 @@
 // src/pages/dashboard/index.astro
 import { getUserJourney, getMaxJourneyDays, getMealCycleDays } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
+import { getTranslator, normaliseLang } from '../../lib/i18n';
 import { generateInsights } from '../../lib/insights';
 import DashNav from '../../components/DashNav.astro';
 import UpsellModal from '../../components/UpsellModal.astro';
@@ -30,6 +31,8 @@ import AppTour      from '../../components/AppTour.astro';
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
 const { user, profile, db } = auth;
+const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
+const t    = getTranslator(lang);
 
 const planType  = profile.subscription_tier || 'basic_30';
 const maxDays   = getMaxJourneyDays(planType);
@@ -258,7 +261,7 @@ const daysLeft   = Math.max(0, maxDays - currentDay);
 const streakPct  = Math.min(100, Math.round((streakDays / 30) * 100));
 const userName   = profile.full_name?.split(' ')[0] || 'there';
 const hour      = new Date().getHours();
-const greeting  = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+const greeting  = hour < 12 ? t('dash.good_morning') : hour < 17 ? t('dash.good_afternoon') : t('dash.good_evening');
 const greetIcon = '';
 const daysToGo   = Math.max(0, maxDays - currentDay);
 const xpDisplay  = totalXP >= 1000 ? (totalXP / 1000).toFixed(1) + 'k' : String(totalXP);
@@ -420,7 +423,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
   ? { label: "You're all caught up today!", sub: 'Great consistency — keep the streak alive', href: null,
       color: '#10b981', bg: 'rgba(16,185,129,.12)', border: 'rgba(16,185,129,.28)', btnLabel: 'View Progress', btnHref: '/dashboard/progress' }
   : !checkinDone
-  ? { label: "Check in now — protect your streak", sub: `${streakDays > 0 ? `${streakDays}-day streak at risk` : 'Start your streak today'} · Earn 30 XP`,
+  ? { label: t('dash.checkin_now') + ' — protect your streak', sub: `${streakDays > 0 ? `${streakDays}-day ${t('dash.streak_at_risk')}` : 'Start your streak today'} · Earn 30 XP`,
       href: '/dashboard/checkin', color: '#f59e0b', bg: 'rgba(245,158,11,.1)', border: 'rgba(245,158,11,.3)', btnLabel: 'Check In Now →', btnHref: '/dashboard/checkin' }
   : pendingTasks > 0
   ? { label: `Complete today's tasks`, sub: `${completedTasks}/${totalTasks} tasks done · ${pendingTasks} remaining`,
@@ -460,7 +463,8 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
 
     /* PAGE */
     .page{max-width:1200px;margin:0 auto;padding:1.75rem 1.5rem 5rem;}
-    @media(max-width:640px){.page{padding:1.25rem 1rem 5rem;}}
+    @media(max-width:640px){.page{padding:1.25rem 1rem 5.5rem;}}
+    @media(max-width:390px){.page{padding:1rem .75rem 5.5rem;}}
 
     /* HERO */
     .hero{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;}
@@ -499,7 +503,12 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
        ═══════════════════════════════════════ */
     .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem;margin-bottom:1.5rem;}
     @media(max-width:900px){.stats-row{grid-template-columns:repeat(2,1fr);}}
-    @media(max-width:480px){.stats-row{gap:.6rem;}}
+    @media(max-width:480px){
+      .stats-row{gap:.5rem;}
+      .stat-card{padding:.85rem .75rem;}
+      .stat-val{font-size:1.4rem;}
+      .stat-badge{font-size:.7rem;}
+    }
     @keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
     @keyframes shimmerSweep{0%{transform:translateX(-120%);}100%{transform:translateX(120%);}}
     @keyframes borderSpin{0%{background-position:0% 50%;}50%{background-position:100% 50%;}100%{background-position:0% 50%;}}
@@ -572,7 +581,17 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
 
     .qa-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:.65rem;margin-bottom:1.5rem;}
     @media(max-width:900px){.qa-grid{grid-template-columns:repeat(3,1fr);}}
-    @media(max-width:480px){.qa-grid{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:480px){
+      .qa-grid{grid-template-columns:repeat(3,1fr);gap:.5rem;}
+      .qa-btn{padding:.75rem .35rem .65rem;border-radius:14px;}
+      .qa-icon-wrap{width:36px;height:36px;border-radius:12px;}
+      .qa-lbl{font-size:.7rem;}
+      .qa-sub{display:none;}
+    }
+    @media(max-width:360px){
+      .qa-grid{grid-template-columns:repeat(2,1fr);}
+      .qa-lbl{font-size:.68rem;}
+    }
 
     .qa-btn{
       display:flex;flex-direction:column;align-items:center;gap:.35rem;
@@ -657,6 +676,9 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
     .card:last-child{margin-bottom:0;}
     .card-title{font-family:'Fraunces',serif;font-size:.95rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;}
     .ct-badge{font-family:'DM Sans',sans-serif;font-size:.62rem;font-weight:800;padding:.15rem .45rem;border-radius:6px;margin-left:auto;}
+    @media(max-width:480px){
+      .card{padding:1rem 1rem;border-radius:16px;}
+    }
 
     /* TASKS */
     .ring-row{display:flex;align-items:center;gap:1.25rem;margin-bottom:1rem;}
@@ -1117,7 +1139,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
       <div class="stat-val" style="color:var(--green)">{dispWeightLost > 0 ? `-${dispWeightLost}` : '0'}</div>
       <div class="stat-lbl">{wUnit} lost so far</div>
       {weightLost > 0
-        ? <span class="stat-badge bg-g">{progressPct}% to goal</span>
+        ? <span class="stat-badge bg-g">{progressPct}% {t('dash.of_goal')}</span>
         : <span class="stat-badge bg-a" style="cursor:pointer;" onclick="document.getElementById('weight-card')?.scrollIntoView({behavior:'smooth'})">Tap to log weight ↓</span>}
       <div class="stat-mini-bar"><div class="stat-mini-fill" style={`width:${progressPct}%;background:linear-gradient(90deg,#10b981,#34d399);`}></div></div>
     </div>
@@ -1216,7 +1238,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
       <div class="card" id="tour-tasks" style="border-left:3px solid rgba(16,185,129,.35);">
         <div class="card-title">
           <CheckCircle2 size={16} color="var(--green)" />
-          Today's Tasks — Day {currentDay}
+          {t('dash.todays_tasks')} — {t('dash.day')} {currentDay}
           <span class="ct-badge bg-g" id="tasksBadge">{completedTasks}/{totalTasks} done</span>
         </div>
         <div class="ring-row">
@@ -1241,7 +1263,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
             <div class="rs-row">
               <div class="rs-dot" style="background:var(--green)"></div>
               <span class="rs-num" id="completedCount">{completedTasks}</span>
-              <span class="rs-txt">Completed</span>
+              <span class="rs-txt">{t('dash.completed')}</span>
             </div>
             <div class="rs-row">
               <div class="rs-dot" style="background:var(--muted)"></div>
@@ -1270,7 +1292,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
         ) : (
           <div class="empty-state">
             <div class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--soft)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
-            <div class="empty-title">No tasks yet for Day {currentDay}</div>
+            <div class="empty-title">{t('dash.no_tasks')} — {t('dash.day')} {currentDay}</div>
             <p class="empty-body">Your daily tasks will appear here once they're generated for today.</p>
             <a href="/dashboard/checkin" class="empty-cta">Start with a check-in →</a>
           </div>
@@ -1281,7 +1303,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
       <div class="card" id="tour-meals" style="border-left:3px solid rgba(245,158,11,.3);">
         <div class="card-title">
           <Utensils size={16} color="var(--amber)" />
-          Today's Meals
+          {t('dash.todays_meals')}
           {adaptedCount > 0 && <span class="ct-badge bg-a">{adaptedCount} flagged</span>}
         </div>
         <!-- Cycle variety info line -->
@@ -1428,7 +1450,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
       <div class="card" style="text-align:center;">
         <div class="card-title" style="justify-content:center;">
           <BarChart3 size={16} color="var(--blue)" />
-          Today's Progress
+          {t('dash.todays_progress')}
         </div>
         <div class="big-ring">
           <svg width="120" height="120" viewBox="0 0 120 120">
@@ -1468,7 +1490,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
       <div class="card" style="border-left:3px solid rgba(139,92,246,.3);">
         <div class="card-title">
           <Zap size={16} color="var(--purple)" />
-          XP & Level
+          {t('dash.xp_level')}
         </div>
         <div class="xp-row">
           <div class="xp-badge" id="xpBadge">{xpLevel}</div>
@@ -1498,7 +1520,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
       <div class="card">
         <div class="card-title">
           <Timer size={16} color={fastingActive ? 'var(--amber)' : 'var(--soft)'} />
-          {fastingActive ? 'Fasting Active' : 'Intermittent Fasting'}
+          {fastingActive ? t('dash.fasting_active') : t('dash.fasting')}
         </div>
         {fastingActive ? (
           <div>
@@ -1510,7 +1532,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
         ) : (
           <div>
             <p style="font-size:.78rem;color:var(--soft);margin-bottom:.5rem;">Boost ketosis &amp; burn more fat with intermittent fasting.</p>
-            <a href="/dashboard/fasting" class="fast-cta">Start Fasting</a>
+            <a href="/dashboard/fasting" class="fast-cta">{t('dash.start_fasting')}</a>
           </div>
         )}
       </div>
@@ -1519,7 +1541,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
       <div class="card">
         <div class="card-title">
           <Droplets size={16} color="var(--blue)" />
-          Water Today
+          {t('dash.water_today')}
         </div>
         <div style="text-align:center;margin:.25rem 0 .75rem;">
           <span id="waterNum" style="font-family:'Fraunces',serif;font-size:2.4rem;font-weight:900;color:var(--blue);">{waterGlasses}</span>
@@ -1540,14 +1562,14 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
           <button onclick="logWater(-1)" style="flex:1;padding:.55rem;border-radius:10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#f87171;font-size:1.1rem;font-weight:800;cursor:pointer;transition:all .18s;" title="Remove glass">−</button>
           <button onclick="logWater(1)"  style="flex:2;padding:.55rem;border-radius:10px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);color:#60a5fa;font-size:.82rem;font-weight:800;cursor:pointer;transition:all .18s;">+ Add Glass</button>
         </div>
-        {waterGlasses >= 8 && <div style="text-align:center;margin-top:.6rem;font-size:.72rem;color:#60a5fa;font-weight:700;">Daily goal reached!</div>}
+        {waterGlasses >= 8 && <div style="text-align:center;margin-top:.6rem;font-size:.72rem;color:#60a5fa;font-weight:700;">{t('dash.goal_reached')}</div>}
       </div>
 
       <!-- Steps Widget -->
       <div class="card">
         <div class="card-title">
           <Activity size={16} color="var(--green)" />
-          Steps Today
+          {t('dash.steps_today')}
         </div>
         <div style="text-align:center;margin:.25rem 0 .5rem;">
           <span style="font-family:'Fraunces',serif;font-size:2.4rem;font-weight:900;color:var(--green2);">{todaySteps.toLocaleString()}</span>
@@ -1567,7 +1589,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
       <div class="card">
         <div class="card-title">
           <Pill size={16} color="var(--purple)" />
-          Electrolytes Today
+          {t('dash.electrolytes')}
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.65rem;">
           {[
@@ -1597,9 +1619,9 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
           <div class="card-title" style="justify-content:space-between;">
             <span style="display:flex;align-items:center;gap:.4rem;">
               <Target size={15} color="var(--green)" />
-              Today's Habits
+              {t('dash.habits')}
             </span>
-            <a href="/dashboard/habits" style="font-size:.68rem;color:var(--soft);font-weight:700;text-decoration:none;">View all →</a>
+            <a href="/dashboard/habits" style="font-size:.68rem;color:var(--soft);font-weight:700;text-decoration:none;">{t('dash.view_all')} →</a>
           </div>
           <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.6rem;">
             {dashHabits.map(h => {
@@ -1630,7 +1652,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
         <div class="card" style="border-left:3px solid rgba(16,185,129,.3);">
           <div class="card-title">
             <LineChart size={16} color="var(--green)" />
-            Weight Trend
+            {t('dash.weight_trend')}
           </div>
           <div id="weightSparkline" style="margin:-.25rem -.5rem .25rem;"></div>
           <div class="wt-stat">
@@ -1646,7 +1668,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
       <div class="card">
         <div class="card-title">
           <Scale size={16} color="var(--green)" />
-          Log Weight
+          {t('dash.log_weight')}
         </div>
         <div class="wl-row">
           <span class="wl-current" id="wlCurrentVal">{dispLatest}</span>
@@ -1670,7 +1692,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
             value={today}
           />
         </div>
-        <button class="wl-btn" id="wlBtn" onclick="window.logWeight()">Log Weight</button>
+        <button class="wl-btn" id="wlBtn" onclick="window.logWeight()">{t('dash.log_weight')}</button>
         <div class="wl-confirm" id="wlConfirm">✓ Logged!</div>
         <a href="/dashboard/progress" class="wl-history">View history →</a>
       </div>
@@ -1679,7 +1701,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
       <div class="card streak-card" style="border-left:3px solid rgba(245,158,11,.35);">
         <div class="card-title" style="justify-content:center;">
           <Flame size={16} color="var(--amber)" />
-          Streak
+          {t('dash.streak')}
         </div>
         <div class="streak-num">{streakDays}</div>
         <div class="streak-lbl">days in a row</div>

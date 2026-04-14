@@ -606,16 +606,50 @@ body {
 
 .dn-bn {
   display: flex; flex-direction: column; align-items: center; gap: .18rem;
-  padding: .38rem .2rem;
-  color: var(--soft); font-size: .58rem; font-weight: 700;
+  padding: .5rem .2rem;
+  color: var(--soft); font-size: .65rem; font-weight: 700;
   text-decoration: none; letter-spacing: .01em;
   transition: color .16s, transform .14s;
+  min-height: 48px; justify-content: center;
 }
 .dn-bn:hover { color: var(--text); transform: translateY(-1px); }
 .dn-bn.active { color: var(--green); }
 .dn-bn.active svg { filter: drop-shadow(0 0 5px var(--green-ring)); }
 
 /* footer styles are injected via JS to avoid Astro CSS scoping */
+
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL MOBILE UX — applied to all dashboard pages
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  /* Prevent iOS Safari zoom on input focus (requires font-size >= 16px) */
+  input:not([type="range"]),
+  textarea,
+  select { font-size: 16px !important; }
+
+  /* Bottom nav safe-area: ensure content never hides behind fixed nav */
+  body { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+
+  /* Touch targets — make tappable elements comfortable */
+  button:not(.dn-bn):not(.seg-btn),
+  .btn, [class*="-btn"]:not(.dn-bn) { min-height: 44px; }
+
+  /* Modal/overlay fullscreen on mobile */
+  [id$="Modal"], [id$="-modal"],
+  [class*="modal-wrap"], [class*="overlay-wrap"] {
+    padding: .75rem !important;
+    align-items: flex-end !important;
+  }
+  [id$="Modal"] > div,
+  [id$="-modal"] > div,
+  [class*="modal-inner"] {
+    border-radius: 20px 20px 0 0 !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
 </style>
 
 <!-- ══ SCRIPT ════════════════════════════════════════════════ -->

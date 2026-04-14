@@ -8,6 +8,7 @@ import {
   type UnitSystem
 } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
+import { getTranslator, normaliseLang } from '../../lib/i18n';
 import DashNav from '../../components/DashNav.astro';
 import User from 'lucide-astro/User';
 import Zap from 'lucide-astro/Zap';
@@ -30,6 +31,8 @@ import LogOut from 'lucide-astro/LogOut';
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
 const { user, profile, db } = auth;
+const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
+const t    = getTranslator(lang);
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
@@ -326,6 +329,12 @@ const avatarLetter       = profile.full_name?.charAt(0)?.toUpperCase() || '?';
     @media(max-width:900px){.hero-body{grid-template-columns:1fr;text-align:center;}.hero-tags{justify-content:center;}.score-wrap{margin:0 auto;}.stats-bar{grid-template-columns:repeat(3,1fr);}}
     @media(max-width:540px){.stats-bar{grid-template-columns:repeat(2,1fr);}.ach-grid{grid-template-columns:1fr;}}
     @media(max-width:700px){#securityGrid{grid-template-columns:1fr !important;}}
+    @media(max-width:480px){
+      .page{padding-left:1rem;padding-right:1rem;padding-bottom:5.5rem;}
+      .fi,input.fi,select.fi,textarea.fi{font-size:16px!important;min-height:44px;}
+      .stats-bar{grid-template-columns:repeat(2,1fr);}
+      .hero-avatar{width:72px;height:72px;font-size:1.8rem;}
+    }
   </style>
 </head>
 <body>
@@ -552,7 +561,7 @@ const avatarLetter       = profile.full_name?.charAt(0)?.toUpperCase() || '?';
           <div class="fsec-title"><User size={15} style="display:inline;vertical-align:middle;" /> Personal Information</div>
           <form id="editForm">
             <div class="fgrid">
-              <div class="fg"><label>Full Name</label><input type="text" name="full_name" value={profile.full_name} class="fi" required/></div>
+              <div class="fg"><label>{t('profile.full_name')}</label><input type="text" name="full_name" value={profile.full_name} class="fi" required/></div>
               <div class="fg"><label>Age</label><input type="number" name="age" value={profile.age||''} class="fi"/></div>
             </div>
             <div class="fgrid">
@@ -572,7 +581,7 @@ const avatarLetter       = profile.full_name?.charAt(0)?.toUpperCase() || '?';
               <div class="fg" style="margin-bottom:1rem;"><label>Height (cm)</label><input type="number" name="height_cm" value={profile.height_cm||''} class="fi"/></div>
             )}
             <div class="fg" style="margin-bottom:1.25rem;"><label>Activity Level</label><select name="activity_level" class="fi"><option value="">Select…</option><option value="sedentary" selected={profile.activity_level==='sedentary'}>Sedentary</option><option value="light" selected={profile.activity_level==='light'}>Light (1–3×/wk)</option><option value="moderate" selected={profile.activity_level==='moderate'}>Moderate (3–5×/wk)</option><option value="active" selected={profile.activity_level==='active'}>Active (6–7×/wk)</option><option value="very_active" selected={profile.activity_level==='very_active'}>Very Active</option></select></div>
-            <button type="submit" class="btn-save">Save Changes</button>
+            <button type="submit" class="btn-save">{t('common.save')}</button>
           </form>
         </div>
 
@@ -627,9 +636,9 @@ const avatarLetter       = profile.full_name?.charAt(0)?.toUpperCase() || '?';
         <div class="form-section" id="languageSection">
           <div class="fsec-title">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:.3rem;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            Display Language
+            {t('profile.language')}
           </div>
-          <p style="font-size:.75rem;color:var(--soft);margin-bottom:1rem;line-height:1.5;">Choose your preferred language for the app interface.</p>
+          <p style="font-size:.75rem;color:var(--soft);margin-bottom:1rem;line-height:1.5;">{t('profile.language_sub')}</p>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem;" id="langGrid">
             {[
               { code: 'en', label: 'English',   flag: '🇬🇧' },
@@ -661,7 +670,7 @@ const avatarLetter       = profile.full_name?.charAt(0)?.toUpperCase() || '?';
           <a href="/dashboard/shopping" class="qa"><ShoppingCart size={14} style="display:inline;vertical-align:middle;" /> Shopping List</a>
           <a href="/dashboard/upgrade" class="qa"><Zap size={14} style="display:inline;vertical-align:middle;" /> Upgrade Plan</a>
           <form action="/api/auth/logout" method="POST" style="margin:0;">
-            <button type="submit" class="qa danger" style="width:100%;text-align:left;border-color:rgba(239,68,68,.15);"><LogOut size={14} style="display:inline;vertical-align:middle;" /> Logout</button>
+            <button type="submit" class="qa danger" style="width:100%;text-align:left;border-color:rgba(239,68,68,.15);"><LogOut size={14} style="display:inline;vertical-align:middle;" /> {t('profile.logout')}</button>
           </form>
         </div>
 
@@ -811,7 +820,7 @@ const avatarLetter       = profile.full_name?.charAt(0)?.toUpperCase() || '?';
 
     <!-- Buttons -->
     <div style="display:flex;gap:.75rem;">
-      <button id="cancelDelete" style="flex:1;padding:.65rem;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:.85rem;font-weight:600;cursor:pointer;">Cancel</button>
+      <button id="cancelDelete" style="flex:1;padding:.65rem;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:.85rem;font-weight:600;cursor:pointer;">{t('common.cancel')}</button>
       <button id="confirmDelete" style="flex:1;padding:.65rem;border-radius:10px;border:none;background:rgba(239,68,68,.85);color:#fff;font-size:.85rem;font-weight:700;cursor:pointer;transition:background .2s;"
         onmouseover="this.style.background='rgba(239,68,68,1)'"
         onmouseout="this.style.background='rgba(239,68,68,.85)'">
@@ -835,7 +844,7 @@ const avatarLetter       = profile.full_name?.charAt(0)?.toUpperCase() || '?';
       <div class="fg"><label style="font-size:.7rem;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;">Notes (optional)</label><textarea name="notes" rows="2" placeholder="How are you feeling?" class="fi" style="resize:none;"></textarea></div>
       <div style="display:flex;gap:.625rem;">
         <button type="submit" class="btn-save" style="flex:1;justify-content:center;">✅ Log Weight</button>
-        <button type="button" id="cancelWM" class="btn-ghost">Cancel</button>
+        <button type="button" id="cancelWM" class="btn-ghost">{t('common.cancel')}</button>
       </div>
     </form>
   </div>
