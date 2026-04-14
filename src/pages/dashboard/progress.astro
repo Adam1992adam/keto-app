@@ -55,8 +55,9 @@ try {
   db.from('weight_logs')
     .select('weight, logged_date')
     .eq('user_id', user.id)
+    .gte('logged_date', ninetyDaysAgo)
     .order('logged_date', { ascending: true })
-    .limit(30),
+    .limit(90),
   db.from('onboarding_data').select('*').eq('user_id', user.id).maybeSingle(),
   db.from('daily_checkins')
     .select('checkin_date, energy_level, followed_meals, water_glasses, mood_level, sleep_hours, sleep_quality')
@@ -266,6 +267,10 @@ const dispHeightStr    = bcHeight ? (() => {
 const wTicksLbs = wTicks.map(t => ({ ...t, valLbs: toW(t.val) }));
 // Chart points with display unit labels for tooltips
 const wChartPtsLbs = wChartPts.map(p => ({ ...p, weightLbs: toW(p.weight) }));
+
+// Raw data for client-side range filtering
+const wRaw = (weightLogs || []).map(w => ({ w: w.weight, d: w.logged_date }));
+const wImperial = units === 'imperial';
 
 // Weight chart bars (kept for fallback reference — not used in new SVG chart)
 const weightChartBars = (weightLogs || []).map(w => ({
@@ -986,8 +991,13 @@ const initialPhotos = progressPhotos || [];
       <div class="card" style="animation-delay:.1s;">
         <div class="ch">
           <div class="ch-ic" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(59,130,246,.2);">⚖️</div>
-          <div style="flex:1;"><div class="ch-tt">{t('progress.weight')} History</div><div class="ch-sub">{wChartPts.length} measurements logged</div></div>
-          <button id="openWeightModal" style="font-size:.72rem;font-weight:800;color:var(--green);background:none;border:none;cursor:pointer;padding:0;">+ {t('progress.log_weight')}</button>
+          <div style="flex:1;"><div class="ch-tt">{t('progress.weight')} History</div><div id="weightChartCount" class="ch-sub">{wChartPts.length} measurements logged</div></div>
+          <div style="display:flex;align-items:center;gap:.4rem;">
+            <button class="w-range-btn" data-days="30" onclick="setWRange(30,this)" style="font-size:.68rem;font-weight:800;padding:.25rem .55rem;border-radius:6px;border:none;cursor:pointer;background:rgba(59,130,246,.15);color:#3b82f6;transition:all .2s;">30d</button>
+            <button class="w-range-btn" data-days="60" onclick="setWRange(60,this)" style="font-size:.68rem;font-weight:800;padding:.25rem .55rem;border-radius:6px;border:none;cursor:pointer;background:none;color:var(--soft);transition:all .2s;">60d</button>
+            <button class="w-range-btn" data-days="90" onclick="setWRange(90,this)" style="font-size:.68rem;font-weight:800;padding:.25rem .55rem;border-radius:6px;border:none;cursor:pointer;background:none;color:var(--soft);transition:all .2s;">90d</button>
+            <button id="openWeightModal" style="font-size:.72rem;font-weight:800;color:var(--green);background:none;border:none;cursor:pointer;padding:0;margin-left:.25rem;">+ {t('progress.log_weight')}</button>
+          </div>
         </div>
         <div class="cb">
           {wChartPts.length > 0 ? (
@@ -1014,7 +1024,7 @@ const initialPhotos = progressPhotos || [];
                   </div>
                 )}
               </div>
-              <svg width="100%" viewBox={`0 0 ${SVG_W} ${SVG_H}`} preserveAspectRatio="xMidYMid meet" style="overflow:visible;display:block;margin-top:.5rem;">
+              <svg id="weightSvg" width="100%" viewBox={`0 0 ${SVG_W} ${SVG_H}`} preserveAspectRatio="xMidYMid meet" style="overflow:visible;display:block;margin-top:.5rem;">
                 <defs>
                   <linearGradient id="wAreaGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.35" />
@@ -2192,6 +2202,123 @@ const initialPhotos = progressPhotos || [];
     if (!tip) return;
     tip.classList.remove('visible');
   };
+})();
+</script>
+
+<script is:inline define:vars={{ wRaw, wUnit, wImperial }}>
+(function() {
+  var SVG_W = 560, SVG_H = 160, SVG_PL = 48, SVG_PR = 12, SVG_PT = 14, SVG_PB = 32;
+
+  function toDisp(kg) {
+    return wImperial ? Math.round(kg * 2.20462 * 10) / 10 : Math.round(kg * 10) / 10;
+  }
+
+  function buildPath(pts) {
+    if (!pts.length) return '';
+    if (pts.length === 1) return 'M ' + pts[0].x + ' ' + pts[0].y;
+    var d = ['M ' + pts[0].x + ' ' + pts[0].y];
+    for (var i = 1; i < pts.length; i++) {
+      var prev = pts[i - 1], cur = pts[i];
+      var cpx = Math.round((prev.x + cur.x) / 2);
+      d.push('C ' + cpx + ' ' + prev.y + ' ' + cpx + ' ' + cur.y + ' ' + cur.x + ' ' + cur.y);
+    }
+    return d.join(' ');
+  }
+
+  function drawWChart(days) {
+    var svg = document.getElementById('weightSvg');
+    if (!svg || !wRaw.length) return;
+    var cutoff = days > 0
+      ? new Date(Date.now() - days * 86400000).toISOString().split('T')[0]
+      : '0000-01-01';
+    var pts0 = wRaw.filter(function(p) { return p.d >= cutoff; });
+    if (!pts0.length) return;
+
+    var weights = pts0.map(function(p) { return p.w; });
+    var wMin = Math.min.apply(null, weights);
+    var wMax = Math.max.apply(null, weights);
+    var wRange = (wMax - wMin) || 1;
+    var wPad = wRange * 0.12;
+    var wLow = Math.max(0, wMin - wPad);
+    var wHigh = wMax + wPad;
+    var wSpan = wHigh - wLow || 1;
+
+    var pts = pts0.map(function(p, i) {
+      return {
+        x: pts0.length > 1
+          ? SVG_PL + Math.round((i / (pts0.length - 1)) * (SVG_W - SVG_PL - SVG_PR))
+          : SVG_PL + Math.round((SVG_W - SVG_PL - SVG_PR) / 2),
+        y: SVG_PT + Math.round(((wHigh - p.w) / wSpan) * (SVG_H - SVG_PT - SVG_PB)),
+        w: p.w, d: p.d,
+        date: new Date(p.d + 'T12:00:00Z').toLocaleDateString('en', {month:'short', day:'numeric'}),
+        isLatest: i === pts0.length - 1,
+      };
+    });
+
+    var linePath = buildPath(pts);
+    var bottom = SVG_H - SVG_PB + 2;
+    var fillPath = linePath + ' L ' + pts[pts.length-1].x + ' ' + bottom + ' L ' + pts[0].x + ' ' + bottom + ' Z';
+
+    var ticks = Array.from({length: 5}, function(_, i) {
+      return {
+        val: Math.round(toDisp(wLow + wSpan * i / 4) * 10) / 10,
+        y: SVG_PT + Math.round((i / 4) * (SVG_H - SVG_PT - SVG_PB)),
+      };
+    }).reverse();
+
+    var dateLabels = pts.length > 1
+      ? [pts[0], pts[Math.floor((pts.length - 1) / 2)], pts[pts.length - 1]]
+      : pts.slice(0, 1);
+
+    var html = '<defs>'
+      + '<linearGradient id="wAreaGrad" x1="0" y1="0" x2="0" y2="1">'
+      + '<stop offset="0%" stop-color="#3b82f6" stop-opacity="0.35"/>'
+      + '<stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>'
+      + '</linearGradient>'
+      + '<linearGradient id="wLineGrad" x1="0" y1="0" x2="1" y2="0">'
+      + '<stop offset="0%" stop-color="#3b82f6"/>'
+      + '<stop offset="100%" stop-color="#10b981"/>'
+      + '</linearGradient></defs>';
+
+    if (pts.length > 1) {
+      html += '<path d="' + fillPath + '" fill="url(#wAreaGrad)"/>';
+      html += '<path d="' + linePath + '" fill="none" stroke="url(#wLineGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
+    }
+    ticks.forEach(function(t) {
+      html += '<line x1="' + SVG_PL + '" y1="' + t.y + '" x2="' + (SVG_W - SVG_PR) + '" y2="' + t.y + '" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>';
+      html += '<text x="' + (SVG_PL - 5) + '" y="' + (t.y + 4) + '" text-anchor="end" font-size="9" fill="var(--soft)">' + t.val + '</text>';
+    });
+    pts.forEach(function(p) {
+      html += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (p.isLatest ? 5 : 3.5) + '"'
+        + ' fill="' + (p.isLatest ? '#10b981' : '#3b82f6') + '"'
+        + ' stroke="' + (p.isLatest ? '#34d399' : '#60a5fa') + '" stroke-width="1.5">'
+        + '<title>' + toDisp(p.w) + ' ' + wUnit + ' \u2014 ' + p.date + '</title></circle>';
+    });
+    dateLabels.forEach(function(p) {
+      html += '<text x="' + p.x + '" y="' + (SVG_H - SVG_PB + 18) + '" text-anchor="middle" font-size="9" fill="var(--soft)">' + p.date + '</text>';
+    });
+
+    svg.innerHTML = html;
+    var countEl = document.getElementById('weightChartCount');
+    if (countEl) countEl.textContent = pts.length + ' measurements logged';
+  }
+
+  window.setWRange = function(days, btn) {
+    document.querySelectorAll('.w-range-btn').forEach(function(b) {
+      b.style.background = 'none';
+      b.style.color = 'var(--soft)';
+    });
+    btn.style.background = 'rgba(59,130,246,.15)';
+    btn.style.color = '#3b82f6';
+    drawWChart(days);
+  };
+
+  // Initial draw: 30d by default (or all data if fewer than 30 entries)
+  document.addEventListener('DOMContentLoaded', function() {
+    var defaultDays = wRaw.length >= 5 ? 30 : 90;
+    var defaultBtn = document.querySelector('.w-range-btn[data-days="' + defaultDays + '"]');
+    if (defaultBtn) window.setWRange(defaultDays, defaultBtn);
+  });
 })();
 </script>
 </body>
