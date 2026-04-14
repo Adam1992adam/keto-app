@@ -2,6 +2,7 @@
 // src/pages/dashboard/keto-calculator.astro
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
+import { getTranslator, normaliseLang } from '../../lib/i18n';
 import Calculator from 'lucide-astro/Calculator';
 import Flame from 'lucide-astro/Flame';
 import Beef from 'lucide-astro/Beef';
@@ -15,8 +16,10 @@ const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
 const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
-const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
+const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
+const t    = getTranslator(lang);
 
 // Pre-fill from onboarding
 const { data: onboarding } = await db
@@ -38,7 +41,7 @@ const prefillWeightDisplay = units === 'imperial'
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Keto Calculator — KetoJourney</title>
+  <title>{t('calc.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Fraunces:ital,wght@1,700;1,800&display=swap" rel="stylesheet" />

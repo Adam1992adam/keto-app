@@ -2,6 +2,7 @@
 // src/pages/dashboard/ketones.astro
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
+import { getTranslator, normaliseLang } from '../../lib/i18n';
 import Activity from 'lucide-astro/Activity';
 import TrendingUp from 'lucide-astro/TrendingUp';
 import Droplets from 'lucide-astro/Droplets';
@@ -16,8 +17,10 @@ if ('redirect' in auth) return Astro.redirect(auth.redirect);
 const { user, profile, db } = auth;
 
 const planType  = profile.subscription_tier || 'basic_30';
-const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 const userName  = (profile as any).full_name || (profile as any).email?.split('@')[0] || 'User';
+const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
+const t    = getTranslator(lang);
 
 // Fetch last 30 ketone logs newest-first
 const { data: logs } = await db
@@ -95,7 +98,7 @@ const today = new Date().toISOString().split('T')[0];
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ketone Tracker · Keto Journey</title>
+  <title>{t('ketones.title')} · Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;1,700&family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
 </head>

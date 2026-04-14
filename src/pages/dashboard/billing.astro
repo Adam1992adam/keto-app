@@ -2,6 +2,7 @@
 import { requireAuth } from '../../lib/auth';
 import { getUserJourney, getMaxJourneyDays } from '../../lib/supabase';
 import DashNav from '../../components/DashNav.astro';
+import { getTranslator, normaliseLang } from '../../lib/i18n';
 import Zap          from 'lucide-astro/Zap';
 import ShieldCheck  from 'lucide-astro/ShieldCheck';
 import Receipt      from 'lucide-astro/Receipt';
@@ -14,8 +15,10 @@ if ('redirect' in auth) return Astro.redirect(auth.redirect);
 const { user, profile, db } = auth;
 
 const planType  = profile.subscription_tier || 'basic_30';
-const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
+const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
+const t    = getTranslator(lang);
 
 // Actual journey progress from user_journey (same source as dashboard)
 const journey    = await getUserJourney(user.id, db);
@@ -72,7 +75,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>My Plan · Keto Journey</title>
+  <title>{t('billing.title')} · Keto Journey</title>
   <meta name="robots" content="noindex"/>
   <script is:inline>
     (function(){ var t = localStorage.getItem('keto-theme') || 'dark'; document.documentElement.setAttribute('data-theme', t); })();

@@ -6,6 +6,7 @@
 
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
+import { getTranslator, normaliseLang } from '../../lib/i18n';
 import UtensilsCrossed from 'lucide-astro/UtensilsCrossed';
 import Clock from 'lucide-astro/Clock';
 import Calendar from 'lucide-astro/Calendar';
@@ -19,8 +20,10 @@ if ('redirect' in auth) return Astro.redirect(auth.redirect);
 const { user, profile, db } = auth;
 
 const planType  = profile.subscription_tier || 'basic_30';
-const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
+const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
+const t    = getTranslator(lang);
 
 // ── Load last saved plan ─────────────────────────────────────────
 const { data: savedPlan, error: loadError } = await db
@@ -78,7 +81,7 @@ const planDataJson = JSON.stringify(planData);
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Meal Prep Planner · Keto Journey</title>
+  <title>{t('mealprep.title')} · Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;1,700&family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />

@@ -5,6 +5,7 @@
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import PushPermission from '../../components/PushPermission.astro';
+import { getTranslator, normaliseLang } from '../../lib/i18n';
 import Bell from 'lucide-astro/Bell';
 
 const auth = await requireAuth(Astro);
@@ -12,8 +13,10 @@ if ('redirect' in auth) return Astro.redirect(auth.redirect);
 const { user, profile, db } = auth;
 
 const planType  = profile.subscription_tier || 'basic_30';
-const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
+const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
+const t    = getTranslator(lang);
 
 const { data: existingPrefs } = await db
   .from('notification_preferences')
@@ -99,7 +102,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Notification Preferences — Keto Journey</title>
+  <title>{t('notif_prefs.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>

@@ -2,6 +2,7 @@
 import { getPlan, getUserJourney, getDailyTasks } from '../../lib/supabase';
 import { requireLogin } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
+import { getTranslator, normaliseLang } from '../../lib/i18n';
 import Zap from 'lucide-astro/Zap';
 import Lock from 'lucide-astro/Lock';
 import CheckCircle from 'lucide-astro/CheckCircle';
@@ -16,8 +17,10 @@ const { user, profile, db } = auth;
 const currentPlan = getPlan(profile.subscription_tier);
 const isSubscribed = profile?.subscription_status === 'active';
 const planType  = profile.subscription_tier || 'basic_30';
-const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
+const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
+const t    = getTranslator(lang);
 
 const journey = await getUserJourney(user.id, db);
 const currentDay = journey?.current_day || 1;
@@ -132,7 +135,7 @@ const plans = [
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Upgrade — Keto Journey</title>
+  <title>{t('upgrade.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>

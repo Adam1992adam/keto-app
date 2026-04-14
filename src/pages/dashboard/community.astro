@@ -2,6 +2,7 @@
 // src/pages/dashboard/community.astro — Pro & Elite community (Facebook-group style)
 import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
+import { getTranslator, normaliseLang } from '../../lib/i18n';
 import Users from 'lucide-astro/Users';
 import MessageCircle from 'lucide-astro/MessageCircle';
 import Heart from 'lucide-astro/Heart';
@@ -23,7 +24,9 @@ if (profile.subscription_tier === 'basic_30' || !profile.subscription_tier) {
 
 const planType  = profile.subscription_tier;
 const userName  = profile.full_name || 'Member';
-const tierLabel = planType === 'elite_12' ? '👑 Elite' : '⚡ Pro';
+const tierLabel = planType === 'elite_12' ? 'Elite' : 'Pro';
+const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
+const t    = getTranslator(lang);
 
 // Member count for the group header
 const { count: memberCount } = await db
@@ -36,7 +39,7 @@ const { count: memberCount } = await db
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Community · Keto Journey</title>
+  <title>{t('community.title')} · Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </head>
