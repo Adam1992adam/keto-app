@@ -111,9 +111,29 @@ const diffColor = recipe.difficulty === 'Easy' ? '#10b981' : recipe.difficulty =
     .av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--green),#059669);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.82rem;color:#fff;text-decoration:none;}
     .page{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:2rem 1.5rem 5rem;}
     .recipe-hero{border-radius:22px;overflow:hidden;margin-bottom:2rem;position:relative;background:var(--card);border:1px solid var(--border);animation:fadeUp .5s ease both;}
-    .recipe-hero-img{width:100%;height:420px;object-fit:cover;display:block;transition:transform .4s ease;}
+    .recipe-hero-img{width:100%;height:420px;object-fit:cover;display:block;transition:transform .4s ease;cursor:zoom-in;}
     .recipe-hero:hover .recipe-hero-img{transform:scale(1.02);}
     .hero-placeholder{height:420px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.75rem;}
+    /* Photo Lightbox */
+    .lightbox{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.95);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s;}
+    .lightbox.open{opacity:1;pointer-events:all;}
+    .lightbox-img{max-width:100%;max-height:90vh;object-fit:contain;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6);transform:scale(.94);transition:transform .25s;}
+    .lightbox.open .lightbox-img{transform:scale(1);}
+    .lightbox-close{position:absolute;top:1.25rem;right:1.25rem;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.12);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#fff;backdrop-filter:blur(8px);transition:background .2s;}
+    .lightbox-close:hover{background:rgba(255,255,255,.25);}
+    .lightbox-hint{position:absolute;bottom:1.5rem;left:50%;transform:translateX(-50%);font-size:.72rem;color:rgba(255,255,255,.5);font-weight:600;letter-spacing:.05em;pointer-events:none;}
+    /* Tap-to-expand hint on mobile */
+    .hero-tap-hint{position:absolute;bottom:4.5rem;right:1rem;background:rgba(0,0,0,.5);color:rgba(255,255,255,.7);font-size:.68rem;font-weight:700;padding:.25rem .6rem;border-radius:99px;backdrop-filter:blur(8px);pointer-events:none;display:none;}
+    @media(max-width:768px){
+      .recipe-hero-img{height:260px;}
+      .hero-placeholder{height:260px;}
+      .hero-tap-hint{display:block;}
+      .recipe-layout{gap:1rem;}
+      .sc-head{padding:1rem 1.25rem;}
+      .sc-body{padding:1rem 1.25rem;}
+      .hero-content{padding:1.5rem;}
+      .page{padding:1rem 1rem 5.5rem;}
+    }
     .hero-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(6,12,8,.95) 0%,rgba(6,12,8,.45) 55%,transparent 100%);}
     [data-theme="light"] .hero-overlay{background:linear-gradient(to top,rgba(7,24,7,.88) 0%,rgba(7,24,7,.35) 55%,transparent 100%);}
     .hero-content{position:absolute;bottom:0;left:0;right:0;padding:2.5rem;}
@@ -206,13 +226,14 @@ const diffColor = recipe.difficulty === 'Easy' ? '#10b981' : recipe.difficulty =
 <div class="page">
   <div class="recipe-hero">
     {recipe.image_url
-      ? <img src={recipe.image_url} alt={recipe.title} class="recipe-hero-img" loading="lazy"/>
+      ? <img src={recipe.image_url} alt={recipe.title} class="recipe-hero-img" loading="lazy" onclick="window.openLightbox()" title="Tap to expand"/>
       : <div class="hero-placeholder" style={`background:${cat.gradient};`}>
           <span style="font-size:6rem;filter:drop-shadow(0 4px 16px rgba(0,0,0,.4));">{cat.icon}</span>
           <span style="font-size:.9rem;font-weight:700;color:rgba(255,255,255,.75);letter-spacing:.06em;text-transform:uppercase;">{cat.name}</span>
         </div>
     }
     <div class="hero-overlay"></div>
+    {recipe.image_url && <div class="hero-tap-hint">🔍 Tap to expand</div>}
     {isCompleted && <div class="done-ribbon">✓ Completed Today</div>}
     <button
       id="favBtn"
@@ -416,8 +437,15 @@ const diffColor = recipe.difficulty === 'Easy' ? '#10b981' : recipe.difficulty =
   </div>
 )}
 
+<!-- Photo Lightbox -->
+<div class="lightbox" id="lightbox" onclick="window.closeLightbox()">
+  <button class="lightbox-close" onclick="window.closeLightbox()" aria-label="Close">✕</button>
+  <img id="lightboxImg" class="lightbox-img" src="" alt="" onclick="event.stopPropagation()"/>
+  <div class="lightbox-hint">Tap outside or press Esc to close</div>
+</div>
+
 <div class="toast" id="toast"></div>
-<script is:inline define:vars={{ taskId: task?.id || null, mealPlanType: mealPlan?.meal_type || null, dayNum: currentDay, xpEarned: task?.xp_earned || 25, totalIng: ingredients.length, recipeTitle: recipe.title, recipeCal: recipe.calories || 0, recipeProtein: recipe.protein || 0, recipeFat: recipe.fat || 0, recipeCarbs: recipe.net_carbs || 0, recipeId: recipe.id }}>
+<script is:inline define:vars={{ taskId: task?.id || null, mealPlanType: mealPlan?.meal_type || null, dayNum: currentDay, xpEarned: task?.xp_earned || 25, totalIng: ingredients.length, recipeTitle: recipe.title, recipeCal: recipe.calories || 0, recipeProtein: recipe.protein || 0, recipeFat: recipe.fat || 0, recipeCarbs: recipe.net_carbs || 0, recipeId: recipe.id, heroImgSrc: recipe.image_url || '' }}>
 window.__recipeId = recipeId;
 var checked=0;
 function updateIng(){
@@ -486,6 +514,39 @@ window.logToFoodLog = async function() {
     if (btn) { btn.disabled=false; btn.textContent='📋 Add to Food Log'; }
   }
 };
+
+/* ── Photo Lightbox ── */
+window.openLightbox = function() {
+  if (!heroImgSrc) return;
+  var lb = document.getElementById('lightbox');
+  var img = document.getElementById('lightboxImg');
+  if (!lb || !img) return;
+  img.src = heroImgSrc;
+  img.alt = recipeTitle;
+  lb.classList.add('open');
+  document.body.style.overflow = 'hidden';
+};
+window.closeLightbox = function() {
+  var lb = document.getElementById('lightbox');
+  if (!lb) return;
+  lb.classList.remove('open');
+  document.body.style.overflow = '';
+};
+// Keyboard close
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') window.closeLightbox();
+});
+// Touch swipe-down to close lightbox
+(function() {
+  var lb = document.getElementById('lightbox');
+  if (!lb) return;
+  var startY = 0;
+  lb.addEventListener('touchstart', function(e) { startY = e.touches[0].clientY; }, { passive: true });
+  lb.addEventListener('touchend', function(e) {
+    var dy = e.changedTouches[0].clientY - startY;
+    if (dy > 80) window.closeLightbox();
+  }, { passive: true });
+})();
 
 window.toggleFav = function toggleFav(btn) {
   var recipeId  = btn.getAttribute('data-recipe-id');

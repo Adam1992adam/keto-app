@@ -1,11 +1,10 @@
 # CLAUDE.md — Keto Journey App — Complete Project Reference
-> Last updated: 2026-04-01 | Astro 4 + Supabase + Vercel
+> Last updated: 2026-04-14 | Astro 4 + Supabase + Vercel | Payment: LemonSqueezy
 
 ---
 
 ## 0. IMPROVEMENT ROADMAP
 > Working through these in order. Update status as each is completed.
-> ⏸ = blocked on Stripe setup (user will notify when ready)
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
@@ -13,13 +12,22 @@
 | 2 | Food Database (Open Food Facts API) | ✅ Done | Real-time search + barcode scanner (BarcodeDetector API) + fallback manual barcode input |
 | 3 | Email Automation | ✅ Done | Resend SDK + 5 templates (welcome, weekly, milestone, streak warning, win-back) + 2 crons |
 | 4 | Before/After Photo Comparison | ✅ Done | Draggable split-view slider on photos.astro + keyboard + touch support |
-| 5 | Recipe Ratings & Personalization | ✅ Done | recipe_ratings table + 5-star widget on recipe/[id] + avg rating display + "You might also like" similar recipes |
-| 6 | Keto Calculator Tool | ✅ Done | TDEE + macro calculator page at /dashboard/keto-calculator — Mifflin-St Jeor, macro rings, tips, water |
+| 5 | Recipe Personalization | ✅ Done | "You might also like" similar recipes on recipe detail; recipe_favorites table; star rating REMOVED |
+| 6 | Keto Calculator Tool | ✅ Done | TDEE + macro calculator at /dashboard/keto-calculator — Mifflin-St Jeor, macro rings, tips, water |
 | 7 | Social Sharing Cards | ✅ Done | Canvas milestone cards at /dashboard/share — 4 templates, 4 themes, square/story format, download + Web Share API |
 | 8 | Offline Mode (finish PWA) | ✅ Done | sw.js v3: Cache First/Network First/SWR strategies + IndexedDB offline queue + background sync + manifest + offline.html |
 | 9 | Smart Upsell Triggers | ✅ Done | UpsellModal component: 4 triggers (journey_ending/streak/weight_win/milestone) + feature-locked nav buttons + localStorage cooldowns |
-| 10 | ⏸ Subscription Portal | ⏸ Stripe | Stripe Customer Portal for self-service billing |
+| 10 | Subscription Portal | ✅ Done | LemonSqueezy billing portal at /dashboard/billing + /api/lemonsqueezy/portal |
 | 11 | Referral System | ✅ Done | referral_codes + referrals tables · /dashboard/referrals · 3 APIs · ?ref= capture on signup · 150 XP per referral |
+| 12 | Multi-Language Support | ✅ Done | EN/FR/DE/ES/PT via getTranslator() + t() — all 26 dashboard pages wired |
+| 13 | Food Photo Analyzer | ✅ Done | /dashboard/food-photo + /api/food/analyze-photo — Gemini 1.5 Flash, structured JSON output |
+| 14 | Meal Swap Suggestions | ✅ Done | ⇄ button on food-log rows → macro-similar recipe suggestions → replace entry |
+| 15 | Weight Projection Chart | ✅ Done | SVG projection on progress.astro: historical line + dashed goal trajectory + "at current pace" |
+| 16 | Onboarding Improvements | ✅ Done | welcome.astro: weight goal timeline, milestone track, fasting protocol card, dietary restrictions |
+| 17 | Mobile Recipe Photo Gallery | 🔧 Next | Fullscreen swipe gallery on recipe/[id].astro; swipe gesture support for mobile |
+| 18 | Proactive Insight Engine | ✅ Done | 14 pattern detectors → auto-generated coaching insights |
+| 19 | Community Moderation | ✅ Done | Admin moderation tools for community posts |
+| 20 | Daily Steps Tracker | ✅ Done | /dashboard/steps with chart and manual entry |
 
 ### Push Notifications — Setup Notes (Step 1)
 ```
@@ -35,10 +43,12 @@ New APIs: `/api/notifications/push-subscribe`, `/api/notifications/push-unsubscr
 
 ## 1. PROJECT OVERVIEW
 
-**Keto Journey** — A 30/180/365-day structured keto diet coaching app.
+**Keto Journey** — A 30/90/360-day structured keto diet coaching app.
 Users buy a plan (Basic/Pro/Elite), onboard, then follow daily tasks, meals, check-ins, fasting, and progress tracking.
 
 **Stack:** Astro 4 (SSR) · Supabase (Postgres + Auth) · Vercel (serverless) · TypeScript
+**Payment:** LemonSqueezy (NOT Stripe) — webhook + checkout URLs + billing portal
+**AI:** Gemini 1.5 Flash for AI Coach (chat) + Food Photo Analyzer
 
 ---
 
@@ -48,54 +58,72 @@ Users buy a plan (Basic/Pro/Elite), onboard, then follow daily tasks, meals, che
 src/
 ├── lib/
 │   ├── supabase.ts              ← Supabase client + all helper functions + PLANS config
-│   ├── auth.ts                  ← requireAuth() shared helper ✅ NEW
-│   └── smartMeals.ts            ← Smart Meal Intelligence Engine ✅ NEW
+│   ├── auth.ts                  ← requireAuth() + requireLogin() + requireApiAuth() helpers
+│   ├── push.ts                  ← sendPushToUser() + sendPushToAll()
+│   └── smartMeals.ts            ← Smart Meal Intelligence Engine
 ├── components/
 │   ├── DashNav.astro            ← Shared nav (all dashboard pages)
-│   └── NotificationsBell.astro  ← Standalone bell component ✅ NEW
+│   ├── NotificationsBell.astro  ← Standalone bell component
+│   └── PushPermission.astro     ← Web Push permission request UI
 ├── pages/
 │   ├── index.astro              ← Landing page
-│   ├── login.astro
-│   ├── signup.astro
+│   ├── login.astro / signup.astro
 │   ├── dashboard/
 │   │   ├── index.astro          ← Main dashboard ✅ WORKING
-│   │   ├── checkin.astro        ← Daily check-in form ✅ WORKING
+│   │   ├── checkin.astro        ← Daily check-in form ✅
 │   │   ├── recipes.astro        ← Recipe browser ✅
-│   │   ├── recipe/[id].astro    ← Recipe detail ✅
-│   │   ├── progress.astro       ← Charts, weight logs, body measurements, achievements ✅
+│   │   ├── recipe/[id].astro    ← Recipe detail (ingredients fix: string+object format) ✅
+│   │   ├── recipes/[bookId].astro ← Recipe book detail ✅
+│   │   ├── browse.astro         ← All recipes browser ✅
+│   │   ├── favorites.astro      ← Saved favorite recipes ✅
+│   │   ├── food-photo.astro     ← AI food photo analyzer ✅
+│   │   ├── food-log.astro       ← Daily food log + meal swap suggestions ✅
+│   │   ├── progress.astro       ← Charts, weight logs, body measurements, projections, achievements ✅
 │   │   ├── shopping.astro       ← Shopping list (dynamic per tier) ✅
 │   │   ├── fasting.astro        ← Fasting timer ✅
 │   │   ├── weekly.astro         ← Weekly report ✅
 │   │   ├── profile.astro        ← User profile + achievements ✅
-│   │   ├── ai-coach.astro       ← Elite only ✅
+│   │   ├── ai-coach.astro       ← Elite only — Gemini chat ✅
+│   │   ├── keto-calculator.astro← TDEE + macro calculator ✅
+│   │   ├── habits.astro         ← Habit tracking ✅
+│   │   ├── ketones.astro        ← Ketone tracker + chart ✅
+│   │   ├── steps.astro          ← Daily steps tracker ✅
+│   │   ├── share.astro          ← Canvas milestone sharing cards ✅
+│   │   ├── photos.astro         ← Before/after split-view slider ✅
+│   │   ├── community.astro      ← Community feed + moderation ✅
+│   │   ├── reflections.astro    ← Daily mood/note reflections ✅
+│   │   ├── meal-prep.astro      ← Meal prep guide ✅
+│   │   ├── scanner.astro        ← Barcode scanner ✅
+│   │   ├── referrals.astro      ← Referral system ✅
+│   │   ├── export.astro         ← Data export ✅
+│   │   ├── guide.astro          ← Keto guide ✅
+│   │   ├── learn.astro          ← Educational content ✅
+│   │   ├── billing.astro        ← LemonSqueezy billing portal ✅
+│   │   ├── notifications.astro  ← Notifications list ✅
+│   │   ├── notification-preferences.astro ← Push + email preferences ✅
 │   │   ├── onboarding.astro     ← First-time setup ✅
-│   │   ├── upgrade.astro        ← Plan upgrade page
-│   │   └── notifications.astro  ← Notifications page
+│   │   ├── welcome.astro        ← Post-onboarding welcome + goal timeline ✅
+│   │   ├── upgrade.astro        ← Plan upgrade (requireLogin — no subscription check) ✅
+│   │   └── expired.astro        ← Expired subscription (requireLogin + buildCheckoutUrl) ✅
 │   └── api/
-│       ├── checkin/
-│       │   └── save.ts          ← POST /api/checkin/save ✅ XP fix applied
-│       ├── tasks/
-│       │   └── complete.ts      ← POST /api/tasks/complete ✅ NEW — full RPC implementation
-│       ├── notifications/
-│       │   ├── index.ts         ← GET/POST /api/notifications ✅
-│       │   ├── generate.ts      ← POST /api/notifications/generate ✅ "All caught up" bug fixed
-│       │   └── save.ts          ← POST /api/notifications/save ✅ fixed shared client
-│       ├── fasting/
-│       │   ├── start.ts         ← POST /api/fasting/start ✅
-│       │   └── end.ts           ← POST /api/fasting/end ✅ XP fix applied
-│       ├── meals/
-│       │   ├── today.ts         ← GET /api/meals/today
-│       │   └── swap.ts          ← POST /api/meals/swap ✅ complete rewrite (correct fields)
-│       ├── measurements/
-│       │   └── save.ts          ← POST /api/measurements/save ✅ NEW
-│       ├── profile/
-│       │   ├── update.ts        ← POST /api/profile/update
-│       │   └── add-weight.ts    ← POST /api/profile/add-weight ✅ field names fixed
-│       ├── weekly/
-│       │   └── save.ts          ← POST /api/weekly/save ✅ XP fix applied
-│       ├── onboarding/
-│       └── chat/
-│           └── gemini.ts        ← POST /api/chat/gemini ✅ table name + field names fixed
+│       ├── auth/                ← signup, login, logout, refresh, change-email/password, delete-account
+│       ├── checkin/save.ts      ← POST /api/checkin/save ✅ XP via award_xp RPC
+│       ├── tasks/complete.ts    ← POST /api/tasks/complete ✅ complete_task RPC + fallback chain
+│       ├── notifications/       ← index, generate, save, push-subscribe/unsubscribe/send, preferences
+│       ├── fasting/             ← start.ts, end.ts (XP via award_xp RPC)
+│       ├── meals/               ← today.ts, swap.ts, complete.ts
+│       ├── food/                ← analyze-photo.ts (Gemini), suggest-swaps.ts
+│       ├── food-log/            ← add.ts, delete.ts, entries.ts
+│       ├── measurements/save.ts ← POST /api/measurements/save ✅
+│       ├── profile/             ← update.ts, add-weight.ts
+│       ├── weekly/save.ts       ← XP via award_xp RPC
+│       ├── recipes/             ← favorite.ts (rate.ts REMOVED)
+│       ├── community/           ← posts.ts + [id]/comments.ts + moderation
+│       ├── lemonsqueezy/        ← webhook.ts, portal.ts, verify-purchase.ts
+│       ├── referrals/           ← 3 endpoints
+│       ├── admin/               ← verify, activate-pending, delete-pending, update-user
+│       ├── cron/                ← daily-push.ts, weekly-email.ts
+│       └── chat/gemini.ts       ← POST /api/chat/gemini ✅ correct table/field names
 ```
 
 ---
@@ -113,11 +141,13 @@ src/
 | `fasting_sessions` | `started_at, ended_at, target_hours, protocol`. Active = `ended_at IS NULL` |
 | `meal_plans` | `plan_type, day_number, meal_type, recipe_id` — joined with recipes |
 | `meal_swaps` | `user_id, original_recipe_id, swap_recipe_id, reason, swap_date` |
-| `recipes` | `id, title, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, tags[]` |
+| `recipes` | `id, title, description, calories, protein, fat, carbs, fiber, net_carbs, image_url, prep_time, cook_time, servings, difficulty, ingredients(jsonb), instructions(jsonb), tips(jsonb), tags[], book_id` |
+| `recipe_favorites` | `user_id, recipe_id` — user-saved favorites |
 | `weight_logs` | `user_id, weight, logged_date` ← fields are `weight` + `logged_date` (NOT `weight_kg`/`date`) |
 | `weekly_reports` | `user_id, week_number` |
 | `notifications` | `user_id, type, title, body, icon, action_url, action_label, priority, is_read, is_dismissed, expires_at` |
 | `notification_preferences` | Per-user notification settings |
+| `push_subscriptions` | Web Push endpoint, p256dh, auth_key, user_agent |
 | `onboarding_data` | `user_id, current_weight, target_weight, dietary_restrictions[], fasting_protocol, goal, feature_electrolytes` |
 | `xp_transactions` | `user_id, action_type, xp_amount, description, day_number` ← fields are `action_type` + `xp_amount` |
 | `achievements` | Earned achievements per user |
@@ -126,7 +156,24 @@ src/
 | `body_measurements` | `user_id, logged_date, neck_cm, waist_cm, hips_cm, chest_cm, arm_cm, thigh_cm, notes` |
 | `completed_days` | Days marked as fully complete |
 | `chat_messages` | AI Coach chat history |
-| `pending_activations` | Payment activation queue |
+| `pending_activations` | LemonSqueezy payment activation queue |
+| `referral_codes` | `user_id, code, uses_count` |
+| `referrals` | `referrer_id, referred_id, code, created_at` |
+| `habits` | User habit tracking |
+| `ketone_logs` | Ketone measurements |
+| `steps_logs` | Daily step counts |
+
+### recipes.ingredients format — MIXED (handle both)
+```typescript
+// Some recipes store as objects:  { item: "almond flour", amount: "120", unit: "g", category: "..." }
+// Some recipes store as strings:  "180g almond flour"
+// ALWAYS normalize in frontmatter before rendering:
+const ingredients = rawIngredients.map((ing: any) =>
+  typeof ing === 'string'
+    ? { amount: '', unit: '', item: ing, isString: true }
+    : { amount: ing.amount || '', unit: ing.unit || '', item: ing.item || '', isString: false }
+);
+```
 
 ---
 
@@ -144,7 +191,7 @@ xp_transactions        ← Log only (action_type, xp_amount fields)
 ```
 
 **Rule**: All XP updates go through `supabase.rpc('award_xp', {...})`.
-This is already applied in: `checkin/save.ts`, `fasting/end.ts`, `weekly/save.ts`, `tasks/complete.ts`.
+Applied in: `checkin/save.ts`, `fasting/end.ts`, `weekly/save.ts`, `tasks/complete.ts`.
 
 ### Task Completion Flow ✅ FIXED
 
@@ -215,23 +262,29 @@ Called on: every dashboard page load via updateCurrentDay(user.id)
 
 ## 6. AUTH PATTERN
 
-### Shared helper (preferred)
+### Shared helper — use for ALL subscription-gated pages
 ```typescript
 import { requireAuth } from '../../lib/auth';
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 ```
 
-### Manual pattern (legacy — still in some pages)
+### requireLogin — use for upgrade.astro and expired.astro ONLY
 ```typescript
-const accessToken = Astro.cookies.get('sb-access-token')?.value;
-if (!accessToken) return Astro.redirect('/login');
-const { data: { user } } = await supabase.auth.getUser(accessToken);
-if (!user) return Astro.redirect('/login');
-const profile = await getProfile(user.id);
-if (!profile) return Astro.redirect('/login');
-if (!isSubscriptionActive(profile)) return Astro.redirect('/dashboard/upgrade');
+// Skips subscription check — allows expired users to access
+import { requireLogin } from '../../lib/auth';
+const auth = await requireLogin(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile, db } = auth;
+```
+
+### requireApiAuth — use in ALL API routes
+```typescript
+import { requireApiAuth } from '../../../lib/auth';
+const auth = await requireApiAuth(request);
+if ('error' in auth) return json({ error: auth.error }, auth.status);
+const { user, db } = auth;
 ```
 
 ---
@@ -347,6 +400,15 @@ expires_at timestamptz, created_at timestamptz
 // Records in meal_swaps: { user_id, original_recipe_id, swap_recipe_id, reason, swap_date }
 ```
 
+### Food-log Swap Suggestions (`/api/food/suggest-swaps.ts`) ✅ NEW
+```typescript
+// GET /api/food/suggest-swaps?calories=X&protein_g=Y&fat_g=Z&carbs_g=W
+// Macro similarity: dCal*2 + dProt*1 + dFat*1 + dCarb*1.5 (lower = better match)
+// Calorie range: 0.4x – 2.5x target
+// Returns top 5 recipe suggestions
+// food-log.astro: ⇄ button per row → modal → "Use" button replaces entry
+```
+
 ### Dietary restriction checks (tag/title based)
 ```typescript
 no_pork:    tags.includes('pork') || title contains bacon/ham/prosciutto/chorizo/sausage
@@ -356,7 +418,7 @@ no_seafood: tags include seafood/omega-3/pescatarian OR title contains salmon/tu
 
 ---
 
-## 11. BODY MEASUREMENTS ✅ NEW
+## 11. BODY MEASUREMENTS ✅
 
 ### `/api/measurements/save.ts`
 - POST endpoint, auth required
@@ -421,7 +483,53 @@ Fixed bugs:
 
 ---
 
-## 15. DESIGN SYSTEM
+## 15. LEMONSQUEEZY PAYMENT SYSTEM ✅
+
+### Env vars required
+```
+LEMONSQUEEZY_WEBHOOK_SECRET=...    ← HMAC signing secret
+LEMONSQUEEZY_API_KEY=...           ← LS API key (for portal lookup)
+LEMONSQUEEZY_STORE_ID=335391
+LEMONSQUEEZY_BASIC_URL=https://keto-12.lemonsqueezy.com/buy/...
+LEMONSQUEEZY_PRO_URL=https://keto-12.lemonsqueezy.com/buy/...
+LEMONSQUEEZY_ELITE_URL=https://keto-12.lemonsqueezy.com/buy/...
+PUBLIC_APP_URL=https://ketojourney.fun
+```
+
+### Checkout URL builder (upgrade.astro + expired.astro)
+```javascript
+function buildCheckoutUrl(baseUrl) {
+  var url = new URL(baseUrl);
+  url.searchParams.set('checkout[email]', userEmail);
+  url.searchParams.set('checkout[name]',  userFullName);
+  if (userId) url.searchParams.set('checkout[custom][user_id]', userId);
+  url.searchParams.set('checkout[redirect_url]', appUrl + '/dashboard/billing');
+  return url.toString();
+}
+```
+**Critical**: `checkout[custom][user_id]` MUST be set for existing users. Without it, webhook uses Path C (creates pending_activation requiring re-registration) instead of Path A (direct profile update).
+
+### Webhook paths
+```
+Path A: custom_data.user_id present → direct profile update by user ID ✅
+Path B: no user_id, but email matches existing profile → update by email ✅
+Path C: neither → pending_activations row for verify-purchase flow ✅
+```
+
+### Webhook events handled
+`order_created`, `order_refunded`, `subscription_created`, `subscription_updated`,
+`subscription_cancelled`, `subscription_expired`, `subscription_payment_success`,
+`subscription_payment_failed`, `subscription_payment_recovered`, `subscription_resumed`
+
+### Testing payments (test-webhook.mjs)
+```bash
+LEMONSQUEEZY_WEBHOOK_SECRET=your_secret node test-webhook.mjs all --local
+LEMONSQUEEZY_WEBHOOK_SECRET=your_secret node test-webhook.mjs order_created --tier pro --email test@test.com
+```
+
+---
+
+## 16. DESIGN SYSTEM
 
 ### CSS Variables
 ```css
@@ -450,11 +558,11 @@ Fixed bugs:
 - Hover: `translateY(-3px)` + `border-color: var(--border2)` + `box-shadow`
 - Animations: `fadeUp` on page load (staggered with `animation-delay`)
 - Rings: SVG circles with `stroke-dashoffset` for progress
-- Mobile: bottom nav at `max-width: 900px`
+- Mobile: bottom nav at `max-width: 900px`; body padding-bottom 5.5rem on mobile
 
 ---
 
-## 16. API RESPONSE PATTERNS
+## 17. API RESPONSE PATTERNS
 
 ### Success
 ```json
@@ -475,10 +583,11 @@ function json(data: any, status = 200) {
   });
 }
 ```
+**Note**: Admin routes (`/api/admin/*.ts`) use `new Response(JSON.stringify(...))` directly — acceptable, low priority to standardize.
 
 ---
 
-## 17. SHOPPING LIST PATTERN ✅ FIXED
+## 18. SHOPPING LIST PATTERN ✅ FIXED
 
 ```typescript
 import { getMaxJourneyDays } from '../../lib/supabase';
@@ -495,59 +604,46 @@ Array.from({ length: maxWeeks }, (_, i) => i + 1)
 
 ---
 
-## 18. COMPLETE LIST OF FIXES APPLIED (Session 2026-03-21 to 2026-03-24)
+## 19. WHAT WORKS (verified 2026-04-14)
 
-| File | Fix Applied |
-|------|-------------|
-| `shopping.astro` | Hardcoded `basic_30` → dynamic `planType`; week count dynamic via `getMaxJourneyDays` |
-| `recipe/[id].astro` | Hardcoded `basic_30` → dynamic `planType`; `.single()` → `.maybeSingle()` |
-| `api/profile/add-weight.ts` | Field names: `weight_kg`→`weight`, `date`→`logged_date`; onConflict fix |
-| `profile.astro` | Weight field names fixed throughout; real DB achievements section added |
-| `api/notifications/generate.ts` | "All caught up" bug fixed: daily types deleted before regen; only milestones blocked |
-| `api/notifications/save.ts` | Was using direct `createClient` instead of shared `supabase` import |
-| `progress.astro` | Weight log modal added; body measurements card + modal added; achievements card added |
-| `api/measurements/save.ts` | **NEW FILE** — body measurements upsert endpoint |
-| `api/fasting/end.ts` | XP now uses `award_xp` RPC (was writing to wrong table `profiles.xp_total`) |
-| `api/weekly/save.ts` | XP now uses `award_xp` RPC (same bug as fasting/end.ts) |
-| `api/chat/gemini.ts` | Table `user_journeys`→`user_journey`; weight fields fixed; `.single()`→`.maybeSingle()` |
-| `api/meals/swap.ts` | **COMPLETE REWRITE** — wrong field names (`protein_g`→`protein`, etc.); tag-based dietary filtering |
-| `api/tasks/complete.ts` | **NEW FILE** — full task completion with `complete_task` RPC + fallback chain |
-| `dashboard/index.astro` | Calls `updateCurrentDay()` on load (fixes Day 1 stuck bug); meal plan fallback to `basic_30` |
-| `lib/auth.ts` | **NEW FILE** — `requireAuth()` shared helper |
-| `components/NotificationsBell.astro` | **NEW FILE** — standalone bell component |
-
----
-
-## 19. WHAT WORKS vs WHAT NEEDS ATTENTION
-
-### ✅ Working (all verified 2026-03-30)
-- Auth flow (login/signup/cookies) via `requireAuth()`
+### ✅ Fully Working
+- Auth flow (login/signup/cookies) via `requireAuth()` / `requireLogin()` / `requireApiAuth()`
 - Dashboard: current day advances correctly on load
-- Dashboard: meals load with plan-specific data (pro_6/elite_12 = 90 days, basic_30 = 30 days)
-- Task completion with XP (API + RPC with fallback chain)
-- Check-in form + save with correct XP to `user_journey`; duplicate warning shown if already submitted today
-- Recipes browser + detail (dynamic plan_type)
-- Progress charts + weight log modal
-- Body measurements tracking (add, edit, delete — edit pre-fills existing modal via data-* attributes)
-- Shopping list (dynamic weeks per tier; empty state shown if no items)
-- Fasting timer (start/end with correct XP; setInterval cleanup on tab hide)
-- Notifications panel (daily types refresh correctly; bell integrated via NotificationsBell.astro)
-- Community feed with pagination (Load More button, state.page counter, has_more flag from API)
-- All API files use getUserClient(token) for RLS-correct authenticated requests
-- AI Coach (correct table/field names; JSX ternary patterns pre-computed)
+- Dashboard: meals load with plan-specific data + `basic_30` fallback
+- Task completion with XP (RPC with fallback chain)
+- Check-in form + save with XP; duplicate warning shown if already submitted
+- Recipes browser + detail — ingredients display both string and object formats ✅
+- Recipe favorites (heart button, /dashboard/favorites)
+- Star rating REMOVED from recipe detail
+- Progress charts + weight log modal + projection SVG
+- Body measurements tracking
+- Shopping list (dynamic weeks per tier)
+- Fasting timer (start/end with correct XP)
+- Notifications panel (daily types refresh; push notifications)
+- Community feed + moderation
+- AI Coach (Gemini 1.5 Flash — Elite only)
 - Weekly report with correct XP
 - Profile with real DB achievements
-- Ketone tracker (new page: /dashboard/ketones with chart, zones guide, log + delete)
-- update_current_day RPC verified working (tested live — calculates days from start_date correctly)
+- Ketone tracker + chart
+- Daily steps tracker
+- Food Photo Analyzer (Gemini)
+- Meal swap suggestions on food-log rows
+- LemonSqueezy: all 10 webhook events, billing portal, verify-purchase
+- Expired subscription: direct re-upgrade with user_id preserved (no re-registration needed)
+- Multi-language support (EN/FR/DE/ES/PT) via getTranslator() + t()
+- Push notifications via VAPID
+- Referral system (150 XP per referral)
 
-### ⚠️ Known Limitations
-- None
+### ⚠️ Known Gaps / Next Up
+- Recipe photo gallery on mobile (Item 17 in roadmap) — currently single hero image only
+- ai-coach.astro needs @media queries for narrow (<400px) viewports
+- guide.astro / keto-calculator.astro — DB calls without explicit try-catch error UI
 
 ---
 
 ## 20. PUSH NOTIFICATIONS SYSTEM
 
-### DB Table — run in Supabase SQL editor
+### DB Table
 ```sql
 CREATE TABLE IF NOT EXISTS push_subscriptions (
   id         uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -588,7 +684,60 @@ VAPID_EMAIL=mailto:your@email.com
 | Milestone | Day 7/14/21/30 reached | `milestone_N` |
 | Level up | New level reached | `level_up_N` |
 
-### 🔧 getMealCycleDays()
+### getMealCycleDays()
 - basic_30 → cycles 30 days
 - pro_6    → cycles 90 days (DB has days 1–90)
 - elite_12 → cycles 90 days (DB has days 1–90)
+
+---
+
+## 21. MULTI-LANGUAGE (i18n) ✅
+
+```typescript
+import { getTranslator } from '../../lib/i18n';
+const lang = profile.language || 'en';
+const t = getTranslator(lang);
+// Usage: t('key') — fallback to 'en' if key missing
+```
+- Supported: `en`, `fr`, `de`, `es`, `pt`
+- 120+ keys across all dashboard pages
+- Language set in profile via /dashboard/profile settings
+
+---
+
+## 22. RECIPE PHOTO GALLERY (Mobile) 🔧 NEXT FEATURE
+
+### Current state
+- `recipes` table has single `image_url` field
+- `recipe/[id].astro` shows single hero image (420px height)
+
+### Planned implementation
+- Tap hero image → fullscreen lightbox overlay
+- Swipe left/right on mobile (touch events)
+- Pinch-to-zoom support
+- CSS: `touch-action: pan-y` on swipeable containers
+- No DB schema change needed for single-image lightbox
+- Future: `recipe_images` table for multi-image galleries
+
+---
+
+## 23. NUTRITIONAL VALUES DISPLAY
+
+### Where macros are shown
+| Page | Data source | Fields displayed |
+|------|-------------|-----------------|
+| dashboard/index.astro | macro_goals + food_logs | calories, protein_g, fat_g, carbs_g (ring chart) |
+| food-log.astro | food_logs | calories, protein_g, fat_g, carbs_g per entry + daily totals |
+| recipe/[id].astro | recipes | calories, protein, fat, net_carbs, fiber (full nutrition table) |
+| recipes.astro / browse.astro | recipes | calories, net_carbs, protein (card badges) |
+| shopping.astro | meal_plans + recipes | per-meal macro breakdown |
+| keto-calculator.astro | macro_goals | TDEE, protein_g, fat_g, carbs_g (macro rings + recommendations) |
+| progress.astro | weight_logs + body_measurements | weight trend, body metrics |
+
+### Field name consistency
+```
+recipes table:   protein, fat, net_carbs, carbs, fiber  (NO _g suffix)
+food_logs table: protein_g, fat_g, carbs_g, calories    (WITH _g suffix)
+macro_goals:     protein_g, fat_g, carbs_g, daily_calories (WITH _g suffix)
+```
+Never mix suffixes. Always check which table you're querying.

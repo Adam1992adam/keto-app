@@ -31,18 +31,7 @@ const { data: favRows } = await db
 
 const favSet = new Set((favRows || []).map((r) => r.recipe_id));
 
-// Fetch avg ratings for all recipes in one query
-const recipeIds = allRecipes.map((r) => r.id);
-const { data: avgRatings } = recipeIds.length
-  ? await db.from('recipe_avg_ratings').select('recipe_id, avg_rating, rating_count').in('recipe_id', recipeIds)
-  : { data: [] };
-
-const ratingMap = {};
-for (const row of (avgRatings || [])) {
-  ratingMap[row.recipe_id] = { avg: parseFloat(row.avg_rating || '0'), count: row.rating_count || 0 };
-}
-
-// Merge favorites + ratings into recipe objects for the client
+// Merge favorites into recipe objects for the client
 const recipes = allRecipes.map((r) => ({
   id:        r.id,
   title:     r.title,
@@ -55,8 +44,6 @@ const recipes = allRecipes.map((r) => ({
   cook_time: r.cook_time || 0,
   tags:      r.tags      || [],
   favorited: favSet.has(r.id),
-  avg:       ratingMap[r.id]?.avg   || 0,
-  count:     ratingMap[r.id]?.count || 0,
 }));
 
 const totalCount = recipes.length;
@@ -426,29 +413,11 @@ const totalCount = recipes.length;
   overflow: hidden;
 }
 
-/* Stars */
-.rc-stars {
-  display: flex;
-  align-items: center;
-  gap: .25rem;
-}
-.rc-stars-row {
-  display: flex;
-  gap: 1px;
-}
-.rc-star-filled { color: var(--gold); }
-.rc-star-empty  { color: var(--muted); }
-.rc-stars-count {
-  font-size: .72rem;
-  color: var(--soft);
-  margin-left: .1rem;
-}
-
 /* Macros row */
 .rc-macros {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: .35rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .3rem;
 }
 .rc-macro {
   background: var(--card2);
@@ -457,9 +426,9 @@ const totalCount = recipes.length;
   text-align: center;
 }
 .rc-macro-val {
-  font-size: .8rem;
+  font-size: .78rem;
   font-weight: 800;
-  color: var(--text);
+  color: inherit;
   display: block;
 }
 .rc-macro-lbl {
@@ -573,20 +542,6 @@ const totalCount = recipes.length;
     return 'default';
   }
 
-  function starsHtml(avg, count) {
-    var html = '<div class="rc-stars"><div class="rc-stars-row">';
-    for (var s = 1; s <= 5; s++) {
-      var cls = s <= Math.round(avg) ? 'rc-star-filled' : 'rc-star-empty';
-      html += '<svg class="' + cls + '" width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
-    }
-    html += '</div>';
-    if (count > 0) {
-      html += '<span class="rc-stars-count">(' + count + ')</span>';
-    }
-    html += '</div>';
-    return html;
-  }
-
   function totalTime(r) {
     return (r.prep_time || 0) + (r.cook_time || 0);
   }
@@ -619,12 +574,11 @@ const totalCount = recipes.length;
 
     html += '<div class="rc-body">';
     html += '<div class="rc-title">' + r.title + '</div>';
-    html += starsHtml(r.avg, r.count);
-
     html += '<div class="rc-macros">';
     html += '<div class="rc-macro"><span class="rc-macro-val">' + r.calories + '</span><span class="rc-macro-lbl">kcal</span></div>';
-    html += '<div class="rc-macro"><span class="rc-macro-val">' + r.protein + 'g</span><span class="rc-macro-lbl">protein</span></div>';
-    html += '<div class="rc-macro"><span class="rc-macro-val">' + r.net_carbs + 'g</span><span class="rc-macro-lbl">net carbs</span></div>';
+    html += '<div class="rc-macro" style="color:#3b82f6;"><span class="rc-macro-val">' + r.protein + 'g</span><span class="rc-macro-lbl">protein</span></div>';
+    html += '<div class="rc-macro" style="color:#f59e0b;"><span class="rc-macro-val">' + r.fat + 'g</span><span class="rc-macro-lbl">fat</span></div>';
+    html += '<div class="rc-macro" style="color:#10b981;"><span class="rc-macro-val">' + r.net_carbs + 'g</span><span class="rc-macro-lbl">net carbs</span></div>';
     html += '</div>';
 
     if (timeStr) {
