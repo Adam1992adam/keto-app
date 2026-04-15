@@ -27,7 +27,7 @@ const dailyTasks = rawTasks || [];
 // Use maybeSingle() — .single() throws a hard error when 0 rows are returned
 const { data: recipe, error: recipeErr } = await db.from('recipes').select('*').eq('id', id).maybeSingle();
 if (recipeErr) console.error('Recipe fetch error:', recipeErr.message);
-if (!recipe) return Astro.redirect('/dashboard/browse');
+if (!recipe) return Astro.redirect('/dashboard/recipes');
 
 const { data: mealPlan } = await db
   .from('meal_plans').select('*')
