@@ -1,5 +1,5 @@
 # CLAUDE.md — Keto Journey App — Complete Project Reference
-> Last updated: 2026-04-15 | Astro 4 + Supabase + Vercel | Payment: LemonSqueezy
+> Last updated: 2026-04-16 | Astro 4 + Supabase + Vercel | Payment: LemonSqueezy
 
 ---
 
@@ -41,6 +41,28 @@
 | H7 | Removed dead endpoint | /api/recipes/rate.ts deleted (star rating removed from UI) |
 | H8 | Error UI | guide, keto-calculator, welcome, habits — try-catch + 503 fallback pages |
 | H9 | Weight chart range selector | 30d/60d/90d toggle buttons, client-side JS redraw, DB fetch expanded to 90 entries |
+
+### Security Hardening Sprint 2 (2026-04-16) — all ✅ Done
+| # | Fix | Notes |
+|---|-----|-------|
+| S01 | Webhook replay attacks | `processed_webhooks` table; unique constraint on HMAC signature; 23505 → idempotent 200 |
+| S02 | Admin timing attack | `crypto.timingSafeEqual()` with equal-length padded Uint8Array buffers |
+| S03 | Food photo analyzer bounds | `clampCal`/`clampMacro` helpers; string fields capped; user context in error logs |
+| S04 | Progress photo daily rate limit | 5 uploads/day cap alongside existing 50 lifetime cap (parallel count queries) |
+| S05 | Habit future-day validation | Fetches `user_journey.current_day`; rejects `day_number > current_day` with 403 |
+| S06 | meals/complete.ts silent fail | Already had `parsedDay > currentDay → 400` guard — confirmed working |
+| S07 | Error log user context | All 13 API files updated: `let userId = 'unknown'` pattern; `console.error('[endpoint] user:', userId, err)` |
+| S08 | AI Coach UTC boundary | Confirmed UTC-consistent; added comment in gemini.ts |
+| S10 | HTML strip in community | posts.ts + comments.ts: `replace(/<[^>]*>/g, '')` before insert |
+
+### Community Upgrade (2026-04-16) ✅ Done
+- **3 post types**: `text`, `photo`, `progress` (results card)
+- **Photo sharing**: FileReader → base64 → `/api/community/upload-photo` → Supabase Storage `community-photos` bucket
+- **Progress cards**: Pre-filled with user's streak/day/level/weight-lost stats; rendered as gradient card in feed
+- **Recipe templates**: "Recipes" category auto-fills post body with structured recipe template
+- **New API**: `POST /api/community/upload-photo` — base64 decode, 2 MB cap, JPEG/PNG/WebP, 5/day rate limit
+- **DB columns added**: `community_posts.post_type text`, `community_posts.image_url text`, `community_posts.result_data jsonb`
+- **Storage bucket**: `community-photos` (public) with RLS — users upload to own folder, public read
 
 ### Push Notifications — Setup Notes (Step 1)
 ```
@@ -644,6 +666,13 @@ Array.from({ length: maxWeeks }, (_, i) => i + 1)
 - Fasting timer (start/end with correct XP; idempotent start — 60s dedup)
 - Notifications panel (daily types refresh; push notifications)
 - Community feed + moderation; ban enforced on posts + comments + reactions
+- Community photo sharing (upload-photo API → Supabase Storage → feed display + lightbox)
+- Community progress cards (pre-filled stats, gradient rendering in feed)
+- Community recipe templates (auto-fill on category select)
+- LemonSqueezy webhook replay protection (processed_webhooks unique constraint)
+- Admin constant-time password comparison (crypto.timingSafeEqual)
+- Progress photo daily rate limit (5/day)
+- Habit future-day protection (day_number ≤ current_day enforced)
 - AI Coach (Gemini 1.5 Flash — Elite only)
 - Weekly report with correct XP
 - Profile: achievements, language selector (EN/FR/DE/ES/PT), avatar picker
@@ -659,12 +688,12 @@ Array.from({ length: maxWeeks }, (_, i) => i + 1)
 - Error UI: guide, keto-calculator, welcome, habits all have try-catch + 503 fallback
 
 ### ⚠️ Known Gaps — Next Priorities
-- **Webhook replay attacks**: LemonSqueezy webhook verifies HMAC but does not validate timestamp (could replay a valid webhook hours later). Fix: check timestamp within ±5min window + store processed webhook IDs.
-- **Admin timing attack**: Admin password comparison is string equality (`===`), not constant-time. Fix: use `crypto.timingSafeEqual()`.
-- **Photo upload rate limit**: Per-user cap is 50 photos but no daily rate limit — user could upload 50 in one session. Fix: add 5/day rate limit.
-- **Habit completion — future days**: day_number is accepted from client without validating it is ≤ user's current_day. Fix: fetch journey and reject future day_number.
+- ~~**Webhook replay attacks**~~ ✅ Fixed — `processed_webhooks` table deduplicates by HMAC signature (unique constraint).
+- ~~**Admin timing attack**~~ ✅ Fixed — `crypto.timingSafeEqual()` with equal-length padded `Uint8Array` buffers.
+- ~~**Food photo analyzer numeric validation**~~ ✅ Fixed — `clampCal`/`clampMacro` helpers cap all values before storage.
+- ~~**Photo upload rate limit**~~ ✅ Fixed — 5 uploads/day cap added to `/api/photos/upload.ts`.
+- ~~**Habit completion future days**~~ ✅ Fixed — rejects `day_number > current_day` with 403 in `/api/habits/toggle.ts`.
 - **Community posts N+1**: posts.ts fetches posts then makes separate queries for profiles and reactions. Already batched with Promise.all, but could be a single JOIN query.
-- **Food photo analyzer numeric validation**: AI-returned calories/macros not capped before storage. Fix: apply same bounds as food-log/add.ts (cal≤9999, macros≤500g).
 - **ai-coach.astro**: needs @media queries for narrow (<400px) viewports.
 
 ---
@@ -775,16 +804,16 @@ Full audit conducted 2026-04-15. Items marked ✅ are fixed; items marked ⚠️
 ### Open — Medium/Low Priority
 | ID | Severity | File | Issue | Recommended Fix |
 |----|----------|------|-------|-----------------|
-| S01 | HIGH | `api/lemonsqueezy/webhook.ts` | HMAC verified but no timestamp check — replay attacks possible | Validate timestamp within ±5min; store processed webhook IDs |
-| S02 | HIGH | `api/admin/verify.ts` | Password compared with `===` (timing attack) | Use `crypto.timingSafeEqual()` |
-| S03 | HIGH | `api/food/analyze-photo.ts` | AI-returned numeric values stored without bounds checking | Apply same caps as food-log/add.ts (cal≤9999, macros≤500g) |
-| S04 | MEDIUM | `api/photos/upload.ts` | 50-photo cap but no daily rate limit | Add 5 uploads/day rate limit |
-| S05 | MEDIUM | `api/habits/toggle.ts` | Accepts arbitrary day_number from client | Fetch journey.current_day and reject day_number > current_day |
-| S06 | MEDIUM | `api/meals/complete.ts` | Fails silently instead of returning 400 when day > current | Return explicit 400 error |
-| S07 | MEDIUM | Multiple | Error logs lack user context (`console.error('error:', err)`) | Include `user.id` and operation name in all error logs |
-| S08 | LOW | `api/chat/gemini.ts` | Daily rate limit window computed as `today + 'T00:00:00Z'` — correct UTC boundary, but verify timezone | Confirm UTC day boundary is consistent with user timezone |
+| S01 | ✅ FIXED | `api/lemonsqueezy/webhook.ts` | HMAC verified but no timestamp check — replay attacks possible | `processed_webhooks` table (UNIQUE on signature) — duplicate insert rejected with 23505 |
+| S02 | ✅ FIXED | `api/admin/verify.ts` | Password compared with `===` (timing attack) | `crypto.timingSafeEqual()` with equal-length padded buffers |
+| S03 | ✅ FIXED | `api/food/analyze-photo.ts` | AI-returned numeric values stored without bounds checking | `clampCal` (≤9999) + `clampMacro` (≤500g) applied to all numeric fields; strings sliced |
+| S04 | ✅ FIXED | `api/photos/upload.ts` | 50-photo cap but no daily rate limit | DB daily count query (≥5 today → 429); runs in parallel with lifetime cap check |
+| S05 | ✅ FIXED | `api/habits/toggle.ts` | Accepts arbitrary day_number from client | Fetches `user_journey.current_day`; rejects day_number > current_day with 403 |
+| S06 | ✅ FIXED | `api/meals/complete.ts` | Fails silently instead of returning 400 when day > current | Already has `parsedDay > currentDay → 403` guard in code |
+| S07 | ✅ FIXED | Multiple | Error logs lack user context (`console.error('error:', err)`) | `[file/name] user: <id>` prefix on all user-facing mutation endpoints (13 files) |
+| S08 | ✅ VERIFIED | `api/chat/gemini.ts` | Daily rate limit window computed as `today + 'T00:00:00Z'` — correct UTC boundary, but verify timezone | Confirmed UTC-consistent: `toISOString()` + `T00:00:00Z` + Supabase `now()` all UTC. Comment added. |
 | S09 | LOW | Multiple API files | `json()` helper duplicated in every file | Centralize in `src/lib/apiResponse.ts` |
-| S10 | LOW | `api/community/posts.ts` | Content stored as plain text — client must escape on render | Document escaping requirement; add server-side HTML strip as safety net |
+| S10 | ✅ FIXED | `api/community/posts.ts` + `comments.ts` | Content stored as plain text — client must escape on render | `replace(/<[^>]*>/g, '')` strips all HTML tags before DB insert in both posts and comments |
 
 ### Security Strengths (Do Not Break)
 - All API routes use `requireApiAuth(cookies)` — no unprotected mutations
@@ -828,3 +857,71 @@ const c = cRes.status === 'fulfilled' ? cRes.value?.data : null;
 | `dashboard/habits.astro` | 2 queries in allSettled | Empty state on failure |
 | `dashboard/keto-calculator.astro` | 1 query with try-catch | Falls back to profile defaults |
 | `dashboard/welcome.astro` | 1 critical query with try-catch | 503 on failure |
+| `dashboard/community.astro` | journey + weight + onboarding in allSettled | Computes `myProgressData` for progress card pre-fill |
+
+---
+
+## 26. COMMUNITY FEATURE (2026-04-16) ✅
+
+### Post Types
+| post_type | Description | Required fields |
+|-----------|-------------|-----------------|
+| `text` | Plain text post (default) | `content` (3–2000 chars) |
+| `photo` | Image post with optional caption | `image_url` (from upload-photo API) + optional `content` (≤500 chars) |
+| `progress` | Results card with optional caption | `result_data` (JSON object) + optional `content` (≤500 chars) |
+
+### DB Schema Additions (community_posts)
+```sql
+ALTER TABLE community_posts ADD COLUMN IF NOT EXISTS post_type  text    DEFAULT 'text';
+ALTER TABLE community_posts ADD COLUMN IF NOT EXISTS image_url  text;
+ALTER TABLE community_posts ADD COLUMN IF NOT EXISTS result_data jsonb;
+```
+
+### Storage Bucket: community-photos
+```sql
+-- Bucket: community-photos (public)
+-- RLS policies:
+-- 1. INSERT: auth.uid()::text = (storage.foldername(name))[1]  (own folder only)
+-- 2. SELECT: true  (public read)
+-- 3. DELETE: auth.uid()::text = (storage.foldername(name))[1]  (own files only)
+```
+
+### Upload Flow
+```
+User selects image (file input)
+  → FileReader.readAsDataURL() → base64
+  → POST /api/community/upload-photo { imageBase64, imageType }
+  → Server: decode → check 2MB → check 5/day rate limit → upload to community-photos/{userId}/{ts}-{rand}.{ext}
+  → Returns { url: string }  (stable public URL)
+  → Stored in image_url column when post is created
+```
+
+### result_data Shape (progress post)
+```typescript
+interface ResultData {
+  day:         number;   // current journey day
+  streak:      number;   // streak_days
+  level:       number;
+  xp:          number;   // total_xp
+  weightLost:  number;   // start - current (or 0)
+  unit:        string;   // 'kg' or 'lbs'
+}
+```
+
+### Feed Rendering
+- `post_type === 'text'` — paragraphs split on `\n\n+`
+- `post_type === 'photo'` — full-width `<img>` with `data-lightbox` attribute; caption below
+- `post_type === 'progress'` — gradient card showing day/streak/level/xp/weight stats; caption below
+- Lightbox: `#lightboxOverlay` + event delegation on `[data-lightbox]` → `open` class toggle; Esc closes
+
+### API: POST /api/community/upload-photo
+- Body: `{ imageBase64: string, imageType: 'image/jpeg'|'image/png'|'image/webp' }`
+- Validates: type whitelist, 2 MB decoded size, 5 photo posts per UTC day
+- Uploads to `community-photos/{user_id}/{timestamp}-{random}.{ext}`
+- Returns: `{ url: string }` — stable public URL from `getPublicUrl()`
+- On storage error: logs `[community/upload-photo] user: <id>` + error
+
+### Access Control
+- Community is available to Pro (`pro_6`) and Elite (`elite_12`) tiers only
+- Basic tier users see an upgrade prompt instead of the feed
+- community_banned users: 403 on posts, comments, reactions (checked server-side)

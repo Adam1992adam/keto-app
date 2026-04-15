@@ -4,8 +4,10 @@
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE         = 20;
 const ALLOWED_CATEGORIES = ['progress', 'recipes', 'tips', 'motivation', 'general'];
+const ALLOWED_POST_TYPES = ['text', 'photo', 'progress'];
+const SUPABASE_URL       = (import.meta.env.PUBLIC_SUPABASE_URL as string) || '';
 
 export const GET: APIRoute = async ({ request, cookies }) => {
   try {
@@ -20,7 +22,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
 
     let query = db
       .from('community_posts')
-      .select('id, user_id, content, category, like_count, fire_count, clap_count, comment_count, is_pinned, created_at, updated_at')
+      .select('id, user_id, content, category, post_type, image_url, result_data, like_count, fire_count, clap_count, comment_count, is_pinned, created_at')
       .eq('is_deleted', false)
       .eq('is_hidden', false)
       .order('is_pinned', { ascending: false })
@@ -60,6 +62,9 @@ export const GET: APIRoute = async ({ request, cookies }) => {
       id: p.id,
       content: p.content,
       category: p.category,
+      post_type: p.post_type || 'text',
+      image_url: p.image_url || null,
+      result_data: p.result_data || null,
       like_count: p.like_count,
       fire_count: p.fire_count,
       clap_count: p.clap_count,
@@ -85,14 +90,39 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const { user, db } = auth;
 
     const body = await request.json();
-    const { content, category = 'general' } = body;
+    const { content, category = 'general', post_type = 'text', image_url, result_data } = body;
 
-    if (!content || typeof content !== 'string' || content.trim().length < 3)
-      return json({ error: 'Content must be at least 3 characters' }, 400);
-    if (content.length > 2000)
-      return json({ error: 'Content too long (max 2000 characters)' }, 400);
     if (!ALLOWED_CATEGORIES.includes(category))
       return json({ error: 'Invalid category' }, 400);
+    if (!ALLOWED_POST_TYPES.includes(post_type))
+      return json({ error: 'Invalid post_type' }, 400);
+
+    const isMediaPost = post_type === 'photo' || post_type === 'progress';
+
+    // Content validation — captions on media posts are optional
+    if (!isMediaPost) {
+      if (!content || typeof content !== 'string' || content.trim().length < 3)
+        return json({ error: 'Content must be at least 3 characters' }, 400);
+      if (content.length > 2000)
+        return json({ error: 'Content too long (max 2000 characters)' }, 400);
+    } else {
+      if (content && content.length > 500)
+        return json({ error: 'Caption too long (max 500 characters)' }, 400);
+    }
+
+    // Validate image_url for photo posts
+    if (post_type === 'photo') {
+      if (!image_url || typeof image_url !== 'string')
+        return json({ error: 'image_url is required for photo posts' }, 400);
+      if (SUPABASE_URL && !image_url.startsWith(SUPABASE_URL))
+        return json({ error: 'Invalid image_url' }, 400);
+    }
+
+    // Strip HTML — defence-in-depth against XSS
+    const raw  = (content || '').trim();
+    const safe = raw.replace(/<[^>]*>/g, '').trim();
+    if (!isMediaPost && safe.length < 3)
+      return json({ error: 'Content must be at least 3 characters' }, 400);
 
     // Block community-banned users
     const { data: posterProfile } = await db
@@ -112,8 +142,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     const { data: post, error } = await db
       .from('community_posts')
-      .insert({ user_id: user.id, content: content.trim(), category })
-      .select('id, content, category, like_count, fire_count, clap_count, comment_count, created_at')
+      .insert({
+        user_id:     user.id,
+        content:     safe,
+        category,
+        post_type,
+        image_url:   (post_type === 'photo' || post_type === 'progress') ? (image_url || null) : null,
+        result_data: post_type === 'progress' ? (result_data || null) : null,
+      })
+      .select('id, content, category, post_type, image_url, result_data, like_count, fire_count, clap_count, comment_count, created_at')
       .maybeSingle();
 
     if (error) return json({ error: 'Server error' }, 500);

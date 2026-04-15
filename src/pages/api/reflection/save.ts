@@ -85,7 +85,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     return json({ success: true });
   } catch (error) {
-    console.error('Error saving reflection:', error);
+    console.error('[reflection/save] user:', user.id, error);
     return json({ error: 'Failed to save' }, 500);
   }
 };

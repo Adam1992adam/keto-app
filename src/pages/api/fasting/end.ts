@@ -4,10 +4,12 @@ import { requireApiAuth } from '../../../lib/auth';
 import { autoCompleteTask, checkAchievements } from '../../../lib/autoTask';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db: supabase, accessToken } = auth;
+    userId = user.id;
 
     const { session_id, ended_at, actual_hours, completed } = await request.json();
 
@@ -86,7 +88,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     });
 
   } catch (error: any) {
-    console.error('Fasting end error:', error);
+    console.error('[fasting/end] user:', userId, error);
     return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
   }
 };

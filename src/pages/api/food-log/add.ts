@@ -7,10 +7,12 @@ import { autoCompleteTask } from '../../../lib/autoTask';
 const MEAL_TASK_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
 
 export const POST: APIRoute = async ({ request, cookies }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db, accessToken } = auth;
+    userId = user.id;
 
     const body = await request.json();
     const { food_name, calories, protein_g, fat_g, carbs_g, meal_type, notes } = body;
@@ -48,7 +50,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return json({ success: true, entry: data });
 
   } catch (err: any) {
-    console.error('Food log add error:', err);
+    console.error('[food-log/add] user:', userId, err);
     return json({ error: 'Server error' }, 500);
   }
 };

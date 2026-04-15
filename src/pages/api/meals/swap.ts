@@ -3,10 +3,12 @@ import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db } = auth;
+    userId = user.id;
 
     const { original_recipe_id, reason } = await request.json();
     if (!original_recipe_id) return json({ error: 'original_recipe_id required' }, 400);
@@ -93,7 +95,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return json({ success: true, new_recipe: best });
 
   } catch (err: any) {
-    console.error('Swap error:', err);
+    console.error('[meals/swap] user:', userId, err);
     return json({ error: 'Server error' }, 500);
   }
 };

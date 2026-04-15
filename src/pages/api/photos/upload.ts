@@ -23,6 +23,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const auth = await requireApiAuth(cookies);
   if (!auth.ok) return auth.response;
   const { user, db } = auth;
+  const userId = user.id;
 
   let body: any;
   try { body = await request.json(); }
@@ -64,14 +65,25 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return json({ error: 'Image too large. Maximum size is 500KB.' }, 400);
   }
 
-  // Per-user photo count cap (prevent storage abuse)
-  const { count } = await db
-    .from('progress_photos')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id);
+  // Per-user lifetime cap + daily rate limit — both checked in parallel
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
 
-  if ((count ?? 0) >= 50) {
+  const [{ count: totalCount }, { count: todayCount }] = await Promise.all([
+    db.from('progress_photos')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id),
+    db.from('progress_photos')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', todayStart.toISOString()),
+  ]);
+
+  if ((totalCount ?? 0) >= 50) {
     return json({ error: 'Maximum of 50 photos allowed. Delete older photos to upload new ones.' }, 400);
+  }
+  if ((todayCount ?? 0) >= 5) {
+    return json({ error: 'Daily upload limit reached (5 per day). Try again tomorrow.' }, 429);
   }
 
   const today = new Date().toISOString().split('T')[0];
@@ -86,7 +98,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     .upload(storagePath, bytes, { contentType: mimeType, upsert: false });
 
   if (storageErr) {
-    console.error('Storage upload error:', storageErr);
+    console.error('[photos/upload] user:', userId, 'storage error:', storageErr);
     return json({ error: 'Server error' }, 500);
   }
 
@@ -98,7 +110,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   if (signedErr || !signedData?.signedUrl) {
     // Clean up the orphaned storage object
     await db.storage.from(BUCKET).remove([storagePath]);
-    console.error('Signed URL error:', signedErr);
+    console.error('[photos/upload] user:', userId, 'signed URL error:', signedErr);
     return json({ error: 'Server error' }, 500);
   }
 
@@ -117,7 +129,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   if (dbErr) {
     // Clean up the orphaned storage object
     await db.storage.from(BUCKET).remove([storagePath]);
-    console.error('Photo DB insert error:', dbErr);
+    console.error('[photos/upload] user:', userId, 'DB insert error:', dbErr);
     return json({ error: 'Server error' }, 500);
   }
 

@@ -92,6 +92,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const customData = payload.meta?.custom_data || {};
     const attrs      = payload.data?.attributes  || {};
 
+    // ── Replay-attack protection ──────────────────────────────────────────────
+    // The HMAC signature is unique per payload body. Inserting it into
+    // processed_webhooks (UNIQUE constraint) atomically prevents replays:
+    // a duplicate signature will fail with a 23505 unique violation.
+    const { error: dupErr } = await db
+      .from('processed_webhooks')
+      .insert({ signature, event_name: eventName || 'unknown' });
+
+    if (dupErr) {
+      if (dupErr.code === '23505') {
+        // Already processed — acknowledge so LemonSqueezy stops retrying
+        console.log(`[LS Webhook] Duplicate signature for ${eventName} — skipping`);
+        return json({ received: true, skipped: true, reason: 'duplicate' });
+      }
+      // Non-duplicate DB error — log but continue (don't block legitimate events)
+      console.error('[LS Webhook] processed_webhooks insert error:', dupErr.message);
+    }
+
     console.log(`[LS Webhook] Event: ${eventName}`);
 
     // ══════════════════════════════════════════════════════════════════════════

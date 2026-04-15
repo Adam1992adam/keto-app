@@ -2,10 +2,12 @@ import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db: supabase } = auth;
+    userId = user.id;
 
     const body = await request.json();
     const { full_name, weight_kg, height_cm, target_weight_kg } = body;
@@ -56,7 +58,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return json({ success: true, data });
 
   } catch (err: any) {
-    console.error('Profile update error:', err);
+    console.error('[profile/update] user:', userId, err);
     return json({ error: 'Server error' }, 500);
   }
 };

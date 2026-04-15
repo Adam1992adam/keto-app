@@ -3,10 +3,12 @@ import { requireApiAuth } from '../../../lib/auth';
 import { autoCompleteTask, checkAchievements } from '../../../lib/autoTask';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db: supabase, accessToken } = auth;
+    userId = user.id;
 
     const body = await request.json();
     // Accept both field name variants: weight/weight_kg, logged_date/date
@@ -23,7 +25,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       );
 
     if (logError) {
-      console.error('Weight log error:', logError);
+      console.error('[profile/add-weight] user:', userId, logError);
       return json({ error: 'Failed to add weight' }, 500);
     }
 
@@ -64,7 +66,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     checkAchievements(user.id, accessToken); // fire-and-forget
     return json({ success: true });
   } catch (err) {
-    console.error('Add weight error:', err);
+    console.error('[profile/add-weight] user:', userId, err);
     return json({ error: 'Server error' }, 500);
   }
 };

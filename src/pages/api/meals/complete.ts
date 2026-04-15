@@ -2,10 +2,12 @@ import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db } = auth;
+    userId = user.id;
 
     const body = await request.json();
     const { meal_type, recipe_id, day_number, action = 'complete', client_date } = body;
@@ -138,7 +140,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return json({ success: true, xp_earned: isNew ? 10 : 0, meals_today: mealsToday, followed, macros });
 
   } catch (err: any) {
-    console.error('Meal complete error:', err);
+    console.error('[meals/complete] user:', userId, err);
     return json({ error: 'Server error' }, 500);
   }
 };

@@ -4,10 +4,12 @@ import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
 
 export const PATCH: APIRoute = async ({ request, cookies }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db } = auth;
+    userId = user.id;
 
     const body = await request.json();
     const { id, food_name, calories, protein_g, fat_g, carbs_g, meal_type } = body;
@@ -47,7 +49,7 @@ export const PATCH: APIRoute = async ({ request, cookies }) => {
     return json({ success: true, entry: data });
 
   } catch (err: any) {
-    console.error('Food log update error:', err);
+    console.error('[food-log/update] user:', userId, err);
     return json({ error: 'Server error' }, 500);
   }
 };

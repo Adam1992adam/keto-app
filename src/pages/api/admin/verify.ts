@@ -32,7 +32,19 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
 
     const { password } = await request.json();
 
-    if (!ADMIN_PASSWORD || password !== ADMIN_PASSWORD) {
+    // Constant-time comparison — prevents timing attacks that === leaks.
+    // timingSafeEqual requires equal-length buffers; pad both to the same
+    // length so the loop always runs regardless of length mismatch.
+    const { timingSafeEqual } = await import('crypto');
+    const enc    = new TextEncoder();
+    const a      = enc.encode(String(password       ?? ''));
+    const b      = enc.encode(String(ADMIN_PASSWORD ?? ''));
+    const maxLen = Math.max(a.length, b.length);
+    const pa = new Uint8Array(maxLen); pa.set(a);
+    const pb = new Uint8Array(maxLen); pb.set(b);
+    const passwordsMatch = a.length === b.length && timingSafeEqual(pa, pb);
+
+    if (!ADMIN_PASSWORD || !passwordsMatch) {
       return new Response(JSON.stringify({ success: false, error: 'Invalid password' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },

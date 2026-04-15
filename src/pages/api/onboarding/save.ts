@@ -3,10 +3,12 @@ import { initializeUserJourney } from '../../../lib/supabase';
 import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db } = auth;
+    userId = user.id;
 
     const body = await request.json();
 
@@ -183,7 +185,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     });
 
   } catch (error: any) {
-    console.error('Onboarding save error:', error);
+    console.error('[onboarding/save] user:', userId, error);
     return new Response(JSON.stringify({ error: 'Server error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

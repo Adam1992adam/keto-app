@@ -68,9 +68,14 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
     if (content.length > 500)
       return json({ error: 'Comment too long (max 500 characters)' }, 400);
 
+    // Strip HTML tags before storing — defence-in-depth against XSS
+    const safe = content.trim().replace(/<[^>]*>/g, '').trim();
+    if (safe.length < 1)
+      return json({ error: 'Content required' }, 400);
+
     const { data: comment, error } = await db
       .from('community_comments')
-      .insert({ post_id, user_id: user.id, content: content.trim() })
+      .insert({ post_id, user_id: user.id, content: safe })
       .select('id, content, created_at')
       .maybeSingle();
 

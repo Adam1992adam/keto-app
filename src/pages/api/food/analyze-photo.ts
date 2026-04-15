@@ -8,10 +8,12 @@ import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db } = auth;
+    userId = user.id;
 
     const body = await request.json();
     const { imageBase64, imageType = 'image/jpeg', saveTo, mealType = 'other', date } = body;
@@ -74,7 +76,7 @@ Rules:
 
     if (!geminiRes.ok) {
       const err = await geminiRes.text();
-      console.error('Gemini error:', err);
+      console.error('[food/analyze-photo] user:', userId, 'Gemini error:', err);
       return json({ error: 'AI analysis failed. Please try again.' }, 502);
     }
 
@@ -98,22 +100,25 @@ Rules:
       }
     }
 
-    // Ensure numeric fields are numbers
+    // Clamp helper — same bounds as food-log/add.ts (cal≤9999, macros≤500g)
+    const clampCal   = (v: number) => Math.min(Math.max(Math.round(v),  0), 9999);
+    const clampMacro = (v: number) => Math.min(Math.max(Math.round(v * 10) / 10, 0),  500);
+
     const n = {
-      food_name:    String(nutrition.food_name    || 'Unknown Food'),
-      serving_size: String(nutrition.serving_size || '1 serving'),
-      calories:     Number(nutrition.calories     || 0),
-      protein_g:    Number(nutrition.protein_g    || 0),
-      fat_g:        Number(nutrition.fat_g        || 0),
-      carbs_g:      Number(nutrition.carbs_g      || 0),
-      fiber_g:      Number(nutrition.fiber_g      || 0),
-      net_carbs_g:  Number(nutrition.net_carbs_g  || 0),
-      sugar_g:      Number(nutrition.sugar_g      || 0),
+      food_name:    String(nutrition.food_name    || 'Unknown Food').slice(0, 200),
+      serving_size: String(nutrition.serving_size || '1 serving').slice(0, 100),
+      calories:     clampCal(Number(nutrition.calories    || 0)),
+      protein_g:    clampMacro(Number(nutrition.protein_g || 0)),
+      fat_g:        clampMacro(Number(nutrition.fat_g     || 0)),
+      carbs_g:      clampMacro(Number(nutrition.carbs_g   || 0)),
+      fiber_g:      clampMacro(Number(nutrition.fiber_g   || 0)),
+      net_carbs_g:  clampMacro(Number(nutrition.net_carbs_g || 0)),
+      sugar_g:      clampMacro(Number(nutrition.sugar_g   || 0)),
       keto_verdict: ['keto_friendly','caution','not_keto'].includes(nutrition.keto_verdict)
         ? nutrition.keto_verdict : 'caution',
       confidence:   ['low','medium','high'].includes(nutrition.confidence)
         ? nutrition.confidence : 'medium',
-      notes:        String(nutrition.notes || ''),
+      notes:        String(nutrition.notes || '').slice(0, 500),
       ingredients:  Array.isArray(nutrition.ingredients) ? nutrition.ingredients : [],
     };
 
@@ -132,14 +137,14 @@ Rules:
         serving_size: n.serving_size,
         source:      'photo_ai',
       });
-      if (saveErr) console.error('Save food log error:', saveErr);
+      if (saveErr) console.error('[food/analyze-photo] user:', userId, 'save error:', saveErr);
       return json({ success: true, nutrition: n, saved: !saveErr });
     }
 
     return json({ success: true, nutrition: n });
 
   } catch (err) {
-    console.error('analyze-photo error:', err);
+    console.error('[food/analyze-photo] user:', userId, err);
     return json({ error: 'Server error' }, 500);
   }
 };

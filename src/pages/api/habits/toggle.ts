@@ -13,6 +13,22 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (!habit_id) return json({ error: 'habit_id required' }, 400);
     const today = date || new Date().toISOString().split('T')[0];
 
+    // Reject future day_number — prevents farming XP for days not yet reached
+    if (day_number) {
+      const parsed = parseInt(day_number, 10);
+      if (!Number.isNaN(parsed)) {
+        const { data: journey } = await supabase
+          .from('user_journey')
+          .select('current_day')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        const currentDay = journey?.current_day ?? 1;
+        if (parsed > currentDay) {
+          return json({ error: 'Cannot complete habits for a future day' }, 403);
+        }
+      }
+    }
+
     // Check if already completed
     const { data: existing } = await supabase
       .from('habit_completions')

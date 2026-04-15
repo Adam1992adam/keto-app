@@ -6,10 +6,12 @@ import { requireApiAuth } from '../../../lib/auth';
 import { autoCompleteTask, checkAchievements } from '../../../lib/autoTask';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db, accessToken } = auth;
+    userId = user.id;
 
     const body = await request.json();
 
@@ -140,7 +142,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return json({ success: true, xp_earned: xpAmount, autoAdvice });
 
   } catch (error: any) {
-    console.error('Checkin save error:', error);
+    console.error('[checkin/save] user:', userId, error);
     return json({ error: 'Server error' }, 500);
   }
 };

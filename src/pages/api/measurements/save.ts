@@ -33,7 +33,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     .upsert(row, { onConflict: 'user_id,logged_date' });
 
   if (error) {
-    console.error('Measurements save error:', error);
+    console.error('[measurements/save] user:', user.id, error);
     return json({ error: 'Server error' }, 500);
   }
 

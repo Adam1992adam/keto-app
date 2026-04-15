@@ -4,10 +4,12 @@ import { getMealCycleDays } from '../../../lib/supabase';
 import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db: supabase } = auth;
+    userId = user.id;
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -21,7 +23,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const today = new Date().toISOString().split('T')[0];
     const now   = new Date();
 
-    // Rate limit: max 20 messages per user per day
+    // Rate limit: max 20 messages per user per UTC day.
+    // today is derived from toISOString() (always UTC), and T00:00:00Z pins windowStart
+    // to UTC midnight — both sides of the window are UTC-consistent.
+    // chat_messages.created_at is Supabase DEFAULT now() which is also UTC.
+    // Intentional: the window resets at UTC midnight, not the user's local midnight.
     const windowStart = new Date(today + 'T00:00:00Z').toISOString();
     const { count: msgCount } = await supabase
       .from('chat_messages')
@@ -278,7 +284,7 @@ ${weightText}
 
     if (!geminiRes.ok) {
       const errText = await geminiRes.text();
-      console.error('Gemini API error:', errText);
+      console.error('[chat/gemini] user:', userId, 'Gemini API error:', errText);
       return json({ error: 'AI service temporarily unavailable. Please try again.' }, 500);
     }
 
@@ -297,7 +303,7 @@ ${weightText}
     return json({ reply });
 
   } catch (err: any) {
-    console.error('Chat error:', err);
+    console.error('[chat/gemini] user:', userId, err);
     return json({ error: 'Server error' }, 500);
   }
 };
