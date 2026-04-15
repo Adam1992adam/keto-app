@@ -3,7 +3,6 @@ import { requireAuth } from '../../lib/auth';
 import DashNav from '../../components/DashNav.astro';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
 import Heart from 'lucide-astro/Heart';
-import Star from 'lucide-astro/Star';
 import UtensilsCrossed from 'lucide-astro/UtensilsCrossed';
 import Clock from 'lucide-astro/Clock';
 import Flame from 'lucide-astro/Flame';
@@ -22,12 +21,34 @@ const t    = getTranslator(lang);
 
 const { data: favs } = await db
   .from('recipe_favorites')
-  .select('recipe_id, recipes(id, title, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, tags)')
+  .select('recipe_id, created_at, recipes(id, title, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, tags, difficulty, book_id)')
   .eq('user_id', user.id)
   .order('created_at', { ascending: false });
 
-const favorites = (favs || []).map((f) => f.recipes).filter(Boolean);
+const favorites = (favs || []).map((f: any) => ({
+  ...(f.recipes || {}),
+  saved_at: f.created_at,
+})).filter((r: any) => r.id);
 const favCount = favorites.length;
+
+// Derive book category label from book_id prefix
+function bookCategory(bookId: string | null): string {
+  if (!bookId) return '';
+  if (bookId.startsWith('sm')) return 'Smoothies';
+  if (bookId.startsWith('bk')) return 'Baking';
+  if (bookId.startsWith('ds')) return 'Desserts';
+  if (bookId.startsWith('b'))  return 'Breakfast';
+  if (bookId.startsWith('l'))  return 'Lunch';
+  if (bookId.startsWith('d'))  return 'Dinner';
+  if (bookId.startsWith('s'))  return 'Snacks';
+  return '';
+}
+
+// Collect unique meal-type tags present in the user's favorites for filter chips
+const MEAL_TAGS = ['breakfast','lunch','dinner','snack','dessert','smoothie','baking'];
+const presentTags = Array.from(new Set(
+  favorites.flatMap((r: any) => (r.tags || []).filter((t: string) => MEAL_TAGS.includes(t)))
+));
 ---
 
 <!DOCTYPE html>
@@ -76,39 +97,78 @@ const favCount = favorites.length;
       color: var(--green, #10b981);
     }
 
-    /* ── Search ── */
-    .search-wrap {
-      margin-bottom: 28px;
+    /* ── Toolbar ── */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: .7rem;
+      margin-bottom: 20px;
       animation: fadeUp .5s .05s ease both;
     }
     .search-box {
       position: relative;
-      max-width: 400px;
+      flex: 1;
+      min-width: 180px;
+      max-width: 340px;
     }
     .search-box input {
       width: 100%;
       background: var(--card, #0d1a0f);
       border: 1px solid var(--border, rgba(16,185,129,.1));
       border-radius: 12px;
-      padding: 12px 16px 12px 42px;
+      padding: 10px 14px 10px 38px;
       color: var(--text, #dfeedd);
       font-family: 'DM Sans', sans-serif;
-      font-size: .95rem;
+      font-size: .9rem;
       outline: none;
       transition: border-color .2s;
     }
-    .search-box input:focus {
-      border-color: var(--green, #10b981);
-    }
+    .search-box input:focus { border-color: var(--green, #10b981); }
     .search-box input::placeholder { color: var(--soft, #4d7055); }
     .search-icon {
       position: absolute;
-      left: 14px;
+      left: 12px;
       top: 50%;
       transform: translateY(-50%);
-      font-size: 1rem;
       pointer-events: none;
+      color: var(--soft, #4d7055);
     }
+    .sort-select {
+      background: var(--card, #0d1a0f);
+      border: 1px solid var(--border, rgba(16,185,129,.1));
+      border-radius: 10px;
+      padding: 9px 12px;
+      color: var(--text, #dfeedd);
+      font-family: 'DM Sans', sans-serif;
+      font-size: .85rem;
+      outline: none;
+      cursor: pointer;
+    }
+    .sort-select:focus { border-color: var(--green, #10b981); }
+
+    /* ── Tag filter chips ── */
+    .tag-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .4rem;
+      margin-bottom: 20px;
+      animation: fadeUp .5s .08s ease both;
+    }
+    .tf-chip {
+      padding: .28rem .7rem;
+      border-radius: 20px;
+      font-size: .75rem;
+      font-weight: 600;
+      border: 1.5px solid var(--border, rgba(16,185,129,.1));
+      background: transparent;
+      color: var(--soft, #4d7055);
+      cursor: pointer;
+      transition: all .15s;
+      text-transform: capitalize;
+    }
+    .tf-chip:hover { border-color: var(--border2, rgba(16,185,129,.22)); color: var(--text, #dfeedd); }
+    .tf-chip.active { background: var(--green, #10b981); border-color: var(--green, #10b981); color: #fff; }
 
     /* ── Grid ── */
     .recipe-grid {
@@ -229,6 +289,7 @@ const favCount = favorites.length;
       display: flex;
       gap: 5px;
       flex-wrap: wrap;
+      align-items: center;
     }
     .tag-chip {
       background: var(--card2, #111f13);
@@ -238,6 +299,27 @@ const favCount = favorites.length;
       font-size: .7rem;
       color: var(--soft, #4d7055);
     }
+    .book-badge {
+      font-size: .68rem;
+      font-weight: 700;
+      padding: .15rem .5rem;
+      border-radius: 6px;
+      background: rgba(59,130,246,.12);
+      color: #60a5fa;
+      border: 1px solid rgba(59,130,246,.2);
+      white-space: nowrap;
+    }
+    .diff-badge {
+      font-size: .65rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: .13rem .42rem;
+      border-radius: 5px;
+      letter-spacing: .05em;
+    }
+    .diff-badge.easy   { background: rgba(16,185,129,.15);  color: #34d399; }
+    .diff-badge.medium { background: rgba(245,158,11,.15);  color: #fbbf24; }
+    .diff-badge.hard   { background: rgba(239,68,68,.15);   color: #f87171; }
 
     /* ── Empty state ── */
     .empty-state {
@@ -301,17 +383,28 @@ const favCount = favorites.length;
     </div>
 
     {favCount > 0 && (
-      <div class="search-wrap">
-        <div class="search-box">
-          <span class="search-icon"><Search size={16} /></span>
-          <input
-            type="text"
-            id="searchInput"
-            placeholder="Search your favourites…"
-            autocomplete="off"
-          />
+      <>
+        <div class="toolbar">
+          <div class="search-box">
+            <span class="search-icon"><Search size={15} /></span>
+            <input type="text" id="searchInput" placeholder="Search your favourites…" autocomplete="off" />
+          </div>
+          <select class="sort-select" id="sortSelect">
+            <option value="newest">Newest saved</option>
+            <option value="carbs">Lowest carbs</option>
+            <option value="protein">Highest protein</option>
+            <option value="calories">Fewest calories</option>
+          </select>
         </div>
-      </div>
+        {presentTags.length > 0 && (
+          <div class="tag-filters">
+            <button class="tf-chip active" data-tag="all">All</button>
+            {presentTags.map((tag: string) => (
+              <button class="tf-chip" data-tag={tag}>{tag}</button>
+            ))}
+          </div>
+        )}
+      </>
     )}
 
     {favCount === 0 ? (
@@ -325,13 +418,21 @@ const favCount = favorites.length;
       <>
         <div class="no-results" id="noResults">No recipes match your search.</div>
         <div class="recipe-grid" id="recipeGrid">
-          {favorites.map((recipe, idx) => {
-            const tags = Array.isArray(recipe.tags) ? recipe.tags.slice(0, 3) : [];
+          {favorites.map((recipe: any, idx: number) => {
+            const tags = Array.isArray(recipe.tags) ? recipe.tags : [];
+            const displayTags = tags.filter((t: string) => !MEAL_TAGS.includes(t)).slice(0, 2);
             const delay = (idx * 0.06).toFixed(2);
+            const bookCat = bookCategory(recipe.book_id || null);
+            const diff = recipe.difficulty?.toLowerCase() || '';
             return (
               <div
                 class="recipe-card"
                 data-title={recipe.title?.toLowerCase()}
+                data-tags={tags.join(',')}
+                data-carbs={recipe.net_carbs || 999}
+                data-protein={recipe.protein || 0}
+                data-calories={recipe.calories || 0}
+                data-saved={recipe.saved_at || ''}
                 style={`animation-delay:${delay}s`}
                 id={`card-${recipe.id}`}
               >
@@ -356,18 +457,18 @@ const favCount = favorites.length;
                     {recipe.cook_time && <span><Flame size={13} style="vertical-align:middle;margin-right:.2rem;" /> {recipe.cook_time}m cook</span>}
                   </div>
                   <div class="macro-row">
-                    {recipe.calories && <span class="macro-pill pill-cal">{recipe.calories} kcal</span>}
-                    {recipe.protein  && <span class="macro-pill pill-pro">{recipe.protein}g P</span>}
-                    {recipe.fat      && <span class="macro-pill pill-fat">{recipe.fat}g F</span>}
+                    {recipe.calories  && <span class="macro-pill pill-cal">{recipe.calories} kcal</span>}
+                    {recipe.protein   && <span class="macro-pill pill-pro">{recipe.protein}g P</span>}
+                    {recipe.fat       && <span class="macro-pill pill-fat">{recipe.fat}g F</span>}
                     {recipe.net_carbs && <span class="macro-pill pill-carb">{recipe.net_carbs}g C</span>}
                   </div>
-                  {tags.length > 0 && (
-                    <div class="tags-row">
-                      {tags.map((tag) => (
-                        <span class="tag-chip">{tag}</span>
-                      ))}
-                    </div>
-                  )}
+                  <div class="tags-row">
+                    {bookCat && <span class="book-badge">📖 {bookCat}</span>}
+                    {diff && <span class={`diff-badge ${diff}`}>{diff}</span>}
+                    {displayTags.map((tag: string) => (
+                      <span class="tag-chip">{tag}</span>
+                    ))}
+                  </div>
                 </div>
               </div>
             );
@@ -378,25 +479,73 @@ const favCount = favorites.length;
   </div>
 
   <script is:inline>
-    // Search filter
+    var activeTag  = 'all';
+    var activeSort = 'newest';
+
+    function applyFilters() {
+      var query = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
+      var grid  = document.getElementById('recipeGrid');
+      if (!grid) return;
+
+      var cards = Array.from(grid.querySelectorAll('.recipe-card'));
+      var visible = 0;
+
+      cards.forEach(function(card) {
+        var title = card.getAttribute('data-title') || '';
+        var tags  = card.getAttribute('data-tags')  || '';
+
+        var passSearch = !query || title.includes(query);
+        var passTag    = activeTag === 'all' || tags.split(',').indexOf(activeTag) !== -1;
+
+        var show = passSearch && passTag;
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+
+      var noResults = document.getElementById('noResults');
+      if (noResults) noResults.style.display = visible === 0 ? 'block' : 'none';
+    }
+
+    function applySort() {
+      var grid = document.getElementById('recipeGrid');
+      if (!grid) return;
+      var cards = Array.from(grid.querySelectorAll('.recipe-card'));
+
+      cards.sort(function(a, b) {
+        if (activeSort === 'carbs')    return parseFloat(a.dataset.carbs)    - parseFloat(b.dataset.carbs);
+        if (activeSort === 'protein')  return parseFloat(b.dataset.protein)  - parseFloat(a.dataset.protein);
+        if (activeSort === 'calories') return parseFloat(a.dataset.calories) - parseFloat(b.dataset.calories);
+        // newest: sort by saved_at desc (lexicographic ISO string comparison works)
+        return (b.dataset.saved || '') > (a.dataset.saved || '') ? 1 : -1;
+      });
+
+      cards.forEach(function(c) { grid.appendChild(c); });
+    }
+
+    // Search
     var searchInput = document.getElementById('searchInput');
     if (searchInput) {
-      searchInput.addEventListener('input', function() {
-        var query = this.value.toLowerCase().trim();
-        var cards = document.querySelectorAll('#recipeGrid .recipe-card');
-        var visible = 0;
-        cards.forEach(function(card) {
-          var title = card.getAttribute('data-title') || '';
-          var show = !query || title.includes(query);
-          card.style.display = show ? '' : 'none';
-          if (show) visible++;
-        });
-        var noResults = document.getElementById('noResults');
-        if (noResults) {
-          noResults.style.display = visible === 0 ? 'block' : 'none';
-        }
+      searchInput.addEventListener('input', applyFilters);
+    }
+
+    // Sort
+    var sortSelect = document.getElementById('sortSelect');
+    if (sortSelect) {
+      sortSelect.addEventListener('change', function() {
+        activeSort = this.value;
+        applySort();
       });
     }
+
+    // Tag filter chips
+    document.querySelectorAll('.tf-chip').forEach(function(chip) {
+      chip.addEventListener('click', function() {
+        activeTag = this.dataset.tag;
+        document.querySelectorAll('.tf-chip').forEach(function(c) { c.classList.remove('active'); });
+        this.classList.add('active');
+        applyFilters();
+      });
+    });
 
     // Remove from favourites
     window.removeFav = function(event, recipeId) {
@@ -420,15 +569,12 @@ const favCount = favorites.length;
           card.style.transform = 'scale(.92)';
           setTimeout(function() {
             card.remove();
-            // Update subtitle count
             var remaining = document.querySelectorAll('#recipeGrid .recipe-card').length;
             var subtitle = document.querySelector('.subtitle');
             if (subtitle) {
               subtitle.innerHTML = 'You have <strong>' + remaining + '</strong> saved recipe' + (remaining === 1 ? '' : 's');
             }
-            if (remaining === 0) {
-              window.location.reload();
-            }
+            if (remaining === 0) window.location.reload();
           }, 320);
         }
       })
