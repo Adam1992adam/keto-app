@@ -1,5 +1,5 @@
 # CLAUDE.md — Keto Journey App — Complete Project Reference
-> Last updated: 2026-04-14 | Astro 4 + Supabase + Vercel | Payment: LemonSqueezy
+> Last updated: 2026-04-15 | Astro 4 + Supabase + Vercel | Payment: LemonSqueezy
 
 ---
 
@@ -24,10 +24,23 @@
 | 14 | Meal Swap Suggestions | ✅ Done | ⇄ button on food-log rows → macro-similar recipe suggestions → replace entry |
 | 15 | Weight Projection Chart | ✅ Done | SVG projection on progress.astro: historical line + dashed goal trajectory + "at current pace" |
 | 16 | Onboarding Improvements | ✅ Done | welcome.astro: weight goal timeline, milestone track, fasting protocol card, dietary restrictions |
-| 17 | Mobile Recipe Photo Gallery | 🔧 Next | Fullscreen swipe gallery on recipe/[id].astro; swipe gesture support for mobile |
+| 17 | Mobile Recipe Photo Gallery | ✅ Done | Fullscreen lightbox on recipe/[id].astro; swipe-down + Esc to close |
 | 18 | Proactive Insight Engine | ✅ Done | 14 pattern detectors → auto-generated coaching insights |
 | 19 | Community Moderation | ✅ Done | Admin moderation tools for community posts |
 | 20 | Daily Steps Tracker | ✅ Done | /dashboard/steps with chart and manual entry |
+
+### Hardening Sprint (2026-04-15) — all ✅ Done
+| # | Fix | Notes |
+|---|-----|-------|
+| H1 | Rate limiting | login (5/15min), forgot-password (3/15min), signup (5/10min), admin (5/15min) via `src/lib/rateLimit.ts` |
+| H2 | Food log entry editing | PATCH /api/food-log/update — ownership check + upper-bound validation |
+| H3 | Parallel DB queries | checkin.astro + profile.astro converted to Promise.allSettled |
+| H4 | Fasting race condition | 60s idempotency window in /api/fasting/start.ts |
+| H5 | Community ban on reactions | /api/community/posts/[id]/react.ts now checks community_banned |
+| H6 | Numeric bounds | food-log/add.ts: calories≤9999, macros≤500g, meal_type allowlist; profile/update.ts: weight 20–500kg, height 50–300cm |
+| H7 | Removed dead endpoint | /api/recipes/rate.ts deleted (star rating removed from UI) |
+| H8 | Error UI | guide, keto-calculator, welcome, habits — try-catch + 503 fallback pages |
+| H9 | Weight chart range selector | 30d/60d/90d toggle buttons, client-side JS redraw, DB fetch expanded to 90 entries |
 
 ### Push Notifications — Setup Notes (Step 1)
 ```
@@ -59,6 +72,7 @@ src/
 ├── lib/
 │   ├── supabase.ts              ← Supabase client + all helper functions + PLANS config
 │   ├── auth.ts                  ← requireAuth() + requireLogin() + requireApiAuth() helpers
+│   ├── rateLimit.ts             ← In-process sliding-window rate limiter (Map-based, Vercel-safe)
 │   ├── push.ts                  ← sendPushToUser() + sendPushToAll()
 │   └── smartMeals.ts            ← Smart Meal Intelligence Engine
 ├── components/
@@ -72,17 +86,17 @@ src/
 │   │   ├── index.astro          ← Main dashboard ✅ WORKING
 │   │   ├── checkin.astro        ← Daily check-in form ✅
 │   │   ├── recipes.astro        ← Recipe browser ✅
-│   │   ├── recipe/[id].astro    ← Recipe detail (ingredients fix: string+object format) ✅
+│   │   ├── recipe/[id].astro    ← Recipe detail (ingredients fix: string+object format; lightbox) ✅
 │   │   ├── recipes/[bookId].astro ← Recipe book detail ✅
 │   │   ├── browse.astro         ← All recipes browser ✅
 │   │   ├── favorites.astro      ← Saved favorite recipes ✅
 │   │   ├── food-photo.astro     ← AI food photo analyzer ✅
-│   │   ├── food-log.astro       ← Daily food log + meal swap suggestions ✅
-│   │   ├── progress.astro       ← Charts, weight logs, body measurements, projections, achievements ✅
+│   │   ├── food-log.astro       ← Daily food log + meal swap + edit entry ✅
+│   │   ├── progress.astro       ← Charts, weight logs, body measurements, projections ✅
 │   │   ├── shopping.astro       ← Shopping list (dynamic per tier) ✅
 │   │   ├── fasting.astro        ← Fasting timer ✅
 │   │   ├── weekly.astro         ← Weekly report ✅
-│   │   ├── profile.astro        ← User profile + achievements ✅
+│   │   ├── profile.astro        ← User profile + achievements + language + avatar ✅
 │   │   ├── ai-coach.astro       ← Elite only — Gemini chat ✅
 │   │   ├── keto-calculator.astro← TDEE + macro calculator ✅
 │   │   ├── habits.astro         ← Habit tracking ✅
@@ -110,15 +124,15 @@ src/
 │       ├── checkin/save.ts      ← POST /api/checkin/save ✅ XP via award_xp RPC
 │       ├── tasks/complete.ts    ← POST /api/tasks/complete ✅ complete_task RPC + fallback chain
 │       ├── notifications/       ← index, generate, save, push-subscribe/unsubscribe/send, preferences
-│       ├── fasting/             ← start.ts, end.ts (XP via award_xp RPC)
+│       ├── fasting/             ← start.ts (idempotent), end.ts (XP via award_xp RPC)
 │       ├── meals/               ← today.ts, swap.ts, complete.ts
 │       ├── food/                ← analyze-photo.ts (Gemini), suggest-swaps.ts
-│       ├── food-log/            ← add.ts, delete.ts, entries.ts
+│       ├── food-log/            ← add.ts, update.ts (PATCH), delete.ts, entries.ts
 │       ├── measurements/save.ts ← POST /api/measurements/save ✅
-│       ├── profile/             ← update.ts, add-weight.ts
+│       ├── profile/             ← update.ts, add-weight.ts, update-avatar.ts, update-language.ts, update-units.ts
 │       ├── weekly/save.ts       ← XP via award_xp RPC
-│       ├── recipes/             ← favorite.ts (rate.ts REMOVED)
-│       ├── community/           ← posts.ts + [id]/comments.ts + moderation
+│       ├── recipes/             ← favorite.ts  (rate.ts DELETED — star rating removed)
+│       ├── community/           ← posts.ts + [id]/comments.ts + [id]/react.ts + moderation
 │       ├── lemonsqueezy/        ← webhook.ts, portal.ts, verify-purchase.ts
 │       ├── referrals/           ← 3 endpoints
 │       ├── admin/               ← verify, activate-pending, delete-pending, update-user
@@ -282,8 +296,8 @@ const { user, profile, db } = auth;
 ### requireApiAuth — use in ALL API routes
 ```typescript
 import { requireApiAuth } from '../../../lib/auth';
-const auth = await requireApiAuth(request);
-if ('error' in auth) return json({ error: auth.error }, auth.status);
+const auth = await requireApiAuth(cookies);
+if (!auth.ok) return auth.response;
 const { user, db } = auth;
 ```
 
@@ -350,7 +364,7 @@ var x = myVar;  // OK
 
 ---
 
-## 9. NOTIFICATIONS SYSTEM ✅ BUG FIXED
+## 9. NOTIFICATIONS SYSTEM ✅
 
 ### Table: `notifications`
 ```sql
@@ -372,24 +386,9 @@ expires_at timestamptz, created_at timestamptz
 - **MILESTONE_TYPES** (blocked once generated): `welcome`, `day1_start`, `weight_progress`, `milestone_*`, `streak_*`, `level_up_*`
 - **DAILY_TYPES** (deleted before regenerating): `checkin_reminder`, `streak_warning`, `incomplete_tasks`, `weight_reminder`, `fasting_active`, `low_water`, `weekly_review`, `energy_trend`
 
-### Notification types
-- `checkin_reminder` — if no checkin today
-- `streak_warning` — if has streak + no checkin today
-- `incomplete_tasks` — if pending tasks
-- `weight_reminder` — if 2+ days since last weigh-in
-- `milestone_N` — day milestones (1,3,7,10,14,21,30)
-- `streak_N` — streak milestones (3,7,14,21,30)
-- `level_up_N` — level up celebration
-- `weight_progress` — 25/50/75% to goal
-- `fasting_active` — fasting tip while active
-- `low_water` — if checked in with < 6 glasses
-- `weekly_review` — last 2 days of week
-- `energy_trend` — 3 days of low energy
-- `welcome` — first time only
-
 ---
 
-## 10. MEAL SWAP SYSTEM ✅ FIXED
+## 10. MEAL SWAP SYSTEM ✅
 
 ### `/api/meals/swap.ts` — correct field names
 ```typescript
@@ -400,7 +399,7 @@ expires_at timestamptz, created_at timestamptz
 // Records in meal_swaps: { user_id, original_recipe_id, swap_recipe_id, reason, swap_date }
 ```
 
-### Food-log Swap Suggestions (`/api/food/suggest-swaps.ts`) ✅ NEW
+### Food-log Swap Suggestions (`/api/food/suggest-swaps.ts`) ✅
 ```typescript
 // GET /api/food/suggest-swaps?calories=X&protein_g=Y&fat_g=Z&carbs_g=W
 // Macro similarity: dCal*2 + dProt*1 + dFat*1 + dCarb*1.5 (lower = better match)
@@ -409,11 +408,12 @@ expires_at timestamptz, created_at timestamptz
 // food-log.astro: ⇄ button per row → modal → "Use" button replaces entry
 ```
 
-### Dietary restriction checks (tag/title based)
+### Food Log Entry Editing ✅ NEW
 ```typescript
-no_pork:    tags.includes('pork') || title contains bacon/ham/prosciutto/chorizo/sausage
-vegetarian: title contains chicken/beef/steak/lamb/duck/pork
-no_seafood: tags include seafood/omega-3/pescatarian OR title contains salmon/tuna/shrimp/etc.
+// PATCH /api/food-log/update — edit existing entry
+// Validates: id required, food_name required, cal≤9999, macros≤500g, meal_type allowlist
+// Ownership enforced: .eq('id', id).eq('user_id', user.id)
+// UI: ✏ button per row → reuses Add modal in edit-mode → Save Changes button
 ```
 
 ---
@@ -433,7 +433,7 @@ no_seafood: tags include seafood/omega-3/pescatarian OR title contains salmon/tu
 
 ---
 
-## 12. WEIGHT LOGS PATTERN ✅ CORRECTED
+## 12. WEIGHT LOGS PATTERN ✅
 
 ```typescript
 // Fields are: weight (NOT weight_kg) and logged_date (NOT date)
@@ -441,10 +441,11 @@ const { data: weightLogs } = await supabase
   .from('weight_logs')
   .select('weight, logged_date')
   .eq('user_id', userId)
-  .order('logged_date', { ascending: false })
-  .limit(8);
+  .gte('logged_date', ninetyDaysAgo)   // progress.astro fetches 90 days for range selector
+  .order('logged_date', { ascending: true })
+  .limit(90);
 
-const latestWeight = weightLogs?.[0]?.weight || startWeight;
+const latestWeight = weightLogs?.[weightLogs.length - 1]?.weight || startWeight;
 // Start weight from onboarding_data.current_weight (NOT profiles.weight_kg)
 const startWeight = onboarding?.current_weight || profile.weight_kg || 0;
 
@@ -454,6 +455,13 @@ await supabase.from('weight_logs').upsert(
   { onConflict: 'user_id,logged_date' }  // NOT 'user_id,date'
 );
 ```
+
+### Weight Chart Range Selector ✅ NEW (progress.astro)
+- DB fetches last 90 days (limit 90, gte ninetyDaysAgo)
+- Three toggle buttons: `30d / 60d / 90d` — rendered above the SVG chart
+- Client-side JS (`define:vars={{ wRaw, wUnit, wImperial }}`) redraws SVG on click
+- Same bezier path algorithm as SSR — smooth curves, tooltips, axis ticks
+- Default: 30d (or 90d if fewer than 5 entries)
 
 ---
 
@@ -471,15 +479,24 @@ const { data: activeFast } = await supabase
   .maybeSingle();
 ```
 
+### Fasting Start Idempotency ✅ FIXED
+```typescript
+// /api/fasting/start.ts — prevents duplicate sessions on double-click
+// If active session was started within last 60s → return it (idempotent)
+// If active session is older than 60s → close it, then insert new one (intentional restart)
+// end.ts already had idempotency: if ended_at !== null → return previously awarded XP
+```
+
 ---
 
-## 14. AI COACH (gemini.ts) ✅ FIXED
+## 14. AI COACH (gemini.ts) ✅
 
-Fixed bugs:
 - Table name: `user_journey` (NOT `user_journeys` — no 's')
 - Weight fields: `weight` + `logged_date` (NOT `weight_kg`/`date`)
 - Use `.maybeSingle()` on weight query (not `.single()` — crashes if no logs)
 - System prompt uses `recentWeight?.weight` (not `.weight_kg`)
+- Chat history limited to last 14 messages (context window management)
+- Rate limit: 20 messages per day per user
 
 ---
 
@@ -520,12 +537,6 @@ Path C: neither → pending_activations row for verify-purchase flow ✅
 `order_created`, `order_refunded`, `subscription_created`, `subscription_updated`,
 `subscription_cancelled`, `subscription_expired`, `subscription_payment_success`,
 `subscription_payment_failed`, `subscription_payment_recovered`, `subscription_resumed`
-
-### Testing payments (test-webhook.mjs)
-```bash
-LEMONSQUEEZY_WEBHOOK_SECRET=your_secret node test-webhook.mjs all --local
-LEMONSQUEEZY_WEBHOOK_SECRET=your_secret node test-webhook.mjs order_created --tier pro --email test@test.com
-```
 
 ---
 
@@ -583,11 +594,20 @@ function json(data: any, status = 200) {
   });
 }
 ```
-**Note**: Admin routes (`/api/admin/*.ts`) use `new Response(JSON.stringify(...))` directly — acceptable, low priority to standardize.
+
+### Rate Limiting Pattern (src/lib/rateLimit.ts)
+```typescript
+import { checkRateLimit, getClientIp } from '../../../lib/rateLimit';
+const ip = getClientIp(request);
+const { allowed, retryAfterSec } = checkRateLimit(`login:${ip}`, 5, 15 * 60 * 1000);
+if (!allowed) return json({ error: `Too many requests. Try again in ${retryAfterSec}s.` }, 429);
+```
+- Applied to: login (5/15min), forgot-password (3/15min), signup (5/10min), admin verify (5/15min)
+- In-process Map — survives within a warm Vercel instance; Supabase auth throttles as second layer
 
 ---
 
-## 18. SHOPPING LIST PATTERN ✅ FIXED
+## 18. SHOPPING LIST PATTERN ✅
 
 ```typescript
 import { getMaxJourneyDays } from '../../lib/supabase';
@@ -604,40 +624,48 @@ Array.from({ length: maxWeeks }, (_, i) => i + 1)
 
 ---
 
-## 19. WHAT WORKS (verified 2026-04-14)
+## 19. WHAT WORKS (verified 2026-04-15)
 
 ### ✅ Fully Working
 - Auth flow (login/signup/cookies) via `requireAuth()` / `requireLogin()` / `requireApiAuth()`
+- Rate limiting on login, forgot-password, signup, admin endpoints
 - Dashboard: current day advances correctly on load
 - Dashboard: meals load with plan-specific data + `basic_30` fallback
 - Task completion with XP (RPC with fallback chain)
 - Check-in form + save with XP; duplicate warning shown if already submitted
-- Recipes browser + detail — ingredients display both string and object formats ✅
+- Recipes browser + detail — ingredients display both string and object formats
+- Recipe detail: fullscreen lightbox on hero image (swipe-down + Esc to close)
 - Recipe favorites (heart button, /dashboard/favorites)
-- Star rating REMOVED from recipe detail
+- Star rating REMOVED from recipe detail; /api/recipes/rate.ts DELETED
 - Progress charts + weight log modal + projection SVG
+- Weight chart: 30d/60d/90d range selector (client-side JS redraw)
 - Body measurements tracking
 - Shopping list (dynamic weeks per tier)
-- Fasting timer (start/end with correct XP)
+- Fasting timer (start/end with correct XP; idempotent start — 60s dedup)
 - Notifications panel (daily types refresh; push notifications)
-- Community feed + moderation
+- Community feed + moderation; ban enforced on posts + comments + reactions
 - AI Coach (Gemini 1.5 Flash — Elite only)
 - Weekly report with correct XP
-- Profile with real DB achievements
+- Profile: achievements, language selector (EN/FR/DE/ES/PT), avatar picker
 - Ketone tracker + chart
 - Daily steps tracker
 - Food Photo Analyzer (Gemini)
-- Meal swap suggestions on food-log rows
+- Food log: add + edit (PATCH) + delete + meal swap suggestions
 - LemonSqueezy: all 10 webhook events, billing portal, verify-purchase
-- Expired subscription: direct re-upgrade with user_id preserved (no re-registration needed)
+- Expired subscription: direct re-upgrade with user_id preserved
 - Multi-language support (EN/FR/DE/ES/PT) via getTranslator() + t()
 - Push notifications via VAPID
 - Referral system (150 XP per referral)
+- Error UI: guide, keto-calculator, welcome, habits all have try-catch + 503 fallback
 
-### ⚠️ Known Gaps / Next Up
-- Recipe photo gallery on mobile (Item 17 in roadmap) — currently single hero image only
-- ai-coach.astro needs @media queries for narrow (<400px) viewports
-- guide.astro / keto-calculator.astro — DB calls without explicit try-catch error UI
+### ⚠️ Known Gaps — Next Priorities
+- **Webhook replay attacks**: LemonSqueezy webhook verifies HMAC but does not validate timestamp (could replay a valid webhook hours later). Fix: check timestamp within ±5min window + store processed webhook IDs.
+- **Admin timing attack**: Admin password comparison is string equality (`===`), not constant-time. Fix: use `crypto.timingSafeEqual()`.
+- **Photo upload rate limit**: Per-user cap is 50 photos but no daily rate limit — user could upload 50 in one session. Fix: add 5/day rate limit.
+- **Habit completion — future days**: day_number is accepted from client without validating it is ≤ user's current_day. Fix: fetch journey and reject future day_number.
+- **Community posts N+1**: posts.ts fetches posts then makes separate queries for profiles and reactions. Already batched with Promise.all, but could be a single JOIN query.
+- **Food photo analyzer numeric validation**: AI-returned calories/macros not capped before storage. Fix: apply same bounds as food-log/add.ts (cal≤9999, macros≤500g).
+- **ai-coach.astro**: needs @media queries for narrow (<400px) viewports.
 
 ---
 
@@ -675,15 +703,6 @@ VAPID_EMAIL=mailto:your@email.com
 - `src/pages/api/cron/daily-push.ts` — daily cron: sends morning reminder + streak warning
 - `generate.ts` — sends push for urgent notifications (streak_warning, incomplete_tasks)
 
-### Notification triggers
-| Trigger | When | Type |
-|---------|------|------|
-| Morning reminder | 8am if no check-in | `checkin_reminder` |
-| Streak warning | 6pm if streak > 0 and no check-in | `streak_warning` |
-| Fasting tip | When active fast passes 8h | `fasting_active` |
-| Milestone | Day 7/14/21/30 reached | `milestone_N` |
-| Level up | New level reached | `level_up_N` |
-
 ### getMealCycleDays()
 - basic_30 → cycles 30 days
 - pro_6    → cycles 90 days (DB has days 1–90)
@@ -695,29 +714,24 @@ VAPID_EMAIL=mailto:your@email.com
 
 ```typescript
 import { getTranslator } from '../../lib/i18n';
-const lang = profile.language || 'en';
+const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t = getTranslator(lang);
 // Usage: t('key') — fallback to 'en' if key missing
 ```
 - Supported: `en`, `fr`, `de`, `es`, `pt`
 - 120+ keys across all dashboard pages
-- Language set in profile via /dashboard/profile settings
+- Language set in profile via /dashboard/profile → Settings tab → Language Selector
+- Cookie: `keto-lang` (set by /api/profile/update-language.ts)
 
 ---
 
-## 22. RECIPE PHOTO GALLERY (Mobile) 🔧 NEXT FEATURE
+## 22. RECIPE PHOTO GALLERY (Mobile) ✅ DONE
 
 ### Current state
-- `recipes` table has single `image_url` field
-- `recipe/[id].astro` shows single hero image (420px height)
-
-### Planned implementation
-- Tap hero image → fullscreen lightbox overlay
-- Swipe left/right on mobile (touch events)
-- Pinch-to-zoom support
-- CSS: `touch-action: pan-y` on swipeable containers
-- No DB schema change needed for single-image lightbox
-- Future: `recipe_images` table for multi-image galleries
+- `recipe/[id].astro` — hero image (420px height) is tappable
+- Click/tap hero → fullscreen lightbox overlay
+- Swipe down OR Esc key → close
+- `touch-action: pan-y` prevents conflicts with page scroll
 
 ---
 
@@ -727,12 +741,12 @@ const t = getTranslator(lang);
 | Page | Data source | Fields displayed |
 |------|-------------|-----------------|
 | dashboard/index.astro | macro_goals + food_logs | calories, protein_g, fat_g, carbs_g (ring chart) |
-| food-log.astro | food_logs | calories, protein_g, fat_g, carbs_g per entry + daily totals |
+| food-log.astro | food_logs | calories, protein_g, fat_g, carbs_g per entry + daily totals + edit button |
 | recipe/[id].astro | recipes | calories, protein, fat, net_carbs, fiber (full nutrition table) |
-| recipes.astro / browse.astro | recipes | calories, net_carbs, protein (card badges) |
+| recipes.astro / browse.astro | recipes | calories, net_carbs, protein, fat (4-col grid) |
 | shopping.astro | meal_plans + recipes | per-meal macro breakdown |
 | keto-calculator.astro | macro_goals | TDEE, protein_g, fat_g, carbs_g (macro rings + recommendations) |
-| progress.astro | weight_logs + body_measurements | weight trend, body metrics |
+| progress.astro | weight_logs + body_measurements | weight trend (30/60/90d), body metrics |
 
 ### Field name consistency
 ```
@@ -741,3 +755,76 @@ food_logs table: protein_g, fat_g, carbs_g, calories    (WITH _g suffix)
 macro_goals:     protein_g, fat_g, carbs_g, daily_calories (WITH _g suffix)
 ```
 Never mix suffixes. Always check which table you're querying.
+
+---
+
+## 24. SECURITY AUDIT — FINDINGS LOG (2026-04-15)
+
+Full audit conducted 2026-04-15. Items marked ✅ are fixed; items marked ⚠️ are known and tracked.
+
+### Fixed in Hardening Sprint
+| ID | Issue | Fix |
+|----|-------|-----|
+| H1 | No rate limiting on auth endpoints | Added `src/lib/rateLimit.ts` — login/forgot/signup/admin all protected |
+| H2 | Food log add had no upper bounds or meal_type validation | Capped cal≤9999, macros≤500g, allowlist for meal_type |
+| H3 | Profile update accepted any weight/height value | weight 20–500kg, height 50–300cm range check; full_name truncated to 100 chars |
+| H4 | Fasting start created duplicate sessions on double-click | 60s idempotency window — returns existing session if started within 60s |
+| H5 | Banned community users could still react to posts | community_banned check added to react.ts |
+| H6 | /api/recipes/rate.ts was a live endpoint writing to orphaned table | Endpoint deleted |
+
+### Open — Medium/Low Priority
+| ID | Severity | File | Issue | Recommended Fix |
+|----|----------|------|-------|-----------------|
+| S01 | HIGH | `api/lemonsqueezy/webhook.ts` | HMAC verified but no timestamp check — replay attacks possible | Validate timestamp within ±5min; store processed webhook IDs |
+| S02 | HIGH | `api/admin/verify.ts` | Password compared with `===` (timing attack) | Use `crypto.timingSafeEqual()` |
+| S03 | HIGH | `api/food/analyze-photo.ts` | AI-returned numeric values stored without bounds checking | Apply same caps as food-log/add.ts (cal≤9999, macros≤500g) |
+| S04 | MEDIUM | `api/photos/upload.ts` | 50-photo cap but no daily rate limit | Add 5 uploads/day rate limit |
+| S05 | MEDIUM | `api/habits/toggle.ts` | Accepts arbitrary day_number from client | Fetch journey.current_day and reject day_number > current_day |
+| S06 | MEDIUM | `api/meals/complete.ts` | Fails silently instead of returning 400 when day > current | Return explicit 400 error |
+| S07 | MEDIUM | Multiple | Error logs lack user context (`console.error('error:', err)`) | Include `user.id` and operation name in all error logs |
+| S08 | LOW | `api/chat/gemini.ts` | Daily rate limit window computed as `today + 'T00:00:00Z'` — correct UTC boundary, but verify timezone | Confirm UTC day boundary is consistent with user timezone |
+| S09 | LOW | Multiple API files | `json()` helper duplicated in every file | Centralize in `src/lib/apiResponse.ts` |
+| S10 | LOW | `api/community/posts.ts` | Content stored as plain text — client must escape on render | Document escaping requirement; add server-side HTML strip as safety net |
+
+### Security Strengths (Do Not Break)
+- All API routes use `requireApiAuth(cookies)` — no unprotected mutations
+- All user-scoped DB queries include `.eq('user_id', user.id)` — no IDOR vulnerabilities found
+- LemonSqueezy webhooks verified with HMAC-SHA256 before processing
+- Passwords handled entirely by Supabase Auth — never stored or logged by app
+- `email_confirm: true` set for paid signups (admin createUser) — no email loop for paying customers
+- RLS enforced at DB level as second layer of ownership control
+- Webhook Path A/B/C handles all user_id/email/neither cases gracefully
+
+---
+
+## 25. PARALLEL QUERY PATTERN
+
+Pages with multiple DB queries should use `Promise.allSettled()` so one failing query doesn't crash the whole page. Pattern used throughout:
+
+```typescript
+// Critical query first (if others depend on its result)
+const journey = await getUserJourney(user.id, db).catch(() => null);
+const currentDay = journey?.current_day || 1;
+
+// All remaining queries in parallel
+const [aRes, bRes, cRes] = await Promise.allSettled([
+  db.from('table_a').select('*').eq('user_id', user.id),
+  db.from('table_b').select('*').eq('user_id', user.id),
+  db.from('table_c').select('*').eq('user_id', user.id),
+]);
+const a = aRes.status === 'fulfilled' ? aRes.value?.data : null;
+const b = bRes.status === 'fulfilled' ? bRes.value?.data : null;
+const c = cRes.status === 'fulfilled' ? cRes.value?.data : null;
+```
+
+### Pages with batch queries
+| Page | Pattern | Notes |
+|------|---------|-------|
+| `dashboard/index.astro` | Batch 1 (critical) + Batch 2 (14 queries) | 503 on batch 1 failure |
+| `dashboard/progress.astro` | journey first, then 12 parallel | 503 on journey failure |
+| `dashboard/checkin.astro` | All 5 in one allSettled | No critical dependency |
+| `dashboard/profile.astro` | journey first, then 7 parallel | journey needed for currentDay |
+| `dashboard/guide.astro` | All 5 in one allSettled | No critical dependency |
+| `dashboard/habits.astro` | 2 queries in allSettled | Empty state on failure |
+| `dashboard/keto-calculator.astro` | 1 query with try-catch | Falls back to profile defaults |
+| `dashboard/welcome.astro` | 1 critical query with try-catch | 503 on failure |
