@@ -216,6 +216,17 @@ const diffColor = recipe.difficulty === 'Easy' ? '#10b981' : recipe.difficulty =
     .btn-green:disabled{opacity:.6;cursor:not-allowed;transform:none;}
     .toast{position:fixed;top:5rem;right:1.5rem;z-index:9999;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;padding:.875rem 1.5rem;border-radius:12px;font-weight:700;font-size:.875rem;box-shadow:0 10px 30px rgba(16,185,129,.4);transform:translateY(-20px);opacity:0;pointer-events:none;transition:all .35s cubic-bezier(.4,0,.2,1);}
     .toast.show{transform:translateY(0);opacity:1;}
+    /* ── Serving scaler ── */
+    .serving-scaler{display:flex;flex-direction:column;align-items:flex-end;gap:.35rem;flex-shrink:0;}
+    .scaler-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);}
+    .scaler-btns{display:flex;gap:.3rem;}
+    .scaler-btn{
+      padding:.28rem .6rem;border-radius:8px;font-size:.75rem;font-weight:800;
+      border:1.5px solid var(--border);background:transparent;color:var(--soft);
+      cursor:pointer;transition:all .2s;
+    }
+    .scaler-btn:hover{border-color:var(--border2);color:var(--text);}
+    .scaler-btn.active{background:#ef4444;border-color:#ef4444;color:#fff;box-shadow:0 3px 8px rgba(239,68,68,.35);}
     @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
     @media print{nav,.sidebar,.btn{display:none!important;}body{background:#fff!important;color:#000!important;}}
   </style>
@@ -262,22 +273,42 @@ const diffColor = recipe.difficulty === 'Easy' ? '#10b981' : recipe.difficulty =
       <div class="sc" style="animation-delay:.04s;">
         <div class="sc-head">
           <div class="sc-ico" style="background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 12px rgba(239,68,68,.3);">📊</div>
-          <div><div class="sc-title">Nutrition Facts</div><div class="sc-sub">Per serving</div></div>
+          <div style="flex:1;">
+            <div class="sc-title">Nutrition Facts</div>
+            <div class="sc-sub" id="nutritionServingLabel">Per serving · {recipe.servings || 1} serving{(recipe.servings||1) > 1 ? 's' : ''}</div>
+          </div>
+          <div class="serving-scaler">
+            <span class="scaler-label">Servings</span>
+            <div class="scaler-btns">
+              <button class="scaler-btn" data-mult="0.5"  onclick="window.setMultiplier(0.5)">½×</button>
+              <button class="scaler-btn active" data-mult="1" onclick="window.setMultiplier(1)">1×</button>
+              <button class="scaler-btn" data-mult="1.5" onclick="window.setMultiplier(1.5)">1½×</button>
+              <button class="scaler-btn" data-mult="2"   onclick="window.setMultiplier(2)">2×</button>
+            </div>
+          </div>
         </div>
         <div class="sc-body">
           <div class="macros-grid">
-            {[
-              {val:recipe.calories,  lbl:'Calories', unit:'',  color:'#ef4444',bg:'rgba(239,68,68,.1)', bd:'#ef4444'},
-              {val:recipe.protein,   lbl:'Protein',  unit:'g', color:'#3b82f6',bg:'rgba(59,130,246,.1)',bd:'#3b82f6'},
-              {val:recipe.fat,       lbl:'Fat',       unit:'g', color:'#f59e0b',bg:'rgba(245,158,11,.1)',bd:'#f59e0b'},
-              {val:recipe.net_carbs, lbl:'Net Carbs', unit:'g', color:'#10b981',bg:'rgba(16,185,129,.1)',bd:'#10b981'},
-              {val:recipe.fiber,     lbl:'Fiber',     unit:'g', color:'#8b5cf6',bg:'rgba(139,92,246,.1)',bd:'#8b5cf6'},
-            ].map(m => (
-              <div class="macro-card" style={`background:${m.bg};border-color:${m.bd};color:${m.color};`}>
-                <span class="macro-val">{m.val}{m.unit}</span>
-                <span class="macro-lbl">{m.lbl}</span>
-              </div>
-            ))}
+            <div class="macro-card" style="background:rgba(239,68,68,.1);border-color:#ef4444;color:#ef4444;">
+              <span class="macro-val" id="macroCalories">{recipe.calories}</span>
+              <span class="macro-lbl">Calories</span>
+            </div>
+            <div class="macro-card" style="background:rgba(59,130,246,.1);border-color:#3b82f6;color:#3b82f6;">
+              <span class="macro-val" id="macroProtein">{recipe.protein}g</span>
+              <span class="macro-lbl">Protein</span>
+            </div>
+            <div class="macro-card" style="background:rgba(245,158,11,.1);border-color:#f59e0b;color:#f59e0b;">
+              <span class="macro-val" id="macroFat">{recipe.fat}g</span>
+              <span class="macro-lbl">Fat</span>
+            </div>
+            <div class="macro-card" style="background:rgba(16,185,129,.1);border-color:#10b981;color:#10b981;">
+              <span class="macro-val" id="macroCarbs">{recipe.net_carbs}g</span>
+              <span class="macro-lbl">Net Carbs</span>
+            </div>
+            <div class="macro-card" style="background:rgba(139,92,246,.1);border-color:#8b5cf6;color:#8b5cf6;">
+              <span class="macro-val" id="macroFiber">{recipe.fiber}g</span>
+              <span class="macro-lbl">Fiber</span>
+            </div>
           </div>
         </div>
       </div>
@@ -384,12 +415,12 @@ const diffColor = recipe.difficulty === 'Easy' ? '#10b981' : recipe.difficulty =
       <div class="side-card">
         <div class="side-head">Details</div>
         <div class="side-body">
-          <div class="detail-row"><span class="detail-lbl">Calories</span><span class="detail-val" style="color:var(--red);">{recipe.calories} kcal</span></div>
-          <div class="detail-row"><span class="detail-lbl">Net Carbs</span><span class="detail-val" style="color:var(--green);">{recipe.net_carbs}g</span></div>
-          <div class="detail-row"><span class="detail-lbl">Protein</span><span class="detail-val" style="color:var(--blue);">{recipe.protein}g</span></div>
-          <div class="detail-row"><span class="detail-lbl">Fat</span><span class="detail-val" style="color:var(--gold);">{recipe.fat}g</span></div>
+          <div class="detail-row"><span class="detail-lbl">Calories</span><span id="sideCalories" class="detail-val" style="color:var(--red);">{recipe.calories} kcal</span></div>
+          <div class="detail-row"><span class="detail-lbl">Net Carbs</span><span id="sideCarbs" class="detail-val" style="color:var(--green);">{recipe.net_carbs}g</span></div>
+          <div class="detail-row"><span class="detail-lbl">Protein</span><span id="sideProtein" class="detail-val" style="color:var(--blue);">{recipe.protein}g</span></div>
+          <div class="detail-row"><span class="detail-lbl">Fat</span><span id="sideFat" class="detail-val" style="color:var(--gold);">{recipe.fat}g</span></div>
           {recipe.difficulty && <div class="detail-row"><span class="detail-lbl">Difficulty</span><span class="diff-pill" style={`background:${diffColor}15;border-color:${diffColor}40;color:${diffColor};`}>{recipe.difficulty}</span></div>}
-          <div class="detail-row"><span class="detail-lbl">Servings</span><span class="detail-val">{recipe.servings||1}</span></div>
+          <div class="detail-row"><span class="detail-lbl">Servings</span><span id="sideServings" class="detail-val">{recipe.servings||1}</span></div>
         </div>
       </div>
       {tags.length > 0 && (
@@ -445,8 +476,46 @@ const diffColor = recipe.difficulty === 'Easy' ? '#10b981' : recipe.difficulty =
 </div>
 
 <div class="toast" id="toast"></div>
-<script is:inline define:vars={{ taskId: task?.id || null, mealPlanType: mealPlan?.meal_type || null, dayNum: currentDay, xpEarned: task?.xp_earned || 25, totalIng: ingredients.length, recipeTitle: recipe.title, recipeCal: recipe.calories || 0, recipeProtein: recipe.protein || 0, recipeFat: recipe.fat || 0, recipeCarbs: recipe.net_carbs || 0, recipeId: recipe.id, heroImgSrc: recipe.image_url || '' }}>
+<script is:inline define:vars={{ taskId: task?.id || null, mealPlanType: mealPlan?.meal_type || null, dayNum: currentDay, xpEarned: task?.xp_earned || 25, totalIng: ingredients.length, recipeTitle: recipe.title, recipeCal: recipe.calories || 0, recipeProtein: recipe.protein || 0, recipeFat: recipe.fat || 0, recipeCarbs: recipe.net_carbs || 0, recipeFiber: recipe.fiber || 0, recipeServings: recipe.servings || 1, recipeId: recipe.id, heroImgSrc: recipe.image_url || '' }}>
 window.__recipeId = recipeId;
+
+// ── Serving size scaler ──────────────────────────────────────────
+var scalerMult = 1;
+function round1(v) { return Math.round(v * 10) / 10; }
+
+window.setMultiplier = function(mult) {
+  scalerMult = mult;
+
+  // Update macro cards
+  document.getElementById('macroCalories').textContent = Math.round(recipeCal * mult);
+  document.getElementById('macroProtein').textContent  = round1(recipeProtein * mult) + 'g';
+  document.getElementById('macroFat').textContent      = round1(recipeFat     * mult) + 'g';
+  document.getElementById('macroCarbs').textContent    = round1(recipeCarbs   * mult) + 'g';
+  document.getElementById('macroFiber').textContent    = round1(recipeFiber   * mult) + 'g';
+
+  // Update sidebar detail rows
+  var sideEl = document.getElementById('sideCalories');
+  if (sideEl) sideEl.textContent = Math.round(recipeCal * mult) + ' kcal';
+  var sideC = document.getElementById('sideCarbs');
+  if (sideC) sideC.textContent = round1(recipeCarbs * mult) + 'g';
+  var sideP = document.getElementById('sideProtein');
+  if (sideP) sideP.textContent = round1(recipeProtein * mult) + 'g';
+  var sideF = document.getElementById('sideFat');
+  if (sideF) sideF.textContent = round1(recipeFat * mult) + 'g';
+  var sideS = document.getElementById('sideServings');
+  if (sideS) sideS.textContent = round1(recipeServings * mult);
+
+  // Update serving label
+  var lbl = document.getElementById('nutritionServingLabel');
+  var servCount = round1(recipeServings * mult);
+  if (lbl) lbl.textContent = 'Per ' + mult + '× serving · ' + servCount + ' serving' + (servCount === 1 ? '' : 's');
+
+  // Highlight active button
+  document.querySelectorAll('.scaler-btn').forEach(function(btn) {
+    btn.classList.toggle('active', parseFloat(btn.dataset.mult) === mult);
+  });
+};
+
 var checked=0;
 function updateIng(){
   const pct=totalIng>0?Math.round((checked/totalIng)*100):0;
@@ -487,16 +556,17 @@ function showToast(msg){const t=document.getElementById('toast');if(!t)return;t.
 window.logToFoodLog = async function() {
   var btn = document.getElementById('foodLogBtn');
   if (btn) { btn.disabled=true; btn.textContent='⏳ Logging…'; }
+  var suffix = scalerMult !== 1 ? ' (' + scalerMult + '× serving)' : '';
   try {
     var res = await fetch('/api/food-log/add', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        food_name:  recipeTitle,
-        calories:   recipeCal,
-        protein_g:  recipeProtein,
-        fat_g:      recipeFat,
-        carbs_g:    recipeCarbs,
+        food_name:  recipeTitle + suffix,
+        calories:   Math.round(recipeCal     * scalerMult),
+        protein_g:  round1(recipeProtein * scalerMult),
+        fat_g:      round1(recipeFat     * scalerMult),
+        carbs_g:    round1(recipeCarbs   * scalerMult),
         meal_type:  mealPlanType || 'other',
         notes:      'Added from recipe #' + recipeId,
       }),
