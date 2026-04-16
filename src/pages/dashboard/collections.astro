@@ -1,0 +1,409 @@
+---
+import { requireAuth } from '../../lib/auth';
+import DashNav from '../../components/DashNav.astro';
+import { getTranslator, normaliseLang } from '../../lib/i18n';
+import Layers from 'lucide-astro/Layers';
+import Plus from 'lucide-astro/Plus';
+import Trash2 from 'lucide-astro/Trash2';
+import UtensilsCrossed from 'lucide-astro/UtensilsCrossed';
+import Clock from 'lucide-astro/Clock';
+import Heart from 'lucide-astro/Heart';
+import X from 'lucide-astro/X';
+
+const auth = await requireAuth(Astro);
+if ('redirect' in auth) return Astro.redirect(auth.redirect);
+const { user, profile, db } = auth;
+
+const planType  = profile.subscription_tier || 'basic_30';
+const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
+const userName  = profile.full_name?.split(' ')[0] || 'Friend';
+const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
+const t    = getTranslator(lang);
+
+// Fetch all collections with item counts
+const { data: colRows } = await db
+  .from('recipe_collections')
+  .select('id, name, emoji, created_at, recipe_collection_items(count)')
+  .eq('user_id', user.id)
+  .order('created_at', { ascending: false });
+
+const collections = (colRows || []).map((c: any) => ({
+  id:    c.id,
+  name:  c.name,
+  emoji: c.emoji,
+  count: c.recipe_collection_items?.[0]?.count ?? 0,
+}));
+
+// Active collection from ?col= query param
+const activeColId = Astro.url.searchParams.get('col') || '';
+const activeCol   = activeColId ? collections.find((c: any) => c.id === activeColId) : null;
+
+// Fetch recipes in the active collection
+let colRecipes: any[] = [];
+if (activeColId) {
+  const { data: items } = await db
+    .from('recipe_collection_items')
+    .select('added_at, recipes(id, title, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, tags, difficulty)')
+    .eq('collection_id', activeColId)
+    .order('added_at', { ascending: false });
+  colRecipes = (items || []).map((i: any) => ({ ...(i.recipes || {}), added_at: i.added_at })).filter((r: any) => r.id);
+}
+
+const EMOJI_OPTIONS = ['📚','🍳','🥗','🍽️','💪','❤️','⭐','🔥','🥑','🧀','🍖','🫐','🥦','🎯','🏆'];
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Collections — Keto Journey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#060d09; --card:#0d1a0f; --card2:#111f13;
+      --border:rgba(16,185,129,.1); --border2:rgba(16,185,129,.22);
+      --text:#dfeedd; --soft:#4d7055; --muted:#233328;
+      --green:#10b981; --green2:#34d399;
+      --gold:#f59e0b; --purple:#8b5cf6; --blue:#3b82f6; --red:#ef4444;
+    }
+    body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; min-height:100vh; }
+
+    .page-wrap { max-width:1100px; margin:0 auto; padding:32px 20px 80px; }
+
+    /* Header */
+    .page-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:28px; animation:fadeUp .5s ease both; }
+    .header-left h1 { font-family:'Fraunces',serif; font-size:clamp(1.5rem,4vw,2rem); font-weight:700; display:flex; align-items:center; gap:.5rem; }
+    .header-sub { font-size:.88rem; color:var(--soft); margin-top:4px; }
+    .btn-new { display:flex; align-items:center; gap:.4rem; padding:.55rem 1.1rem; border-radius:12px; background:var(--green); border:none; color:#fff; font-family:'DM Sans',sans-serif; font-size:.88rem; font-weight:700; cursor:pointer; transition:all .2s; }
+    .btn-new:hover { background:var(--green2); transform:translateY(-1px); }
+
+    /* Collections grid */
+    .collections-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; margin-bottom:36px; animation:fadeUp .5s .05s ease both; }
+    .col-card { background:var(--card); border:1.5px solid var(--border); border-radius:16px; padding:1.1rem 1rem; cursor:pointer; transition:all .2s; position:relative; text-decoration:none; display:block; }
+    .col-card:hover, .col-card.active { border-color:var(--border2); box-shadow:0 6px 20px rgba(16,185,129,.1); transform:translateY(-2px); }
+    .col-card.active { border-color:var(--green); background:rgba(16,185,129,.06); }
+    .col-emoji { font-size:2rem; margin-bottom:.5rem; }
+    .col-name { font-weight:700; font-size:.95rem; color:var(--text); margin-bottom:.25rem; }
+    .col-count { font-size:.78rem; color:var(--soft); }
+    .col-delete-btn { position:absolute; top:8px; right:8px; background:transparent; border:none; color:var(--soft); cursor:pointer; padding:.2rem; border-radius:6px; opacity:0; transition:all .15s; }
+    .col-card:hover .col-delete-btn { opacity:1; }
+    .col-delete-btn:hover { color:var(--red); background:rgba(239,68,68,.1); }
+
+    /* Empty collections state */
+    .empty-cols { text-align:center; padding:48px 20px; animation:fadeUp .5s ease both; }
+    .empty-cols .big-emoji { font-size:3rem; margin-bottom:12px; }
+    .empty-cols h2 { font-family:'Fraunces',serif; font-size:1.3rem; margin-bottom:8px; }
+    .empty-cols p { color:var(--soft); font-size:.9rem; margin-bottom:20px; }
+
+    /* Section divider */
+    .section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .section-title { font-family:'Fraunces',serif; font-size:1.1rem; display:flex; align-items:center; gap:.4rem; }
+    .section-back { font-size:.82rem; color:var(--soft); cursor:pointer; background:transparent; border:none; font-family:'DM Sans',sans-serif; transition:color .15s; }
+    .section-back:hover { color:var(--text); }
+
+    /* Recipes grid */
+    .recipe-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; animation:fadeUp .4s ease both; }
+    @media(max-width:800px){.recipe-grid{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:480px){.recipe-grid{grid-template-columns:1fr;}}
+
+    .recipe-card { background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; transition:all .2s; }
+    .recipe-card:hover { transform:translateY(-3px); border-color:var(--border2); box-shadow:0 8px 28px rgba(16,185,129,.1); }
+    .card-img { position:relative; height:150px; overflow:hidden; }
+    .card-img img { width:100%; height:100%; object-fit:cover; }
+    .card-img-ph { width:100%; height:100%; background:linear-gradient(135deg,#0d2a18,#1a3d25); display:flex; align-items:center; justify-content:center; font-size:2rem; }
+    .remove-btn { position:absolute; top:8px; right:8px; background:rgba(6,13,9,.75); border:1px solid var(--border); border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(6px); transition:all .2s; }
+    .remove-btn:hover { background:rgba(239,68,68,.25); }
+    .card-body { padding:12px 14px 14px; display:flex; flex-direction:column; gap:8px; }
+    .card-title { font-family:'Fraunces',serif; font-size:.92rem; font-weight:700; color:var(--text); line-height:1.3; }
+    .card-title:hover { color:var(--green2); }
+    .card-meta { display:flex; gap:.6rem; font-size:.75rem; color:var(--soft); flex-wrap:wrap; }
+    .macro-row { display:flex; gap:5px; flex-wrap:wrap; }
+    .mp { padding:2px 7px; border-radius:20px; font-size:.7rem; font-weight:600; }
+    .mp-cal { background:rgba(245,158,11,.15); color:#f59e0b; }
+    .mp-pro { background:rgba(59,130,246,.15);  color:#3b82f6; }
+    .mp-fat { background:rgba(139,92,246,.15);  color:#8b5cf6; }
+    .mp-carb{ background:rgba(16,185,129,.15);  color:#10b981; }
+    .diff-badge { font-size:.65rem; font-weight:800; text-transform:uppercase; padding:.12rem .38rem; border-radius:5px; }
+    .diff-badge.easy   { background:rgba(16,185,129,.15); color:#34d399; }
+    .diff-badge.medium { background:rgba(245,158,11,.15); color:#fbbf24; }
+    .diff-badge.hard   { background:rgba(239,68,68,.15);  color:#f87171; }
+
+    /* Empty collection content */
+    .empty-col-recipes { text-align:center; padding:40px 20px; color:var(--soft); }
+    .empty-col-recipes a { color:var(--green); text-decoration:none; }
+    .empty-col-recipes a:hover { text-decoration:underline; }
+
+    /* Create modal */
+    .modal-backdrop { position:fixed; inset:0; z-index:9000; background:rgba(6,13,9,.82); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; padding:1rem; opacity:0; pointer-events:none; transition:opacity .2s; }
+    .modal-backdrop.show { opacity:1; pointer-events:all; }
+    .modal { background:var(--card); border:1.5px solid var(--border2); border-radius:20px; padding:1.5rem; width:min(440px,95vw); box-shadow:0 24px 60px rgba(0,0,0,.5); }
+    .modal-title { font-family:'Fraunces',serif; font-size:1.15rem; margin-bottom:1rem; }
+    .form-label { font-size:.8rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--soft); margin-bottom:.35rem; display:block; }
+    .form-input { width:100%; background:var(--card2); border:1.5px solid var(--border); border-radius:10px; padding:.6rem .9rem; color:var(--text); font-family:'DM Sans',sans-serif; font-size:.93rem; outline:none; transition:border-color .2s; }
+    .form-input:focus { border-color:var(--green); }
+    .emoji-picker { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.4rem; }
+    .ep-btn { width:36px; height:36px; border-radius:8px; border:1.5px solid var(--border); background:transparent; cursor:pointer; font-size:1.1rem; transition:all .15s; }
+    .ep-btn:hover, .ep-btn.active { border-color:var(--green); background:rgba(16,185,129,.1); }
+    .modal-actions { display:flex; gap:.6rem; margin-top:1.2rem; justify-content:flex-end; }
+    .btn-cancel { padding:.5rem 1rem; border-radius:10px; background:transparent; border:1.5px solid var(--border2); color:var(--soft); font-family:'DM Sans',sans-serif; font-size:.87rem; cursor:pointer; transition:all .15s; }
+    .btn-cancel:hover { border-color:var(--border2); color:var(--text); }
+    .btn-create { padding:.5rem 1.2rem; border-radius:10px; background:var(--green); border:none; color:#fff; font-family:'DM Sans',sans-serif; font-size:.87rem; font-weight:700; cursor:pointer; transition:all .15s; }
+    .btn-create:hover { background:var(--green2); }
+    .btn-create:disabled { opacity:.5; cursor:not-allowed; }
+
+    .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:#1a3d25; border:1px solid var(--border2); border-radius:12px; padding:.65rem 1.2rem; font-size:.88rem; color:var(--text); opacity:0; pointer-events:none; transition:all .3s; z-index:9999; white-space:nowrap; }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+  </style>
+</head>
+<body>
+  <DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="favorites" />
+
+  <div class="page-wrap">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <h1><Layers size={24} /> My Collections</h1>
+        <div class="header-sub">{collections.length} collection{collections.length !== 1 ? 's' : ''} · save recipes into named lists</div>
+      </div>
+      <button class="btn-new" onclick="window.openCreateModal()"><Plus size={16} /> New Collection</button>
+    </div>
+
+    <!-- Collections grid -->
+    {collections.length === 0 ? (
+      <div class="empty-cols">
+        <div class="big-emoji">📚</div>
+        <h2>No collections yet</h2>
+        <p>Create a collection to organise your favourite recipes into named lists.</p>
+        <button class="btn-new" style="margin:0 auto;" onclick="window.openCreateModal()"><Plus size={16} /> Create your first collection</button>
+      </div>
+    ) : (
+      <div class="collections-grid" id="collectionsGrid">
+        {collections.map((col: any) => (
+          <a
+            href={`/dashboard/collections?col=${col.id}`}
+            class={`col-card${activeColId === col.id ? ' active' : ''}`}
+            data-col-id={col.id}
+            data-col-name={col.name}
+          >
+            <div class="col-emoji">{col.emoji}</div>
+            <div class="col-name">{col.name}</div>
+            <div class="col-count">{col.count} recipe{col.count !== 1 ? 's' : ''}</div>
+            <button
+              class="col-delete-btn"
+              aria-label="Delete collection"
+              onclick={`event.preventDefault();event.stopPropagation();window.deleteCollection('${col.id}','${col.name.replace(/'/g,"\\'")}');`}
+            ><Trash2 size={14} /></button>
+          </a>
+        ))}
+      </div>
+    )}
+
+    <!-- Active collection recipes -->
+    {activeCol && (
+      <div>
+        <div class="section-head">
+          <div class="section-title">
+            <span>{activeCol.emoji}</span>
+            <span>{activeCol.name}</span>
+            <span style="font-size:.8rem;color:var(--soft);font-family:'DM Sans',sans-serif;font-weight:400;">({colRecipes.length} recipe{colRecipes.length !== 1 ? 's' : ''})</span>
+          </div>
+          <a href="/dashboard/collections" style="text-decoration:none;font-size:.82rem;color:var(--soft);">← All collections</a>
+        </div>
+
+        {colRecipes.length === 0 ? (
+          <div class="empty-col-recipes">
+            <p>This collection is empty. <a href="/dashboard/recipes">Browse recipes</a> and save them here.</p>
+          </div>
+        ) : (
+          <div class="recipe-grid">
+            {colRecipes.map((recipe: any) => {
+              const diff = recipe.difficulty?.toLowerCase() || '';
+              return (
+                <div class="recipe-card" id={`rc-${recipe.id}`}>
+                  <div class="card-img">
+                    {recipe.image_url
+                      ? <img src={recipe.image_url} alt={recipe.title} loading="lazy" />
+                      : <div class="card-img-ph"><UtensilsCrossed size={28} /></div>
+                    }
+                    <button
+                      class="remove-btn"
+                      aria-label="Remove from collection"
+                      onclick={`window.removeFromCol('${activeColId}','${recipe.id}')`}
+                    ><X size={13} /></button>
+                  </div>
+                  <div class="card-body">
+                    <a href={`/dashboard/recipe/${recipe.id}`} class="card-title" style="text-decoration:none;">{recipe.title}</a>
+                    <div class="card-meta">
+                      {recipe.prep_time && <span><Clock size={12} style="vertical-align:middle;" /> {recipe.prep_time}m</span>}
+                      {diff && <span class={`diff-badge ${diff}`}>{diff}</span>}
+                    </div>
+                    <div class="macro-row">
+                      {recipe.calories  && <span class="mp mp-cal">{recipe.calories} kcal</span>}
+                      {recipe.protein   && <span class="mp mp-pro">{recipe.protein}g P</span>}
+                      {recipe.fat       && <span class="mp mp-fat">{recipe.fat}g F</span>}
+                      {recipe.net_carbs && <span class="mp mp-carb">{recipe.net_carbs}g C</span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+
+  <!-- Create Collection Modal -->
+  <div class="modal-backdrop" id="createModal" onclick="if(event.target===this)window.closeCreateModal()">
+    <div class="modal">
+      <div class="modal-title">New Collection</div>
+      <label class="form-label" for="colNameInput">Name</label>
+      <input class="form-input" id="colNameInput" type="text" placeholder="e.g. Quick Weeknight Dinners" maxlength="60" autocomplete="off" />
+      <label class="form-label" style="margin-top:.9rem;">Emoji</label>
+      <div class="emoji-picker" id="emojiPicker">
+        {EMOJI_OPTIONS.map((em, i) => (
+          <button class={`ep-btn${i === 0 ? ' active' : ''}`} data-emoji={em}>{em}</button>
+        ))}
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="window.closeCreateModal()">Cancel</button>
+        <button class="btn-create" id="btnCreate" onclick="window.submitCreate()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script is:inline define:vars={{ activeColId }}>
+    var selectedEmoji = '📚';
+
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      if (!t) return;
+      t.textContent = msg;
+      t.className = 'toast show';
+      setTimeout(function() { t.classList.remove('show'); }, 3000);
+    }
+
+    window.openCreateModal = function() {
+      document.getElementById('createModal').classList.add('show');
+      setTimeout(function() { document.getElementById('colNameInput').focus(); }, 80);
+    };
+    window.closeCreateModal = function() {
+      document.getElementById('createModal').classList.remove('show');
+      document.getElementById('colNameInput').value = '';
+    };
+
+    // Emoji picker
+    document.querySelectorAll('.ep-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.ep-btn').forEach(function(b) { b.classList.remove('active'); });
+        this.classList.add('active');
+        selectedEmoji = this.dataset.emoji;
+      });
+    });
+
+    window.submitCreate = function() {
+      var name = (document.getElementById('colNameInput').value || '').trim();
+      if (!name) { document.getElementById('colNameInput').focus(); return; }
+      var btn = document.getElementById('btnCreate');
+      btn.disabled = true;
+      btn.textContent = 'Creating…';
+
+      fetch('/api/collections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, emoji: selectedEmoji }),
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        btn.disabled = false;
+        btn.textContent = 'Create';
+        if (data.error) { showToast(data.error); return; }
+        window.closeCreateModal();
+        // Add card to grid instantly
+        var grid = document.getElementById('collectionsGrid');
+        if (grid) {
+          var a = document.createElement('a');
+          a.href = '/dashboard/collections?col=' + data.collection.id;
+          a.className = 'col-card';
+          a.dataset.colId = data.collection.id;
+          a.dataset.colName = data.collection.name;
+          var nameEsc = (data.collection.name || '').replace(/'/g, "\\'");
+          a.innerHTML =
+            '<div class="col-emoji">' + data.collection.emoji + '</div>' +
+            '<div class="col-name">' + data.collection.name + '</div>' +
+            '<div class="col-count">0 recipes</div>' +
+            '<button class="col-delete-btn" aria-label="Delete collection" onclick="event.preventDefault();event.stopPropagation();window.deleteCollection(\'' + data.collection.id + '\',\'' + nameEsc + '\');"><svg xmlns=\'http://www.w3.org/2000/svg\' width=\'14\' height=\'14\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\'><polyline points=\'3 6 5 6 21 6\'></polyline><path d=\'M19 6l-1 14H6L5 6\'></path><path d=\'M10 11v6\'></path><path d=\'M14 11v6\'></path><path d=\'M9 6V4h6v2\'></path></svg></button>';
+          grid.prepend(a);
+        }
+        showToast('Collection "' + data.collection.name + '" created');
+      })
+      .catch(function() {
+        btn.disabled = false;
+        btn.textContent = 'Create';
+        showToast('Something went wrong.');
+      });
+    };
+
+    // Enter key submits
+    document.getElementById('colNameInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') window.submitCreate();
+    });
+
+    window.deleteCollection = function(colId, colName) {
+      if (!confirm('Delete collection "' + colName + '"? This cannot be undone.')) return;
+      fetch('/api/collections/items?deleteCollection=1', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collectionId: colId }),
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) { showToast(data.error); return; }
+        var card = document.querySelector('[data-col-id="' + colId + '"]');
+        if (card) {
+          card.style.transition = 'opacity .3s, transform .3s';
+          card.style.opacity = '0';
+          card.style.transform = 'scale(.9)';
+          setTimeout(function() {
+            card.remove();
+            // If deleted the active collection, go back to /dashboard/collections
+            if (activeColId === colId) window.location.href = '/dashboard/collections';
+          }, 320);
+        }
+        showToast('Collection deleted');
+      })
+      .catch(function() { showToast('Something went wrong.'); });
+    };
+
+    window.removeFromCol = function(colId, recipeId) {
+      fetch('/api/collections/items', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collectionId: colId, recipeId: recipeId }),
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) { showToast(data.error); return; }
+        var card = document.getElementById('rc-' + recipeId);
+        if (card) {
+          card.style.transition = 'opacity .3s, transform .3s';
+          card.style.opacity = '0';
+          card.style.transform = 'scale(.9)';
+          setTimeout(function() { card.remove(); }, 320);
+        }
+        showToast('Removed from collection');
+      })
+      .catch(function() { showToast('Something went wrong.'); });
+    };
+  </script>
+</body>
+</html>

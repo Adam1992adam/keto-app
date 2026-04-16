@@ -433,6 +433,7 @@ const diffColor = recipe.difficulty === 'Easy' ? '#10b981' : recipe.difficulty =
         <div class="side-head">Actions</div>
         <div class="side-body">
           <button id="foodLogBtn" onclick="window.logToFoodLog()" class="btn btn-green" style="width:100%;">📋 Add to Food Log</button>
+          <button onclick="window.openColPicker()" class="btn btn-outline" style="width:100%;">📚 Save to Collection</button>
           <a href="/dashboard" class="btn btn-outline">🏠 Dashboard</a>
           <a href="/dashboard/recipes" class="btn btn-outline">📚 All Recipes</a>
           <button onclick="window.print()" class="btn btn-outline">🖨️ Print Recipe</button>
@@ -640,6 +641,84 @@ window.toggleFav = function toggleFav(btn) {
   .catch(function() { showToast('❌ Could not update favorite'); });
 };
 
+// ── SAVE TO COLLECTION ──
+var colPickerOpen = false;
+
+window.openColPicker = function() {
+  var modal = document.getElementById('colPickerModal');
+  if (!modal) return;
+  modal.classList.add('show');
+  colPickerOpen = true;
+  // Load collections
+  var list = document.getElementById('colPickerList');
+  list.innerHTML = '<div style="color:var(--soft);font-size:.85rem;padding:.5rem 0;">Loading…</div>';
+  fetch('/api/collections')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var cols = data.collections || [];
+      if (cols.length === 0) {
+        list.innerHTML = '<div style="color:var(--soft);font-size:.85rem;padding:.5rem 0;">No collections yet. <a href="/dashboard/collections" style="color:var(--green);">Create one</a>.</div>';
+        return;
+      }
+      list.innerHTML = '';
+      cols.forEach(function(col) {
+        var btn = document.createElement('button');
+        btn.className = 'col-pick-btn';
+        btn.innerHTML = '<span>' + col.emoji + '</span><span style="flex:1;text-align:left;">' + col.name + '</span><span style="font-size:.75rem;color:var(--soft);">' + col.count + ' recipes</span>';
+        btn.onclick = function() { window.saveToCol(col.id, col.name); };
+        list.appendChild(btn);
+      });
+    })
+    .catch(function() {
+      list.innerHTML = '<div style="color:var(--soft);font-size:.85rem;">Could not load collections.</div>';
+    });
+};
+
+window.closeColPicker = function() {
+  var modal = document.getElementById('colPickerModal');
+  if (modal) modal.classList.remove('show');
+  colPickerOpen = false;
+};
+
+// recipeId comes from define:vars
+window._recipeId = recipeId;
+
+window.saveToCol = function(colId, colName) {
+  fetch('/api/collections/items', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ collectionId: colId, recipeId: window._recipeId }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    window.closeColPicker();
+    if (data.error) { showToast('❌ ' + data.error); return; }
+    showToast('📚 Saved to "' + colName + '"');
+  })
+  .catch(function() { showToast('❌ Could not save'); });
+};
+
 </script>
+
+<!-- Collection Picker Modal -->
+<div id="colPickerModal" style="position:fixed;inset:0;z-index:9100;background:rgba(6,13,9,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s;" onclick="if(event.target===this)window.closeColPicker()">
+  <div style="background:var(--card);border:1.5px solid var(--border2);border-radius:20px;padding:1.4rem;width:min(400px,95vw);box-shadow:0 24px 60px rgba(0,0,0,.5);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:700;">Save to Collection</div>
+      <button onclick="window.closeColPicker()" style="background:transparent;border:none;color:var(--soft);cursor:pointer;font-size:1.1rem;">✕</button>
+    </div>
+    <div id="colPickerList" style="display:flex;flex-direction:column;gap:.4rem;max-height:280px;overflow-y:auto;"></div>
+    <div style="margin-top:1rem;padding-top:.75rem;border-top:1px solid var(--border);">
+      <a href="/dashboard/collections" style="font-size:.82rem;color:var(--green);text-decoration:none;">+ New Collection</a>
+    </div>
+  </div>
+</div>
+
+<style>
+  #colPickerModal.show { opacity:1!important; pointer-events:all!important; }
+  .col-pick-btn { display:flex; align-items:center; gap:.6rem; width:100%; padding:.6rem .8rem; border-radius:10px; background:var(--card2); border:1.5px solid var(--border); color:var(--text); font-family:'DM Sans',sans-serif; font-size:.88rem; cursor:pointer; transition:all .15s; }
+  .col-pick-btn:hover { border-color:var(--green); background:rgba(16,185,129,.06); }
+</style>
+
 </body>
 </html>

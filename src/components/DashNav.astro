@@ -40,7 +40,7 @@ const initials  = (userName[0] || 'U').toUpperCase();
 const tierCss   = planType === 'elite_12' ? 'dn-tier dn-tier--elite' : planType === 'pro_6' ? 'dn-tier dn-tier--pro' : 'dn-tier dn-tier--basic';
 
 const progressPages = ['progress', 'photos', 'checkin', 'reflections', 'ketones', 'share', 'steps'];
-const mealPages     = ['recipes', 'food-log', 'food-photo', 'favorites', 'meal-prep', 'scanner'];
+const mealPages     = ['recipes', 'food-log', 'food-photo', 'favorites', 'collections', 'meal-prep', 'scanner'];
 const planPages     = ['shopping', 'habits', 'weekly', 'fasting', 'keto-calculator'];
 const morePages     = ['learn', 'notifications', 'export', 'referrals', 'guide', 'billing'];
 
@@ -74,8 +74,9 @@ const groups = [
       { href: '/dashboard/recipes',   key: 'recipes',   label: t('nav.recipes')   },
       { href: '/dashboard/food-log',   key: 'food-log',   label: t('nav.food_log')    },
       { href: '/dashboard/food-photo', key: 'food-photo', label: t('nav.food_photo')  },
-      { href: '/dashboard/favorites',  key: 'favorites',  label: t('nav.favorites')   },
-      { href: '/dashboard/meal-prep', key: 'meal-prep', label: t('nav.meal_prep') },
+      { href: '/dashboard/favorites',    key: 'favorites',    label: t('nav.favorites')     },
+      { href: '/dashboard/collections',  key: 'collections',  label: 'Collections'          },
+      { href: '/dashboard/meal-prep',    key: 'meal-prep',    label: t('nav.meal_prep')     },
       { href: '/dashboard/scanner',   key: 'scanner',   label: t('nav.scanner')   },
     ],
   },
