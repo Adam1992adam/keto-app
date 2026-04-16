@@ -41,7 +41,7 @@ const tierCss   = planType === 'elite_12' ? 'dn-tier dn-tier--elite' : planType 
 
 const progressPages = ['progress', 'photos', 'checkin', 'reflections', 'ketones', 'share', 'steps'];
 const mealPages     = ['recipes', 'food-log', 'food-photo', 'favorites', 'collections', 'meal-prep', 'scanner'];
-const planPages     = ['shopping', 'habits', 'weekly', 'fasting', 'keto-calculator'];
+const planPages     = ['shopping', 'habits', 'weekly', 'fasting', 'keto-calculator', 'meal-planner'];
 const morePages     = ['learn', 'notifications', 'export', 'referrals', 'guide', 'billing'];
 
 const activeGroup =
@@ -83,6 +83,7 @@ const groups = [
   {
     key: 'plan', label: t('nav.plan'),
     links: [
+      { href: '/dashboard/meal-planner',     key: 'meal-planner',    label: 'Meal Planner'      },
       { href: '/dashboard/shopping',        key: 'shopping',        label: t('nav.shopping')   },
       { href: '/dashboard/habits',          key: 'habits',          label: t('nav.habits')     },
       { href: '/dashboard/weekly',          key: 'weekly',          label: t('nav.weekly')     },

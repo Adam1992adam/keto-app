@@ -434,6 +434,7 @@ const diffColor = recipe.difficulty === 'Easy' ? '#10b981' : recipe.difficulty =
         <div class="side-body">
           <button id="foodLogBtn" onclick="window.logToFoodLog()" class="btn btn-green" style="width:100%;">📋 Add to Food Log</button>
           <button onclick="window.openColPicker()" class="btn btn-outline" style="width:100%;">📚 Save to Collection</button>
+          <button onclick="window.openMealPlanPicker()" class="btn btn-outline" style="width:100%;">📅 Add to Meal Plan</button>
           <a href="/dashboard" class="btn btn-outline">🏠 Dashboard</a>
           <a href="/dashboard/recipes" class="btn btn-outline">📚 All Recipes</a>
           <button onclick="window.print()" class="btn btn-outline">🖨️ Print Recipe</button>
@@ -641,6 +642,48 @@ window.toggleFav = function toggleFav(btn) {
   .catch(function() { showToast('❌ Could not update favorite'); });
 };
 
+// ── MEAL PLAN PICKER ──
+var mpSelectedMeal = 'breakfast';
+
+window.openMealPlanPicker = function() {
+  // Set today as default date
+  var today = new Date().toISOString().slice(0, 10);
+  document.getElementById('mpDate').value = today;
+  document.getElementById('mealPlanModal').classList.add('show');
+};
+window.closeMealPlanPicker = function() {
+  document.getElementById('mealPlanModal').classList.remove('show');
+};
+
+document.getElementById('mpMealBtns').addEventListener('click', function(e) {
+  var btn = e.target.closest('.mp-meal-btn');
+  if (!btn) return;
+  mpSelectedMeal = btn.dataset.meal;
+  document.querySelectorAll('.mp-meal-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+});
+
+window.saveMealPlan = function() {
+  var planDate = document.getElementById('mpDate').value;
+  if (!planDate) { document.getElementById('mpDate').focus(); return; }
+  var btn = document.getElementById('mpSaveBtn');
+  btn.disabled = true; btn.textContent = 'Adding…';
+
+  fetch('/api/meal-planner', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ plan_date: planDate, meal_type: mpSelectedMeal, recipe_id: window._recipeId }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    btn.disabled = false; btn.textContent = 'Add to Plan';
+    if (data.error) { showToast('❌ ' + data.error); return; }
+    window.closeMealPlanPicker();
+    showToast('📅 Added to meal plan');
+  })
+  .catch(function() { btn.disabled = false; btn.textContent = 'Add to Plan'; showToast('❌ Connection error'); });
+};
+
 // ── SAVE TO COLLECTION ──
 var colPickerOpen = false;
 
@@ -699,6 +742,39 @@ window.saveToCol = function(colId, colName) {
 };
 
 </script>
+
+<!-- Meal Plan Picker Modal -->
+<div id="mealPlanModal" style="position:fixed;inset:0;z-index:9200;background:rgba(6,13,9,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s;" onclick="if(event.target===this)window.closeMealPlanPicker()">
+  <div style="background:var(--card);border:1.5px solid var(--border2);border-radius:20px;padding:1.4rem;width:min(380px,95vw);box-shadow:0 24px 60px rgba(0,0,0,.5);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:700;">Add to Meal Plan</div>
+      <button onclick="window.closeMealPlanPicker()" style="background:transparent;border:none;color:var(--soft);cursor:pointer;font-size:1.1rem;">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.65rem;">
+      <div>
+        <label style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);display:block;margin-bottom:.35rem;">Date</label>
+        <input type="date" id="mpDate" style="width:100%;background:var(--card2);border:1.5px solid var(--border);border-radius:10px;padding:.55rem .8rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;outline:none;" />
+      </div>
+      <div>
+        <label style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);display:block;margin-bottom:.35rem;">Meal</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;" id="mpMealBtns">
+          <button class="mp-meal-btn active" data-meal="breakfast">🍳 Breakfast</button>
+          <button class="mp-meal-btn" data-meal="lunch">🥗 Lunch</button>
+          <button class="mp-meal-btn" data-meal="dinner">🍽️ Dinner</button>
+          <button class="mp-meal-btn" data-meal="snack">🥑 Snack</button>
+        </div>
+      </div>
+      <button id="mpSaveBtn" onclick="window.saveMealPlan()" style="margin-top:.3rem;padding:.55rem 1rem;border-radius:10px;background:var(--green);border:none;color:#fff;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:700;cursor:pointer;transition:background .15s;width:100%;">Add to Plan</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  #mealPlanModal.show { opacity:1!important; pointer-events:all!important; }
+  .mp-meal-btn { padding:.45rem .5rem; border-radius:9px; background:var(--card2); border:1.5px solid var(--border); color:var(--soft); font-family:'DM Sans',sans-serif; font-size:.82rem; font-weight:600; cursor:pointer; transition:all .15s; }
+  .mp-meal-btn:hover { border-color:var(--border2); color:var(--text); }
+  .mp-meal-btn.active { background:var(--green); border-color:var(--green); color:#fff; }
+</style>
 
 <!-- Collection Picker Modal -->
 <div id="colPickerModal" style="position:fixed;inset:0;z-index:9100;background:rgba(6,13,9,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s;" onclick="if(event.target===this)window.closeColPicker()">
