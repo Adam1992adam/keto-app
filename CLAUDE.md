@@ -1,5 +1,5 @@
 # CLAUDE.md — Keto Journey App — Complete Project Reference
-> Last updated: 2026-04-16 | Astro 4 + Supabase + Vercel | Payment: LemonSqueezy
+> Last updated: 2026-04-16 (session 2) | Astro 4 + Supabase + Vercel | Payment: LemonSqueezy
 
 ---
 
@@ -54,6 +54,18 @@
 | S07 | Error log user context | All 13 API files updated: `let userId = 'unknown'` pattern; `console.error('[endpoint] user:', userId, err)` |
 | S08 | AI Coach UTC boundary | Confirmed UTC-consistent; added comment in gemini.ts |
 | S10 | HTML strip in community | posts.ts + comments.ts: `replace(/<[^>]*>/g, '')` before insert |
+
+### Recipe Section Overhaul (2026-04-16 session 2) ✅ Done
+| # | Work | Notes |
+|---|------|-------|
+| R1 | Removed /dashboard/browse | Deleted 757-line page; cleaned 4 references (DashNav, recipe/[id], guide x2) |
+| R2 | Serving size scaler | ½×/1×/1½×/2× buttons on recipe detail; macros + sidebar + food-log payload all scale |
+| R3 | Global recipe search | /api/recipes/search (paginated, tag/difficulty/carbs filters, favorites marked); overlay on recipes.astro with ⌘K shortcut |
+| R4 | Recipes.astro overhaul | Real DB recipe counts per book; fake PDF modal removed; all 84 bookMeta entries; tier access guard |
+| R5 | Favorites page upgrade | Tag filter chips; sort (newest/carbs/protein/calories); book category + difficulty badges; removed Star import |
+| R6 | Recipe Collections | recipe_collections + recipe_collection_items tables (RLS); GET/POST/DELETE APIs; /dashboard/collections page; "Save to Collection" on recipe detail |
+| R7 | Meal Planner | user_meal_plan table (RLS); GET/POST/DELETE /api/meal-planner; /dashboard/meal-planner weekly grid + mobile day-tabs; "Add to Meal Plan" on recipe detail |
+| R8 | Recipe data gap fixed | 87 null book_id recipes assigned: b5 (30 breakfast/Pro), l5 (30 lunch/Pro), d3+d4 (21 dinner/Basic), s1 (6 snacks/Basic) |
 
 ### Community Upgrade (2026-04-16) ✅ Done
 - **3 post types**: `text`, `photo`, `progress` (results card)
@@ -110,7 +122,8 @@ src/
 │   │   ├── recipes.astro        ← Recipe browser ✅
 │   │   ├── recipe/[id].astro    ← Recipe detail (ingredients fix: string+object format; lightbox) ✅
 │   │   ├── recipes/[bookId].astro ← Recipe book detail ✅
-│   │   ├── browse.astro         ← All recipes browser ✅
+│   │   ├── collections.astro    ← Recipe collections (named lists) ✅
+│   │   ├── meal-planner.astro  ← Weekly meal planner grid ✅
 │   │   ├── favorites.astro      ← Saved favorite recipes ✅
 │   │   ├── food-photo.astro     ← AI food photo analyzer ✅
 │   │   ├── food-log.astro       ← Daily food log + meal swap + edit entry ✅
@@ -153,7 +166,9 @@ src/
 │       ├── measurements/save.ts ← POST /api/measurements/save ✅
 │       ├── profile/             ← update.ts, add-weight.ts, update-avatar.ts, update-language.ts, update-units.ts
 │       ├── weekly/save.ts       ← XP via award_xp RPC
-│       ├── recipes/             ← favorite.ts  (rate.ts DELETED — star rating removed)
+│       ├── recipes/             ← favorite.ts, search.ts  (rate.ts DELETED — star rating removed)
+│       ├── collections/         ← index.ts (GET list / POST create), items.ts (POST add / DELETE remove/collection)
+│       ├── meal-planner.ts      ← GET week / POST add entry / DELETE remove entry
 │       ├── community/           ← posts.ts + [id]/comments.ts + [id]/react.ts + moderation
 │       ├── lemonsqueezy/        ← webhook.ts, portal.ts, verify-purchase.ts
 │       ├── referrals/           ← 3 endpoints
@@ -198,6 +213,9 @@ src/
 | `habits` | User habit tracking |
 | `ketone_logs` | Ketone measurements |
 | `steps_logs` | Daily step counts |
+| `recipe_collections` | `user_id, name, emoji` — user-created recipe collections (max 20) |
+| `recipe_collection_items` | `collection_id, recipe_id` — recipes in a collection (max 200, unique per collection) |
+| `user_meal_plan` | `user_id, plan_date(date), meal_type, recipe_id` — user's weekly meal schedule (max 8/slot) |
 
 ### recipes.ingredients format — MIXED (handle both)
 ```typescript
@@ -688,13 +706,15 @@ Array.from({ length: maxWeeks }, (_, i) => i + 1)
 - Error UI: guide, keto-calculator, welcome, habits all have try-catch + 503 fallback
 
 ### ⚠️ Known Gaps — Next Priorities
-- ~~**Webhook replay attacks**~~ ✅ Fixed — `processed_webhooks` table deduplicates by HMAC signature (unique constraint).
-- ~~**Admin timing attack**~~ ✅ Fixed — `crypto.timingSafeEqual()` with equal-length padded `Uint8Array` buffers.
-- ~~**Food photo analyzer numeric validation**~~ ✅ Fixed — `clampCal`/`clampMacro` helpers cap all values before storage.
-- ~~**Photo upload rate limit**~~ ✅ Fixed — 5 uploads/day cap added to `/api/photos/upload.ts`.
-- ~~**Habit completion future days**~~ ✅ Fixed — rejects `day_number > current_day` with 403 in `/api/habits/toggle.ts`.
+- ~~**Webhook replay attacks**~~ ✅ Fixed
+- ~~**Admin timing attack**~~ ✅ Fixed
+- ~~**Food photo analyzer numeric validation**~~ ✅ Fixed
+- ~~**Photo upload rate limit**~~ ✅ Fixed
+- ~~**Habit completion future days**~~ ✅ Fixed
+- ~~**Recipe data gap (Pro/Elite books showing 0 recipes)**~~ ✅ Fixed — 87 null book_ids assigned in DB migration
 - **Community posts N+1**: posts.ts fetches posts then makes separate queries for profiles and reactions. Already batched with Promise.all, but could be a single JOIN query.
 - **ai-coach.astro**: needs @media queries for narrow (<400px) viewports.
+- **Smoothies/Baking/Desserts categories**: 0 recipes in DB — no data exists yet for sm*/bk*/ds* book IDs.
 
 ---
 
