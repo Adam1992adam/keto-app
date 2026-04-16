@@ -6,11 +6,12 @@ import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db } = auth;
-    const userId = user.id;
+    userId = user.id;
 
     const body = await request.json().catch(() => ({}));
     const collectionId = body.collectionId || '';
@@ -45,17 +46,18 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     return json({ success: true });
   } catch (e: any) {
-    console.error('[collections/items POST] user: unknown', e);
+    console.error('[collections/items POST] user:', userId, e);
     return json({ error: 'Server error' }, 500);
   }
 };
 
 export const DELETE: APIRoute = async ({ request, cookies, url }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db } = auth;
-    const userId = user.id;
+    userId = user.id;
 
     const body = await request.json().catch(() => ({}));
     const collectionId = body.collectionId || '';
@@ -97,7 +99,7 @@ export const DELETE: APIRoute = async ({ request, cookies, url }) => {
 
     return json({ success: true, deleted: 'item' });
   } catch (e: any) {
-    console.error('[collections/items DELETE] user: unknown', e);
+    console.error('[collections/items DELETE] user:', userId, e);
     return json({ error: 'Server error' }, 500);
   }
 };

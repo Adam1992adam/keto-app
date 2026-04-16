@@ -16,10 +16,12 @@ function monday(dateStr: string): string {
 }
 
 export const GET: APIRoute = async ({ request, cookies }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db } = auth;
+    userId = user.id;
 
     const url   = new URL(request.url);
     const week  = url.searchParams.get('week') || new Date().toISOString().slice(0, 10);
@@ -35,23 +37,24 @@ export const GET: APIRoute = async ({ request, cookies }) => {
       .order('plan_date', { ascending: true });
 
     if (error) {
-      console.error('[meal-planner GET] user:', user.id, error);
+      console.error('[meal-planner GET] user:', userId, error);
       return json({ error: 'Server error' }, 500);
     }
 
     return json({ entries: data || [], start, end });
   } catch (e: any) {
-    console.error('[meal-planner GET] user: unknown', e);
+    console.error('[meal-planner GET] user:', userId, e);
     return json({ error: 'Server error' }, 500);
   }
 };
 
 export const POST: APIRoute = async ({ request, cookies }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db } = auth;
-    const userId = user.id;
+    userId = user.id;
 
     const body      = await request.json().catch(() => ({}));
     const planDate  = (body.plan_date  || '').trim();
@@ -85,17 +88,18 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     return json({ entry: data }, 201);
   } catch (e: any) {
-    console.error('[meal-planner POST] user: unknown', e);
+    console.error('[meal-planner POST] user:', userId, e);
     return json({ error: 'Server error' }, 500);
   }
 };
 
 export const DELETE: APIRoute = async ({ request, cookies }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db } = auth;
-    const userId = user.id;
+    userId = user.id;
 
     const body = await request.json().catch(() => ({}));
     const id   = (body.id || '').trim();
@@ -114,7 +118,7 @@ export const DELETE: APIRoute = async ({ request, cookies }) => {
 
     return json({ success: true });
   } catch (e: any) {
-    console.error('[meal-planner DELETE] user: unknown', e);
+    console.error('[meal-planner DELETE] user:', userId, e);
     return json({ error: 'Server error' }, 500);
   }
 };

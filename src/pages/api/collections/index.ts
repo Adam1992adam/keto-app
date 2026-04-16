@@ -5,10 +5,12 @@ import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
 
 export const GET: APIRoute = async ({ cookies }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db } = auth;
+    userId = user.id;
 
     const { data, error } = await db
       .from('recipe_collections')
@@ -16,7 +18,10 @@ export const GET: APIRoute = async ({ cookies }) => {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
-    if (error) return json({ error: 'Server error' }, 500);
+    if (error) {
+      console.error('[collections GET] user:', userId, error);
+      return json({ error: 'Server error' }, 500);
+    }
 
     const collections = (data || []).map((c: any) => ({
       id:         c.id,
@@ -28,17 +33,18 @@ export const GET: APIRoute = async ({ cookies }) => {
 
     return json({ collections });
   } catch (e: any) {
-    console.error('[collections/index GET] user: unknown', e);
+    console.error('[collections GET] user:', userId, e);
     return json({ error: 'Server error' }, 500);
   }
 };
 
 export const POST: APIRoute = async ({ request, cookies }) => {
+  let userId = 'unknown';
   try {
     const auth = await requireApiAuth(cookies);
     if (!auth.ok) return auth.response;
     const { user, db } = auth;
-    let userId = user.id;
+    userId = user.id;
 
     const body = await request.json().catch(() => ({}));
     const name  = (body.name  || '').trim().slice(0, 60);
@@ -66,7 +72,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     return json({ collection: { ...data, count: 0 } }, 201);
   } catch (e: any) {
-    console.error('[collections/index POST] user: unknown', e);
+    console.error('[collections POST] user:', userId, e);
     return json({ error: 'Server error' }, 500);
   }
 };

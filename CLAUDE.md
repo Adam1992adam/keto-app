@@ -1,5 +1,5 @@
 # CLAUDE.md — Keto Journey App — Complete Project Reference
-> Last updated: 2026-04-16 (session 2) | Astro 4 + Supabase + Vercel | Payment: LemonSqueezy
+> Last updated: 2026-04-16 (session 3) | Astro 4 + Supabase + Vercel | Payment: LemonSqueezy
 
 ---
 
@@ -66,6 +66,16 @@
 | R6 | Recipe Collections | recipe_collections + recipe_collection_items tables (RLS); GET/POST/DELETE APIs; /dashboard/collections page; "Save to Collection" on recipe detail |
 | R7 | Meal Planner | user_meal_plan table (RLS); GET/POST/DELETE /api/meal-planner; /dashboard/meal-planner weekly grid + mobile day-tabs; "Add to Meal Plan" on recipe detail |
 | R8 | Recipe data gap fixed | 87 null book_id recipes assigned: b5 (30 breakfast/Pro), l5 (30 lunch/Pro), d3+d4 (21 dinner/Basic), s1 (6 snacks/Basic) |
+
+### Recipe Data Expansion + App Audit (2026-04-16 session 3) ✅ Done
+| # | Work | Notes |
+|---|------|-------|
+| D1 | Smoothie recipes added | sm1–sm4: 20 recipes each (80 total) — green smoothies, berry blends, protein shakes, creamy shakes |
+| D2 | Baking recipes added | bk1–bk4: 20 recipes each (80 total) — breads, cookies/bars, muffins/cupcakes, cakes/tarts |
+| D3 | Dessert recipes added | ds1–ds4: 20 recipes each (80 total) — ice cream, puddings/custards, candy/confections, pies/cobblers |
+| D4 | bookMeta title mismatches fixed | 9 mismatches corrected in recipes.astro + [bookId].astro (sm2/sm3/sm4/bk2/bk4/ds1/ds2/ds3/ds4) |
+| D5 | S07 pattern backfilled | `let userId = 'unknown'` applied to meal-planner.ts, collections/index.ts, collections/items.ts |
+| D6 | DB integrity verified | All 240 new recipes: correct net_carbs math, no duplicates, no null book_id, tier guards correct |
 
 ### Community Upgrade (2026-04-16) ✅ Done
 - **3 post types**: `text`, `photo`, `progress` (results card)
@@ -713,8 +723,10 @@ Array.from({ length: maxWeeks }, (_, i) => i + 1)
 - ~~**Habit completion future days**~~ ✅ Fixed
 - ~~**Recipe data gap (Pro/Elite books showing 0 recipes)**~~ ✅ Fixed — 87 null book_ids assigned in DB migration
 - **Community posts N+1**: posts.ts fetches posts then makes separate queries for profiles and reactions. Already batched with Promise.all, but could be a single JOIN query.
-- **ai-coach.astro**: needs @media queries for narrow (<400px) viewports.
-- **Smoothies/Baking/Desserts categories**: 0 recipes in DB — no data exists yet for sm*/bk*/ds* book IDs.
+- ~~**ai-coach.astro**: needs @media queries for narrow (<400px) viewports.~~ ✅ Already has `@media(max-width:400px)` rule.
+- ~~**Smoothies/Baking/Desserts categories**: 0 recipes in DB~~ ✅ Fixed — sm1–sm4, bk1–bk4, ds1–ds4 each have 20 recipes (240 total added).
+- **Pro/Elite-only recipe books**: b5–b12, l5–l12, d5–d12, s5–s12, sm5–sm12, bk5–bk12, ds5–ds12 have no recipes yet (shown as locked/placeholder).
+- **Dessert title overlap (note for Stage 5+)**: When adding Pro dessert recipes, differentiate ds6 "Keto Mousse & Puddings" from ds2 "Keto Puddings & Custards", ds7 "Keto Pies & Tarts" from ds4 "Keto Pies & Cobblers", and ds8 "Keto Candy Book" from ds3 "Keto Candy & Confections" — same emoji/topic collisions to resolve with distinct recipes.
 
 ---
 
