@@ -438,7 +438,7 @@ const presentTags = Array.from(new Set(
               >
                 <div class="card-image-wrap">
                   {recipe.image_url ? (
-                    <img src={recipe.image_url} alt={recipe.title} loading="lazy" />
+                    <img src={recipe.image_url} alt={recipe.title} loading="lazy" width="400" height="160" />
                   ) : (
                     <div class="card-image-placeholder"><UtensilsCrossed size={32} /></div>
                   )}

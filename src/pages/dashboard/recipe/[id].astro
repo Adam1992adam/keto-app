@@ -237,7 +237,7 @@ const diffColor = recipe.difficulty === 'Easy' ? '#10b981' : recipe.difficulty =
 <div class="page">
   <div class="recipe-hero">
     {recipe.image_url
-      ? <img src={recipe.image_url} alt={recipe.title} class="recipe-hero-img" loading="lazy" onclick="window.openLightbox()" title="Tap to expand"/>
+      ? <img src={recipe.image_url} alt={recipe.title} class="recipe-hero-img" loading="eager" width="800" height="420" onclick="window.openLightbox()" title="Tap to expand"/>
       : <div class="hero-placeholder" style={`background:${cat.gradient};`}>
           <span style="font-size:6rem;filter:drop-shadow(0 4px 16px rgba(0,0,0,.4));">{cat.icon}</span>
           <span style="font-size:.9rem;font-weight:700;color:rgba(255,255,255,.75);letter-spacing:.06em;text-transform:uppercase;">{cat.name}</span>

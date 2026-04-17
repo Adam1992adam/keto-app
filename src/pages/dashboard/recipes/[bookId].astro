@@ -448,7 +448,7 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
           >
             <div class="recipe-img">
               {r.image_url
-                ? <img src={r.image_url} alt={r.title} loading="lazy" />
+                ? <img src={r.image_url} alt={r.title} loading="lazy" width="400" height="170" />
                 : <div class="recipe-img-placeholder">{book.emoji}</div>
               }
               <div class="recipe-img-overlay"></div>
