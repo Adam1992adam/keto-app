@@ -5,6 +5,7 @@
 
 import type { APIRoute } from 'astro';
 import { sendPushToUser } from '../../../lib/push';
+import { json } from '../../../lib/apiResponse';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Auth: CRON_SECRET or same-origin request
@@ -46,9 +47,3 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

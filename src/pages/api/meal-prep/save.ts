@@ -14,6 +14,7 @@
 
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
+import { json } from '../../../lib/apiResponse';
 
 // ── GET — return latest saved plan ──────────────────────────────────────────
 export const GET: APIRoute = async ({ cookies }) => {
@@ -86,9 +87,3 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 };
 
 // ── Helper ───────────────────────────────────────────────────────────────────
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

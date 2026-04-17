@@ -16,6 +16,7 @@
 //   subscription_resumed         → restore after pause/cancel
 
 import type { APIRoute } from 'astro';
+import { json } from '../../../lib/apiResponse';
 
 // ─── HMAC signature verification ─────────────────────────────────────────────
 async function verifySignature(secret: string, body: string, signature: string): Promise<boolean> {
@@ -46,11 +47,6 @@ function detectTier(productName: string, variantName: string, priceCents: number
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status, headers: { 'Content-Type': 'application/json' },
-  });
-}
 
 function getEnv(key: string, locals: any): string {
   const cfEnv = locals?.runtime?.env || {};

@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
+import { json } from '../../../lib/apiResponse';
 
 const DEFAULTS = {
   checkin_reminder:  true,
@@ -64,9 +65,3 @@ export const POST: APIRoute = async ({ cookies, request }) => {
   return json({ success: true, preferences: row });
 };
 
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

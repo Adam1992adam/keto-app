@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
+import { json } from '../../../lib/apiResponse';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -42,9 +43,3 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 };
 
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

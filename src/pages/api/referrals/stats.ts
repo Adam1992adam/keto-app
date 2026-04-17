@@ -2,13 +2,8 @@
 // Returns the user's referral code, total invites, XP earned, and referral history.
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
+import { json } from '../../../lib/apiResponse';
 
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
 
 export const GET: APIRoute = async ({ cookies }) => {
   const auth = await requireApiAuth(cookies);

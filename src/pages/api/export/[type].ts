@@ -3,6 +3,7 @@
 // type: weight | checkins | food | measurements
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
+import { json } from '../../../lib/apiResponse';
 
 export const GET: APIRoute = async ({ params, cookies }) => {
   const auth = await requireApiAuth(cookies);
@@ -193,9 +194,3 @@ function csvResponse(headers: string[], rows: (string | number | null | undefine
   });
 }
 
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

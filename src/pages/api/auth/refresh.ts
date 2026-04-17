@@ -2,6 +2,7 @@
 // POST /api/auth/refresh — rotate access token using refresh token cookie
 import type { APIRoute } from 'astro';
 import { supabase } from '../../../lib/supabase';
+import { json } from '../../../lib/apiResponse';
 
 export const POST: APIRoute = async ({ cookies }) => {
   const refreshToken = cookies.get('sb-refresh-token')?.value;
@@ -22,9 +23,3 @@ export const POST: APIRoute = async ({ cookies }) => {
   return json({ success: true });
 };
 
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

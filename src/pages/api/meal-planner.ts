@@ -4,6 +4,7 @@
 // DELETE /api/meal-planner  { id }
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../lib/auth';
+import { json } from '../../lib/apiResponse';
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
@@ -123,9 +124,3 @@ export const DELETE: APIRoute = async ({ request, cookies }) => {
   }
 };
 
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

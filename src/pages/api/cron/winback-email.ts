@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { sendWinbackEmail } from '../../../lib/email';
+import { json } from '../../../lib/apiResponse';
 
 export const GET: APIRoute = async ({ request }) => {
   const authHeader = request.headers.get('authorization');
@@ -102,9 +103,3 @@ export const GET: APIRoute = async ({ request }) => {
   return json({ success: true, sent, skipped });
 };
 
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { sendWeeklySummaryEmail } from '../../../lib/email';
+import { json } from '../../../lib/apiResponse';
 
 export const GET: APIRoute = async ({ request }) => {
   // ── Auth ─────────────────────────────────────────────────────
@@ -214,9 +215,3 @@ function getEmailInsight(p: {
   return undefined;
 }
 
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

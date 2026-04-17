@@ -2,6 +2,7 @@
 // Activates a streak shield to cover a missed yesterday.
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
+import { json } from '../../../lib/apiResponse';
 
 export const POST: APIRoute = async ({ cookies }) => {
   try {
@@ -29,9 +30,3 @@ export const POST: APIRoute = async ({ cookies }) => {
   }
 };
 
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

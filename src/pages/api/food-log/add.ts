@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
 import { autoCompleteTask } from '../../../lib/autoTask';
+import { json } from '../../../lib/apiResponse';
 
 const MEAL_TASK_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
 
@@ -55,9 +56,3 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 };
 
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

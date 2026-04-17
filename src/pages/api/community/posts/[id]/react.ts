@@ -2,6 +2,7 @@
 // POST /api/community/posts/[id]/react  { reaction_type: 'like'|'fire'|'clap' }
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../../../lib/auth';
+import { json } from '../../../../../lib/apiResponse';
 
 export const POST: APIRoute = async ({ request, cookies, params }) => {
   try {
@@ -44,9 +45,3 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
   }
 };
 
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

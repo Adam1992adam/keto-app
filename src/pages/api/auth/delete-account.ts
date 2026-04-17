@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { requireApiAuth } from '../../../lib/auth';
+import { json } from '../../../lib/apiResponse';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   const auth = await requireApiAuth(cookies);
@@ -89,8 +90,3 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   return json({ success: true });
 };
 
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status, headers: { 'Content-Type': 'application/json' },
-  });
-}

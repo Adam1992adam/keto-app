@@ -2,6 +2,7 @@
 // actions: dismiss | hide_post | hide_comment | ban_user | unban_user
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import { json } from '../../../lib/apiResponse';
 
 const VALID_ACTIONS = ['dismiss', 'hide_post', 'hide_comment', 'ban_user', 'unban_user'];
 
@@ -94,9 +95,3 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 };
 
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

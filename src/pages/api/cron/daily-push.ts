@@ -11,6 +11,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { sendPushToUser } from '../../../lib/push';
+import { json } from '../../../lib/apiResponse';
 
 export const GET: APIRoute = async ({ request, locals }) => {
   // ── Auth ────────────────────────────────────────────────────
@@ -146,9 +147,3 @@ export const GET: APIRoute = async ({ request, locals }) => {
   });
 };
 
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

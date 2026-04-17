@@ -3,6 +3,7 @@
 // Server-side recipe search across the full library. Returns paginated results.
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
+import { json } from '../../../lib/apiResponse';
 
 const PAGE_SIZE = 24;
 const ALLOWED_DIFFICULTIES = ['easy', 'medium', 'hard'];
@@ -116,9 +117,3 @@ function enrich(recipes: any[], favSet: Set<string>) {
   }));
 }
 
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}

@@ -4,6 +4,7 @@
 // Returns: { url: string } — stable public URL from the community-photos bucket
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
+import { json } from '../../../lib/apiResponse';
 
 const BUCKET   = 'community-photos';
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
@@ -82,8 +83,3 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   return json({ url: pubData.publicUrl });
 };
 
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status, headers: { 'Content-Type': 'application/json' },
-  });
-}
