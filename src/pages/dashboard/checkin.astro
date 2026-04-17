@@ -808,6 +808,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
       <div class="slider-track-wrap">
         <input type="range" class="ci-range" id="energySlider"
           min="1" max="5" step="1" value={prefill.energy}
+          aria-label="Energy level" aria-valuemin="1" aria-valuemax="5" aria-valuenow={prefill.energy}
           oninput="window.onSlider('energy', this.value)" />
       </div>
       <div class="slider-labels">
@@ -832,6 +833,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
       <div class="slider-track-wrap">
         <input type="range" class="ci-range" id="moodSlider"
           min="1" max="5" step="1" value={prefill.mood}
+          aria-label="Mood level" aria-valuemin="1" aria-valuemax="5" aria-valuenow={prefill.mood}
           oninput="window.onSlider('mood', this.value)" />
       </div>
       <div class="slider-labels">
@@ -856,6 +858,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
       <div class="slider-track-wrap">
         <input type="range" class="ci-range" id="hungerSlider"
           min="1" max="5" step="1" value={prefill.hunger}
+          aria-label="Hunger level" aria-valuemin="1" aria-valuemax="5" aria-valuenow={prefill.hunger}
           style="accent-color:var(--red);"
           oninput="window.onSlider('hunger', this.value)" />
       </div>
@@ -881,6 +884,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
       <div class="slider-track-wrap">
         <input type="range" class="ci-range" id="brainSlider"
           min="1" max="5" step="1" value="3"
+          aria-label="Brain fog level" aria-valuemin="1" aria-valuemax="5" aria-valuenow="3"
           style="accent-color:var(--purple);"
           oninput="window.onSlider('brain', this.value)" />
       </div>

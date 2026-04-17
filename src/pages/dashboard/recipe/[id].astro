@@ -471,7 +471,7 @@ const diffColor = recipe.difficulty === 'Easy' ? '#10b981' : recipe.difficulty =
 )}
 
 <!-- Photo Lightbox -->
-<div class="lightbox" id="lightbox" onclick="window.closeLightbox()">
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Recipe photo" onclick="window.closeLightbox()">
   <button class="lightbox-close" onclick="window.closeLightbox()" aria-label="Close">✕</button>
   <img id="lightboxImg" class="lightbox-img" src="" alt="" onclick="event.stopPropagation()"/>
   <div class="lightbox-hint">Tap outside or press Esc to close</div>
@@ -744,7 +744,7 @@ window.saveToCol = function(colId, colName) {
 </script>
 
 <!-- Meal Plan Picker Modal -->
-<div id="mealPlanModal" style="position:fixed;inset:0;z-index:9200;background:rgba(6,13,9,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s;" onclick="if(event.target===this)window.closeMealPlanPicker()">
+<div id="mealPlanModal" role="dialog" aria-modal="true" aria-label="Add to Meal Plan" style="position:fixed;inset:0;z-index:9200;background:rgba(6,13,9,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s;" onclick="if(event.target===this)window.closeMealPlanPicker()">
   <div style="background:var(--card);border:1.5px solid var(--border2);border-radius:20px;padding:1.4rem;width:min(380px,95vw);box-shadow:0 24px 60px rgba(0,0,0,.5);">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
       <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:700;">Add to Meal Plan</div>
@@ -777,7 +777,7 @@ window.saveToCol = function(colId, colName) {
 </style>
 
 <!-- Collection Picker Modal -->
-<div id="colPickerModal" style="position:fixed;inset:0;z-index:9100;background:rgba(6,13,9,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s;" onclick="if(event.target===this)window.closeColPicker()">
+<div id="colPickerModal" role="dialog" aria-modal="true" aria-label="Save to Collection" style="position:fixed;inset:0;z-index:9100;background:rgba(6,13,9,.82);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s;" onclick="if(event.target===this)window.closeColPicker()">
   <div style="background:var(--card);border:1.5px solid var(--border2);border-radius:20px;padding:1.4rem;width:min(400px,95vw);box-shadow:0 24px 60px rgba(0,0,0,.5);">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
       <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:700;">Save to Collection</div>

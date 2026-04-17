@@ -416,7 +416,7 @@ const mealIcons: Record<string, string> = {
 )}
 
 <!-- ── ADD MODAL ─────────────────────────────────────────────── -->
-<div class="modal-backdrop" id="addModal">
+<div class="modal-backdrop" id="addModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title" id="modalTitle">Log Food</div>
@@ -496,7 +496,7 @@ const mealIcons: Record<string, string> = {
 <div class="toast" id="toast"></div>
 
 <!-- ── SWAP SUGGESTIONS MODAL ───────────────────────────────── -->
-<div class="swap-modal-backdrop" id="swapModal">
+<div class="swap-modal-backdrop" id="swapModal" role="dialog" aria-modal="true" aria-label="Meal swap suggestions">
   <div class="swap-modal">
     <div class="modal-handle"></div>
     <div class="swap-modal-title">Suggest Alternatives</div>
