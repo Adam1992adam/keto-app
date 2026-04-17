@@ -1,6 +1,6 @@
 import { defineConfig } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
-import vercel from '@astrojs/vercel/serverless';
+import vercel from '@astrojs/vercel';
 import sentry from '@sentry/astro';
 
 export default defineConfig({
@@ -11,7 +11,6 @@ export default defineConfig({
   integrations: [
     tailwind(),
     sentry({
-      dsn: process.env.PUBLIC_SENTRY_DSN,
       sourceMapsUploadOptions: {
         project: 'keto-journey',
         authToken: process.env.SENTRY_AUTH_TOKEN,
