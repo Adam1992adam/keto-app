@@ -2,8 +2,12 @@
 // GET  /api/community/posts?category=all&page=1  → paginated posts
 // POST /api/community/posts  { content, category } → create post
 import type { APIRoute } from 'astro';
+import sanitizeHtml from 'sanitize-html';
 import { requireApiAuth } from '../../../lib/auth';
 import { json } from '../../../lib/apiResponse';
+
+// Strip all HTML tags and attributes — allows zero tags
+const SANITIZE_OPTS: sanitizeHtml.IOptions = { allowedTags: [], allowedAttributes: {} };
 
 const PAGE_SIZE         = 20;
 const ALLOWED_CATEGORIES = ['progress', 'recipes', 'tips', 'motivation', 'general'];
@@ -119,9 +123,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         return json({ error: 'Invalid image_url' }, 400);
     }
 
-    // Strip HTML — defence-in-depth against XSS
+    // Strip all HTML — defence-in-depth against XSS
     const raw  = (content || '').trim();
-    const safe = raw.replace(/<[^>]*>/g, '').trim();
+    const safe = sanitizeHtml(raw, SANITIZE_OPTS).trim();
     if (!isMediaPost && safe.length < 3)
       return json({ error: 'Content must be at least 3 characters' }, 400);
 

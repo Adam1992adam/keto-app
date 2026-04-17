@@ -2,8 +2,11 @@
 // GET  /api/community/posts/[id]/comments  → list comments for post
 // POST /api/community/posts/[id]/comments  { content } → add comment
 import type { APIRoute } from 'astro';
+import sanitizeHtml from 'sanitize-html';
 import { requireApiAuth } from '../../../../../lib/auth';
 import { json } from '../../../../../lib/apiResponse';
+
+const SANITIZE_OPTS: sanitizeHtml.IOptions = { allowedTags: [], allowedAttributes: {} };
 
 export const GET: APIRoute = async ({ cookies, params }) => {
   try {
@@ -69,8 +72,8 @@ export const POST: APIRoute = async ({ request, cookies, params }) => {
     if (content.length > 500)
       return json({ error: 'Comment too long (max 500 characters)' }, 400);
 
-    // Strip HTML tags before storing — defence-in-depth against XSS
-    const safe = content.trim().replace(/<[^>]*>/g, '').trim();
+    // Strip all HTML tags before storing — defence-in-depth against XSS
+    const safe = sanitizeHtml(content.trim(), SANITIZE_OPTS).trim();
     if (safe.length < 1)
       return json({ error: 'Content required' }, 400);
 
