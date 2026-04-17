@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Astro type check
+        run: npx astro check
+        env:
+          # Stub env vars so Astro doesn't crash on import.meta.env references
+          PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          PUBLIC_SUPABASE_ANON_KEY: placeholder
+          PUBLIC_APP_URL: https://placeholder.com
+          PUBLIC_SENTRY_DSN: ''
