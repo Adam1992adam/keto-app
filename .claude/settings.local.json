@@ -43,7 +43,28 @@
       "Bash(grep -n \"__recipeId\\\\|define:vars\\\\|recipeId\\\\b\" src/pages/dashboard/recipe/[id].astro)",
       "Bash(grep -n \"page-wrap\\\\|/page-wrap\\\\|</div>.*page\" src/pages/dashboard/recipe/[id].astro)",
       "Bash(grep -n \"toast\\\\|/div.*page\\\\|class=\"\"toast\"\"\" src/pages/dashboard/recipe/[id].astro)",
-      "Bash(dir \"C:\\\\Users\\\\abdellatif\\\\Videos\\\\keto-app\\\\public\")"
+      "Bash(dir \"C:\\\\Users\\\\abdellatif\\\\Videos\\\\keto-app\\\\public\")",
+      "Bash(grep -l \"requireAuth\\\\|manual.*cookie\\\\|let\\\\s\\\\+.*=\\\\s*await\" /c/Users/abdellatif/Videos/keto-app/src/pages/dashboard/*.astro)",
+      "Bash(grep -l \"!meals\\\\|!tasks\\\\|!data\\\\|length === 0\" /c/Users/abdellatif/Videos/keto-app/src/pages/dashboard/*.astro)",
+      "Bash(grep:*)",
+      "Bash(sed -n '560,580p' /c/Users/abdellatif/Videos/keto-app/src/lib/supabase.ts)",
+      "Bash(sed -n '661,700p' /c/Users/abdellatif/Videos/keto-app/src/lib/supabase.ts)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:4321/dashboard/progress\" --cookie \"sb-access-token=test\" -m 5)",
+      "Bash(find:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npm info:*)",
+      "Bash(npm view:*)",
+      "Bash(sed:*)",
+      "Read(//tmp/**)",
+      "Bash(find /tmp -name \"*.output\")",
+      "Bash(sort -t/ -k6)",
+      "Bash(LEMONSQUEEZY_WEBHOOK_SECRET=\"0123456789azertyuiopqsdfghjklmwxcvbn\" node test-webhook.mjs all)",
+      "Bash(xargs -I {} bash -c 'echo \"=== {} ===\" && grep \"return.*json\\\\|return.*Response\" {} | head -3')",
+      "Bash(tail -40 C:\\\\\\\\Users\\\\\\\\ABDELL~1\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\C--Users-abdellatif-Videos-keto-app\\\\\\\\ec5b0fcd-962d-46a1-bda6-9cff4965106f\\\\\\\\tasks\\\\\\\\bt4pijrf7.output)",
+      "Bash(node_modules/.bin/astro build:*)",
+      "Bash(cat:*)"
     ]
   }
 }
