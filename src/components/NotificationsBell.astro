@@ -463,7 +463,25 @@ const { userId } = Astro.props;
       updateBadge(data.unreadCount || 0);
     } catch {}
   }
+
+  // Generate fresh notifications in background, then refresh badge
+  async function generateInBackground() {
+    try {
+      await fetch('/api/notifications/generate', { method: 'POST' });
+      const res  = await fetch('/api/notifications?limit=1');
+      const data = await res.json();
+      updateBadge(data.unreadCount || 0);
+      // If panel is already open, refresh its content too
+      if (panel?.classList.contains('open')) {
+        loaded = false;
+        await loadNotifications();
+      }
+    } catch {}
+  }
+
   quickBadgeCheck();
+  // Generate after 2s so it doesn't compete with page load resources
+  setTimeout(generateInBackground, 2000);
 
   // ── Auto-refresh every 5 minutes ─────────────────────────
   setInterval(() => {
