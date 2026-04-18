@@ -11,7 +11,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     userId = user.id;
 
     const body = await request.json();
-    const { full_name, weight_kg, height_cm, target_weight_kg } = body;
+    const { full_name, weight_kg, height_cm, target_weight_kg, timezone, client_date } = body;
 
     // Validate weight/height ranges before writing
     if (weight_kg !== undefined) {
@@ -35,6 +35,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (weight_kg !== undefined) updateData.weight_kg = parseFloat(weight_kg);
     if (height_cm !== undefined) updateData.height_cm = parseInt(height_cm);
     if (target_weight_kg !== undefined) updateData.target_weight_kg = parseFloat(target_weight_kg);
+    if (timezone !== undefined) {
+      try { new Date().toLocaleDateString('en-CA', { timeZone: timezone }); }
+      catch { return json({ error: 'Invalid timezone' }, 400); }
+      updateData.timezone = timezone;
+    }
 
     const { data, error } = await supabase
       .from('profiles')
@@ -45,14 +50,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     if (error) return json({ error: 'Server error' }, 500);
 
-    // Also log weight if changed (upsert to avoid duplicates on same day)
+    // Also log weight if changed — use client's local date when provided
     if (weight_kg !== undefined) {
+      const logDate = (client_date && /^\d{4}-\d{2}-\d{2}$/.test(client_date))
+        ? client_date
+        : new Date().toISOString().split('T')[0];
       await supabase
         .from('weight_logs')
         .upsert({
-          user_id: user.id,
-          weight: parseFloat(weight_kg),
-          logged_date: new Date().toISOString().split('T')[0],
+          user_id:     user.id,
+          weight:      parseFloat(weight_kg),
+          logged_date: logDate,
         }, { onConflict: 'user_id,logged_date' });
     }
 

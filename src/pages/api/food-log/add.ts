@@ -16,11 +16,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     userId = user.id;
 
     const body = await request.json();
-    const { food_name, calories, protein_g, fat_g, carbs_g, meal_type, notes } = body;
+    const { food_name, calories, protein_g, fat_g, carbs_g, meal_type, notes, client_date } = body;
 
     if (!food_name?.trim()) return json({ error: 'Food name is required' }, 400);
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = (client_date && /^\d{4}-\d{2}-\d{2}$/.test(client_date))
+      ? client_date
+      : new Date().toISOString().split('T')[0];
     const { data: journey } = await db
       .from('user_journey').select('current_day').eq('user_id', user.id).maybeSingle();
     const dayNumber = journey?.current_day || 1;

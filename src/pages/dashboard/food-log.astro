@@ -841,7 +841,7 @@ window.saveEntry = function() {
   fetch('/api/food-log/add', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ food_name: name, calories: cal, protein_g: prot, fat_g: fat, carbs_g: netCarb, meal_type: meal }),
+    body: JSON.stringify({ food_name: name, calories: cal, protein_g: prot, fat_g: fat, carbs_g: netCarb, meal_type: meal, client_date: new Date().toLocaleDateString('en-CA') }),
   })
   .then(function(r){ return r.json(); })
   .then(function(d){
@@ -969,7 +969,7 @@ window.applySwap = function(btn, recipeName, cal, prot, fat, carbs) {
     return fetch('/api/food-log/add', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ food_name: recipeName, calories: cal, protein_g: prot, fat_g: fat, carbs_g: carbs, meal_type: mealType }),
+      body: JSON.stringify({ food_name: recipeName, calories: cal, protein_g: prot, fat_g: fat, carbs_g: carbs, meal_type: mealType, client_date: new Date().toLocaleDateString('en-CA') }),
     });
   })
   .then(function(r){ return r.json(); })

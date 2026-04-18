@@ -2,6 +2,7 @@
 import type { APIRoute } from 'astro';
 import { getMealCycleDays } from '../../../lib/supabase';
 import { requireApiAuth } from '../../../lib/auth';
+import { localDate, localDayStartISO } from '../../../lib/dates';
 import { json } from '../../../lib/apiResponse';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -14,22 +15,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('subscription_tier, full_name, weight_kg, target_weight_kg, height_cm, age, gender, goal, activity_level')
+      .select('subscription_tier, full_name, weight_kg, target_weight_kg, height_cm, age, gender, goal, activity_level, timezone')
       .eq('id', user.id)
       .maybeSingle();
 
     if (!profile || profile.subscription_tier !== 'elite_12')
       return json({ error: 'Elite plan required' }, 403);
 
-    const today = new Date().toISOString().split('T')[0];
-    const now   = new Date();
-
-    // Rate limit: max 20 messages per user per UTC day.
-    // today is derived from toISOString() (always UTC), and T00:00:00Z pins windowStart
-    // to UTC midnight — both sides of the window are UTC-consistent.
-    // chat_messages.created_at is Supabase DEFAULT now() which is also UTC.
-    // Intentional: the window resets at UTC midnight, not the user's local midnight.
-    const windowStart = new Date(today + 'T00:00:00Z').toISOString();
+    const tz          = profile.timezone || 'UTC';
+    const today       = localDate(tz);
+    const now         = new Date();
+    const windowStart = localDayStartISO(tz);
     const { count: msgCount } = await supabase
       .from('chat_messages')
       .select('id', { count: 'exact', head: true })

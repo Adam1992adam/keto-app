@@ -2929,5 +2929,20 @@ async function useStreakShield() {
 </script>
 
 <AppTour userName={userName} />
+
+<!-- Timezone auto-detect: silently sync browser timezone to profile on first visit -->
+<script is:inline define:vars={{ storedTz: profile.timezone || '' }}>
+(function() {
+  try {
+    var detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (!detected || detected === storedTz) return;
+    fetch('/api/profile/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ timezone: detected }),
+    }).catch(function() {});
+  } catch(e) {}
+}());
+</script>
 </body>
 </html>

@@ -9,7 +9,7 @@ import { checkRateLimit, getClientIp } from '../../../lib/rateLimit';
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: 5 signups per 10 minutes per IP (prevent resource abuse)
   const ip = getClientIp(request);
-  const { allowed, retryAfterSec } = checkRateLimit(`signup:${ip}`, 5, 10 * 60 * 1000);
+  const { allowed, retryAfterSec } = await checkRateLimit(`signup:${ip}`, 5, 10 * 60 * 1000);
   if (!allowed) {
     return new Response(JSON.stringify({ error: `Too many requests. Try again in ${retryAfterSec}s.` }), {
       status: 429,

@@ -48,6 +48,8 @@ export interface Profile {
   preferred_units: UnitSystem;
   // Language preference
   preferred_language?: string;
+  // Timezone (IANA, e.g. "America/New_York")
+  timezone?: string;
   // Admin
   is_admin?: boolean;
   created_at?: string;

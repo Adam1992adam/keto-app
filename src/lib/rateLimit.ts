@@ -1,68 +1,42 @@
 /**
- * rateLimit.ts — In-process sliding-window rate limiter
+ * rateLimit.ts — Postgres-backed sliding-window rate limiter.
  *
- * Works per Vercel function instance. Rapid burst attacks (the main threat
- * for brute-force) are always routed to the same warm instance, so this
- * provides effective protection with zero extra latency or DB cost.
- * Supabase Auth's own server-side throttling acts as a second layer.
+ * Uses the check_rate_limit(p_key, p_max, p_window_ms) RPC function which
+ * runs SECURITY DEFINER, making it safe to call with the anon key.
+ * Falls open on DB error so auth is never broken by a rate-limit outage.
  */
+import { supabase } from './supabase';
 
-interface Entry {
-  count:   number;
-  resetAt: number;
-}
-
-// One shared Map per module instance (persists across requests on a warm Lambda)
-const store = new Map<string, Entry>();
-
-// Purge expired keys every 10 minutes to prevent memory growth
-if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, entry] of store) {
-      if (entry.resetAt < now) store.delete(key);
-    }
-  }, 10 * 60 * 1000);
-}
-
-/**
- * Check whether a keyed action is within its allowed rate.
- *
- * @param key         Unique key, e.g. `login:1.2.3.4`
- * @param max         Max requests allowed in the window
- * @param windowMs    Window size in milliseconds
- * @returns           `{ allowed, retryAfterSec }`
- */
-export function checkRateLimit(
+export async function checkRateLimit(
   key: string,
   max: number,
   windowMs: number,
-): { allowed: boolean; retryAfterSec: number } {
-  const now   = Date.now();
-  const entry = store.get(key);
+): Promise<{ allowed: boolean; retryAfterSec: number }> {
+  try {
+    const { data, error } = await supabase.rpc('check_rate_limit', {
+      p_key:       key,
+      p_max:       max,
+      p_window_ms: windowMs,
+    });
 
-  if (!entry || entry.resetAt < now) {
-    store.set(key, { count: 1, resetAt: now + windowMs });
+    if (error || !data?.[0]) {
+      console.warn('[rateLimit] DB error — failing open:', error?.message);
+      return { allowed: true, retryAfterSec: 0 };
+    }
+
+    return {
+      allowed:        data[0].allowed,
+      retryAfterSec:  data[0].retry_after_sec ?? 0,
+    };
+  } catch (err) {
+    console.warn('[rateLimit] unexpected error — failing open:', err);
     return { allowed: true, retryAfterSec: 0 };
   }
-
-  if (entry.count >= max) {
-    return { allowed: false, retryAfterSec: Math.ceil((entry.resetAt - now) / 1000) };
-  }
-
-  entry.count++;
-  return { allowed: true, retryAfterSec: 0 };
 }
 
-/**
- * Extract the real client IP from a Vercel/Astro request.
- * Prefers the rightmost trusted hop in X-Forwarded-For.
- */
+/** Extract the real client IP from a Vercel/Astro request. */
 export function getClientIp(request: Request): string {
   const xff = request.headers.get('x-forwarded-for');
-  if (xff) {
-    // Vercel sets x-forwarded-for to a single value (the real client IP)
-    return xff.split(',')[0].trim();
-  }
+  if (xff) return xff.split(',')[0].trim();
   return request.headers.get('x-real-ip') || 'unknown';
 }

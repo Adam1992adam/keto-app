@@ -677,6 +677,33 @@ const avatarLetter       = profile.full_name?.charAt(0)?.toUpperCase() || '?';
           <div id="langMsg" style="display:none;font-size:.76rem;padding:.4rem .75rem;border-radius:8px;margin-bottom:.5rem;"></div>
         </div>
 
+        <!-- ── Timezone ──────────────────────────────────────── -->
+        <div class="form-section">
+          <div class="fsec-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle;margin-right:.3rem;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Timezone
+          </div>
+          <p style="font-size:.75rem;color:var(--soft);margin-bottom:.75rem;line-height:1.5;">Used for daily check-ins, streaks, and AI Coach message limits.</p>
+          <select id="tzSelect" style="width:100%;padding:.55rem .75rem;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:.82rem;cursor:pointer;outline:none;">
+            {[
+              'UTC',
+              'America/New_York','America/Chicago','America/Denver','America/Los_Angeles',
+              'America/Anchorage','America/Honolulu','America/Toronto','America/Vancouver',
+              'America/Mexico_City','America/Bogota','America/Sao_Paulo','America/Buenos_Aires',
+              'Europe/London','Europe/Paris','Europe/Berlin','Europe/Madrid','Europe/Rome',
+              'Europe/Amsterdam','Europe/Stockholm','Europe/Warsaw','Europe/Istanbul',
+              'Europe/Moscow','Africa/Cairo','Africa/Lagos','Africa/Nairobi',
+              'Asia/Dubai','Asia/Karachi','Asia/Kolkata','Asia/Dhaka',
+              'Asia/Bangkok','Asia/Shanghai','Asia/Tokyo','Asia/Seoul',
+              'Asia/Singapore','Asia/Jakarta','Australia/Sydney','Australia/Melbourne',
+              'Pacific/Auckland','Pacific/Honolulu',
+            ].map(tz => (
+              <option value={tz} selected={(profile.timezone || 'UTC') === tz}>{tz.replace(/_/g,' ')}</option>
+            ))}
+          </select>
+          <div id="tzMsg" style="display:none;font-size:.76rem;padding:.4rem .75rem;border-radius:8px;margin-top:.5rem;"></div>
+        </div>
+
         <div class="form-section">
           <div class="fsec-title"><Zap size={15} style="display:inline;vertical-align:middle;" /> Quick Actions</div>
           <a href="/dashboard" class="qa"><BarChart3 size={14} style="display:inline;vertical-align:middle;" /> Dashboard</a>
@@ -968,6 +995,36 @@ document.querySelectorAll('.lang-btn').forEach(function(btn){
     }
   });
 });
+
+// TIMEZONE
+var tzSelect = document.getElementById('tzSelect');
+if (tzSelect) {
+  tzSelect.addEventListener('change', async function() {
+    var msg = document.getElementById('tzMsg');
+    var tz  = tzSelect.value;
+    msg.style.display = 'none';
+    try {
+      var r = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timezone: tz }),
+      });
+      var d = await r.json();
+      msg.style.display = 'block';
+      if (d.success) {
+        msg.style.background = 'rgba(16,185,129,.1)'; msg.style.color = 'var(--green)';
+        msg.textContent = 'Timezone saved.';
+      } else {
+        msg.style.background = 'rgba(239,68,68,.1)'; msg.style.color = 'var(--red)';
+        msg.textContent = d.error || 'Failed to save.';
+      }
+    } catch(e) {
+      msg.style.display = 'block';
+      msg.style.background = 'rgba(239,68,68,.1)'; msg.style.color = 'var(--red)';
+      msg.textContent = 'Network error.';
+    }
+  });
+}
 
 // TOAST
 function showToast(msg){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.className='toast show';setTimeout(()=>t.classList.remove('show'),2800);}
