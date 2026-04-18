@@ -6,7 +6,8 @@
 //            ingredients }
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
-import { json } from '../../../lib/apiResponse';
+import { json, captureError } from '../../../lib/apiResponse';
+import { localDate } from '../../../lib/dates';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   let userId = 'unknown';
@@ -20,6 +21,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const { imageBase64, imageType = 'image/jpeg', saveTo, mealType = 'other', date } = body;
 
     if (!imageBase64) return json({ error: 'Image required' }, 400);
+
+    const { data: profileTz } = await db.from('profiles').select('timezone').eq('id', user.id).maybeSingle();
+    const tz = profileTz?.timezone || 'UTC';
 
     const GEMINI_API_KEY = import.meta.env.GEMINI_API_KEY;
     if (!GEMINI_API_KEY) return json({ error: 'AI service not configured' }, 503);
@@ -125,7 +129,7 @@ Rules:
 
     // Save to food_logs if requested
     if (saveTo) {
-      const logDate = date || new Date().toISOString().split('T')[0];
+      const logDate = date || localDate(tz);
       const { error: saveErr } = await db.from('food_logs').insert({
         user_id:     user.id,
         logged_date: logDate,
@@ -145,7 +149,7 @@ Rules:
     return json({ success: true, nutrition: n });
 
   } catch (err) {
-    console.error('[food/analyze-photo] user:', userId, err);
+    await captureError('food/analyze-photo', userId, err);
     return json({ error: 'Server error' }, 500);
   }
 };

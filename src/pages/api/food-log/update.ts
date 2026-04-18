@@ -2,7 +2,7 @@
 // PATCH /api/food-log/update
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
-import { json } from '../../../lib/apiResponse';
+import { json, captureError } from '../../../lib/apiResponse';
 
 export const PATCH: APIRoute = async ({ request, cookies }) => {
   let userId = 'unknown';
@@ -50,7 +50,7 @@ export const PATCH: APIRoute = async ({ request, cookies }) => {
     return json({ success: true, entry: data });
 
   } catch (err: any) {
-    console.error('[food-log/update] user:', userId, err);
+    await captureError('food-log/update', userId, err);
     return json({ error: 'Server error' }, 500);
   }
 };

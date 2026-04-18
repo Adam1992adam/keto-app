@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import sanitizeHtml from 'sanitize-html';
 import { requireApiAuth } from '../../../lib/auth';
 import { json } from '../../../lib/apiResponse';
+import { localDayStartISO } from '../../../lib/dates';
 
 // Strip all HTML tags and attributes — allows zero tags
 const SANITIZE_OPTS: sanitizeHtml.IOptions = { allowedTags: [], allowedAttributes: {} };
@@ -135,13 +136,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (posterProfile?.community_banned)
       return json({ error: 'You are banned from the community.' }, 403);
 
-    // Rate limit: max 10 posts per user per day
-    const today = new Date().toISOString().split('T')[0];
+    // Rate limit: max 10 posts per user per day (in user's local timezone)
+    const { data: profileTz } = await db.from('profiles').select('timezone').eq('id', user.id).maybeSingle();
+    const dayStart = localDayStartISO(profileTz?.timezone || 'UTC');
     const { count } = await db
       .from('community_posts')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .gte('created_at', today + 'T00:00:00Z');
+      .gte('created_at', dayStart);
     if ((count || 0) >= 10)
       return json({ error: 'Daily post limit reached (10/day)' }, 429);
 

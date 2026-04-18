@@ -4,7 +4,7 @@
 // DELETE /api/meal-planner  { id }
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../lib/auth';
-import { json } from '../../lib/apiResponse';
+import { json, captureError } from '../../lib/apiResponse';
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 
@@ -38,13 +38,13 @@ export const GET: APIRoute = async ({ request, cookies }) => {
       .order('plan_date', { ascending: true });
 
     if (error) {
-      console.error('[meal-planner GET] user:', userId, error);
+      await captureError('meal-planner GET', userId, error);
       return json({ error: 'Server error' }, 500);
     }
 
     return json({ entries: data || [], start, end });
   } catch (e: any) {
-    console.error('[meal-planner GET] user:', userId, e);
+    await captureError('meal-planner GET', userId, e);
     return json({ error: 'Server error' }, 500);
   }
 };
@@ -83,13 +83,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .single();
 
     if (error) {
-      console.error('[meal-planner POST] user:', userId, error);
+      await captureError('meal-planner POST', userId, error);
       return json({ error: 'Server error' }, 500);
     }
 
     return json({ entry: data }, 201);
   } catch (e: any) {
-    console.error('[meal-planner POST] user:', userId, e);
+    await captureError('meal-planner POST', userId, e);
     return json({ error: 'Server error' }, 500);
   }
 };
@@ -113,13 +113,13 @@ export const DELETE: APIRoute = async ({ request, cookies }) => {
       .eq('user_id', userId);
 
     if (error) {
-      console.error('[meal-planner DELETE] user:', userId, error);
+      await captureError('meal-planner DELETE', userId, error);
       return json({ error: 'Server error' }, 500);
     }
 
     return json({ success: true });
   } catch (e: any) {
-    console.error('[meal-planner DELETE] user:', userId, e);
+    await captureError('meal-planner DELETE', userId, e);
     return json({ error: 'Server error' }, 500);
   }
 };

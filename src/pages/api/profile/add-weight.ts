@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
 import { autoCompleteTask, checkAchievements } from '../../../lib/autoTask';
-import { json } from '../../../lib/apiResponse';
+import { json, captureError } from '../../../lib/apiResponse';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   let userId = 'unknown';
@@ -67,7 +67,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     checkAchievements(user.id, accessToken); // fire-and-forget
     return json({ success: true });
   } catch (err) {
-    console.error('[profile/add-weight] user:', userId, err);
+    await captureError('profile/add-weight', userId, err);
     return json({ error: 'Server error' }, 500);
   }
 };

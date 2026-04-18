@@ -3,7 +3,7 @@ import type { APIRoute } from 'astro';
 import { getMealCycleDays } from '../../../lib/supabase';
 import { requireApiAuth } from '../../../lib/auth';
 import { localDate, localDayStartISO } from '../../../lib/dates';
-import { json } from '../../../lib/apiResponse';
+import { json, captureError } from '../../../lib/apiResponse';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   let userId = 'unknown';
@@ -300,7 +300,7 @@ ${weightText}
     return json({ reply });
 
   } catch (err: any) {
-    console.error('[chat/gemini] user:', userId, err);
+    await captureError('chat/gemini', userId, err);
     return json({ error: 'Server error' }, 500);
   }
 };

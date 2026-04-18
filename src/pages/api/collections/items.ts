@@ -4,7 +4,7 @@
 // DELETE /api/collections/items?deleteCollection=1 → delete entire collection (body: { collectionId })
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
-import { json } from '../../../lib/apiResponse';
+import { json, captureError } from '../../../lib/apiResponse';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   let userId = 'unknown';
@@ -41,13 +41,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .upsert({ collection_id: collectionId, recipe_id: recipeId }, { onConflict: 'collection_id,recipe_id' });
 
     if (error) {
-      console.error('[collections/items POST] user:', userId, error);
+      await captureError('collections/items POST', userId, error);
       return json({ error: 'Server error' }, 500);
     }
 
     return json({ success: true });
   } catch (e: any) {
-    console.error('[collections/items POST] user:', userId, e);
+    await captureError('collections/items POST', userId, e);
     return json({ error: 'Server error' }, 500);
   }
 };
@@ -79,7 +79,7 @@ export const DELETE: APIRoute = async ({ request, cookies, url }) => {
     if (deleteCollection) {
       const { error } = await db.from('recipe_collections').delete().eq('id', collectionId).eq('user_id', userId);
       if (error) {
-        console.error('[collections/items DELETE collection] user:', userId, error);
+        await captureError('collections/items DELETE collection', userId, error);
         return json({ error: 'Server error' }, 500);
       }
       return json({ success: true, deleted: 'collection' });
@@ -94,13 +94,13 @@ export const DELETE: APIRoute = async ({ request, cookies, url }) => {
       .eq('recipe_id', recipeId);
 
     if (error) {
-      console.error('[collections/items DELETE item] user:', userId, error);
+      await captureError('collections/items DELETE item', userId, error);
       return json({ error: 'Server error' }, 500);
     }
 
     return json({ success: true, deleted: 'item' });
   } catch (e: any) {
-    console.error('[collections/items DELETE] user:', userId, e);
+    await captureError('collections/items DELETE', userId, e);
     return json({ error: 'Server error' }, 500);
   }
 };

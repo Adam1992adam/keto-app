@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
 import { autoCompleteTask, checkAchievements } from '../../../lib/autoTask';
-import { json } from '../../../lib/apiResponse';
+import { json, captureError } from '../../../lib/apiResponse';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   let userId = 'unknown';
@@ -143,7 +143,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return json({ success: true, xp_earned: xpAmount, autoAdvice });
 
   } catch (error: any) {
-    console.error('[checkin/save] user:', userId, error);
+    await captureError('checkin/save', userId, error);
     return json({ error: 'Server error' }, 500);
   }
 };

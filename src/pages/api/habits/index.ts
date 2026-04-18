@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
 import { json } from '../../../lib/apiResponse';
+import { localDate } from '../../../lib/dates';
 
 export const GET: APIRoute = async ({ cookies, url }) => {
   try {
@@ -11,7 +12,9 @@ export const GET: APIRoute = async ({ cookies, url }) => {
     if (!auth.ok) return auth.response;
     const { user, db: supabase } = auth;
 
-    const dateParam = url.searchParams.get('date') || new Date().toISOString().split('T')[0];
+    const { data: profileTz } = await supabase.from('profiles').select('timezone').eq('id', user.id).maybeSingle();
+    const tz = profileTz?.timezone || 'UTC';
+    const dateParam = url.searchParams.get('date') || localDate(tz);
 
     const { data: habits, error: he } = await supabase
       .from('habits').select('*').eq('user_id', user.id).eq('is_active', true)

@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
 import { autoCompleteTask } from '../../../lib/autoTask';
-import { json } from '../../../lib/apiResponse';
+import { json, captureError } from '../../../lib/apiResponse';
 
 const MEAL_TASK_TYPES = new Set(['breakfast', 'lunch', 'dinner', 'snack']);
 
@@ -53,7 +53,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return json({ success: true, entry: data });
 
   } catch (err: any) {
-    console.error('[food-log/add] user:', userId, err);
+    await captureError('food-log/add', userId, err);
     return json({ error: 'Server error' }, 500);
   }
 };

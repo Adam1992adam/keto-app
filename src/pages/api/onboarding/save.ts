@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { initializeUserJourney } from '../../../lib/supabase';
 import { requireApiAuth } from '../../../lib/auth';
+import { captureError } from '../../../lib/apiResponse';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   let userId = 'unknown';
@@ -185,7 +186,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     });
 
   } catch (error: any) {
-    console.error('[onboarding/save] user:', userId, error);
+    await captureError('onboarding/save', userId, error);
     return new Response(JSON.stringify({ error: 'Server error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

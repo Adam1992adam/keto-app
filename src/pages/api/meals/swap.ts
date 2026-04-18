@@ -1,7 +1,7 @@
 // src/pages/api/meals/swap.ts
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
-import { json } from '../../../lib/apiResponse';
+import { json, captureError } from '../../../lib/apiResponse';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   let userId = 'unknown';
@@ -96,7 +96,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return json({ success: true, new_recipe: best });
 
   } catch (err: any) {
-    console.error('[meals/swap] user:', userId, err);
+    await captureError('meals/swap', userId, err);
     return json({ error: 'Server error' }, 500);
   }
 };

@@ -2,6 +2,7 @@
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
 import { autoCompleteTask, checkAchievements } from '../../../lib/autoTask';
+import { captureError } from '../../../lib/apiResponse';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   let userId = 'unknown';
@@ -88,7 +89,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     });
 
   } catch (error: any) {
-    console.error('[fasting/end] user:', userId, error);
+    await captureError('fasting/end', userId, error);
     return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
   }
 };

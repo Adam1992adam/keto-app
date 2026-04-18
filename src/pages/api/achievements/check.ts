@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
 import { json } from '../../../lib/apiResponse';
+import { localDate } from '../../../lib/dates';
 
 const ACHIEVEMENTS = [
   // Streak
@@ -58,8 +59,9 @@ export const POST: APIRoute = async ({ cookies }) => {
       .from('achievements').select('achievement_type').eq('user_id', user.id);
     const earned = new Set((existing || []).map((a: any) => a.achievement_type));
 
-    // Fetch all state in parallel
-    const today = new Date().toISOString().split('T')[0];
+    const { data: profileTz } = await db.from('profiles').select('timezone').eq('id', user.id).maybeSingle();
+    const tz = profileTz?.timezone || 'UTC';
+    const today = localDate(tz);
     const [journeyRes, checkinsRes, weightRes, fastingRes, mealCompRes, onboardingRes, todayCheckinRes] =
       await Promise.all([
         db.from('user_journey').select('current_day,streak_days,total_xp,level').eq('user_id', user.id).maybeSingle(),

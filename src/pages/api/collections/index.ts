@@ -3,7 +3,7 @@
 // POST /api/collections        → create a new collection
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
-import { json } from '../../../lib/apiResponse';
+import { json, captureError } from '../../../lib/apiResponse';
 
 export const GET: APIRoute = async ({ cookies }) => {
   let userId = 'unknown';
@@ -20,7 +20,7 @@ export const GET: APIRoute = async ({ cookies }) => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('[collections GET] user:', userId, error);
+      await captureError('collections GET', userId, error);
       return json({ error: 'Server error' }, 500);
     }
 
@@ -34,7 +34,7 @@ export const GET: APIRoute = async ({ cookies }) => {
 
     return json({ collections });
   } catch (e: any) {
-    console.error('[collections GET] user:', userId, e);
+    await captureError('collections GET', userId, e);
     return json({ error: 'Server error' }, 500);
   }
 };
@@ -67,13 +67,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       .single();
 
     if (error) {
-      console.error('[collections/index POST] user:', userId, error);
+      await captureError('collections/index POST', userId, error);
       return json({ error: 'Server error' }, 500);
     }
 
     return json({ collection: { ...data, count: 0 } }, 201);
   } catch (e: any) {
-    console.error('[collections POST] user:', userId, e);
+    await captureError('collections POST', userId, e);
     return json({ error: 'Server error' }, 500);
   }
 };

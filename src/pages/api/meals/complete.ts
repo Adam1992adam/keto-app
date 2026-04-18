@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
-import { json } from '../../../lib/apiResponse';
+import { json, captureError } from '../../../lib/apiResponse';
+import { localDate } from '../../../lib/dates';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   let userId = 'unknown';
@@ -9,6 +10,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (!auth.ok) return auth.response;
     const { user, db } = auth;
     userId = user.id;
+
+    const { data: profileTz } = await db.from('profiles').select('timezone').eq('id', user.id).maybeSingle();
+    const tz = profileTz?.timezone || 'UTC';
 
     const body = await request.json();
     const { meal_type, recipe_id, day_number, action = 'complete', client_date } = body;
@@ -108,7 +112,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     // Auto-update today's checkin followed_meals if >= 3 meals eaten
     if (followed) {
-      const serverDate = new Date().toISOString().split('T')[0];
+      const serverDate = localDate(tz);
       const today = (client_date && /^\d{4}-\d{2}-\d{2}$/.test(client_date)) ? client_date : serverDate;
       await db
         .from('daily_checkins')
@@ -141,7 +145,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return json({ success: true, xp_earned: isNew ? 10 : 0, meals_today: mealsToday, followed, macros });
 
   } catch (err: any) {
-    console.error('[meals/complete] user:', userId, err);
+    await captureError('meals/complete', userId, err);
     return json({ error: 'Server error' }, 500);
   }
 };

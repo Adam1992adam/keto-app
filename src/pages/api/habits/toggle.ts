@@ -2,7 +2,8 @@
 // POST /api/habits/toggle  { habit_id, date }  → toggle completion for that day
 import type { APIRoute } from 'astro';
 import { requireApiAuth } from '../../../lib/auth';
-import { json } from '../../../lib/apiResponse';
+import { json, captureError } from '../../../lib/apiResponse';
+import { localDate } from '../../../lib/dates';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -12,7 +13,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     const { habit_id, date, day_number } = await request.json();
     if (!habit_id) return json({ error: 'habit_id required' }, 400);
-    const today = date || new Date().toISOString().split('T')[0];
+    const { data: profileTz } = await supabase.from('profiles').select('timezone').eq('id', user.id).maybeSingle();
+    const tz = profileTz?.timezone || 'UTC';
+    const today = date || localDate(tz);
 
     // Reject future day_number — prevents farming XP for days not yet reached
     if (day_number) {
@@ -60,6 +63,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return json({ success: true, completed: true, xp_earned: 5 });
     }
   } catch (e: any) {
+    await captureError('habits/toggle', 'unknown', e);
     return json({ error: 'Server error' }, 500);
   }
 };
