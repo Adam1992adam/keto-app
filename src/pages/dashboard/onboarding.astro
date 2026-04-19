@@ -569,7 +569,7 @@ const tier = profile.subscription_tier || 'basic_30';
             <div><span class="slider-val" id="heightVal">5'7"</span></div>
           </div>
           <input type="range" id="heightSlider" min="55" max="87" value="67"
-            oninput="(function(v){var f=Math.floor(v/12);var i=v%12;document.getElementById('heightVal').textContent=f+'\''+i+'\"';})(parseInt(this.value))"/>
+            oninput="(function(v){var f=Math.floor(v/12),i=v%12,ft=String.fromCharCode(39),q=String.fromCharCode(34);document.getElementById('heightVal').textContent=f+ft+i+q;})(parseInt(this.value))"/>
           <div class="slider-marks"><span>4'7"</span><span>5'11"</span><span>7'3"</span></div>
         </div>
 
