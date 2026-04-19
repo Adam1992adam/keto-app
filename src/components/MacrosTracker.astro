@@ -86,7 +86,7 @@ const fatPercent = targetFat > 0 ? Math.round((actualFat / targetFat) * 100) : 0
 const carbsPercent = targetCarbs > 0 ? Math.round((actualCarbs / targetCarbs) * 100) : 0;
 
 // AI Insights
-const insights = [];
+const insights: { type: string; icon: string; message: string; suggestion: string }[] = [];
 
 if (actualCalories === 0) {
   insights.push({
