@@ -306,7 +306,7 @@ export function hasFeature(
  * Get all books for a tier (cumulative — higher tiers include lower tier books)
  */
 export function getBooksForTier(tier: PlanTier | null | undefined) {
-  const books = [...PLANS.basic_30.freeBooks];
+  const books: { id: string; title: string; description: string; emoji: string; pages: number; fileUrl: string }[] = [...PLANS.basic_30.freeBooks];
   if (tier === 'pro_6' || tier === 'elite_12') books.push(...PLANS.pro_6.freeBooks);
   if (tier === 'elite_12') books.push(...PLANS.elite_12.freeBooks);
   return books;

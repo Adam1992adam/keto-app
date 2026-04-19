@@ -151,12 +151,12 @@ export const GET: APIRoute = async ({ request }) => {
       sent++;
 
       // Log send so we don't double-send this week
-      await db.from('xp_transactions').insert({
+      await Promise.resolve(db.from('xp_transactions').insert({
         user_id:     profile.id,
         action_type: 'weekly_email_sent',
         xp_amount:   0,
         description: `Weekly summary email — Week ${weekNum}`,
-      }).catch(() => {});
+      })).catch(() => {});
 
       // Small delay to stay within Resend rate limits
       await new Promise(r => setTimeout(r, 100));

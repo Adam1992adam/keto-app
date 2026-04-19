@@ -33,10 +33,11 @@ export const GET: APIRoute = async ({ request, cookies }) => {
       ? tagsParam.split(',').map(t => t.trim().toLowerCase()).filter(t => ALLOWED_TAGS.includes(t))
       : [];
 
-    let query = db
-      .from('recipes')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // @ts-ignore — deep type instantiation workaround for Supabase chained builder
+    let query: any = (db.from('recipes') as any)
       .select('id, title, calories, protein, fat, net_carbs, prep_time, cook_time, image_url, tags, difficulty, servings, book_id', { count: 'exact' })
-      .eq('is_deleted' as any, false)  // guard in case column exists
+      .eq('is_deleted', false)
       .range(offset, offset + PAGE_SIZE - 1);
 
     // Full-text search on title
