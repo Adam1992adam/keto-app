@@ -8,7 +8,7 @@ if ('redirect' in auth) return Astro.redirect(auth.redirect);
 const { user, profile, db } = auth;
 
 // Fetch onboarding data for personalization
-let onboarding = null;
+let onboarding = null as any;
 try {
   const { data } = await db.from('onboarding_data').select('*').eq('user_id', user.id).maybeSingle();
   onboarding = data;
@@ -78,9 +78,9 @@ const hasWeightGoal  = weightDiffLbs > 0 && startWeightLbs && targetWeightLbs;
 const ms1Wk  = weeksToGoal ? Math.round(weeksToGoal * 0.25) : null;
 const ms2Wk  = weeksToGoal ? Math.round(weeksToGoal * 0.50) : null;
 const ms3Wk  = weeksToGoal ? Math.round(weeksToGoal * 0.75) : null;
-const ms1Lbs = ms1Wk  ? Math.round((startWeightLbs - ms1Wk  * ketoRateLbs) * 10) / 10 : null;
-const ms2Lbs = ms2Wk  ? Math.round((startWeightLbs - ms2Wk  * ketoRateLbs) * 10) / 10 : null;
-const ms3Lbs = ms3Wk  ? Math.round((startWeightLbs - ms3Wk  * ketoRateLbs) * 10) / 10 : null;
+const ms1Lbs = ms1Wk  ? Math.round(((startWeightLbs || 0) - ms1Wk  * ketoRateLbs) * 10) / 10 : null;
+const ms2Lbs = ms2Wk  ? Math.round(((startWeightLbs || 0) - ms2Wk  * ketoRateLbs) * 10) / 10 : null;
+const ms3Lbs = ms3Wk  ? Math.round(((startWeightLbs || 0) - ms3Wk  * ketoRateLbs) * 10) / 10 : null;
 
 // Fasting protocol label
 const fastingLabels: Record<string, string> = {

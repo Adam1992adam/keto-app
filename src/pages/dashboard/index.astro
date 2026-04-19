@@ -39,8 +39,8 @@ const maxDays   = getMaxJourneyDays(planType);
 const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 
 // ── Batch 1: onboarding + journey in parallel (critical — graceful error on DB failure) ──
-let onboarding = null;
-let journey = null;
+let onboarding = null as any;
+let journey = null as any;
 try {
   const [ob, j] = await Promise.all([
     db.from('onboarding_data').select('*').eq('user_id', user.id).maybeSingle(),
@@ -2574,7 +2574,7 @@ import gsap from 'gsap';
     theme: { mode: isDark ? 'dark' : 'light' },
   };
 
-  const chart = new ApexCharts(el, opts);
+  const chart = new ApexCharts(el, opts as any);
   chart.render();
 
   // Re-render on theme toggle

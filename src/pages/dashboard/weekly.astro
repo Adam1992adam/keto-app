@@ -121,12 +121,12 @@ const weekHabitComps = await db
 const weekHabitDone = weekHabitComps.data || [];
 
 // Per-habit: how many days completed this week
-const habitWeekMap = {};
+const habitWeekMap: Record<string, number> = {};
 for (const c of weekHabitDone) {
   habitWeekMap[c.habit_id] = (habitWeekMap[c.habit_id] || 0) + 1;
 }
 const totalHabitOpportunities = habitsForWeek.length * 7;
-const totalHabitDone = Object.values(habitWeekMap).reduce((s, v) => s + v, 0);
+const totalHabitDone = Object.values(habitWeekMap).reduce((s: number, v: any) => s + v, 0);
 const habitCompliancePct = totalHabitOpportunities > 0
   ? Math.round((totalHabitDone / totalHabitOpportunities) * 100) : 0;
 

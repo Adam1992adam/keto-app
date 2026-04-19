@@ -30,7 +30,7 @@ const stepGoal   = todayLog?.goal  || 10000;
 const pct        = Math.min(100, Math.round((todaySteps / stepGoal) * 100));
 
 // Build 7-day array with pre-computed heights
-const days7 = [];
+const days7: any[] = [];
 for (let i = 6; i >= 0; i--) {
   const d   = new Date(Date.now() - i * 86400000);
   const iso = d.toISOString().slice(0, 10);

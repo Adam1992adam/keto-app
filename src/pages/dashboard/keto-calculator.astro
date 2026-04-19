@@ -22,7 +22,7 @@ const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
 
 // Pre-fill from onboarding — graceful fallback to profile/defaults if DB unavailable
-let onboarding = null;
+let onboarding = null as any;
 try {
   const { data } = await db
     .from('onboarding_data')

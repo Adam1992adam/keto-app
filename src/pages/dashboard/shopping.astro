@@ -80,7 +80,7 @@ const deriveIngredients = (recipe) => {
   if (!recipe) return [];
   const t = (recipe.title || '').toLowerCase();
   const tags = recipe.tags || [];
-  const items = [];
+  const items: string[] = [];
   if (t.includes('egg') || t.includes('omelette') || t.includes('frittata')) { items.push('Eggs'); items.push('Butter'); }
   else if (t.includes('bacon')) { items.push('Bacon'); items.push('Eggs'); }
   else if (t.includes('salmon')) { items.push('Salmon'); items.push('Lemon'); items.push('Butter'); items.push('Fresh herbs'); }
@@ -181,7 +181,7 @@ const allItems = Array.from(ingMap.values()).map(ing => {
 });
 
 // ── Categorize ────────────────────────────────────────────
-const catMap = {};
+const catMap: Record<string, any[]> = {};
 Object.keys(catDefs).forEach(c => { catMap[c] = []; });
 catMap['Other'] = [];
 
@@ -474,7 +474,7 @@ const myItems = customItems || [];
         {filteredMealPlans.map((meal) => (
           <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.4rem .75rem;flex-shrink:0;">
             <span style="font-size:.65rem;font-weight:800;color:var(--green);text-transform:uppercase;margin-right:.35rem;">Day {meal.day_number}</span>
-            <span style="font-size:.72rem;color:var(--text);">{(meal.recipe && meal.recipe.title) ? meal.recipe.title : 'Meal'}</span>
+            <span style="font-size:.72rem;color:var(--text);">{(meal.recipe && (meal.recipe as any).title) ? (meal.recipe as any).title : 'Meal'}</span>
           </div>
         ))}
       </div>

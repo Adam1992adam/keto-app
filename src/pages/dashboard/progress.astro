@@ -13,7 +13,7 @@ const t    = getTranslator(lang);
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 
-let journey = null;
+let journey = null as any;
 try {
   journey = await getUserJourney(user.id, db);
 } catch (e) {
@@ -373,13 +373,13 @@ const calStartRaw = new Date(ninetyDaysAgo + 'T12:00:00');
 const calStartDow  = calStartRaw.getDay(); // 0=Sun
 const calGridStart = new Date(calStartRaw.getTime() - calStartDow * 86400000);
 
-const calDays = [];
+const calDays: any[] = [];
 const calToday = new Date(new Date().toISOString().split('T')[0] + 'T12:00:00');
 const calTodayStr = new Date().toISOString().split('T')[0];
 const calGridStartStr = calGridStart.toISOString().split('T')[0];
 
 // Build enough days to cover from grid start through today (max ~13 weeks = 91 days)
-const calTotalDays = Math.round((calToday - calGridStart) / 86400000) + 1;
+const calTotalDays = Math.round((calToday.getTime() - calGridStart.getTime()) / 86400000) + 1;
 for (let i = 0; i < calTotalDays; i++) {
   const d = new Date(calGridStart.getTime() + i * 86400000);
   const ds = d.toISOString().split('T')[0];
@@ -403,7 +403,7 @@ for (let i = 0; i < calTotalDays; i++) {
 }
 
 // Month labels: find first day of each month in the grid and record its column index
-const calMonthLabels = [];
+const calMonthLabels: any[] = [];
 for (let i = 0; i < calDays.length; i++) {
   const ds = calDays[i].date;
   const dayOfMonth = parseInt(ds.split('-')[2], 10);
@@ -900,7 +900,7 @@ const initialPhotos = progressPhotos || [];
             </linearGradient>
           </defs>
           {projYTicks.map(tk => (
-            <g key={tk.y}>
+            <g>
               <line x1={PROJ_PL} y1={tk.y} x2={PROJ_W - PROJ_PR} y2={tk.y} stroke="rgba(255,255,255,0.05)" stroke-width="1" />
               <text x={PROJ_PL - 5} y={tk.y + 4} text-anchor="end" font-size="9" fill="var(--soft)">{tk.valDisp}</text>
             </g>
@@ -924,7 +924,7 @@ const initialPhotos = progressPhotos || [];
               stroke="#f59e0b" stroke-width="2" stroke-dasharray="7 4" stroke-linecap="round" opacity="0.75" />
           )}
           {projHistPts.map(p => (
-            <circle key={p.date} cx={p.x} cy={p.y} r="3.5" fill="#10b981" stroke="#34d399" stroke-width="1.5">
+            <circle cx={p.x} cy={p.y} r="3.5" fill="#10b981" stroke="#34d399" stroke-width="1.5">
               <title>{p.weightDisp} {wUnit} — {p.date}</title>
             </circle>
           ))}
@@ -1038,13 +1038,13 @@ const initialPhotos = progressPhotos || [];
                 {wChartPts.length > 1 && <path d={wFillPath} fill="url(#wAreaGrad)" />}
                 {wChartPts.length > 1 && <path d={wLinePath} fill="none" stroke="url(#wLineGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />}
                 {wTicksLbs.map(t => (
-                  <g key={t.y}>
+                  <g>
                     <line x1={SVG_PL} y1={t.y} x2={SVG_W - SVG_PR} y2={t.y} stroke="rgba(255,255,255,0.05)" stroke-width="1" />
                     <text x={SVG_PL - 5} y={t.y + 4} text-anchor="end" font-size="9" fill="var(--soft)">{t.valLbs}</text>
                   </g>
                 ))}
                 {wChartPtsLbs.map(p => (
-                  <circle key={p.rawDate} cx={p.x} cy={p.y} r={p.isLatest ? 5 : 3.5}
+                  <circle cx={p.x} cy={p.y} r={p.isLatest ? 5 : 3.5}
                     fill={p.isLatest ? '#10b981' : '#3b82f6'}
                     stroke={p.isLatest ? '#34d399' : '#60a5fa'}
                     stroke-width="1.5">
@@ -1052,7 +1052,7 @@ const initialPhotos = progressPhotos || [];
                   </circle>
                 ))}
                 {wDateLabels.map(p => (
-                  <text key={p.rawDate} x={p.x} y={SVG_H - SVG_PB + 18} text-anchor="middle" font-size="9" fill="var(--soft)">{p.date}</text>
+                  <text x={p.x} y={SVG_H - SVG_PB + 18} text-anchor="middle" font-size="9" fill="var(--soft)">{p.date}</text>
                 ))}
               </svg>
             </>

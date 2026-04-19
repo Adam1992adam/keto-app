@@ -53,7 +53,7 @@ const [tasksRes, , weightRes, allTasksRes, xpRes, bmiRes, calRes, waterRes] =
     getWeightLogs(user.id, 30, db),
     db.from('daily_tasks').select('*').eq('user_id', user.id).order('day_number', { ascending: true }),
     getXPTransactions(user.id, 30, db),
-    calculateBMI(profile.weight_kg, profile.height_cm),
+    calculateBMI(profile.weight_kg as number, profile.height_cm as number),
     calculateCalorieTarget(profile),
     db.from('water_intake').select('glasses_count').eq('user_id', user.id),
   ]);

@@ -21,7 +21,7 @@ const t    = getTranslator(lang);
 const today = new Date().toISOString().split('T')[0];
 
 // All queries fire in parallel — each fails independently
-let journey = null, onboarding = null, hasCheckedIn = false, hasLoggedWeight = false, hasFasted = false;
+let journey = null as any, onboarding = null as any, hasCheckedIn = false, hasLoggedWeight = false, hasFasted = false;
 try {
   const [jRes, obRes, ciRes, wlRes, fsRes] = await Promise.allSettled([
     getUserJourney(user.id, db),

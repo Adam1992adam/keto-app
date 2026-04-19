@@ -63,7 +63,7 @@ const isPro       = planType === 'pro_6';
 const isActive    = profile.subscription_status === 'active';
 
 const formatDate  = (d: Date | null) => d ? d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) : '—';
-const saleId      = profile.payhip_sale_id || profile.sale_id || null;
+const saleId      = (profile as any).payhip_sale_id || (profile as any).sale_id || null;
 
 const CHECKOUT_PRO   = import.meta.env.LEMONSQUEEZY_PRO_URL   || '';
 const CHECKOUT_ELITE = import.meta.env.LEMONSQUEEZY_ELITE_URL || '';
