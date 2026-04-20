@@ -1,5 +1,5 @@
 # CLAUDE.md — Keto Journey App — Complete Project Reference
-> Last updated: 2026-04-16 (session 3) | Astro 4 + Supabase + Vercel | Payment: LemonSqueezy
+> Last updated: 2026-04-20 (session 4) | Astro 4 + Supabase + Vercel | Payment: LemonSqueezy
 
 ---
 
@@ -722,11 +722,10 @@ Array.from({ length: maxWeeks }, (_, i) => i + 1)
 - ~~**Photo upload rate limit**~~ ✅ Fixed
 - ~~**Habit completion future days**~~ ✅ Fixed
 - ~~**Recipe data gap (Pro/Elite books showing 0 recipes)**~~ ✅ Fixed — 87 null book_ids assigned in DB migration
-- **Community posts N+1**: posts.ts fetches posts then makes separate queries for profiles and reactions. Already batched with Promise.all, but could be a single JOIN query.
+- ~~**Community posts N+1**: posts.ts fetches posts then makes separate queries for profiles and reactions.~~ ✅ Fixed — POST handler merged 2 sequential profile queries into 1; GET already used Promise.all.
 - ~~**ai-coach.astro**: needs @media queries for narrow (<400px) viewports.~~ ✅ Already has `@media(max-width:400px)` rule.
 - ~~**Smoothies/Baking/Desserts categories**: 0 recipes in DB~~ ✅ Fixed — sm1–sm4, bk1–bk4, ds1–ds4 each have 20 recipes (240 total added).
-- **Pro/Elite-only recipe books**: b5–b12, l5–l12, d5–d12, s5–s12, sm5–sm12, bk5–bk12, ds5–ds12 have no recipes yet (shown as locked/placeholder).
-- **Dessert title overlap (note for Stage 5+)**: When adding Pro dessert recipes, differentiate ds6 "Keto Mousse & Puddings" from ds2 "Keto Puddings & Custards", ds7 "Keto Pies & Tarts" from ds4 "Keto Pies & Cobblers", and ds8 "Keto Candy Book" from ds3 "Keto Candy & Confections" — same emoji/topic collisions to resolve with distinct recipes.
+- ~~**Pro/Elite-only recipe books**: b5–b12, l5–l12, d5–d12, s5–s12, sm5–sm12, bk5–bk12, ds5–ds12 have no recipes yet~~ ✅ Fixed — all Pro (b5–bk8) and Elite (b9–ds12) books now populated with 20 recipes each (~800 total added this session).
 
 ---
 

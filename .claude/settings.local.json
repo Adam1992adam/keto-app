@@ -65,7 +65,11 @@
       "Bash(tail -40 C:\\\\\\\\Users\\\\\\\\ABDELL~1\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\C--Users-abdellatif-Videos-keto-app\\\\\\\\ec5b0fcd-962d-46a1-bda6-9cff4965106f\\\\\\\\tasks\\\\\\\\bt4pijrf7.output)",
       "Bash(node_modules/.bin/astro build:*)",
       "Bash(cat:*)",
-      "Bash(npm audit:*)"
+      "Bash(npm audit:*)",
+      "Bash(npx tsc *)",
+      "Bash(gh run *)",
+      "Bash(sed 's/\"strictNullChecks\": true,//' tsconfig.json)",
+      "Bash(cp /tmp/tsconfig_test.json tsconfig.json)"
     ]
   }
 }

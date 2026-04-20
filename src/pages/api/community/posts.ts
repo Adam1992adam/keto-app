@@ -130,15 +130,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (!isMediaPost && safe.length < 3)
       return json({ error: 'Content must be at least 3 characters' }, 400);
 
-    // Block community-banned users
+    // Single profile query covers both ban check and timezone
     const { data: posterProfile } = await db
-      .from('profiles').select('community_banned').eq('id', user.id).maybeSingle();
+      .from('profiles').select('community_banned, timezone').eq('id', user.id).maybeSingle();
     if (posterProfile?.community_banned)
       return json({ error: 'You are banned from the community.' }, 403);
 
     // Rate limit: max 10 posts per user per day (in user's local timezone)
-    const { data: profileTz } = await db.from('profiles').select('timezone').eq('id', user.id).maybeSingle();
-    const dayStart = localDayStartISO(profileTz?.timezone || 'UTC');
+    const dayStart = localDayStartISO(posterProfile?.timezone || 'UTC');
     const { count } = await db
       .from('community_posts')
       .select('id', { count: 'exact', head: true })
