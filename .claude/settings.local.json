@@ -69,7 +69,11 @@
       "Bash(npx tsc *)",
       "Bash(gh run *)",
       "Bash(sed 's/\"strictNullChecks\": true,//' tsconfig.json)",
-      "Bash(cp /tmp/tsconfig_test.json tsconfig.json)"
+      "Bash(cp /tmp/tsconfig_test.json tsconfig.json)",
+      "Bash(curl *)",
+      "Bash(python -c \"import sys,json; models=json.load\\(sys.stdin\\).get\\('models',[]\\); [print\\(m['name']\\) for m in models if 'flash' in m['name'].lower\\(\\) or 'pro' in m['name'].lower\\(\\)]\")",
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(m['name']\\) for m in data.get\\('models',[]\\)]\")",
+      "Bash(python -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(m['name'], '-', m.get\\('supportedGenerationMethods',''\\)\\) for m in data.get\\('models',[]\\)]\")"
     ]
   }
 }
