@@ -74,7 +74,7 @@ Rules:
             { type: 'text', text: prompt },
           ],
         }],
-        max_tokens:  500,
+        max_tokens:  2000,
         temperature: 0.2,
       }),
     });
@@ -86,7 +86,7 @@ Rules:
     }
 
     const orData = await orRes.json();
-    const rawText = orData?.choices?.[0]?.message?.content || '';
+    const rawText = orData?.choices?.[0]?.message?.content || orData?.choices?.[0]?.message?.reasoning || '';
 
     // Strip markdown code fences if present
     const cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();

@@ -268,7 +268,7 @@ ${weightText}
       body: JSON.stringify({
         model:       'tencent/hy3-preview:free',
         messages,
-        max_tokens:  1500,
+        max_tokens:  4000,
         temperature: 0.8,
       }),
     });
@@ -280,9 +280,17 @@ ${weightText}
     }
 
     const orData = await orRes.json();
-    const reply = orData?.choices?.[0]?.message?.content;
+    const choice = orData?.choices?.[0];
+    const reply = choice?.message?.content;
 
-    if (!reply) return json({ error: 'No response from AI. Please try again.' }, 500);
+    if (!reply) {
+      // Thinking model ran out of tokens before producing content
+      if (choice?.finish_reason === 'length') {
+        return json({ error: 'Your question needed a very long answer. Try asking something more specific.' }, 500);
+      }
+      console.error('[chat/gemini] user:', userId, 'null content, finish_reason:', choice?.finish_reason, 'raw:', JSON.stringify(orData).slice(0, 300));
+      return json({ error: 'No response from AI. Please try again.' }, 500);
+    }
 
     // Save AI reply
     await supabase.from('chat_messages').insert({
