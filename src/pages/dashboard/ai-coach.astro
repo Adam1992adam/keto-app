@@ -146,8 +146,8 @@ const showSnack      = nowHour >= 15 && nowHour < 19;
     body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
 
     /* ── Layout ── */
-    .ai-layout{display:flex;position:fixed;top:64px;bottom:0;left:0;right:0;overflow:hidden;}
-    #dn-footer, #dn-footer-styles + *{display:none!important;}
+    .ai-layout{display:flex;position:fixed;top:64px;bottom:0;left:0;right:0;overflow:hidden;z-index:200;}
+    #dn-footer{display:none!important;visibility:hidden!important;}
 
     /* ── Sidebar ── */
     .ai-sidebar{
@@ -616,6 +616,22 @@ const showSnack      = nowHour >= 15 && nowHour < 19;
 
   </main>
 </div>
+
+<script is:inline>
+// Kill footer the instant DashNav JS injects it
+(function() {
+  function hideFooter() {
+    var f = document.getElementById('dn-footer');
+    if (f) { f.style.cssText = 'display:none!important'; }
+    var s = document.getElementById('dn-footer-styles');
+    if (s) { s.remove(); }
+  }
+  hideFooter();
+  var obs = new MutationObserver(hideFooter);
+  obs.observe(document.body, { childList: true, subtree: true });
+  document.addEventListener('DOMContentLoaded', function() { hideFooter(); obs.disconnect(); });
+})();
+</script>
 
 <script is:inline>
 // ── Markdown renderer ───────────────────────────────────────
