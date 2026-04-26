@@ -201,9 +201,8 @@ ${weightText}
       return json({ error: 'Message or image required' }, 400);
 
     // ── API key check — graceful fallback if not configured ──
-    const GEMINI_API_KEY = import.meta.env.GEMINI_API_KEY;
-    if (!GEMINI_API_KEY) {
-      // Save the user's message so the chat history stays intact
+    const OPENROUTER_API_KEY = import.meta.env.OPENROUTER_API_KEY;
+    if (!OPENROUTER_API_KEY) {
       await supabase.from('chat_messages').insert({
         user_id:   user.id,
         role:      'user',
@@ -237,56 +236,51 @@ ${weightText}
       image_url: imageBase64 ? 'image_attached' : null,
     });
 
-    // ── Build Gemini request ─────────────────────────────────
-    const contents: any[] = [];
+    // ── Build OpenRouter request (OpenAI-compatible format) ──
+    const messages: any[] = [{ role: 'system', content: systemPrompt }];
 
     for (const msg of chatHistory) {
       if (msg.content) {
-        contents.push({
-          role:  msg.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: msg.content }],
-        });
+        messages.push({ role: msg.role === 'assistant' ? 'assistant' : 'user', content: msg.content });
       }
     }
 
-    const currentParts: any[] = [];
     if (imageBase64) {
-      currentParts.push({ inline_data: { mime_type: imageType || 'image/jpeg', data: imageBase64 } });
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'image_url', image_url: { url: `data:${imageType || 'image/jpeg'};base64,${imageBase64}` } },
+          { type: 'text', text: message || 'Please analyze this image.' },
+        ],
+      });
+    } else {
+      messages.push({ role: 'user', content: message });
     }
-    currentParts.push({ text: message || 'Please analyze this image.' });
-    contents.push({ role: 'user', parts: currentParts });
 
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemPrompt }] },
-          contents,
-          generationConfig: {
-            maxOutputTokens: 1500,
-            temperature:     0.8,
-            topP:            0.92,
-          },
-          safetySettings: [
-            { category: 'HARM_CATEGORY_HARASSMENT',        threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH',       threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-          ],
-        }),
-      }
-    );
+    const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer':  'https://ketojourney.fun',
+        'X-Title':       'Keto Journey',
+      },
+      body: JSON.stringify({
+        model:       'tencent/hy3-preview:free',
+        messages,
+        max_tokens:  1500,
+        temperature: 0.8,
+      }),
+    });
 
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      console.error('[chat/gemini] user:', userId, 'Gemini API error:', errText);
+    if (!orRes.ok) {
+      const errText = await orRes.text();
+      console.error('[chat/gemini] user:', userId, 'OpenRouter error:', errText);
       return json({ error: 'AI service temporarily unavailable. Please try again.' }, 500);
     }
 
-    const geminiData = await geminiRes.json();
-    const reply = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const orData = await orRes.json();
+    const reply = orData?.choices?.[0]?.message?.content;
 
     if (!reply) return json({ error: 'No response from AI. Please try again.' }, 500);
 

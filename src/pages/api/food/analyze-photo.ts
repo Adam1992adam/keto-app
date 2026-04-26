@@ -25,8 +25,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const { data: profileTz } = await db.from('profiles').select('timezone').eq('id', user.id).maybeSingle();
     const tz = profileTz?.timezone || 'UTC';
 
-    const GEMINI_API_KEY = import.meta.env.GEMINI_API_KEY;
-    if (!GEMINI_API_KEY) return json({ error: 'AI service not configured' }, 503);
+    const OPENROUTER_API_KEY = import.meta.env.OPENROUTER_API_KEY;
+    if (!OPENROUTER_API_KEY) return json({ error: 'AI service not configured' }, 503);
 
     const prompt = `You are a nutritionist AI. Analyze this food photo and return ONLY a valid JSON object — no markdown, no explanation, just the raw JSON.
 
@@ -57,36 +57,36 @@ Rules:
 - If you cannot identify the food at all, use your best estimate and set confidence to "low"
 - Return only the JSON object, nothing else`;
 
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            role: 'user',
-            parts: [
-              { inline_data: { mime_type: imageType, data: imageBase64 } },
-              { text: prompt },
-            ],
-          }],
-          generationConfig: {
-            maxOutputTokens: 500,
-            temperature: 0.2,
-            topP: 0.8,
-          },
-        }),
-      }
-    );
+    const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer':  'https://ketojourney.fun',
+        'X-Title':       'Keto Journey',
+      },
+      body: JSON.stringify({
+        model: 'tencent/hy3-preview:free',
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: `data:${imageType};base64,${imageBase64}` } },
+            { type: 'text', text: prompt },
+          ],
+        }],
+        max_tokens:  500,
+        temperature: 0.2,
+      }),
+    });
 
-    if (!geminiRes.ok) {
-      const err = await geminiRes.text();
-      console.error('[food/analyze-photo] user:', userId, 'Gemini error:', err);
+    if (!orRes.ok) {
+      const err = await orRes.text();
+      console.error('[food/analyze-photo] user:', userId, 'OpenRouter error:', err);
       return json({ error: 'AI analysis failed. Please try again.' }, 502);
     }
 
-    const geminiData = await geminiRes.json();
-    const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const orData = await orRes.json();
+    const rawText = orData?.choices?.[0]?.message?.content || '';
 
     // Strip markdown code fences if present
     const cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
