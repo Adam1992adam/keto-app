@@ -146,7 +146,8 @@ const showSnack      = nowHour >= 15 && nowHour < 19;
     body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
 
     /* ── Layout ── */
-    .ai-layout{display:flex;flex:1;overflow:hidden;height:calc(100vh - 64px);}
+    .ai-layout{display:flex;position:fixed;top:64px;bottom:0;left:0;right:0;overflow:hidden;}
+    #dn-footer, #dn-footer-styles + *{display:none!important;}
 
     /* ── Sidebar ── */
     .ai-sidebar{
@@ -339,6 +340,7 @@ const showSnack      = nowHour >= 15 && nowHour < 19;
     /* Mobile */
     @media(max-width:768px){
       .ai-sidebar{display:none;}
+      .ai-layout{top:56px;bottom:72px;}
       .ai-messages{padding:.875rem;}
       .ai-input-area{padding:.75rem;}
       .ai-msg-bubble{max-width:88%;}
@@ -347,8 +349,6 @@ const showSnack      = nowHour >= 15 && nowHour < 19;
       .ai-msg-bubble{max-width:94%;font-size:.82rem;padding:.6rem .8rem;}
       .ai-messages{padding:.625rem;}
     }
-    /* Hide page footer — full-screen chat layout has no room for it */
-    #dn-footer { display: none !important; }
   </style>
 </head>
 <body>
@@ -611,7 +611,7 @@ const showSnack      = nowHour >= 15 && nowHour < 19;
           </svg>
         </button>
       </div>
-      <div class="ai-input-hint">Enter to send · Shift+Enter for new line · Powered by Gemini 1.5</div>
+      <div class="ai-input-hint">Enter to send · Shift+Enter for new line · Powered by Hy3 AI</div>
     </div>
 
   </main>
