@@ -5,6 +5,9 @@ import sentry from '@sentry/astro';
 
 export default defineConfig({
   output: 'server',
+  security: {
+    checkOrigin: false,
+  },
   adapter: vercel({
     webAnalytics: { enabled: true },
   }),
