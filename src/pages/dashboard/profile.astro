@@ -710,9 +710,7 @@ const avatarLetter       = profile.full_name?.charAt(0)?.toUpperCase() || '?';
           <a href="/dashboard/recipes" class="qa"><Utensils size={14} style="display:inline;vertical-align:middle;" /> Recipes</a>
           <a href="/dashboard/shopping" class="qa"><ShoppingCart size={14} style="display:inline;vertical-align:middle;" /> Shopping List</a>
           <a href="/dashboard/upgrade" class="qa"><Zap size={14} style="display:inline;vertical-align:middle;" /> Upgrade Plan</a>
-          <form action="/api/auth/logout" method="POST" style="margin:0;">
-            <button type="submit" class="qa danger" style="width:100%;text-align:left;border-color:rgba(239,68,68,.15);"><LogOut size={14} style="display:inline;vertical-align:middle;" /> {t('profile.logout')}</button>
-          </form>
+          <a href="/api/auth/logout" class="qa danger" style="border-color:rgba(239,68,68,.15);"><LogOut size={14} style="display:inline;vertical-align:middle;" /> {t('profile.logout')}</a>
         </div>
 
         <!-- ── Data Export ─────────────────────────────────── -->
