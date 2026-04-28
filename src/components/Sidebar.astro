@@ -1,0 +1,200 @@
+---
+// src/components/Sidebar.astro — shared sidebar for dashboard pages
+
+interface Props {
+  userName:   string;
+  planType:   string;
+  tierLabel:  string;
+  currentDay: number;
+  activePage?: string;
+}
+
+const { userName, planType, tierLabel, currentDay, activePage = '' } = Astro.props;
+const isElite  = planType === 'elite_12';
+const initial  = (userName[0] || 'U').toUpperCase();
+const tierMono = planType === 'elite_12' ? 'ELITE' : planType === 'pro_6' ? 'PRO' : 'BASIC';
+
+const nav = [
+  { href: '/dashboard',          id: 'dashboard', label: 'Today',    icon: '<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
+  { href: '/dashboard/food-log', id: 'food-log',  label: 'Meals',    icon: '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/>' },
+  { href: '/dashboard/fasting',  id: 'fasting',   label: 'Fasting',  icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' },
+  { href: '/dashboard/progress', id: 'progress',  label: 'Progress', icon: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>' },
+  { href: '/dashboard/recipes',  id: 'recipes',   label: 'Recipes',  icon: '<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>' },
+  { href: '/dashboard/habits',   id: 'habits',    label: 'Habits',   icon: '<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>' },
+  { href: '/dashboard/shopping', id: 'shopping',  label: 'Shopping', icon: '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>' },
+];
+
+// Map pages that don't have their own nav entry to the right highlight
+const activeMap: Record<string, string> = {
+  'food-photo': 'food-log', 'food-log': 'food-log',
+  'recipe': 'recipes', 'recipes': 'recipes', 'favorites': 'recipes', 'collections': 'recipes',
+  'meal-planner': 'recipes', 'scanner': 'recipes',
+  'checkin': 'progress', 'photos': 'progress', 'ketones': 'progress', 'steps': 'progress',
+  'reflections': 'progress', 'share': 'progress',
+  'weekly': 'shopping', 'meal-prep': 'shopping',
+};
+const activeId = activeMap[activePage] || activePage;
+---
+
+<style>
+  /* ── Sidebar shell ────────────────────────────────────────── */
+  .rv-sb {
+    width: 232px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    background: var(--rv-card, #fff);
+    border-right: 1px solid var(--rv-line, #E5DED2);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 14px;
+    overflow-y: auto;
+    gap: 4px;
+    z-index: 50;
+    flex-shrink: 0;
+  }
+  .rv-sb-logo {
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none; margin-bottom: 24px; padding: 0 4px;
+    flex-shrink: 0;
+  }
+  .rv-logo-mark {
+    width: 30px; height: 30px; border-radius: 7px; flex-shrink: 0;
+    background: var(--rv-ink, #16110F);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-weight: 800; font-size: .92rem; color: var(--rv-accent-2, #B6FF3C);
+  }
+  [data-theme="dark"] .rv-logo-mark { background: #fff; color: #16110F; }
+  .rv-logo-word {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-size: .74rem; font-weight: 500; letter-spacing: .07em;
+    color: var(--rv-ink-soft, #4A4340);
+  }
+  .rv-logo-word strong { font-weight: 800; color: var(--rv-ink, #16110F); letter-spacing: .05em; }
+
+  /* ── Nav items ────────────────────────────────────────────── */
+  .rv-sb-nav { display: flex; flex-direction: column; gap: 2px; }
+  .rv-ni {
+    display: flex; align-items: center; gap: 11px;
+    padding: 9px 12px; border-radius: 10px; text-decoration: none;
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-size: .84rem; font-weight: 500;
+    color: var(--rv-ink-soft, #4A4340);
+    transition: all .15s;
+  }
+  .rv-ni:hover { background: var(--rv-bg-alt, #F2EDE5); color: var(--rv-ink, #16110F); }
+  .rv-ni--active { background: var(--rv-ink, #16110F); color: var(--rv-bg, #FAF6F1) !important; }
+  .rv-ni--active .rv-ni-ic { color: var(--rv-accent-2, #B6FF3C); }
+  .rv-ni--elite .rv-ni-ic { color: var(--rv-accent, #FF5C7A); }
+  .rv-ni-ic { width: 17px; height: 17px; flex-shrink: 0; }
+
+  /* ── Bottom user chip ─────────────────────────────────────── */
+  .rv-sb-fill { flex: 1; min-height: 16px; }
+  .rv-sb-user {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border-radius: 10px; text-decoration: none;
+    border: 1px solid var(--rv-line, #E5DED2);
+    transition: border-color .15s;
+    flex-shrink: 0;
+  }
+  .rv-sb-user:hover { border-color: var(--rv-accent, #FF5C7A); }
+  .rv-sb-avatar {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    background: var(--rv-accent, #FF5C7A); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-weight: 700; font-size: .88rem;
+  }
+  .rv-sb-info { display: flex; flex-direction: column; min-width: 0; }
+  .rv-sb-name { font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: .82rem; font-weight: 600; color: var(--rv-ink, #16110F); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rv-sb-plan { font-size: .67rem; letter-spacing: .07em; color: var(--rv-muted, #8A8077); font-family: 'Geist Mono', monospace; margin-top: 1px; }
+
+  /* ── Mobile bottom nav ────────────────────────────────────── */
+  .rv-mobnav {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+    background: var(--rv-card, #fff);
+    border-top: 1px solid var(--rv-line, #E5DED2);
+    padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+  }
+  .rv-mobnav-inner { display: flex; justify-content: space-around; }
+  .rv-mn {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 4px 12px; text-decoration: none;
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-size: .6rem; font-weight: 500; letter-spacing: .03em;
+    color: var(--rv-ink-soft, #4A4340);
+    transition: color .15s;
+  }
+  .rv-mn:hover, .rv-mn.active { color: var(--rv-accent, #FF5C7A); }
+  .rv-mn-ic { width: 20px; height: 20px; }
+
+  @media (max-width: 900px) {
+    .rv-sb { display: none; }
+    .rv-mobnav { display: block; }
+  }
+</style>
+
+<!-- Desktop sidebar -->
+<aside class="rv-sb">
+  <a href="/dashboard" class="rv-sb-logo">
+    <span class="rv-logo-mark">K</span>
+    <span class="rv-logo-word">KETO<strong>JOURNEY</strong></span>
+  </a>
+
+  <nav class="rv-sb-nav">
+    {nav.map(item => (
+      <a href={item.href} class={`rv-ni${activeId === item.id ? ' rv-ni--active' : ''}`}>
+        <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={item.icon}></svg>
+        <span>{item.label}</span>
+      </a>
+    ))}
+    {isElite && (
+      <a href="/dashboard/ai-coach" class={`rv-ni rv-ni--elite${activePage === 'ai-coach' ? ' rv-ni--active' : ''}`}>
+        <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span>AI Coach</span>
+      </a>
+    )}
+    <a href="/dashboard/profile" class={`rv-ni${activePage === 'profile' ? ' rv-ni--active' : ''}`}>
+      <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Profile</span>
+    </a>
+  </nav>
+
+  <div class="rv-sb-fill"></div>
+
+  <a href="/dashboard/profile" class="rv-sb-user">
+    <div class="rv-sb-avatar">{initial}</div>
+    <div class="rv-sb-info">
+      <span class="rv-sb-name">{userName}</span>
+      <span class="rv-sb-plan">{tierMono} · DAY {currentDay}</span>
+    </div>
+  </a>
+</aside>
+
+<!-- Mobile bottom nav -->
+<nav class="rv-mobnav">
+  <div class="rv-mobnav-inner">
+    <a href="/dashboard" class={`rv-mn${activeId === 'dashboard' ? ' active' : ''}`}>
+      <svg class="rv-mn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Today</span>
+    </a>
+    <a href="/dashboard/progress" class={`rv-mn${activeId === 'progress' ? ' active' : ''}`}>
+      <svg class="rv-mn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      <span>Progress</span>
+    </a>
+    <a href="/dashboard/food-log" class={`rv-mn${activeId === 'food-log' ? ' active' : ''}`}>
+      <svg class="rv-mn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>
+      <span>Meals</span>
+    </a>
+    <a href="/dashboard/recipes" class={`rv-mn${activeId === 'recipes' ? ' active' : ''}`}>
+      <svg class="rv-mn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      <span>Recipes</span>
+    </a>
+    <a href="/dashboard/profile" class={`rv-mn${activePage === 'profile' ? ' active' : ''}`}>
+      <svg class="rv-mn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Profile</span>
+    </a>
+  </div>
+</nav>

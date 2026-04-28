@@ -1,9 +1,6 @@
 ---
-// src/components/DashNav.astro
-// ═══════════════════════════════════════════════════════════════
-// Shared navigation for ALL dashboard pages.
-// Defines the global design token system for the entire app.
-// ═══════════════════════════════════════════════════════════════
+// src/components/DashNav.astro — Rose Vital redesign 2026-04-27
+// Shared navigation + global design tokens for ALL dashboard pages.
 
 import NotificationsBell from './NotificationsBell.astro';
 import CookieConsent from './CookieConsent.astro';
@@ -128,12 +125,9 @@ gtag('config', 'G-JRQ61VBZ4N');
   <!-- Logo -->
   <a href="/dashboard" class="dn-logo">
     <div class="dn-logo-mark">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
-        <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
-      </svg>
+      <span class="dn-logo-k">K</span>
     </div>
-    <span class="dn-logo-text">Keto<strong>Journey</strong></span>
+    <span class="dn-logo-text">KETO<strong>JOURNEY</strong></span>
   </a>
 
   <!-- ── Desktop pill tabs ───────────────────────────────── -->
@@ -240,10 +234,16 @@ gtag('config', 'G-JRQ61VBZ4N');
 
   <!-- ── Right controls ─────────────────────────────────── -->
   <div class="dn-right">
+
+    <a href="/dashboard/food-log" class="dn-quick-log">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Quick log
+    </a>
+
     <span class={tierCss}>
-      {planType === 'elite_12' && <Crown size={11} />}
-      {planType === 'pro_6'    && <Zap   size={11} />}
-      {planType === 'basic_30' && <Leaf  size={11} />}
+      {planType === 'elite_12' && <Crown size={10} />}
+      {planType === 'pro_6'    && <Zap   size={10} />}
+      {planType === 'basic_30' && <Leaf  size={10} />}
       {planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic'}
     </span>
 
@@ -253,10 +253,6 @@ gtag('config', 'G-JRQ61VBZ4N');
     </button>
 
     <NotificationsBell userId={userId} />
-
-    <a href="/dashboard/learn" class="dn-icon-btn dn-help" title="Learn & Help" aria-label="Help & tutorials">
-      <HelpCircle size={15} />
-    </a>
 
     <a href="/dashboard/profile" class="dn-avatar" title={userName}>
       {initials}
@@ -288,121 +284,118 @@ gtag('config', 'G-JRQ61VBZ4N');
 <!-- ══ STYLES ════════════════════════════════════════════════ -->
 <style>
 /* ═══════════════════════════════════════════════════════════════
-   GLOBAL DESIGN TOKEN SYSTEM
-   Strategy: html:not([data-theme="dark"]) = higher specificity
-   than each page's :root { dark }, so light values always win.
+   ROSE VITAL — GLOBAL DESIGN TOKEN SYSTEM
+   Strategy: html:not([data-theme="dark"]) = specificity [0,1,1]
+   beats any page's :root [0,1,0], so light values always win.
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── Layout / radius / shadow tokens (theme-independent) ── */
+/* ── Shape / spacing tokens (theme-independent) ── */
 :root {
-  --nav-h:     64px;
+  --nav-h:     60px;
   --r-xs:      6px;
   --r-sm:      10px;
   --r:         16px;
   --r-lg:      22px;
   --r-xl:      28px;
   --r-full:    9999px;
+
+  /* Rose Vital brand tokens — always available */
+  --rv-ink:        #16110F;
+  --rv-ink-soft:   #4A4340;
+  --rv-ink-muted:  #9B9390;
+  --rv-bg:         #FAF6F1;
+  --rv-bg-alt:     #F2EDE5;
+  --rv-card:       #FFFFFF;
+  --rv-border:     rgba(22,17,15,.08);
+  --rv-border-2:   rgba(22,17,15,.16);
+  --rv-accent:     #FF5C7A;
+  --rv-accent-2:   #B6FF3C;
+  --rv-accent-3:   #FF914D;
 }
 
-/* ── LIGHT theme (default) ────────────────────────────────
-   html:not([data-theme="dark"]) specificity = [0,1,1]
-   beats page :root specificity = [0,1,0]                  */
+/* ── LIGHT theme (Rose Vital) ─────────────────────────────── */
 html:not([data-theme="dark"]) {
-  /* Backgrounds */
-  --bg:          #f5f7fa;
-  --bg2:         #eef1f6;
-  --card:        #ffffff;
-  --card2:       #f8fafc;
-
-  /* Borders */
-  --border:      rgba(0, 0, 0, .07);
-  --border2:     rgba(22, 163, 74, .22);
-
-  /* Text */
-  --text:        #0f172a;
-  --soft:        #64748b;
-  --muted:       #e2e8f0;
-
-  /* Brand green */
+  --bg:          #FAF6F1;
+  --bg2:         #F2EDE5;
+  --card:        #FFFFFF;
+  --card2:       #F8F4EF;
+  --border:      rgba(22,17,15,.08);
+  --border2:     rgba(255,92,122,.25);
+  --text:        #16110F;
+  --soft:        #4A4340;
+  --muted:       #E5DDD5;
   --green:       #16a34a;
   --green2:      #22c55e;
   --green3:      #4ade80;
   --green-bg:    #f0fdf4;
-  --green-ring:  rgba(22, 163, 74, .15);
-
-  /* Amber / gold */
+  --green-ring:  rgba(22,163,74,.15);
   --amber:       #f59e0b;
   --amber2:      #fbbf24;
   --amber-bg:    #fffbeb;
   --gold:        #f59e0b;
-
-  /* Red */
   --red:         #ef4444;
   --red-bg:      #fef2f2;
-
-  /* Purple */
   --purple:      #8b5cf6;
   --purple2:     #a78bfa;
   --purple-bg:   #faf5ff;
-
-  /* Blue */
   --blue:        #3b82f6;
   --blue2:       #60a5fa;
   --blue-bg:     #eff6ff;
-
-  /* Cyan */
   --cyan:        #06b6d4;
   --cyan-bg:     #ecfeff;
-
-  /* Shadows */
-  --shadow-xs:   0 1px 2px rgba(0,0,0,.05);
-  --shadow-sm:   0 1px 3px rgba(0,0,0,.07), 0 2px 8px rgba(0,0,0,.04);
-  --shadow:      0 4px 20px rgba(0,0,0,.07), 0 2px 6px rgba(0,0,0,.04);
-  --shadow-lg:   0 8px 32px rgba(0,0,0,.09), 0 4px 12px rgba(0,0,0,.05);
-  --shadow-xl:   0 20px 60px rgba(0,0,0,.10), 0 8px 20px rgba(0,0,0,.06);
+  --shadow-xs:   0 1px 2px rgba(0,0,0,.04);
+  --shadow-sm:   0 1px 4px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.03);
+  --shadow:      0 4px 20px rgba(0,0,0,.06), 0 2px 6px rgba(0,0,0,.03);
+  --shadow-lg:   0 8px 32px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.04);
+  --shadow-xl:   0 20px 60px rgba(0,0,0,.09), 0 8px 20px rgba(0,0,0,.05);
 }
 
 /* ── DARK theme override ──────────────────────────────────── */
 [data-theme="dark"] {
-  --bg:          #060d09;
-  --bg2:         #0a1410;
-  --card:        #0d1a0f;
-  --card2:       #111f13;
-  --border:      rgba(16, 185, 129, .1);
-  --border2:     rgba(16, 185, 129, .25);
-  --text:        #dfeedd;
-  --soft:        #4d7055;
-  --muted:       #233328;
+  --bg:          #130E0C;
+  --bg2:         #1C1613;
+  --card:        #1F1916;
+  --card2:       #261E1A;
+  --border:      rgba(255,255,255,.07);
+  --border2:     rgba(255,92,122,.25);
+  --text:        #F5EDE4;
+  --soft:        #7A6D68;
+  --muted:       #352B27;
   --green:       #10b981;
   --green2:      #34d399;
   --green3:      #6ee7b7;
-  --green-bg:    rgba(16, 185, 129, .1);
-  --green-ring:  rgba(16, 185, 129, .15);
+  --green-bg:    rgba(16,185,129,.1);
+  --green-ring:  rgba(16,185,129,.15);
   --amber:       #f59e0b;
   --amber2:      #fbbf24;
-  --amber-bg:    rgba(245, 158, 11, .1);
+  --amber-bg:    rgba(245,158,11,.1);
   --gold:        #f59e0b;
   --red:         #ef4444;
-  --red-bg:      rgba(239, 68, 68, .1);
+  --red-bg:      rgba(239,68,68,.1);
   --purple:      #8b5cf6;
   --purple2:     #a78bfa;
-  --purple-bg:   rgba(139, 92, 246, .1);
+  --purple-bg:   rgba(139,92,246,.1);
   --blue:        #3b82f6;
   --blue2:       #60a5fa;
-  --blue-bg:     rgba(59, 130, 246, .1);
+  --blue-bg:     rgba(59,130,246,.1);
   --cyan:        #06b6d4;
-  --cyan-bg:     rgba(6, 182, 212, .1);
+  --cyan-bg:     rgba(6,182,212,.1);
   --shadow-xs:   0 1px 2px rgba(0,0,0,.3);
   --shadow-sm:   0 1px 4px rgba(0,0,0,.3);
   --shadow:      0 4px 16px rgba(0,0,0,.35);
   --shadow-lg:   0 8px 32px rgba(0,0,0,.4);
   --shadow-xl:   0 20px 60px rgba(0,0,0,.5);
 }
+[data-theme="dark"] { --rv-ink: #F5EDE4; --rv-ink-soft: #A09089; --rv-bg: #130E0C; --rv-bg-alt: #1C1613; --rv-card: #1F1916; --rv-border: rgba(255,255,255,.07); }
 
-/* ── Base reset ─────────────────────────────────────────── */
+/* ── Hide top nav globally (sidebar replaces it) ─────────── */
+.dash-nav { display: none !important; }
+#dn-footer { display: none !important; }
+
+/* ── Base reset ──────────────────────────────────────────── */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Bricolage Grotesque', 'DM Sans', sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -411,50 +404,57 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   TOP NAV
+   TOP NAV — Rose Vital
    ═══════════════════════════════════════════════════════════ */
 .dash-nav {
   position: sticky; top: 0; z-index: 200;
   height: var(--nav-h);
   background: var(--card);
   border-bottom: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 0 var(--border);
   display: flex; align-items: center;
-  padding: 0 1.5rem; gap: 1rem;
+  padding: 0 1.25rem; gap: .75rem;
+  backdrop-filter: blur(16px) saturate(1.2);
 }
 
 /* ── Logo ────────────────────────────────────────────────── */
 .dn-logo {
-  display: flex; align-items: center; gap: .6rem;
+  display: flex; align-items: center; gap: .55rem;
   text-decoration: none; flex-shrink: 0; user-select: none;
 }
 .dn-logo-mark {
-  width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0;
-  background: linear-gradient(135deg, var(--green) 0%, #15803d 100%);
+  width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+  background: var(--rv-ink);
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 2px 8px var(--green-ring);
 }
+[data-theme="dark"] .dn-logo-mark { background: #FFFFFF; }
+.dn-logo-k {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: .95rem; font-weight: 800; line-height: 1;
+  color: var(--rv-accent-2);
+}
+[data-theme="dark"] .dn-logo-k { color: var(--rv-ink); }
 .dn-logo-text {
-  font-family: 'DM Sans', sans-serif;
-  font-size: .88rem; font-weight: 500; letter-spacing: -.01em;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: .72rem; font-weight: 500; letter-spacing: .08em;
   color: var(--soft);
 }
-.dn-logo-text strong { font-weight: 800; color: var(--text); }
+.dn-logo-text strong { font-weight: 800; color: var(--text); letter-spacing: .06em; }
 
 /* ── Pill tabs ───────────────────────────────────────────── */
 .dn-tabs {
-  display: flex; align-items: center; gap: .15rem;
-  list-style: none; margin-left: .4rem;
+  display: flex; align-items: center; gap: .1rem;
+  list-style: none; margin-left: .5rem;
 }
 @media (max-width: 900px) { .dn-tabs { display: none; } }
 
 .dn-group { position: relative; }
 
 .dn-tab {
-  display: inline-flex; align-items: center; gap: .35rem;
-  font-family: 'DM Sans', sans-serif;
-  font-size: .8rem; font-weight: 600;
-  padding: .44rem .88rem; border-radius: var(--r-full);
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: .775rem; font-weight: 600; letter-spacing: -.01em;
+  padding: .4rem .8rem; border-radius: var(--r-full);
   color: var(--soft); background: transparent;
   border: none; cursor: pointer;
   text-decoration: none; white-space: nowrap;
@@ -463,9 +463,15 @@ body {
 }
 .dn-tab:hover { color: var(--text); background: var(--bg2); }
 
-/* Active pill — dark in light mode, green in dark mode */
-.dn-tab.active { background: #0f172a; color: #ffffff; }
-[data-theme="dark"] .dn-tab.active { background: var(--green); color: #ffffff; }
+/* Active pill — ink bg + white text in light; accent in dark */
+.dn-tab.active {
+  background: var(--rv-ink);
+  color: #FFFFFF;
+}
+[data-theme="dark"] .dn-tab.active {
+  background: var(--rv-accent);
+  color: #FFFFFF;
+}
 
 /* Elite tabs */
 .dn-tab.dn-elite { color: var(--amber); }
@@ -473,16 +479,17 @@ body {
 .dn-tab.dn-elite.active { background: var(--amber); color: #fff; }
 
 /* Locked feature tab */
-.dn-tab.dn-locked { color: var(--soft); opacity: .65; cursor: pointer; }
-.dn-tab.dn-locked:hover { color: var(--amber); background: var(--amber-bg); opacity: 1; }
+.dn-tab.dn-locked { color: var(--soft); opacity: .6; cursor: pointer; }
+.dn-tab.dn-locked:hover { color: var(--rv-accent); background: rgba(255,92,122,.07); opacity: 1; }
 
 /* Upgrade tab */
 .dn-tab.dn-upgrade {
-  color: var(--green);
-  border: 1.5px solid var(--border2);
+  color: var(--rv-accent);
+  border: 1.5px solid rgba(255,92,122,.3);
+  background: rgba(255,92,122,.05);
 }
-.dn-tab.dn-upgrade:hover { background: var(--green-bg); }
-.dn-tab.dn-upgrade.active { background: var(--green); color: #fff; border-color: var(--green); }
+.dn-tab.dn-upgrade:hover { background: rgba(255,92,122,.1); border-color: var(--rv-accent); }
+.dn-tab.dn-upgrade.active { background: var(--rv-accent); color: #fff; border-color: var(--rv-accent); }
 .dn-tab.dn-upgrade--elite {
   color: #fbbf24;
   border-color: rgba(245,158,11,.4);
@@ -493,34 +500,30 @@ body {
   box-shadow: 0 0 12px rgba(245,158,11,.15);
 }
 
-/* Caret — targets the svg with class="dn-caret" from lucide-astro */
+/* Caret */
 .dn-caret { flex-shrink: 0; transition: transform .2s; }
 .dn-group.open .dn-caret { transform: rotate(180deg); }
-/* lucide-astro adds both .lucide and the class, so also target svg */
 .dn-tab svg.dn-caret { flex-shrink: 0; }
-/* Ensure lucide icons in tabs don't inherit unwanted styles */
 .dn-tab svg:not(.dn-caret) { flex-shrink: 0; }
 
 /* ── Dropdown ────────────────────────────────────────────── */
 .dn-drop {
-  position: absolute; top: calc(100% + 8px); left: 50%;
+  position: absolute; top: calc(100% + 6px); left: 50%;
   transform: translateX(-50%) translateY(-4px);
-  min-width: 158px;
-  /* Light mode — hardcoded so it always renders regardless of CSS variable resolution */
-  background: #ffffff;
-  border: 1px solid rgba(0,0,0,.09);
+  min-width: 164px;
+  background: #FFFFFF;
+  border: 1px solid rgba(22,17,15,.09);
   border-radius: var(--r-lg);
-  padding: .45rem;
-  box-shadow: 0 8px 32px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.06);
+  padding: .4rem;
+  box-shadow: 0 12px 40px rgba(0,0,0,.10), 0 2px 8px rgba(0,0,0,.06);
   opacity: 0; pointer-events: none;
-  transition: opacity .16s ease, transform .16s ease;
+  transition: opacity .15s ease, transform .15s ease;
   z-index: 300;
 }
-/* Dark mode override — :global() prevents Astro from scoping the html ancestor */
 :global([data-theme="dark"]) .dn-drop {
-  background: #1a2e1e;
-  border: 1px solid rgba(16,185,129,.25);
-  box-shadow: 0 8px 32px rgba(0,0,0,.5), 0 2px 8px rgba(0,0,0,.3);
+  background: #1F1916;
+  border: 1px solid rgba(255,255,255,.09);
+  box-shadow: 0 12px 40px rgba(0,0,0,.5), 0 2px 8px rgba(0,0,0,.3);
 }
 .dn-group.open .dn-drop {
   opacity: 1; pointer-events: auto;
@@ -528,47 +531,73 @@ body {
 }
 .dn-drop-link {
   display: flex; align-items: center;
-  padding: .52rem .8rem; border-radius: var(--r-sm);
-  font-size: .8rem; font-weight: 600;
+  padding: .48rem .8rem; border-radius: var(--r-sm);
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: .775rem; font-weight: 600;
   color: var(--soft); text-decoration: none; white-space: nowrap;
-  transition: color .14s, background .14s;
+  transition: color .13s, background .13s;
 }
-.dn-drop-link:hover { color: var(--text); background: rgba(0,0,0,.05); }
-:global([data-theme="dark"]) .dn-drop-link:hover { color: #dfeedd; background: rgba(255,255,255,.06); }
-.dn-drop-link.active { color: #10b981; background: rgba(16,185,129,.1); }
+.dn-drop-link:hover { color: var(--text); background: var(--bg2); }
+:global([data-theme="dark"]) .dn-drop-link:hover { color: #F5EDE4; background: rgba(255,255,255,.05); }
+.dn-drop-link.active { color: var(--rv-accent); background: rgba(255,92,122,.07); }
+:global([data-theme="dark"]) .dn-drop-link.active { color: var(--rv-accent); background: rgba(255,92,122,.12); }
 
 /* ── Spacer ──────────────────────────────────────────────── */
 .dn-sp { flex: 1; min-width: 0; }
 
-/* ── Right controls group ────────────────────────────────── */
+/* ── Right controls ──────────────────────────────────────── */
 .dn-right {
-  display: flex; align-items: center; gap: .45rem; flex-shrink: 0;
+  display: flex; align-items: center; gap: .4rem; flex-shrink: 0;
 }
+
+/* Quick-log pill CTA */
+.dn-quick-log {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: .72rem; font-weight: 700; letter-spacing: -.005em;
+  padding: .38rem .85rem; border-radius: var(--r-full);
+  background: var(--rv-accent); color: #FFFFFF;
+  text-decoration: none; border: none; cursor: pointer;
+  box-shadow: 0 2px 10px rgba(255,92,122,.28);
+  transition: transform .15s, box-shadow .15s, background .15s;
+  white-space: nowrap;
+}
+.dn-quick-log:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(255,92,122,.36);
+}
+.dn-quick-log:active { transform: translateY(0); }
+@media (max-width: 1100px) { .dn-quick-log { display: none; } }
 
 /* Tier badge */
 .dn-tier {
   display: inline-flex; align-items: center; gap: .3rem;
-  font-size: .68rem; font-weight: 800; letter-spacing: .02em;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: .65rem; font-weight: 800; letter-spacing: .06em;
   text-transform: uppercase;
-  padding: .22rem .72rem; border-radius: var(--r-full);
+  padding: .22rem .65rem; border-radius: var(--r-full);
   white-space: nowrap; flex-shrink: 0;
 }
 .dn-tier svg { flex-shrink: 0; }
 .dn-tier--basic {
-  background: rgba(16,185,129,.12);
-  border: 1.5px solid rgba(16,185,129,.3);
-  color: #10b981;
+  background: rgba(182,255,60,.15);
+  border: 1.5px solid rgba(182,255,60,.4);
+  color: #5D8A00;
+}
+[data-theme="dark"] .dn-tier--basic {
+  color: var(--rv-accent-2);
+  background: rgba(182,255,60,.12);
 }
 .dn-tier--pro {
-  background: rgba(99,102,241,.15);
-  border: 1.5px solid rgba(99,102,241,.4);
-  color: #818cf8;
+  background: rgba(255,145,77,.12);
+  border: 1.5px solid rgba(255,145,77,.35);
+  color: var(--rv-accent-3);
 }
 .dn-tier--elite {
-  background: linear-gradient(135deg,rgba(245,158,11,.18),rgba(239,68,68,.12));
-  border: 1.5px solid rgba(245,158,11,.5);
-  color: #fbbf24;
-  box-shadow: 0 0 10px rgba(245,158,11,.15);
+  background: rgba(255,92,122,.1);
+  border: 1.5px solid rgba(255,92,122,.3);
+  color: var(--rv-accent);
+  box-shadow: 0 0 10px rgba(255,92,122,.12);
 }
 
 /* Icon button */
@@ -577,75 +606,81 @@ body {
   background: var(--bg2); border: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; color: var(--soft);
-  transition: background .18s, border-color .18s, color .18s;
+  transition: background .16s, border-color .16s, color .16s;
+  text-decoration: none;
 }
 .dn-icon-btn:hover {
-  background: var(--card); border-color: var(--border2); color: var(--green);
+  background: var(--bg); border-color: var(--border2); color: var(--rv-accent);
 }
 
-/* Sun/moon visibility based on theme */
-.icon-moon { display: block; }   /* show in light mode (click → go dark) */
-.icon-sun  { display: none;  }   /* hidden in light mode */
+/* Sun/moon visibility */
+.icon-moon { display: block; }
+.icon-sun  { display: none;  }
 [data-theme="dark"] .icon-moon { display: none; }
 [data-theme="dark"] .icon-sun  { display: block; }
 
 /* Avatar */
 .dn-avatar {
   width: 34px; height: 34px; border-radius: var(--r-full); flex-shrink: 0;
-  background: linear-gradient(135deg, var(--green) 0%, #15803d 100%);
+  background: var(--rv-ink);
   display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: .79rem; color: #fff;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-weight: 800; font-size: .75rem; color: #FFFFFF;
   text-decoration: none;
-  box-shadow: 0 2px 8px var(--green-ring);
-  transition: transform .18s, box-shadow .18s;
+  box-shadow: 0 2px 8px rgba(22,17,15,.15);
+  transition: transform .16s, box-shadow .16s;
 }
-.dn-avatar:hover { transform: scale(1.07); box-shadow: 0 4px 14px var(--green-ring); }
+[data-theme="dark"] .dn-avatar { background: var(--rv-accent); }
+.dn-avatar:hover { transform: scale(1.07); box-shadow: 0 4px 14px rgba(22,17,15,.2); }
 
 /* ═══════════════════════════════════════════════════════════
-   MOBILE BOTTOM NAV
+   MOBILE BOTTOM NAV — Rose Vital
    ═══════════════════════════════════════════════════════════ */
 .dn-bottom {
   display: none;
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
   background: var(--card);
   border-top: 1px solid var(--border);
-  box-shadow: 0 -4px 20px rgba(0,0,0,.06);
-  padding: .5rem 0 calc(.5rem + env(safe-area-inset-bottom));
+  box-shadow: 0 -2px 20px rgba(0,0,0,.05);
+  padding: .4rem 0 calc(.4rem + env(safe-area-inset-bottom));
   grid-template-columns: repeat(5, 1fr);
 }
 @media (max-width: 900px) { .dn-bottom { display: grid; } }
 
 .dn-bn {
-  display: flex; flex-direction: column; align-items: center; gap: .18rem;
-  padding: .5rem .2rem;
-  color: var(--soft); font-size: .65rem; font-weight: 700;
-  text-decoration: none; letter-spacing: .01em;
-  transition: color .16s, transform .14s;
+  display: flex; flex-direction: column; align-items: center; gap: .15rem;
+  padding: .45rem .2rem;
+  color: var(--soft); font-size: .6rem; font-weight: 700;
+  font-family: 'Bricolage Grotesque', sans-serif; letter-spacing: .01em;
+  text-decoration: none;
+  transition: color .15s, transform .12s;
   min-height: 48px; justify-content: center;
 }
 .dn-bn:hover { color: var(--text); transform: translateY(-1px); }
-.dn-bn.active { color: var(--green); }
-.dn-bn.active svg { filter: drop-shadow(0 0 5px var(--green-ring)); }
+.dn-bn.active { color: var(--rv-accent); }
+.dn-bn.active svg { filter: drop-shadow(0 0 4px rgba(255,92,122,.35)); }
 
-/* footer styles are injected via JS to avoid Astro CSS scoping */
+/* ── Active indicator dot ── */
+.dn-bn.active::after {
+  content: '';
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--rv-accent);
+  display: block; margin-top: .1rem;
+}
 
 /* ═══════════════════════════════════════════════════════════════
-   GLOBAL MOBILE UX — applied to all dashboard pages
+   GLOBAL MOBILE UX
    ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 480px) {
-  /* Prevent iOS Safari zoom on input focus (requires font-size >= 16px) */
   input:not([type="range"]),
   textarea,
   select { font-size: 16px !important; }
 
-  /* Bottom nav safe-area: ensure content never hides behind fixed nav */
   body { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
 
-  /* Touch targets — make tappable elements comfortable */
   button:not(.dn-bn):not(.seg-btn),
   .btn, [class*="-btn"]:not(.dn-bn) { min-height: 44px; }
 
-  /* Modal/overlay fullscreen on mobile */
   [id$="Modal"], [id$="-modal"],
   [class*="modal-wrap"], [class*="overlay-wrap"] {
     padding: .75rem !important;
@@ -842,14 +877,14 @@ body {
     var t = document.createElement('div');
     t.style.cssText = [
       'position:fixed;bottom:80px;left:50%;transform:translateX(-50%)',
-      'background:#0d1a0f;border:1px solid rgba(16,185,129,.3)',
-      'color:#dfeedd;border-radius:12px;padding:.75rem 1.25rem',
-      'font-size:.82rem;font-weight:600;z-index:9999',
-      'display:flex;align-items:center;gap:.75rem;box-shadow:0 8px 32px rgba(0,0,0,.4)',
+      'background:#16110F;border:1px solid rgba(255,92,122,.25)',
+      'color:#F5EDE4;border-radius:14px;padding:.75rem 1.25rem',
+      'font-family:"Bricolage Grotesque",sans-serif;font-size:.82rem;font-weight:600;z-index:9999',
+      'display:flex;align-items:center;gap:.75rem;box-shadow:0 8px 32px rgba(0,0,0,.35)',
     ].join(';');
-    t.innerHTML = '<span>🔄 App updated — reload to get the latest</span>'
+    t.innerHTML = '<span>↻ App updated — reload to get the latest</span>'
       + '<button onclick="this.closest(\'div\').remove()" '
-      + 'style="background:#10b981;color:#fff;border:none;border-radius:6px;'
+      + 'style="background:#FF5C7A;color:#fff;border:none;border-radius:8px;'
       + 'padding:.3rem .75rem;cursor:pointer;font-weight:700;font-size:.78rem">Reload</button>';
     t.querySelector('button').addEventListener('click', function () {
       worker.postMessage({ type: 'SKIP_WAITING' });
@@ -861,19 +896,19 @@ body {
   /* ── Generic toast ────────────────────────────────────── */
   function showToast(msg, color) {
     var t = document.createElement('div');
-    var bg = color === 'green' ? '#10b981' : '#3b82f6';
+    var bg = color === 'green' ? '#FF5C7A' : '#3b82f6';
     t.style.cssText = [
       'position:fixed;bottom:80px;left:50%;transform:translateX(-50%)',
-      'background:' + bg + ';color:#fff;border-radius:10px',
-      'padding:.65rem 1.25rem;font-size:.82rem;font-weight:700',
-      'z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3)',
+      'background:' + bg + ';color:#fff;border-radius:12px',
+      'padding:.65rem 1.25rem;font-family:"Bricolage Grotesque",sans-serif;font-size:.82rem;font-weight:700',
+      'z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.25)',
     ].join(';');
     t.textContent = msg;
     document.body.appendChild(t);
     setTimeout(function () { t.remove(); }, 3500);
   }
 
-  /* ── Footer injection (after DOM ready — styles injected inline to bypass Astro scoping) ── */
+  /* ── Footer injection (styles injected inline to bypass Astro scoping) ── */
   document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('dn-footer')) return;
 
@@ -881,37 +916,36 @@ body {
     var s = document.createElement('style');
     s.id = 'dn-footer-styles';
     s.textContent = [
-      '#dn-footer{margin-top:5rem;padding:2.5rem 2rem 2rem;border-top:1px solid var(--border);background:var(--card);position:relative;overflow:hidden;}',
-      '#dn-footer::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 70% 90% at 50% 120%,var(--green-ring),transparent);pointer-events:none;}',
+      '#dn-footer{margin-top:5rem;padding:2.5rem 2rem 2rem;border-top:1px solid var(--border);background:var(--bg2);position:relative;overflow:hidden;}',
       '#dn-footer a{text-decoration:none;}',
       '.dnf-inner{max-width:1280px;margin:0 auto;position:relative;}',
       '.dnf-top{display:flex;align-items:flex-start;justify-content:space-between;gap:2rem;flex-wrap:wrap;padding-bottom:2rem;margin-bottom:2rem;border-bottom:1px solid var(--border);}',
 
       /* Brand */
       '.dnf-brand{display:flex;flex-direction:column;gap:.8rem;max-width:270px;}',
-      '.dnf-logo{display:flex;align-items:center;gap:.6rem;}',
-      '.dnf-logo-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--green),#15803d);display:flex;align-items:center;justify-content:center;font-size:1rem;box-shadow:0 2px 10px var(--green-ring);flex-shrink:0;}',
-      '.dnf-logo-name{font-family:"DM Sans",sans-serif;font-size:.95rem;font-weight:800;color:var(--text);letter-spacing:-.01em;}',
-      '.dnf-tagline{font-size:.79rem;color:var(--soft);line-height:1.6;}',
+      '.dnf-logo{display:flex;align-items:center;gap:.55rem;}',
+      '.dnf-logo-mark{width:32px;height:32px;border-radius:8px;background:var(--rv-ink);display:flex;align-items:center;justify-content:center;font-family:"Bricolage Grotesque",sans-serif;font-size:.9rem;font-weight:800;color:#B6FF3C;flex-shrink:0;}',
+      '.dnf-logo-name{font-family:"Bricolage Grotesque",sans-serif;font-size:.85rem;font-weight:800;color:var(--text);letter-spacing:.04em;}',
+      '.dnf-tagline{font-size:.79rem;color:var(--soft);line-height:1.65;}',
 
       /* Trust pills */
       '.dnf-pills{display:flex;gap:.5rem;flex-wrap:wrap;}',
-      '.dnf-pill{display:inline-flex;align-items:center;gap:.3rem;padding:.22rem .7rem;border-radius:999px;background:var(--green-bg);border:1px solid var(--border2);font-size:.68rem;font-weight:700;color:var(--green);}',
+      '.dnf-pill{display:inline-flex;align-items:center;gap:.3rem;padding:.22rem .7rem;border-radius:999px;background:rgba(255,92,122,.07);border:1px solid rgba(255,92,122,.2);font-family:"Bricolage Grotesque",sans-serif;font-size:.67rem;font-weight:700;color:var(--rv-accent);}',
 
       /* Columns */
       '.dnf-cols{display:flex;gap:3rem;flex-wrap:wrap;}',
-      '.dnf-col-title{font-size:.67rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--green);margin-bottom:.9rem;}',
+      '.dnf-col-title{font-family:"Bricolage Grotesque",sans-serif;font-size:.62rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);margin-bottom:.9rem;}',
       '.dnf-col-links{display:flex;flex-direction:column;gap:.6rem;}',
-      '.dnf-col-links a{font-size:.8rem;font-weight:500;color:var(--soft);display:inline-flex;align-items:center;gap:.4rem;transition:color .18s,transform .18s;}',
-      '.dnf-col-links a:hover{color:var(--green);transform:translateX(3px);}',
+      '.dnf-col-links a{font-family:"Bricolage Grotesque",sans-serif;font-size:.78rem;font-weight:500;color:var(--soft);display:inline-flex;align-items:center;gap:.4rem;transition:color .16s,transform .16s;}',
+      '.dnf-col-links a:hover{color:var(--rv-accent);transform:translateX(3px);}',
 
       /* Bottom bar */
       '.dnf-bottom{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;}',
-      '.dnf-copy{font-size:.73rem;color:var(--soft);font-weight:500;}',
+      '.dnf-copy{font-family:"Bricolage Grotesque",sans-serif;font-size:.72rem;color:var(--soft);font-weight:500;}',
       '.dnf-copy strong{color:var(--text);}',
       '.dnf-legal{display:flex;align-items:center;gap:.5rem;}',
-      '.dnf-legal a{font-size:.72rem;font-weight:600;color:var(--soft);transition:color .18s;}',
-      '.dnf-legal a:hover{color:var(--green);}',
+      '.dnf-legal a{font-family:"Bricolage Grotesque",sans-serif;font-size:.7rem;font-weight:600;color:var(--soft);transition:color .16s;}',
+      '.dnf-legal a:hover{color:var(--rv-accent);}',
       '.dnf-legal-sep{font-size:.65rem;color:var(--muted);}',
 
       /* Mobile */
@@ -934,7 +968,7 @@ body {
           /* Brand + tagline + trust pills */
           '<div class="dnf-brand">',
             '<div class="dnf-logo">',
-              '<div class="dnf-logo-mark">🥑</div>',
+              '<div class="dnf-logo-mark">K</div>',
               '<span class="dnf-logo-name">KetoJourney</span>',
             '</div>',
             '<p class="dnf-tagline">Your structured keto coaching app — daily meal plans, smart tracking, and personalised guidance for a lasting transformation.</p>',
