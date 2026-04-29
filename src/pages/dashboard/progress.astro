@@ -2,7 +2,8 @@
 import { getUserJourney, getMaxJourneyDays, getAchievements, kgToLbs, cmToInches } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import { generateInsights } from '../../lib/insights';
-import DashNav from '../../components/DashNav.astro';
+import Sidebar from '../../components/Sidebar.astro';
+import { updateCurrentDay } from '../../lib/supabase';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
 
 const auth = await requireAuth(Astro);
@@ -13,13 +14,15 @@ const t    = getTranslator(lang);
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 
+await updateCurrentDay(user.id).catch(() => null);
+
 let journey = null as any;
 try {
   journey = await getUserJourney(user.id, db);
 } catch (e) {
   console.error('[Progress] DB unavailable:', e);
   return new Response(
-    `<!DOCTYPE html><html><head><title>Temporarily Unavailable</title><meta http-equiv="refresh" content="15;url=/dashboard/progress"></head><body style="background:#060d09;color:#dfeedd;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:1.2rem;text-align:center;padding:2rem"><h2 style="font-family:Fraunces,serif;font-size:1.6rem;margin:0;color:#10b981">Keto Journey</h2><p style="font-size:1.1rem;margin:0">Progress page temporarily unavailable</p><p style="color:#4d7055;margin:0;font-size:.9rem">Retrying in 15 seconds…</p><a href="/dashboard/progress" style="color:#10b981;font-size:.9rem;margin-top:.5rem">Retry now</a></body></html>`,
+    `<!DOCTYPE html><html><head><title>Temporarily Unavailable</title><meta http-equiv="refresh" content="15;url=/dashboard/progress"></head><body style="background:#FAF6F1;color:#16110F;font-family:'Bricolage Grotesque',system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:1.2rem;text-align:center;padding:2rem"><h2 style="font-size:1.6rem;margin:0;color:#FF5C7A">Keto Journey</h2><p style="font-size:1.1rem;margin:0">Progress page temporarily unavailable</p><p style="color:#8A8077;margin:0;font-size:.9rem">Retrying in 15 seconds…</p><a href="/dashboard/progress" style="color:#FF5C7A;font-size:.9rem;margin-top:.5rem">Retry now</a></body></html>`,
     { status: 503, headers: { 'Content-Type': 'text/html' } }
   );
 }
@@ -548,39 +551,35 @@ const initialPhotos = progressPhotos || [];
   <title>{t('progress.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
   <script is:inline>(function(){const t=localStorage.getItem('keto-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
   <style>
-    :root{--bg:#060c08;--card:#0d1a0f;--card2:#122014;--surface:#0a1209;--border:rgba(16,185,129,.11);--border2:rgba(16,185,129,.28);--text:#e0ede0;--soft:#4e724e;--muted:#1e2e1e;--green:#10b981;--green2:#34d399;--gold:#f59e0b;--red:#ef4444;--blue:#3b82f6;--purple:#8b5cf6;--cyan:#06b6d4;}
-    [data-theme="light"]{--bg:#ecf4ec;--card:#fff;--card2:#f2f8f2;--surface:#f8faf8;--border:rgba(0,0,0,.07);--border2:rgba(16,185,129,.25);--text:#071807;--soft:#3a6040;--muted:#b0cdb0;}
+    :root{
+      /* Rose Vital design tokens */
+      --rv-bg:#FAF6F1;--rv-card:#FFFFFF;--rv-bg-alt:#F2EDE5;--rv-line:#E5DED2;
+      --rv-ink:#16110F;--rv-ink-soft:#4A4340;--rv-muted:#8A8077;
+      --rv-accent:#FF5C7A;--rv-accent-2:#B6FF3C;--rv-warm:#FF914D;
+      /* Alias legacy vars to Rose Vital */
+      --bg:var(--rv-bg);--card:var(--rv-card);--card2:var(--rv-bg-alt);--surface:var(--rv-bg-alt);
+      --border:var(--rv-line);--border2:rgba(255,92,122,.3);
+      --text:var(--rv-ink);--soft:var(--rv-ink-soft);--muted:#C8BFBA;
+      /* Keep semantic data/chart colors unchanged */
+      --green:#10b981;--green2:#34d399;--gold:#f59e0b;--red:#ef4444;
+      --blue:#3b82f6;--purple:#8b5cf6;--cyan:#06b6d4;
+    }
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background .3s,color .3s;}
-    .bg-wrap{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
-    .orb{position:absolute;border-radius:50%;filter:blur(130px);animation:drift ease-in-out infinite;}
-    [data-theme="light"] .orb{opacity:.06;}
-    .o1{width:700px;height:700px;background:rgba(16,185,129,.08);top:-180px;left:-150px;animation-duration:25s;opacity:.35;}
-    .o2{width:500px;height:500px;background:rgba(59,130,246,.05);bottom:-120px;right:-120px;animation-duration:32s;animation-delay:-14s;opacity:.3;}
-    .o3{width:350px;height:350px;background:rgba(245,158,11,.04);top:40%;left:45%;animation-duration:20s;animation-delay:-9s;opacity:.25;}
-    @keyframes drift{0%,100%{transform:translate(0,0)scale(1);}40%{transform:translate(40px,-50px)scale(1.07);}70%{transform:translate(-35px,45px)scale(.93);}}
-    nav{position:sticky;top:0;z-index:100;height:64px;background:rgba(6,12,8,.9);border-bottom:1px solid var(--border);backdrop-filter:blur(22px);}
-    [data-theme="light"] nav{background:rgba(255,255,255,.92);}
-    .nav-inner{max-width:1260px;margin:0 auto;padding:0 1.5rem;height:100%;display:flex;align-items:center;gap:.75rem;}
-    .logo{font-family:'Fraunces',serif;font-weight:900;font-size:1.1rem;color:var(--text);text-decoration:none;}
-    .logo span{color:var(--green);}
-    .nav-back{display:flex;align-items:center;gap:.4rem;padding:.4rem .9rem;border-radius:10px;font-size:.8rem;font-weight:700;color:var(--soft);text-decoration:none;background:var(--card);border:1px solid var(--border);transition:all .2s;}
-    .nav-back:hover{border-color:var(--green);color:var(--green);}
-    .nav-sp{flex:1;}
-    .xp-chip{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.22);border-radius:99px;padding:.28rem .75rem;font-size:.71rem;font-weight:800;color:var(--gold);}
-    .ibtn{width:35px;height:35px;border-radius:9px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.9rem;transition:all .2s;}
-    .ibtn:hover{border-color:var(--green);}
-    .av{width:33px;height:33px;border-radius:50%;background:linear-gradient(135deg,var(--green),#059669);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.82rem;color:#fff;text-decoration:none;}
+    body{font-family:'Bricolage Grotesque',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+    /* Shell layout */
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{min-width:0;overflow-x:hidden;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}.rv-pg-main{padding-bottom:5.5rem;}}
     /* PAGE */
-    .page{position:relative;z-index:1;max-width:1260px;margin:0 auto;padding:2rem 1.5rem 5rem;}
+    .page{padding:2rem 1.75rem 4rem;}
     /* HEADER */
     .pg-header{margin-bottom:2rem;animation:fadeUp .4s ease both;}
-    .pg-eyebrow{font-size:.72rem;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.4rem;}
-    .pg-title{font-family:'Fraunces',serif;font-size:clamp(2rem,4vw,2.8rem);font-weight:900;line-height:1.05;margin-bottom:.5rem;}
-    .pg-title em{font-style:italic;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .pg-eyebrow{font-size:.72rem;font-weight:800;color:var(--rv-accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.4rem;}
+    .pg-title{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:clamp(1.8rem,3.5vw,2.6rem);font-weight:800;line-height:1.1;margin-bottom:.5rem;}
+    .pg-title em{font-style:italic;font-family:'Instrument Serif',serif;color:var(--rv-accent);}
     .pg-sub{font-size:.85rem;color:var(--soft);line-height:1.6;}
     /* HERO STATS */
     .hero-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.75rem;}
@@ -592,7 +591,7 @@ const initialPhotos = progressPhotos || [];
     .hstat.purple::before{background:linear-gradient(90deg,var(--purple),#a78bfa);}
     .hstat:hover{border-color:var(--border2);transform:translateY(-3px);}
     .hstat-icon{font-size:1.6rem;margin-bottom:.5rem;}
-    .hstat-val{font-family:'Fraunces',serif;font-size:2.2rem;font-weight:900;line-height:1;margin-bottom:.25rem;}
+    .hstat-val{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:2.2rem;font-weight:800;line-height:1;margin-bottom:.25rem;}
     .hstat-lbl{font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);}
     .hstat-sub{font-size:.68rem;margin-top:.3rem;padding:.18rem .55rem;border-radius:99px;display:inline-block;font-weight:700;}
     /* LAYOUT */
@@ -612,11 +611,11 @@ const initialPhotos = progressPhotos || [];
       .meas-grid,[style*="grid-template-columns:repeat(3"]{grid-template-columns:1fr 1fr!important;}
     }
     /* CARD */
-    .card{background:var(--card);border:1px solid var(--border);border-radius:20px;overflow:hidden;transition:border-color .25s;animation:fadeUp .4s ease both;}
-    .card:hover{border-color:var(--border2);}
+    .card{background:var(--rv-card);border:1px solid var(--rv-line);border-radius:20px;overflow:hidden;transition:border-color .25s;animation:fadeUp .4s ease both;}
+    .card:hover{border-color:var(--rv-accent);}
     .ch{display:flex;align-items:center;gap:.8rem;padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);}
     .ch-ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
-    .ch-tt{font-family:'Fraunces',serif;font-size:.95rem;font-weight:700;flex:1;}
+    .ch-tt{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:.95rem;font-weight:700;flex:1;color:var(--rv-ink);}
     .ch-sub{font-size:.7rem;color:var(--soft);}
     .cb{padding:1.25rem 1.5rem;}
     /* PROGRESS BAR */
@@ -625,7 +624,7 @@ const initialPhotos = progressPhotos || [];
     .prog-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;}
     .prog-lbl{font-size:.8rem;font-weight:700;}
     .prog-val{font-size:.8rem;font-weight:800;}
-    .prog-trk{height:9px;background:var(--muted);border-radius:99px;overflow:hidden;}
+    .prog-trk{height:9px;background:var(--rv-line);border-radius:99px;overflow:hidden;}
     .prog-fill{height:100%;border-radius:99px;transition:width 1.4s cubic-bezier(.4,0,.2,1);}
     /* WEIGHT CHART */
     .wchart{display:flex;align-items:flex-end;gap:3px;height:90px;margin-bottom:.75rem;}
@@ -641,32 +640,32 @@ const initialPhotos = progressPhotos || [];
     /* MILESTONES */
     .milestones{display:flex;flex-direction:column;gap:.6rem;}
     .ms{display:flex;align-items:center;gap:.9rem;padding:.8rem 1rem;border-radius:12px;border:1.5px solid var(--border);transition:all .25s;}
-    .ms.done{border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.05);}
-    .ms.next{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.04);animation:pulse-ms 2s ease-in-out infinite;}
-    @keyframes pulse-ms{0%,100%{border-color:rgba(245,158,11,.3);}50%{border-color:rgba(245,158,11,.6);}}
+    .ms.done{border-color:rgba(255,92,122,.3);background:rgba(255,92,122,.05);}
+    .ms.next{border-color:rgba(255,145,77,.3);background:rgba(255,145,77,.04);animation:pulse-ms 2s ease-in-out infinite;}
+    @keyframes pulse-ms{0%,100%{border-color:rgba(255,145,77,.3);}50%{border-color:rgba(255,145,77,.6);}}
     .ms-icon{font-size:1.3rem;flex-shrink:0;}
     .ms-info{flex:1;}
     .ms-lbl{font-size:.83rem;font-weight:700;}
     .ms-day{font-size:.68rem;color:var(--soft);}
-    .ms-check{font-size:.9rem;color:var(--green);}
+    .ms-check{font-size:.9rem;color:var(--rv-accent);}
     /* XP TABLE */
-    .xp-row{display:flex;align-items:center;justify-content:space-between;padding:.65rem 0;border-bottom:1px solid var(--border);}
+    .xp-row{display:flex;align-items:center;justify-content:space-between;padding:.65rem 0;border-bottom:1px solid var(--rv-line);}
     .xp-row:last-child{border:none;}
-    .xp-type{font-size:.8rem;font-weight:600;flex:1;}
-    .xp-date{font-size:.68rem;color:var(--soft);}
-    .xp-pts{font-size:.8rem;font-weight:900;color:var(--gold);background:rgba(245,158,11,.1);padding:.18rem .5rem;border-radius:7px;}
+    .xp-type{font-size:.8rem;font-weight:600;flex:1;color:var(--rv-ink);}
+    .xp-date{font-size:.68rem;color:var(--rv-ink-soft);}
+    .xp-pts{font-size:.8rem;font-weight:800;color:var(--gold);background:rgba(245,158,11,.1);padding:.18rem .5rem;border-radius:7px;}
     /* STAT MINI CARDS */
     .mini3{display:grid;grid-template-columns:repeat(3,1fr);gap:.65rem;margin-bottom:1rem;}
-    .mini-c{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem;text-align:center;}
-    .mini-val{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:900;line-height:1;margin-bottom:.2rem;}
+    .mini-c{background:var(--rv-bg-alt);border:1px solid var(--rv-line);border-radius:12px;padding:.9rem;text-align:center;}
+    .mini-val{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.5rem;font-weight:800;line-height:1;margin-bottom:.2rem;}
     .mini-lbl{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);}
     /* RING */
     .ring-wrap{position:relative;width:90px;height:90px;margin:0 auto .75rem;}
     .rsvg{transform:rotate(-90deg);}
-    .r-trk{fill:none;stroke:var(--muted);stroke-width:8;}
+    .r-trk{fill:none;stroke:var(--rv-line);stroke-width:8;}
     .r-fill{fill:none;stroke-width:8;stroke-linecap:round;stroke-dasharray:245;}
     .ring-c{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;}
-    .ring-pct{font-family:'Fraunces',serif;font-size:1.2rem;font-weight:900;line-height:1;}
+    .ring-pct{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.2rem;font-weight:800;line-height:1;}
     .ring-lbl{font-size:.52rem;font-weight:700;color:var(--soft);}
     @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
     /* ACTIVITY HEATMAP */
@@ -678,11 +677,11 @@ const initialPhotos = progressPhotos || [];
     .cal-col{display:flex;flex-direction:column;gap:3px;}
     .cal-sq{width:13px;height:13px;border-radius:3px;cursor:pointer;transition:transform .12s,opacity .15s;}
     .cal-sq:hover{transform:scale(1.35);opacity:1;}
-    .cal-none{background:var(--muted);}
-    .cal-future{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.04);}
-    .cal-12{background:#7f1d1d;}
-    .cal-3{background:#854d0e;}
-    .cal-4{background:#166534;}
+    .cal-none{background:#E5DED2;}
+    .cal-future{background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.04);}
+    .cal-12{background:rgba(239,68,68,.35);}
+    .cal-3{background:rgba(245,158,11,.4);}
+    .cal-4{background:rgba(16,185,129,.4);}
     .cal-5{background:#10b981;}
     .cal-legend{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;margin-top:.7rem;}
     .cal-legend-sq{width:11px;height:11px;border-radius:2px;display:inline-block;flex-shrink:0;}
@@ -690,45 +689,45 @@ const initialPhotos = progressPhotos || [];
     /* CALENDAR TOOLTIP */
     .cal-tip{
       position:fixed;z-index:200;
-      background:var(--card);border:1px solid var(--border2);
+      background:var(--rv-ink);border:1px solid var(--rv-ink);
       border-radius:10px;padding:.45rem .75rem;
-      font-size:.72rem;font-weight:700;color:var(--text);
+      font-size:.72rem;font-weight:700;color:var(--rv-bg);
       pointer-events:none;white-space:nowrap;
-      box-shadow:0 6px 20px rgba(0,0,0,.35);
+      box-shadow:0 6px 20px rgba(0,0,0,.2);
       opacity:0;transition:opacity .15s;
     }
     .cal-tip.visible{opacity:1;}
     /* ACHIEVEMENT CARDS */
     .ach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;}
     .ach-card{
-      background:var(--card2);
-      border:1.5px solid rgba(245,158,11,.2);
+      background:var(--rv-bg-alt);
+      border:1.5px solid rgba(255,92,122,.2);
       border-radius:16px;padding:1rem 1.1rem;
       display:flex;align-items:flex-start;gap:.75rem;
       transition:all .25s;
     }
-    .ach-card:hover{border-color:rgba(245,158,11,.5);transform:translateY(-2px);box-shadow:0 6px 20px rgba(245,158,11,.08);}
+    .ach-card:hover{border-color:rgba(255,92,122,.45);transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,92,122,.08);}
     .ach-card.green-ach{border-color:rgba(16,185,129,.25);}
     .ach-card.green-ach:hover{border-color:rgba(16,185,129,.55);box-shadow:0 6px 20px rgba(16,185,129,.1);}
     .ach-icon{font-size:2rem;line-height:1;flex-shrink:0;margin-top:.1rem;}
     .ach-body{flex:1;min-width:0;}
-    .ach-name{font-weight:800;font-size:.83rem;color:var(--gold);margin-bottom:.2rem;}
-    .ach-card.green-ach .ach-name{color:var(--green2);}
-    .ach-desc{font-size:.7rem;color:var(--soft);line-height:1.4;margin-bottom:.3rem;}
-    .ach-date{font-size:.62rem;color:var(--muted);font-weight:700;}
+    .ach-name{font-weight:800;font-size:.83rem;color:var(--rv-accent);margin-bottom:.2rem;}
+    .ach-card.green-ach .ach-name{color:var(--green);}
+    .ach-desc{font-size:.7rem;color:var(--rv-ink-soft);line-height:1.4;margin-bottom:.3rem;}
+    .ach-date{font-size:.62rem;color:var(--rv-muted);font-weight:700;}
     /* GOAL TIMELINE */
-    .goal-bar-wrap{position:relative;height:14px;background:var(--muted);border-radius:99px;overflow:hidden;margin-bottom:1.75rem;}
+    .goal-bar-wrap{position:relative;height:14px;background:var(--rv-line);border-radius:99px;overflow:hidden;margin-bottom:1.75rem;}
     .goal-bar-fill{height:100%;border-radius:99px;transition:width 1.4s cubic-bezier(.4,0,.2,1);}
     .goal-markers{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;}
     .gm{display:flex;flex-direction:column;align-items:center;gap:.3rem;text-align:center;}
     .gm-icon{font-size:.9rem;line-height:1;}
-    .gm-weight{font-family:'Fraunces',serif;font-size:.85rem;font-weight:900;color:var(--soft);}
+    .gm-weight{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:.85rem;font-weight:800;color:var(--rv-ink-soft);}
     .gm-weight.done{color:var(--green2);}
     .gm-label{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);}
     .gm-label.done{color:var(--green);}
-    .goal-stats{display:flex;flex-wrap:wrap;gap:.4rem 1.25rem;justify-content:center;margin-top:.9rem;padding:.65rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:12px;}
-    .gs-item{font-size:.77rem;font-weight:700;color:var(--soft);}
-    .gs-item strong{color:var(--text);font-weight:900;}
+    .goal-stats{display:flex;flex-wrap:wrap;gap:.4rem 1.25rem;justify-content:center;margin-top:.9rem;padding:.65rem 1rem;background:var(--rv-bg-alt);border:1px solid var(--rv-line);border-radius:12px;}
+    .gs-item{font-size:.77rem;font-weight:700;color:var(--rv-ink-soft);}
+    .gs-item strong{color:var(--rv-ink);font-weight:800;}
     /* PROGRESS PHOTOS */
     .photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;}
     .photo-thumb{width:100%;aspect-ratio:1;border-radius:12px;object-fit:cover;border:1px solid var(--border);background:var(--muted);cursor:pointer;transition:all .2s;}
@@ -742,11 +741,11 @@ const initialPhotos = progressPhotos || [];
   </style>
 </head>
 <body>
-<div class="bg-wrap"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
-<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="progress" />
-
 <div id="calTip" class="cal-tip"></div>
 
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="progress" />
+<div class="rv-pg-main">
 <div class="page">
 
   <!-- HEADER -->
@@ -801,7 +800,7 @@ const initialPhotos = progressPhotos || [];
             <div>
               <div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:.15rem;">{ins.title}</div>
               <div style="font-size:.77rem;color:var(--soft);line-height:1.55;">{ins.body}</div>
-              {ins.action && <a href={ins.action.url} style="font-size:.73rem;font-weight:700;color:var(--green);text-decoration:none;margin-top:.2rem;display:inline-block;">{ins.action.label} →</a>}
+              {ins.action && <a href={ins.action.url} style="font-size:.73rem;font-weight:700;color:var(--rv-accent);text-decoration:none;margin-top:.2rem;display:inline-block;">{ins.action.label} →</a>}
             </div>
           </div>
         ))}
@@ -818,7 +817,7 @@ const initialPhotos = progressPhotos || [];
           <div class="ch-tt">Goal Timeline</div>
           <div class="ch-sub">{goalStartLbs} {wUnit} → {goalWeightLbs} {wUnit} · {goalPctDone}% complete</div>
         </div>
-        <div style="font-family:'Fraunces',serif;font-size:1.4rem;font-weight:900;color:var(--green);">{goalPctDone}%</div>
+        <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;font-weight:800;color:var(--rv-accent);">{goalPctDone}%</div>
       </div>
       <div class="cb">
 
@@ -901,7 +900,7 @@ const initialPhotos = progressPhotos || [];
           </defs>
           {projYTicks.map(tk => (
             <g>
-              <line x1={PROJ_PL} y1={tk.y} x2={PROJ_W - PROJ_PR} y2={tk.y} stroke="rgba(255,255,255,0.05)" stroke-width="1" />
+              <line x1={PROJ_PL} y1={tk.y} x2={PROJ_W - PROJ_PR} y2={tk.y} stroke="rgba(0,0,0,0.06)" stroke-width="1" />
               <text x={PROJ_PL - 5} y={tk.y + 4} text-anchor="end" font-size="9" fill="var(--soft)">{tk.valDisp}</text>
             </g>
           ))}
@@ -993,10 +992,10 @@ const initialPhotos = progressPhotos || [];
           <div class="ch-ic" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(59,130,246,.2);">⚖️</div>
           <div style="flex:1;"><div class="ch-tt">{t('progress.weight')} History</div><div id="weightChartCount" class="ch-sub">{wChartPts.length} measurements logged</div></div>
           <div style="display:flex;align-items:center;gap:.4rem;">
-            <button class="w-range-btn" data-days="30" onclick="setWRange(30,this)" style="font-size:.68rem;font-weight:800;padding:.25rem .55rem;border-radius:6px;border:none;cursor:pointer;background:rgba(59,130,246,.15);color:#3b82f6;transition:all .2s;">30d</button>
-            <button class="w-range-btn" data-days="60" onclick="setWRange(60,this)" style="font-size:.68rem;font-weight:800;padding:.25rem .55rem;border-radius:6px;border:none;cursor:pointer;background:none;color:var(--soft);transition:all .2s;">60d</button>
-            <button class="w-range-btn" data-days="90" onclick="setWRange(90,this)" style="font-size:.68rem;font-weight:800;padding:.25rem .55rem;border-radius:6px;border:none;cursor:pointer;background:none;color:var(--soft);transition:all .2s;">90d</button>
-            <button id="openWeightModal" style="font-size:.72rem;font-weight:800;color:var(--green);background:none;border:none;cursor:pointer;padding:0;margin-left:.25rem;">+ {t('progress.log_weight')}</button>
+            <button class="w-range-btn" data-days="30" onclick="setWRange(30,this)" style="font-size:.68rem;font-weight:800;padding:.25rem .55rem;border-radius:6px;border:none;cursor:pointer;background:rgba(255,92,122,.12);color:#FF5C7A;transition:all .2s;">30d</button>
+            <button class="w-range-btn" data-days="60" onclick="setWRange(60,this)" style="font-size:.68rem;font-weight:800;padding:.25rem .55rem;border-radius:6px;border:none;cursor:pointer;background:none;color:var(--rv-ink-soft);transition:all .2s;">60d</button>
+            <button class="w-range-btn" data-days="90" onclick="setWRange(90,this)" style="font-size:.68rem;font-weight:800;padding:.25rem .55rem;border-radius:6px;border:none;cursor:pointer;background:none;color:var(--rv-ink-soft);transition:all .2s;">90d</button>
+            <button id="openWeightModal" style="font-size:.72rem;font-weight:800;color:var(--rv-accent);background:none;border:none;cursor:pointer;padding:0;margin-left:.25rem;">+ {t('progress.log_weight')}</button>
           </div>
         </div>
         <div class="cb">
@@ -1004,22 +1003,22 @@ const initialPhotos = progressPhotos || [];
             <>
               <div style="display:flex;justify-content:space-between;margin-bottom:1rem;">
                 <div style="text-align:center;">
-                  <div style="font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;color:var(--blue);">{dispStartWeight}<span style="font-size:.75rem;color:var(--soft);">{wUnit}</span></div>
+                  <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.6rem;font-weight:900;color:var(--blue);">{dispStartWeight}<span style="font-size:.75rem;color:var(--soft);">{wUnit}</span></div>
                   <div style="font-size:.62rem;color:var(--soft);font-weight:700;">START</div>
                 </div>
                 <div style="text-align:center;">
-                  <div style="font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;color:var(--green);">{dispWeight}<span style="font-size:.75rem;color:var(--soft);">{wUnit}</span></div>
+                  <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.6rem;font-weight:900;color:var(--green);">{dispWeight}<span style="font-size:.75rem;color:var(--soft);">{wUnit}</span></div>
                   <div style="font-size:.62rem;color:var(--soft);font-weight:700;">CURRENT</div>
                 </div>
                 {targetWeight > 0 && (
                   <div style="text-align:center;">
-                    <div style="font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;color:var(--gold);">{dispTargetWeight}<span style="font-size:.75rem;color:var(--soft);">{wUnit}</span></div>
+                    <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.6rem;font-weight:900;color:var(--gold);">{dispTargetWeight}<span style="font-size:.75rem;color:var(--soft);">{wUnit}</span></div>
                     <div style="font-size:.62rem;color:var(--soft);font-weight:700;">GOAL</div>
                   </div>
                 )}
                 {weightLost > 0 && (
                   <div style="text-align:center;">
-                    <div style="font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;color:var(--green);">-{dispWeightLost}<span style="font-size:.75rem;color:var(--soft);">{wUnit}</span></div>
+                    <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.6rem;font-weight:900;color:var(--green);">-{dispWeightLost}<span style="font-size:.75rem;color:var(--soft);">{wUnit}</span></div>
                     <div style="font-size:.62rem;color:var(--soft);font-weight:700;">LOST</div>
                   </div>
                 )}
@@ -1039,7 +1038,7 @@ const initialPhotos = progressPhotos || [];
                 {wChartPts.length > 1 && <path d={wLinePath} fill="none" stroke="url(#wLineGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />}
                 {wTicksLbs.map(t => (
                   <g>
-                    <line x1={SVG_PL} y1={t.y} x2={SVG_W - SVG_PR} y2={t.y} stroke="rgba(255,255,255,0.05)" stroke-width="1" />
+                    <line x1={SVG_PL} y1={t.y} x2={SVG_W - SVG_PR} y2={t.y} stroke="rgba(0,0,0,0.06)" stroke-width="1" />
                     <text x={SVG_PL - 5} y={t.y + 4} text-anchor="end" font-size="9" fill="var(--soft)">{t.valLbs}</text>
                   </g>
                 ))}
@@ -1061,7 +1060,7 @@ const initialPhotos = progressPhotos || [];
               <div style="font-size:2.5rem;margin-bottom:.75rem;">⚖️</div>
               <div style="font-weight:700;margin-bottom:.3rem;">No weight logs yet</div>
               <div style="font-size:.78rem;">Log your first weight to start tracking progress</div>
-              <button id="openWeightModalEmpty" style="display:inline-block;margin-top:1rem;padding:.6rem 1.4rem;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;border-radius:10px;font-weight:800;font-size:.8rem;border:none;cursor:pointer;">+ {t('progress.log_weight')}</button>
+              <button id="openWeightModalEmpty" style="display:inline-block;margin-top:1rem;padding:.6rem 1.4rem;background:var(--rv-ink);color:var(--rv-bg);border-radius:10px;font-weight:800;font-size:.8rem;border:none;cursor:pointer;">+ {t('progress.log_weight')}</button>
             </div>
           )}
         </div>
@@ -1170,12 +1169,12 @@ const initialPhotos = progressPhotos || [];
         <div class="ch">
           <div class="ch-ic" style="background:linear-gradient(135deg,#6366f1,#4f46e5);box-shadow:0 4px 10px rgba(99,102,241,.2);">🌙</div>
           <div>
-            <div class="ch-title">Sleep Trend</div>
+            <div class="ch-tt">Sleep Trend</div>
             <div class="ch-sub">{sleepChart.length > 0 ? `Last ${sleepChart.length} logged nights` : 'No data yet'}</div>
           </div>
           {avgSleepHours && (
             <div style="margin-left:auto;text-align:right;">
-              <div style="font-family:'Fraunces',serif;font-size:1.5rem;font-weight:900;color:#a5b4fc;">{avgSleepHours}h</div>
+              <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.5rem;font-weight:900;color:#a5b4fc;">{avgSleepHours}h</div>
               <div style="font-size:.65rem;color:var(--soft);">avg / night</div>
             </div>
           )}
@@ -1294,7 +1293,7 @@ const initialPhotos = progressPhotos || [];
             </div>
             {avgWaterAll && (
               <div style="margin-left:auto;text-align:right;">
-                <div style="font-family:'Fraunces',serif;font-size:1.4rem;font-weight:900;color:var(--blue);">{avgWaterAll}</div>
+                <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;font-weight:900;color:var(--blue);">{avgWaterAll}</div>
                 <div style="font-size:.62rem;color:var(--soft);">avg glasses</div>
               </div>
             )}
@@ -1327,7 +1326,7 @@ const initialPhotos = progressPhotos || [];
               <div class={`ms ${m.done ? 'done' : i === milestones.findIndex(x => !x.done) ? 'next' : ''}`}>
                 <div class="ms-icon">{m.icon}</div>
                 <div class="ms-info">
-                  <div class="ms-lbl" style={m.done ? 'color:var(--green);' : ''}>{m.label}</div>
+                  <div class="ms-lbl" style={m.done ? 'color:var(--rv-accent);' : ''}>{m.label}</div>
                   <div class="ms-day">Day {m.day}</div>
                 </div>
                 <div class="ms-check">{m.done ? '✓' : i === milestones.findIndex(x => !x.done) ? '⟳' : ''}</div>
@@ -1366,7 +1365,7 @@ const initialPhotos = progressPhotos || [];
     <div class="ch">
       <div class="ch-ic" style="background:linear-gradient(135deg,#f97316,#ea580c);box-shadow:0 4px 10px rgba(249,115,22,.2);">📏</div>
       <div style="flex:1;"><div class="ch-tt">{t('progress.measurements')}</div><div class="ch-sub">{latestMeasurements ? `Last logged ${new Date(latestMeasurements.logged_date).toLocaleDateString('en',{month:'short',day:'numeric'})}` : 'No measurements yet'}</div></div>
-      <button id="openMeasModal" style="font-size:.72rem;font-weight:800;color:var(--green);background:none;border:none;cursor:pointer;padding:0;">+ Log</button>
+      <button id="openMeasModal" style="font-size:.72rem;font-weight:800;color:var(--rv-accent);background:none;border:none;cursor:pointer;padding:0;">+ Log</button>
     </div>
     <div class="cb">
       {latestMeasurements ? (
@@ -1387,12 +1386,12 @@ const initialPhotos = progressPhotos || [];
                 style="font-size:.68rem;font-weight:800;color:#f97316;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.25);border-radius:7px;padding:.2rem .55rem;cursor:pointer;">✏️ Edit</button>
             </div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;">
-              {latestMeasurements.waist_cm && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.waist_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.waist')}</div></div>}
-              {latestMeasurements.hips_cm  && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.hips_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.hips')}</div></div>}
-              {latestMeasurements.chest_cm && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.chest_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.chest')}</div></div>}
-              {latestMeasurements.neck_cm  && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.neck_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.neck')}</div></div>}
-              {latestMeasurements.arm_cm   && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.arm_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.arm')}</div></div>}
-              {latestMeasurements.thigh_cm && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.thigh_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.thigh')}</div></div>}
+              {latestMeasurements.waist_cm && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.waist_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.waist')}</div></div>}
+              {latestMeasurements.hips_cm  && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.hips_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.hips')}</div></div>}
+              {latestMeasurements.chest_cm && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.chest_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.chest')}</div></div>}
+              {latestMeasurements.neck_cm  && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.neck_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.neck')}</div></div>}
+              {latestMeasurements.arm_cm   && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.arm_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.arm')}</div></div>}
+              {latestMeasurements.thigh_cm && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.thigh_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.thigh')}</div></div>}
             </div>
           </div>
           <!-- Previous entry (if any) -->
@@ -1438,12 +1437,12 @@ const initialPhotos = progressPhotos || [];
     <div class="ch">
       <div class="ch-ic" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);box-shadow:0 4px 10px rgba(139,92,246,.2);">🩸</div>
       <div style="flex:1;"><div class="ch-tt">Ketone Tracker</div><div class="ch-sub">{latestKetone ? `Last: ${latestKetone.ketone_mmol} mmol/L · ${new Date(latestKetone.logged_date).toLocaleDateString('en',{month:'short',day:'numeric'})}` : 'No readings yet'}</div></div>
-      <button id="openKetoneModal" style="font-size:.72rem;font-weight:800;color:var(--purple2);background:none;border:none;cursor:pointer;padding:0;">+ Log</button>
+      <button id="openKetoneModal" style="font-size:.72rem;font-weight:800;color:var(--rv-accent);background:none;border:none;cursor:pointer;padding:0;">+ Log</button>
     </div>
     <div class="cb">
       {ketoneStatus && (
         <div style={`display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;border-radius:12px;background:${ketoneStatus.color}18;border:1px solid ${ketoneStatus.color}30;margin-bottom:1rem;`}>
-          <div style={`font-size:1.8rem;font-family:'Fraunces',serif;font-weight:900;color:${ketoneStatus.color};`}>{latestKetone.ketone_mmol}</div>
+          <div style={`font-size:1.8rem;font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:900;color:${ketoneStatus.color};`}>{latestKetone.ketone_mmol}</div>
           <div>
             <div style={`font-weight:800;font-size:.85rem;color:${ketoneStatus.color};`}>{ketoneStatus.label}</div>
             <div style="font-size:.72rem;color:var(--soft);margin-top:.15rem;">{ketoneStatus.tip}</div>
@@ -1510,7 +1509,7 @@ const initialPhotos = progressPhotos || [];
         <div style="margin-bottom:1.5rem;">
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.5rem;">
             <span style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);">BMI</span>
-            <span style={`font-family:'Fraunces',serif;font-size:1.5rem;font-weight:900;color:${bcBMIcat?.color};`}>{bcBMI}</span>
+            <span style={`font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.5rem;font-weight:900;color:${bcBMIcat?.color};`}>{bcBMI}</span>
           </div>
           <!-- Gradient bar with marker -->
           <div style="position:relative;height:10px;border-radius:99px;background:linear-gradient(90deg,#3b82f6 0%,#10b981 30%,#f59e0b 65%,#ef4444 100%);margin-bottom:.3rem;">
@@ -1528,14 +1527,14 @@ const initialPhotos = progressPhotos || [];
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.75rem;margin-bottom:1rem;">
           {bcBodyFat !== null && (
             <div style="padding:.85rem;background:var(--bg);border:1px solid var(--border);border-radius:12px;text-align:center;">
-              <div style={`font-family:'Fraunces',serif;font-size:1.4rem;font-weight:900;color:${bcBodyFat > 30 ? 'var(--red)' : bcBodyFat > 20 ? 'var(--gold)' : 'var(--green)'};`}>{bcBodyFat}%</div>
+              <div style={`font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;font-weight:900;color:${bcBodyFat > 30 ? 'var(--red)' : bcBodyFat > 20 ? 'var(--gold)' : 'var(--green)'};`}>{bcBodyFat}%</div>
               <div style="font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">Est. Body Fat</div>
               <div style="font-size:.65rem;color:var(--soft);margin-top:.15rem;">{bcGender === 'male' ? 'Ideal: 10–20%' : 'Ideal: 18–28%'}</div>
             </div>
           )}
           {bcBodyFat !== null && bcWeight > 0 && (
             <div style="padding:.85rem;background:var(--bg);border:1px solid var(--border);border-radius:12px;text-align:center;">
-              <div style="font-family:'Fraunces',serif;font-size:1.4rem;font-weight:900;color:var(--blue);">{toW(Math.round(bcWeight * (1 - bcBodyFat / 100) * 10) / 10)} {wUnit}</div>
+              <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;font-weight:900;color:var(--blue);">{toW(Math.round(bcWeight * (1 - bcBodyFat / 100) * 10) / 10)} {wUnit}</div>
               <div style="font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">Lean Mass</div>
               <div style="font-size:.65rem;color:var(--soft);margin-top:.15rem;">Protect with protein</div>
             </div>
@@ -1626,24 +1625,26 @@ const initialPhotos = progressPhotos || [];
   </div>
 
   <!-- BOTTOM CTA -->
-  <div style="background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(59,130,246,.07));border:1.5px solid rgba(16,185,129,.25);border-radius:20px;padding:2rem;text-align:center;animation:fadeUp .4s .3s ease both;">
+  <div style="background:linear-gradient(135deg,rgba(255,92,122,.07),rgba(255,145,77,.05));border:1.5px solid rgba(255,92,122,.2);border-radius:20px;padding:2rem;text-align:center;animation:fadeUp .4s .3s ease both;">
     <div style="font-size:2.5rem;margin-bottom:.75rem;">🚀</div>
-    <div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;margin-bottom:.4rem;">Keep Pushing, {userName}!</div>
-    <div style="font-size:.83rem;color:var(--soft);margin-bottom:1.25rem;line-height:1.6;">You're on Day {currentDay} of {maxDays}. {maxDays-currentDay} days left to complete your transformation.</div>
+    <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.3rem;font-weight:800;margin-bottom:.4rem;color:var(--rv-ink);">Keep Pushing, {userName}!</div>
+    <div style="font-size:.83rem;color:var(--rv-ink-soft);margin-bottom:1.25rem;line-height:1.6;">You're on Day {currentDay} of {maxDays}. {maxDays-currentDay} days left to complete your transformation.</div>
     <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;">
-      <a href="/dashboard/checkin" style="padding:.7rem 1.5rem;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;border-radius:12px;font-weight:800;font-size:.82rem;text-decoration:none;box-shadow:0 4px 14px rgba(16,185,129,.3);">📋 Daily Check-in</a>
-      <a href="/dashboard/recipes" style="padding:.7rem 1.5rem;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:12px;font-weight:800;font-size:.82rem;text-decoration:none;">🍳 View Recipes</a>
-      <a href="/dashboard" style="padding:.7rem 1.5rem;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:12px;font-weight:800;font-size:.82rem;text-decoration:none;">🏠 Dashboard</a>
+      <a href="/dashboard/checkin" style="padding:.7rem 1.5rem;background:var(--rv-ink);color:var(--rv-bg);border-radius:12px;font-weight:800;font-size:.82rem;text-decoration:none;box-shadow:0 4px 14px rgba(22,17,15,.15);">📋 Daily Check-in</a>
+      <a href="/dashboard/recipes" style="padding:.7rem 1.5rem;background:var(--rv-card);border:1px solid var(--rv-line);color:var(--rv-ink);border-radius:12px;font-weight:800;font-size:.82rem;text-decoration:none;">🍳 View Recipes</a>
+      <a href="/dashboard" style="padding:.7rem 1.5rem;background:var(--rv-card);border:1px solid var(--rv-line);color:var(--rv-ink);border-radius:12px;font-weight:800;font-size:.82rem;text-decoration:none;">🏠 Dashboard</a>
     </div>
   </div>
 
+</div>
+</div>
 </div>
 
 <!-- BODY MEASUREMENTS MODAL -->
 <div id="measModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:1rem;">
   <div style="background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:1.75rem;width:100%;max-width:400px;max-height:90vh;overflow-y:auto;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-      <div id="measModalTitle" style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:900;">📏 Log Measurements</div>
+      <div id="measModalTitle" style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.1rem;font-weight:900;">📏 Log Measurements</div>
       <button id="closeMeasModal" style="background:none;border:none;color:var(--soft);font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
     </div>
     <div id="measModalError" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:.6rem .9rem;font-size:.78rem;color:#ef4444;margin-bottom:1rem;"></div>
@@ -1656,7 +1657,7 @@ const initialPhotos = progressPhotos || [];
       <div><label style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);display:block;margin-bottom:.35rem;">{t('progress.thigh')} ({mUnit})</label><input id="mThigh"  type="number" step="0.1" min={units==='imperial'?'8':'20'}  max={units==='imperial'?'47':'120'} placeholder={units==='imperial'?'e.g. 22':'e.g. 56'} style="width:100%;padding:.6rem .8rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:.88rem;box-sizing:border-box;" /></div>
     </div>
     <div style="margin-bottom:.75rem;"><label style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);display:block;margin-bottom:.35rem;">Date</label><input id="mDate" type="date" style="width:100%;padding:.6rem .8rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:10px;color:var(--text);font-size:.88rem;box-sizing:border-box;" /></div>
-    <button id="saveMeasBtn" style="width:100%;padding:.85rem;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;border:none;border-radius:12px;font-weight:800;font-size:.9rem;cursor:pointer;">{t('common.save')} Measurements</button>
+    <button id="saveMeasBtn" style="width:100%;padding:.85rem;background:var(--rv-ink);color:var(--rv-bg);border:none;border-radius:12px;font-weight:800;font-size:.9rem;cursor:pointer;">{t('common.save')} Measurements</button>
   </div>
 </div>
 
@@ -1664,7 +1665,7 @@ const initialPhotos = progressPhotos || [];
 <div id="weightModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:1rem;">
   <div style="background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:1.75rem;width:100%;max-width:360px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-      <div style="font-family:'Fraunces',serif;font-size:1.1rem;font-weight:900;">⚖️ {t('progress.log_weight')}</div>
+      <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.1rem;font-weight:900;">⚖️ {t('progress.log_weight')}</div>
       <button id="closeWeightModal" style="background:none;border:none;color:var(--soft);font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
     </div>
     <div id="weightModalError" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:.6rem .9rem;font-size:.78rem;color:#ef4444;margin-bottom:1rem;"></div>
@@ -1679,7 +1680,7 @@ const initialPhotos = progressPhotos || [];
         <input id="weightDate" type="date"
           style="width:100%;padding:.7rem 1rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:12px;color:var(--text);font-size:.95rem;font-family:'DM Sans',sans-serif;box-sizing:border-box;" />
       </div>
-      <button id="saveWeightBtn" style="width:100%;padding:.85rem;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;border:none;border-radius:12px;font-weight:800;font-size:.9rem;cursor:pointer;margin-top:.25rem;">{t('common.save')} {t('progress.weight')}</button>
+      <button id="saveWeightBtn" style="width:100%;padding:.85rem;background:var(--rv-ink);color:var(--rv-bg);border:none;border-radius:12px;font-weight:800;font-size:.9rem;cursor:pointer;margin-top:.25rem;">{t('common.save')} {t('progress.weight')}</button>
     </div>
   </div>
 </div>
@@ -1878,7 +1879,7 @@ const initialPhotos = progressPhotos || [];
 <div id="ketoneModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:1rem;">
   <div style="background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:1.75rem;width:100%;max-width:360px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-      <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:900;">🩸 Log Ketone Reading</div>
+      <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.05rem;font-weight:900;">🩸 Log Ketone Reading</div>
       <button id="closeKetoneModal" style="background:none;border:none;color:var(--soft);font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
     </div>
     <div id="ketoneModalError" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:.6rem .9rem;font-size:.78rem;color:#ef4444;margin-bottom:1rem;"></div>
@@ -1999,7 +2000,7 @@ const initialPhotos = progressPhotos || [];
 <div id="photoModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:1rem;">
   <div style="background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:1.75rem;width:100%;max-width:400px;max-height:90vh;overflow-y:auto;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-      <div style="font-family:'Fraunces',serif;font-size:1.05rem;font-weight:900;">📸 Add Progress Photo</div>
+      <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.05rem;font-weight:900;">📸 Add Progress Photo</div>
       <button id="closePhotoModal" style="background:none;border:none;color:var(--soft);font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
     </div>
     <div id="photoModalError" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:.6rem .9rem;font-size:.78rem;color:#ef4444;margin-bottom:1rem;"></div>
@@ -2285,7 +2286,7 @@ const initialPhotos = progressPhotos || [];
       html += '<path d="' + linePath + '" fill="none" stroke="url(#wLineGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
     }
     ticks.forEach(function(t) {
-      html += '<line x1="' + SVG_PL + '" y1="' + t.y + '" x2="' + (SVG_W - SVG_PR) + '" y2="' + t.y + '" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>';
+      html += '<line x1="' + SVG_PL + '" y1="' + t.y + '" x2="' + (SVG_W - SVG_PR) + '" y2="' + t.y + '" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>';
       html += '<text x="' + (SVG_PL - 5) + '" y="' + (t.y + 4) + '" text-anchor="end" font-size="9" fill="var(--soft)">' + t.val + '</text>';
     });
     pts.forEach(function(p) {
@@ -2308,8 +2309,8 @@ const initialPhotos = progressPhotos || [];
       b.style.background = 'none';
       b.style.color = 'var(--soft)';
     });
-    btn.style.background = 'rgba(59,130,246,.15)';
-    btn.style.color = '#3b82f6';
+    btn.style.background = 'rgba(255,92,122,.12)';
+    btn.style.color = '#FF5C7A';
     drawWChart(days);
   };
 
