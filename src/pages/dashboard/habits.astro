@@ -1,16 +1,9 @@
 ---
 // src/pages/dashboard/habits.astro
 import { requireAuth } from '../../lib/auth';
-import DashNav from '../../components/DashNav.astro';
+import Sidebar from '../../components/Sidebar.astro';
+import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import CheckSquare from 'lucide-astro/CheckSquare';
-import Repeat from 'lucide-astro/Repeat';
-import Star from 'lucide-astro/Star';
-import Zap from 'lucide-astro/Zap';
-import TrendingUp from 'lucide-astro/TrendingUp';
-import Calendar from 'lucide-astro/Calendar';
-import Flame from 'lucide-astro/Flame';
-import Target from 'lucide-astro/Target';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -23,7 +16,10 @@ const t    = getTranslator(lang);
 
 const today = new Date().toISOString().split('T')[0];
 
-// Load habits
+await updateCurrentDay(user.id).catch(() => null);
+const journey    = await getUserJourney(user.id, db).catch(() => null);
+const currentDay = journey?.current_day || 1;
+
 const thirtyAgo = new Date(Date.now() - 29 * 86400000).toISOString().split('T')[0];
 let habits: any[] = [], completions: any[] = [];
 try {
@@ -37,60 +33,53 @@ try {
   console.error('[Habits] DB error:', e);
 }
 
-// Build lookup: habit_id → Set<date>
 const doneMap = {};
 for (const c of completions) {
   if (!doneMap[c.habit_id]) doneMap[c.habit_id] = new Set();
   doneMap[c.habit_id].add(c.completed_date);
 }
 
-// Compute streak per habit
 function computeStreak(habitId) {
   const done = doneMap[habitId] || new Set();
   const idx = Array.from({ length: 365 }, (_, i) =>
-    new Date(new Date(today + 'T12:00:00Z').getTime() - i * 86400000)
-      .toISOString().split('T')[0]
+    new Date(new Date(today + 'T12:00:00Z').getTime() - i * 86400000).toISOString().split('T')[0]
   ).findIndex(date => !done.has(date));
   return idx === -1 ? 365 : idx;
 }
 
-// Last 7 days labels + dates
 const last7 = Array.from({ length: 7 }, (_, i) => {
   const dd = new Date(Date.now() - (6 - i) * 86400000);
   return {
-    date:  dd.toISOString().split('T')[0],
-    label: dd.toLocaleDateString('en', { weekday: 'short' }).slice(0, 2),
+    date:    dd.toISOString().split('T')[0],
+    label:   dd.toLocaleDateString('en', { weekday: 'short' }).slice(0, 2),
     isToday: i === 6,
   };
 });
 
-// Total completions today
-const doneToday = habits.filter(h => doneMap[h.id]?.has(today)).length;
+const doneToday    = habits.filter(h => doneMap[h.id]?.has(today)).length;
 const allDoneToday = habits.length > 0 && doneToday === habits.length;
+const ringCirc     = Math.round(2 * Math.PI * 24);
+const ringOffset   = Math.round(ringCirc * (1 - doneToday / Math.max(habits.length, 1)));
 
-// Category colors
-const catColor = {
-  keto:      '#10b981',
-  nutrition: '#f59e0b',
-  fitness:   '#3b82f6',
+const catColor: Record<string, string> = {
+  keto:      '#FF5C7A',
+  nutrition: '#FF914D',
+  fitness:   '#4E80EE',
   mindset:   '#8b5cf6',
-  general:   '#6b7280',
+  general:   '#8A8077',
 };
 
-// Preset habits to suggest
 const presets = [
-  { icon:'🧂', title:'Take electrolytes',     category:'keto',      target_streak:7  },
-  { icon:'💧', title:'Drink 8 glasses of water', category:'nutrition', target_streak:7  },
-  { icon:'🥗', title:'Stay under 20g carbs',   category:'keto',      target_streak:7  },
-  { icon:'🚶', title:'30-min walk or exercise', category:'fitness',   target_streak:7  },
-  { icon:'😴', title:'Sleep 7+ hours',          category:'mindset',   target_streak:7  },
-  { icon:'⏱️', title:'Complete 16h fast',        category:'keto',      target_streak:7  },
-  { icon:'🧘', title:'5-min meditation',         category:'mindset',   target_streak:7  },
-  { icon:'📖', title:'Read 10 pages',            category:'mindset',   target_streak:7  },
+  { icon:'🧂', title:'Take electrolytes',       category:'keto',      target_streak:7 },
+  { icon:'💧', title:'Drink 8 glasses of water', category:'nutrition', target_streak:7 },
+  { icon:'🥗', title:'Stay under 20g carbs',     category:'keto',      target_streak:7 },
+  { icon:'🚶', title:'30-min walk or exercise',  category:'fitness',   target_streak:7 },
+  { icon:'😴', title:'Sleep 7+ hours',           category:'mindset',   target_streak:7 },
+  { icon:'⏱️', title:'Complete 16h fast',          category:'keto',      target_streak:7 },
+  { icon:'🧘', title:'5-min meditation',          category:'mindset',   target_streak:7 },
+  { icon:'📖', title:'Read 10 pages',             category:'mindset',   target_streak:7 },
 ];
-
-// Filter out presets already added (by title)
-const existingTitles = new Set(habits.map(h => h.title.toLowerCase()));
+const existingTitles   = new Set(habits.map(h => h.title.toLowerCase()));
 const availablePresets = presets.filter(p => !existingTitles.has(p.title.toLowerCase()));
 ---
 
@@ -99,232 +88,408 @@ const availablePresets = presets.filter(p => !existingTitles.has(p.title.toLower
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{t('habits.title')} — Keto Journey</title>
+  <title>Habits — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
-  <script is:inline>(function(){const t=localStorage.getItem('keto-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <script is:inline>(function(){var t=localStorage.getItem('keto-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
   <style>
-    :root{--bg:#060c08;--card:#0d1a0f;--card2:#122014;--border:rgba(16,185,129,.11);--border2:rgba(16,185,129,.28);--text:#e0ede0;--soft:#4e724e;--muted:#1e2e1e;--green:#10b981;--green2:#34d399;--gold:#f59e0b;--red:#ef4444;--blue:#3b82f6;--purple:#8b5cf6;}
-    [data-theme="light"]{--bg:#ecf4ec;--card:#fff;--card2:#f2f8f2;--border:rgba(0,0,0,.07);--border2:rgba(16,185,129,.25);--text:#071807;--soft:#3a6040;--muted:#b0cdb0;}
-    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
-    .page{max-width:800px;margin:0 auto;padding:1.75rem 1.25rem 6rem;}
-    @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+    :root {
+      --rv-bg:      #FAF6F1;
+      --rv-card:    #FFFFFF;
+      --rv-bg-alt:  #F2EDE5;
+      --rv-ink:     #16110F;
+      --rv-ink-soft:#4A4340;
+      --rv-muted:   #8A8077;
+      --rv-line:    #E5DED2;
+      --rv-accent:  #FF5C7A;
+      --rv-accent-2:#B6FF3C;
+      --rv-accent-3:#FF914D;
+    }
+    [data-theme="dark"] {
+      --rv-bg:      #0F0B09;
+      --rv-card:    #1A1410;
+      --rv-bg-alt:  #221C18;
+      --rv-ink:     #F5F0EA;
+      --rv-ink-soft:#B8AFA6;
+      --rv-muted:   #6B6260;
+      --rv-line:    #2E2520;
+    }
+    *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Geist',system-ui,sans-serif; background:var(--rv-bg); color:var(--rv-ink); min-height:100vh; }
 
-    /* HEADER */
-    .pg-header{margin-bottom:1.75rem;animation:fadeUp .35s ease both;}
-    .pg-eyebrow{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--soft);margin-bottom:.4rem;}
-    .pg-title{font-family:'Fraunces',serif;font-size:2rem;font-weight:900;line-height:1.1;}
-    .pg-title em{font-style:italic;color:var(--green);}
-    .pg-sub{font-size:.82rem;color:var(--soft);margin-top:.4rem;}
+    .rv-shell { display:grid; grid-template-columns:232px 1fr; min-height:100vh; }
+    .rv-main  { min-width:0; overflow-x:hidden; }
+    @media(max-width:900px) { .rv-shell{grid-template-columns:1fr;} .rv-main{padding-bottom:5.5rem;} }
 
-    /* TODAY BANNER */
-    .today-banner{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-radius:16px;background:var(--card);border:1px solid var(--border);margin-bottom:1.25rem;animation:fadeUp .35s .04s ease both;}
-    .tb-left{}
-    .tb-pct{font-family:'Fraunces',serif;font-size:2rem;font-weight:900;color:var(--green);line-height:1;}
-    .tb-sub{font-size:.72rem;color:var(--soft);margin-top:.15rem;}
-    .tb-ring{position:relative;width:56px;height:56px;flex-shrink:0;}
-    .tb-ring svg{transform:rotate(-90deg);}
-    .tb-ring-lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;color:var(--green);}
+    .rv-inner { max-width:720px; margin:0 auto; padding:2.5rem 2rem 4rem; }
+    @media(max-width:640px) { .rv-inner{padding:1.25rem 1rem 3rem;} }
 
-    /* HABITS LIST */
-    .habits-list{display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.5rem;}
-    .habit-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1rem 1.25rem;animation:fadeUp .35s ease both;transition:border-color .2s;}
-    .habit-card:hover{border-color:var(--border2);}
-    .habit-card.done-today{border-color:rgba(16,185,129,.3);background:linear-gradient(135deg,rgba(16,185,129,.05),transparent);}
-    .hc-top{display:flex;align-items:center;gap:.875rem;margin-bottom:.75rem;}
-    .hc-check{width:40px;height:40px;border-radius:12px;border:2px solid var(--border2);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;transition:all .22s;flex-shrink:0;}
-    .hc-check.checked{background:linear-gradient(135deg,var(--green),var(--green2));border-color:transparent;transform:scale(1.05);}
-    .hc-check:hover{border-color:var(--green);}
-    .hc-info{flex:1;min-width:0;}
-    .hc-title{font-weight:800;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .hc-meta{font-size:.68rem;color:var(--soft);margin-top:.1rem;display:flex;align-items:center;gap:.5rem;}
-    .hc-cat{padding:.1rem .45rem;border-radius:99px;font-size:.6rem;font-weight:800;text-transform:uppercase;}
-    .hc-streak{display:flex;align-items:center;gap:.2rem;font-weight:700;}
-    .hc-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:.15rem .3rem;border-radius:6px;transition:color .15s;flex-shrink:0;}
-    .hc-del:hover{color:var(--red);}
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
 
-    /* WEEK GRID */
-    .week-grid{display:flex;gap:.3rem;align-items:center;}
-    .wg-dot{width:24px;height:24px;border-radius:7px;border:1.5px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800;color:var(--muted);transition:all .2s;flex-direction:column;gap:1px;}
-    .wg-dot.done{background:rgba(16,185,129,.2);border-color:rgba(16,185,129,.4);color:var(--green);}
-    .wg-dot.today{border-color:var(--border2);}
-    .wg-day{font-size:.52rem;color:var(--soft);text-align:center;}
+    /* ── Header ─────────────────────────────────────────── */
+    .rv-hd { margin-bottom:2rem; animation:fadeUp .35s ease both; }
+    .rv-hd-eyebrow {
+      font-family:'Geist Mono',monospace;
+      font-size:.62rem; font-weight:700; letter-spacing:.1em;
+      text-transform:uppercase; color:var(--rv-muted); margin-bottom:.4rem;
+    }
+    .rv-hd-title {
+      font-family:'Bricolage Grotesque',system-ui,sans-serif;
+      font-size:1.7rem; font-weight:800; line-height:1.1;
+    }
+    .rv-hd-title em { font-style:italic; color:var(--rv-accent); }
+    .rv-hd-sub { font-size:.8rem; color:var(--rv-muted); margin-top:.3rem; }
 
-    /* PRESETS */
-    .section-title{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin-bottom:.75rem;}
-    .presets-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;margin-bottom:1.5rem;}
-    @media(min-width:600px){.presets-grid{grid-template-columns:repeat(4,1fr);}}
-    .preset-btn{display:flex;flex-direction:column;align-items:center;gap:.3rem;padding:.75rem .5rem;border-radius:14px;background:var(--card);border:1px solid var(--border);cursor:pointer;transition:all .2s;text-align:center;}
-    .preset-btn:hover{border-color:var(--border2);transform:translateY(-2px);}
-    .preset-icon{font-size:1.4rem;}
-    .preset-label{font-size:.65rem;font-weight:700;color:var(--soft);line-height:1.3;}
+    /* ── Today banner ───────────────────────────────────── */
+    .rv-today-banner {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:1.1rem 1.5rem;
+      background:var(--rv-card); border:1px solid var(--rv-line);
+      border-radius:16px; margin-bottom:1.25rem;
+      animation:fadeUp .35s .04s ease both;
+    }
+    .rv-tb-pct {
+      font-family:'Bricolage Grotesque',system-ui,sans-serif;
+      font-size:2rem; font-weight:800; color:var(--rv-accent); line-height:1;
+    }
+    .rv-tb-sub { font-family:'Geist Mono',monospace; font-size:.68rem; color:var(--rv-muted); margin-top:.15rem; }
+    .rv-tb-ring { position:relative; width:52px; height:52px; flex-shrink:0; }
+    .rv-tb-ring svg { transform:rotate(-90deg); }
+    .rv-tb-ring-lbl {
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      font-family:'Geist Mono',monospace; font-size:.68rem; font-weight:700; color:var(--rv-accent);
+    }
 
-    /* EMPTY */
-    .empty{text-align:center;padding:2.5rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:18px;margin-bottom:1.5rem;}
-    .empty-icon{font-size:2.5rem;margin-bottom:.6rem;}
-    .empty-txt{font-size:.82rem;color:var(--soft);}
+    /* ── Section label ──────────────────────────────────── */
+    .rv-sec-lbl {
+      font-family:'Geist Mono',monospace;
+      font-size:.62rem; font-weight:700; letter-spacing:.1em;
+      text-transform:uppercase; color:var(--rv-muted);
+      margin-bottom:.75rem;
+    }
 
-    /* MODAL */
-    .modal-backdrop{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:1rem;}
-    .modal-backdrop.open{display:flex;}
-    .modal{background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:1.75rem;width:100%;max-width:400px;}
-    .modal-title{font-family:'Fraunces',serif;font-size:1.1rem;font-weight:900;margin-bottom:1.25rem;}
-    .fm-label{font-size:.72rem;font-weight:700;color:var(--soft);margin-bottom:.3rem;display:block;}
-    .fm-input{width:100%;background:var(--card2);border:1.5px solid var(--border);border-radius:10px;padding:.62rem .85rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;outline:none;transition:border-color .2s;margin-bottom:.75rem;}
-    .fm-input:focus{border-color:var(--green);}
-    .icon-grid{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.75rem;}
-    .icon-opt{width:36px;height:36px;border-radius:9px;border:1.5px solid var(--border);background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;cursor:pointer;transition:all .18s;}
-    .icon-opt.sel{border-color:var(--green);background:rgba(16,185,129,.12);}
-    .cat-grid{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.85rem;}
-    .cat-opt{padding:.3rem .75rem;border-radius:99px;font-size:.7rem;font-weight:800;border:1.5px solid var(--border);background:transparent;cursor:pointer;transition:all .18s;}
-    .cat-opt.sel{border-color:var(--green);background:rgba(16,185,129,.1);color:var(--green);}
-    .fm-actions{display:flex;gap:.6rem;}
-    .btn-cancel{flex:1;padding:.65rem;border-radius:11px;background:var(--card2);border:1px solid var(--border);color:var(--soft);font-weight:700;font-size:.82rem;cursor:pointer;}
-    .btn-save{flex:2;padding:.65rem;border-radius:11px;background:linear-gradient(135deg,var(--green),var(--green2));border:none;color:#fff;font-weight:800;font-size:.82rem;cursor:pointer;}
+    /* ── Habit card ─────────────────────────────────────── */
+    .rv-habits-list { display:flex; flex-direction:column; gap:.75rem; margin-bottom:1.5rem; }
+    .rv-hcard {
+      background:var(--rv-card); border:1px solid var(--rv-line);
+      border-radius:16px; padding:1rem 1.25rem;
+      animation:fadeUp .35s ease both; transition:border-color .2s;
+    }
+    .rv-hcard:hover { border-color:var(--rv-ink-soft); }
+    .rv-hcard.done-today { border-color:rgba(255,92,122,.25); background:rgba(255,92,122,.02); }
 
-    /* FAB */
-    .fab{position:fixed;bottom:5rem;right:1.25rem;z-index:50;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green2));border:none;color:#fff;font-size:1.5rem;cursor:pointer;box-shadow:0 6px 20px rgba(16,185,129,.4);transition:transform .2s;display:flex;align-items:center;justify-content:center;}
-    .fab:hover{transform:scale(1.08);}
-    @media(min-width:900px){.fab{bottom:2rem;right:2rem;}}
+    .rv-hc-top { display:flex; align-items:center; gap:.875rem; margin-bottom:.75rem; }
+    .rv-hc-check {
+      width:38px; height:38px; border-radius:11px;
+      border:2px solid var(--rv-line);
+      background:transparent;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; font-size:1.1rem;
+      transition:all .2s; flex-shrink:0;
+    }
+    .rv-hc-check.checked {
+      background:var(--rv-ink); border-color:var(--rv-ink);
+      color:var(--rv-accent-2); font-size:.9rem;
+    }
+    .rv-hc-check:hover { border-color:var(--rv-ink-soft); }
 
-    /* TOAST */
-    .toast{position:fixed;top:5rem;right:1.5rem;z-index:9999;padding:.75rem 1.25rem;border-radius:11px;font-weight:800;font-size:.8rem;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.3);transform:translateX(120px);opacity:0;pointer-events:none;transition:all .3s;}
-    .toast.show{transform:translateX(0);opacity:1;}
+    .rv-hc-info { flex:1; min-width:0; }
+    .rv-hc-title {
+      font-family:'Bricolage Grotesque',system-ui,sans-serif;
+      font-weight:700; font-size:.9rem;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .rv-hc-meta { display:flex; align-items:center; gap:.5rem; margin-top:.15rem; }
+    .rv-hc-cat {
+      padding:.12rem .45rem; border-radius:99px;
+      font-family:'Geist Mono',monospace;
+      font-size:.58rem; font-weight:700; text-transform:uppercase;
+    }
+    .rv-hc-streak {
+      font-family:'Geist Mono',monospace;
+      font-size:.65rem; font-weight:600; color:var(--rv-accent-3);
+      display:flex; align-items:center; gap:.2rem;
+    }
+    .rv-hc-del {
+      background:none; border:none; color:var(--rv-muted);
+      cursor:pointer; padding:.25rem .35rem; border-radius:7px;
+      font-size:.9rem; transition:all .15s; flex-shrink:0;
+    }
+    .rv-hc-del:hover { color:var(--rv-accent); background:rgba(255,92,122,.08); }
+
+    /* 7-day grid */
+    .rv-week-grid { display:flex; gap:.3rem; align-items:center; }
+    .rv-wg-col { display:flex; flex-direction:column; align-items:center; gap:3px; flex:1; }
+    .rv-wg-dot {
+      width:24px; height:24px; border-radius:7px;
+      border:1.5px solid var(--rv-line);
+      background:transparent;
+      display:flex; align-items:center; justify-content:center;
+      font-family:'Geist Mono',monospace; font-size:.58rem; font-weight:700;
+      color:var(--rv-muted); transition:all .2s;
+    }
+    .rv-wg-dot.done { background:rgba(255,92,122,.1); border-color:rgba(255,92,122,.3); color:var(--rv-accent); }
+    .rv-wg-dot.today { border-color:var(--rv-ink-soft); }
+    .rv-wg-day {
+      font-family:'Geist Mono',monospace; font-size:.5rem; font-weight:600;
+      color:var(--rv-muted); text-align:center;
+    }
+
+    /* ── Preset buttons ─────────────────────────────────── */
+    .rv-presets-grid {
+      display:grid; grid-template-columns:repeat(2,1fr); gap:.5rem; margin-bottom:1.5rem;
+    }
+    @media(min-width:600px) { .rv-presets-grid{grid-template-columns:repeat(4,1fr);} }
+    .rv-preset-btn {
+      display:flex; flex-direction:column; align-items:center; gap:.3rem;
+      padding:.75rem .5rem; border-radius:13px;
+      background:var(--rv-card); border:1px solid var(--rv-line);
+      cursor:pointer; transition:all .2s; text-align:center;
+    }
+    .rv-preset-btn:hover { border-color:var(--rv-ink-soft); transform:translateY(-2px); }
+    .rv-preset-icon { font-size:1.3rem; }
+    .rv-preset-label {
+      font-family:'Geist Mono',monospace;
+      font-size:.6rem; font-weight:600; color:var(--rv-muted); line-height:1.3;
+    }
+
+    /* ── Empty ──────────────────────────────────────────── */
+    .rv-empty {
+      text-align:center; padding:3rem 2rem;
+      background:var(--rv-card); border:1px solid var(--rv-line);
+      border-radius:16px; margin-bottom:1.5rem;
+    }
+    .rv-empty-icon {
+      width:56px; height:56px; border-radius:14px; background:var(--rv-bg-alt);
+      display:flex; align-items:center; justify-content:center;
+      margin:0 auto .75rem; font-size:1.5rem;
+    }
+    .rv-empty-txt { font-size:.82rem; color:var(--rv-muted); }
+
+    /* ── FAB ────────────────────────────────────────────── */
+    .rv-fab {
+      position:fixed; bottom:5.5rem; right:1.25rem; z-index:200;
+      width:52px; height:52px; border-radius:50%;
+      background:var(--rv-ink); color:var(--rv-accent-2);
+      border:none; font-size:1.5rem; cursor:pointer;
+      box-shadow:0 6px 20px rgba(22,17,15,.25);
+      display:flex; align-items:center; justify-content:center;
+      transition:transform .2s;
+    }
+    .rv-fab:hover { transform:scale(1.08); }
+    @media(min-width:900px) { .rv-fab{bottom:2rem;right:2rem;} }
+
+    /* ── Toast ──────────────────────────────────────────── */
+    .rv-toast {
+      position:fixed; top:1.25rem; right:1.5rem; z-index:9999;
+      padding:.7rem 1.1rem; border-radius:10px;
+      font-family:'Geist Mono',monospace; font-weight:600; font-size:.72rem;
+      background:var(--rv-ink); color:var(--rv-bg);
+      box-shadow:0 8px 24px rgba(0,0,0,.15);
+      transform:translateX(120px); opacity:0; pointer-events:none; transition:all .3s;
+    }
+    .rv-toast.show { transform:translateX(0); opacity:1; }
+
+    /* ── Modal ──────────────────────────────────────────── */
+    .rv-backdrop {
+      display:none; position:fixed; inset:0; z-index:1000;
+      background:rgba(22,17,15,.5); backdrop-filter:blur(6px);
+      align-items:center; justify-content:center; padding:1rem;
+    }
+    .rv-backdrop.open { display:flex; }
+    .rv-modal {
+      background:var(--rv-card); border:1px solid var(--rv-line);
+      border-radius:20px; padding:1.75rem;
+      width:100%; max-width:400px;
+    }
+    .rv-modal-title {
+      font-family:'Bricolage Grotesque',system-ui,sans-serif;
+      font-size:1.1rem; font-weight:800; margin-bottom:1.25rem;
+    }
+    .rv-label {
+      font-family:'Geist Mono',monospace;
+      font-size:.62rem; font-weight:700; color:var(--rv-muted);
+      letter-spacing:.04em; display:block; margin-bottom:.3rem;
+    }
+    .rv-input {
+      width:100%; background:var(--rv-bg-alt); border:1.5px solid var(--rv-line);
+      border-radius:10px; padding:.62rem .85rem; color:var(--rv-ink);
+      font-family:'Geist',system-ui; font-size:.86rem; outline:none;
+      transition:border-color .2s; margin-bottom:.75rem;
+    }
+    .rv-input:focus { border-color:var(--rv-ink); }
+    .rv-icon-grid { display:flex; flex-wrap:wrap; gap:.35rem; margin-bottom:.75rem; }
+    .rv-icon-opt {
+      width:36px; height:36px; border-radius:9px;
+      border:1.5px solid var(--rv-line); background:var(--rv-bg-alt);
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.1rem; cursor:pointer; transition:all .18s;
+    }
+    .rv-icon-opt.sel { border-color:var(--rv-ink); background:var(--rv-card); }
+    .rv-cat-grid { display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:.85rem; }
+    .rv-cat-opt {
+      padding:.28rem .7rem; border-radius:99px;
+      font-family:'Geist Mono',monospace;
+      font-size:.66rem; font-weight:700;
+      border:1.5px solid var(--rv-line); background:transparent;
+      color:var(--rv-muted); cursor:pointer; transition:all .18s;
+    }
+    .rv-cat-opt.sel { border-color:var(--rv-ink); background:var(--rv-ink); color:var(--rv-bg); }
+    .rv-fm-actions { display:flex; gap:.55rem; }
+    .rv-btn-cancel {
+      flex:1; padding:.65rem; border-radius:10px;
+      background:var(--rv-bg-alt); border:1px solid var(--rv-line);
+      color:var(--rv-ink-soft);
+      font-family:'Bricolage Grotesque',system-ui; font-weight:700;
+      font-size:.82rem; cursor:pointer;
+    }
+    .rv-btn-save {
+      flex:2; padding:.65rem; border-radius:10px;
+      background:var(--rv-ink); border:none; color:var(--rv-bg);
+      font-family:'Bricolage Grotesque',system-ui; font-weight:800;
+      font-size:.82rem; cursor:pointer; transition:opacity .2s;
+    }
+    .rv-btn-save:disabled { opacity:.5; cursor:not-allowed; }
   </style>
 </head>
 <body>
 
-<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="habits" />
+<div class="rv-shell">
+  <Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="habits" />
 
-<div class="page">
+  <div class="rv-main">
+    <div class="rv-inner">
 
-  <!-- HEADER -->
-  <div class="pg-header">
-    <div class="pg-eyebrow">Daily Routines</div>
-    <h1 class="pg-title">Habit <em>Tracker</em></h1>
-    <div class="pg-sub">Build streaks. Stack wins. Keto is a lifestyle.</div>
-  </div>
-
-  <!-- TODAY BANNER -->
-  {habits.length > 0 && (
-    <div class="today-banner">
-      <div class="tb-left">
-        <div class="tb-pct" id="todayPct">{habits.length > 0 ? Math.round((doneToday / habits.length) * 100) : 0}%</div>
-        <div class="tb-sub" id="todaySub">{allDoneToday ? 'All habits done today!' : `${doneToday} of ${habits.length} habits done today`}</div>
+      <!-- HEADER -->
+      <div class="rv-hd">
+        <div class="rv-hd-eyebrow">Daily Routines</div>
+        <h1 class="rv-hd-title">Habit <em>Tracker</em></h1>
+        <div class="rv-hd-sub">Build streaks. Stack wins. Keto is a lifestyle.</div>
       </div>
-      <div class="tb-ring">
-        <svg width="56" height="56" viewBox="0 0 56 56">
-          <circle cx="28" cy="28" r="22" fill="none" stroke="var(--muted)" stroke-width="5"/>
-          <circle cx="28" cy="28" r="22" fill="none" stroke="var(--green)" stroke-width="5"
-            stroke-dasharray={`${2 * Math.PI * 22}`}
-            stroke-dashoffset={`${2 * Math.PI * 22 * (1 - doneToday / Math.max(habits.length, 1))}`}
-            stroke-linecap="round" id="ringCircle"/>
-        </svg>
-        <div class="tb-ring-lbl" id="ringLbl">{doneToday}/{habits.length}</div>
-      </div>
-    </div>
-  )}
 
-  <!-- HABITS LIST -->
-  {habits.length > 0 ? (
-    <div class="habits-list" id="habitsList">
-      {habits.map((h, idx) => {
-        const streak = computeStreak(h.id);
-        const isDoneToday = !!doneMap[h.id]?.has(today);
-        const cc = catColor[h.category] || '#6b7280';
-        return (
-          <div class={`habit-card${isDoneToday ? ' done-today' : ''}`} id={`hc-${h.id}`} style={`animation-delay:${idx * 0.04}s;`}>
-            <div class="hc-top">
-              <button class={`hc-check${isDoneToday ? ' checked' : ''}`} id={`chk-${h.id}`}
-                onclick={`window.toggleHabit('${h.id}','${today}')`}>
-                {isDoneToday ? '✓' : h.icon}
-              </button>
-              <div class="hc-info">
-                <div class="hc-title">{h.title}</div>
-                <div class="hc-meta">
-                  <span class="hc-cat" style={`background:${cc}18;color:${cc};border:1px solid ${cc}33;`}>{h.category}</span>
-                  {streak > 0 && <span class="hc-streak"><Flame size={12} style="display:inline;vertical-align:middle;" /> {streak}d streak</span>}
+      <!-- TODAY BANNER -->
+      {habits.length > 0 && (
+        <div class="rv-today-banner">
+          <div>
+            <div class="rv-tb-pct" id="todayPct">{Math.round((doneToday / habits.length) * 100)}%</div>
+            <div class="rv-tb-sub" id="todaySub">{allDoneToday ? 'All habits done today!' : `${doneToday} of ${habits.length} habits done`}</div>
+          </div>
+          <div class="rv-tb-ring">
+            <svg width="52" height="52" viewBox="0 0 52 52">
+              <circle cx="26" cy="26" r="24" fill="none" stroke="var(--rv-line)" stroke-width="5"/>
+              <circle cx="26" cy="26" r="24" fill="none" stroke="var(--rv-accent)" stroke-width="5"
+                stroke-dasharray={ringCirc}
+                stroke-dashoffset={ringOffset}
+                stroke-linecap="round" id="ringCircle"/>
+            </svg>
+            <div class="rv-tb-ring-lbl" id="ringLbl">{doneToday}/{habits.length}</div>
+          </div>
+        </div>
+      )}
+
+      <!-- HABITS LIST -->
+      {habits.length > 0 ? (
+        <div class="rv-habits-list" id="habitsList">
+          {habits.map((h, idx) => {
+            const streak    = computeStreak(h.id);
+            const isDone    = !!doneMap[h.id]?.has(today);
+            const cc        = catColor[h.category] || '#8A8077';
+            return (
+              <div class={`rv-hcard${isDone ? ' done-today' : ''}`} id={`hc-${h.id}`} style={`animation-delay:${idx * 0.04}s;`}>
+                <div class="rv-hc-top">
+                  <button class={`rv-hc-check${isDone ? ' checked' : ''}`} id={`chk-${h.id}`}
+                    onclick={`window.toggleHabit('${h.id}','${today}')`}>
+                    {isDone ? '✓' : h.icon}
+                  </button>
+                  <div class="rv-hc-info">
+                    <div class="rv-hc-title">{h.title}</div>
+                    <div class="rv-hc-meta">
+                      <span class="rv-hc-cat" style={`background:${cc}18;color:${cc};border:1px solid ${cc}33;`}>{h.category}</span>
+                      {streak > 0 && <span class="rv-hc-streak">🔥 {streak}d streak</span>}
+                    </div>
+                  </div>
+                  <button class="rv-hc-del" onclick={`window.deleteHabit('${h.id}')`} title="Remove">🗑</button>
+                </div>
+                <div class="rv-week-grid">
+                  {last7.map(day => {
+                    const done = !!doneMap[h.id]?.has(day.date);
+                    return (
+                      <div class="rv-wg-col">
+                        <div class={`rv-wg-dot${done ? ' done' : ''}${day.isToday ? ' today' : ''}`}>
+                          {done ? '✓' : ''}
+                        </div>
+                        <div class="rv-wg-day" style={day.isToday ? 'color:var(--rv-accent);font-weight:700;' : ''}>{day.label}</div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-              <button class="hc-del" onclick={`window.deleteHabit('${h.id}')`} title="Remove habit">🗑</button>
-            </div>
-            <!-- 7-day grid -->
-            <div class="week-grid">
-              {last7.map(day => {
-                const done = !!doneMap[h.id]?.has(day.date);
-                return (
-                  <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;">
-                    <div class={`wg-dot${done ? ' done' : ''}${day.isToday ? ' today' : ''}`}>
-                      {done ? '✓' : ''}
-                    </div>
-                    <div class="wg-day" style={day.isToday ? 'color:var(--green);font-weight:800;' : ''}>{day.label}</div>
-                  </div>
-                );
-              })}
-            </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div class="rv-empty">
+          <div class="rv-empty-icon">🎯</div>
+          <div class="rv-empty-txt">No habits yet — add your first habit below or pick a preset.</div>
+        </div>
+      )}
+
+      <!-- PRESETS -->
+      {availablePresets.length > 0 && (
+        <div>
+          <div class="rv-sec-lbl">Quick-add presets</div>
+          <div class="rv-presets-grid">
+            {availablePresets.slice(0, 8).map(p => (
+              <button class="rv-preset-btn" onclick={`window.addPreset(${JSON.stringify(JSON.stringify(p))})`}>
+                <div class="rv-preset-icon">{p.icon}</div>
+                <div class="rv-preset-label">{p.title}</div>
+              </button>
+            ))}
           </div>
-        );
-      })}
-    </div>
-  ) : (
-    <div class="empty">
-      <div class="empty-icon"><Target size={48} color="var(--soft)" /></div>
-      <div class="empty-txt">No habits yet — add your first habit below or pick a preset.</div>
-    </div>
-  )}
+        </div>
+      )}
 
-  <!-- PRESET SUGGESTIONS -->
-  {availablePresets.length > 0 && (
-    <div>
-      <div class="section-title">Quick-add presets</div>
-      <div class="presets-grid">
-        {availablePresets.slice(0, 8).map(p => (
-          <button class="preset-btn" onclick={`window.addPreset(${JSON.stringify(JSON.stringify(p))})`}>
-            <div class="preset-icon">{p.icon}</div>
-            <div class="preset-label">{p.title}</div>
-          </button>
-        ))}
-      </div>
     </div>
-  )}
-
+  </div>
 </div>
 
 <!-- FAB -->
-<button class="fab" onclick="window.openAdd()" title="New habit">+</button>
+<button class="rv-fab" onclick="window.openAdd()" title="New habit" aria-label="Add habit">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
 
 <!-- ADD MODAL -->
-<div class="modal-backdrop" id="addModal">
-  <div class="modal">
-    <div class="modal-title">New Habit</div>
+<div class="rv-backdrop" id="addModal">
+  <div class="rv-modal">
+    <div class="rv-modal-title">New Habit</div>
 
-    <label class="fm-label">Pick an icon</label>
-    <div class="icon-grid" id="iconGrid">
+    <label class="rv-label">Pick an icon</label>
+    <div class="rv-icon-grid" id="iconGrid">
       {['✅','🎯','💪','🧂','💧','🥗','🚶','😴','⏱️','🧘','📖','🏋️','🥑','🩸','🌿','⚡'].map(ic => (
-        <div class="icon-opt" data-icon={ic} onclick="window.pickIcon(this)">{ic}</div>
+        <div class="rv-icon-opt" data-icon={ic} onclick="window.pickIcon(this)">{ic}</div>
       ))}
     </div>
 
-    <label class="fm-label">Habit title *</label>
-    <input class="fm-input" id="hTitle" placeholder="e.g. Take electrolytes" autocomplete="off"/>
+    <label class="rv-label">Habit title *</label>
+    <input class="rv-input" id="hTitle" placeholder="e.g. Take electrolytes" autocomplete="off"/>
 
-    <label class="fm-label">Category</label>
-    <div class="cat-grid">
+    <label class="rv-label">Category</label>
+    <div class="rv-cat-grid">
       {['keto','nutrition','fitness','mindset','general'].map(c => (
-        <div class="cat-opt" data-cat={c} onclick="window.pickCat(this)">{c}</div>
+        <div class="rv-cat-opt" data-cat={c} onclick="window.pickCat(this)">{c}</div>
       ))}
     </div>
 
-    <div class="fm-actions">
-      <button class="btn-cancel" onclick="window.closeAdd()">Cancel</button>
-      <button class="btn-save" id="hSaveBtn" onclick="window.saveHabit()">Add Habit</button>
+    <div class="rv-fm-actions">
+      <button class="rv-btn-cancel" onclick="window.closeAdd()">Cancel</button>
+      <button class="rv-btn-save" id="hSaveBtn" onclick="window.saveHabit()">Add Habit</button>
     </div>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="rv-toast" id="toast"></div>
 
 <script is:inline define:vars={{ todayStr: today, initDone: doneToday, totalHabits: habits.length }}>
 var _done  = initDone;
@@ -337,69 +502,57 @@ function showToast(msg) {
 }
 
 function updateBanner() {
-  var pct = _total > 0 ? Math.round((_done / _total) * 100) : 0;
-  var pctEl  = document.getElementById('todayPct');
-  var subEl  = document.getElementById('todaySub');
-  var ringEl = document.getElementById('ringCircle');
-  var lblEl  = document.getElementById('ringLbl');
+  var pct   = _total > 0 ? Math.round((_done / _total) * 100) : 0;
+  var pctEl = document.getElementById('todayPct');
+  var subEl = document.getElementById('todaySub');
+  var ringEl= document.getElementById('ringCircle');
+  var lblEl = document.getElementById('ringLbl');
   if (pctEl) pctEl.textContent = pct + '%';
-  if (subEl) subEl.textContent = (_done === _total && _total > 0) ? '🎉 All habits done today!' : _done + ' of ' + _total + ' habits done today';
+  if (subEl) subEl.textContent = (_done === _total && _total > 0) ? 'All habits done today!' : _done + ' of ' + _total + ' habits done';
   if (ringEl) {
-    var circ = 2 * Math.PI * 22;
+    var circ = 2 * Math.PI * 24;
     ringEl.setAttribute('stroke-dashoffset', circ * (1 - _done / Math.max(_total, 1)));
   }
   if (lblEl) lblEl.textContent = _done + '/' + _total;
 }
 
 window.toggleHabit = function(habitId, date) {
-  var card = document.getElementById('hc-' + habitId);
-  var chk  = document.getElementById('chk-' + habitId);
-  var wasDone = chk && chk.classList.contains('checked');
-  // Optimistic UI
+  var card   = document.getElementById('hc-' + habitId);
+  var chk    = document.getElementById('chk-' + habitId);
+  var wasDone= chk && chk.classList.contains('checked');
   if (wasDone) {
-    chk.classList.remove('checked');
-    if (card) card.classList.remove('done-today');
+    chk.classList.remove('checked'); if (card) card.classList.remove('done-today');
     _done = Math.max(0, _done - 1);
   } else {
-    chk.classList.add('checked');
-    if (card) card.classList.add('done-today');
+    chk.classList.add('checked'); if (card) card.classList.add('done-today');
     _done = Math.min(_total, _done + 1);
   }
   updateBanner();
-  // Also update the dot for today
-  var dots = card ? card.querySelectorAll('.wg-dot.today') : [];
+  var dots = card ? card.querySelectorAll('.rv-wg-dot.today') : [];
   dots.forEach(function(d) {
     if (wasDone) { d.classList.remove('done'); d.textContent = ''; }
     else         { d.classList.add('done');    d.textContent = '✓'; }
   });
   fetch('/api/habits/toggle', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ habit_id: habitId, date: date }),
   })
   .then(function(r){ return r.json(); })
   .then(function(d){
     if (!d.success) {
-      // Revert
       if (wasDone) { chk.classList.add('checked'); if(card) card.classList.add('done-today'); _done++; }
       else         { chk.classList.remove('checked'); if(card) card.classList.remove('done-today'); _done--; }
       updateBanner();
-      showToast('❌ ' + (d.error || 'Error'));
-    } else {
-      // Update icon
-      var icon = chk ? chk.getAttribute('data-icon') || '✅' : '✅';
-      if (!wasDone) { if(chk) chk.textContent = '✓'; }
-      else          { /* restore emoji — need to reload for full accuracy */ }
+      showToast(d.error || 'Error');
     }
   })
-  .catch(function(){ showToast('❌ Connection error'); });
+  .catch(function(){ showToast('Connection error'); });
 };
 
 window.deleteHabit = function(habitId) {
   if (!confirm('Remove this habit?')) return;
   fetch('/api/habits/delete', {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    method:'DELETE', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ habit_id: habitId }),
   })
   .then(function(r){ return r.json(); })
@@ -407,19 +560,17 @@ window.deleteHabit = function(habitId) {
     if (d.success) {
       var card = document.getElementById('hc-' + habitId);
       if (card) { card.style.opacity='0'; card.style.transform='translateX(20px)'; card.style.transition='all .3s'; setTimeout(function(){ card.remove(); _total--; updateBanner(); }, 300); }
-    } else { showToast('❌ ' + (d.error || 'Error')); }
+    } else { showToast(d.error || 'Error'); }
   });
 };
 
-/* ── ADD MODAL ── */
 var _selIcon = '✅';
 var _selCat  = 'keto';
 
-// Init selection states
 (function(){
-  var firstIcon = document.querySelector('.icon-opt');
+  var firstIcon = document.querySelector('.rv-icon-opt');
   if (firstIcon) { firstIcon.classList.add('sel'); _selIcon = firstIcon.getAttribute('data-icon') || '✅'; }
-  var firstCat = document.querySelector('.cat-opt');
+  var firstCat = document.querySelector('.rv-cat-opt');
   if (firstCat) { firstCat.classList.add('sel'); _selCat = firstCat.getAttribute('data-cat') || 'keto'; }
 })();
 
@@ -432,14 +583,12 @@ window.closeAdd = function() {
   document.getElementById('hTitle').value = '';
 };
 window.pickIcon = function(el) {
-  document.querySelectorAll('.icon-opt').forEach(function(e){ e.classList.remove('sel'); });
-  el.classList.add('sel');
-  _selIcon = el.getAttribute('data-icon') || '✅';
+  document.querySelectorAll('.rv-icon-opt').forEach(function(e){ e.classList.remove('sel'); });
+  el.classList.add('sel'); _selIcon = el.getAttribute('data-icon') || '✅';
 };
 window.pickCat = function(el) {
-  document.querySelectorAll('.cat-opt').forEach(function(e){ e.classList.remove('sel'); });
-  el.classList.add('sel');
-  _selCat = el.getAttribute('data-cat') || 'general';
+  document.querySelectorAll('.rv-cat-opt').forEach(function(e){ e.classList.remove('sel'); });
+  el.classList.add('sel'); _selCat = el.getAttribute('data-cat') || 'general';
 };
 
 window.saveHabit = function() {
@@ -448,36 +597,31 @@ window.saveHabit = function() {
   var btn = document.getElementById('hSaveBtn');
   btn.disabled = true; btn.textContent = 'Adding…';
   fetch('/api/habits', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title: title, icon: _selIcon, category: _selCat, target_streak: 7 }),
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ title:title, icon:_selIcon, category:_selCat, target_streak:7 }),
   })
   .then(function(r){ return r.json(); })
   .then(function(d){
-    if (d.success) { showToast('✅ Habit added!'); setTimeout(function(){ window.location.reload(); }, 500); }
-    else { btn.disabled = false; btn.textContent = 'Add Habit'; showToast('❌ ' + (d.error || 'Error')); }
+    if (d.success) { showToast('Habit added!'); setTimeout(function(){ window.location.reload(); }, 500); }
+    else { btn.disabled=false; btn.textContent='Add Habit'; showToast(d.error || 'Error'); }
   })
-  .catch(function(){ btn.disabled = false; btn.textContent = 'Add Habit'; showToast('❌ Error'); });
+  .catch(function(){ btn.disabled=false; btn.textContent='Add Habit'; showToast('Error'); });
 };
 
 window.addPreset = function(jsonStr) {
   var p = JSON.parse(jsonStr);
   fetch('/api/habits', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title: p.title, icon: p.icon, category: p.category, target_streak: p.target_streak }),
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ title:p.title, icon:p.icon, category:p.category, target_streak:p.target_streak }),
   })
   .then(function(r){ return r.json(); })
   .then(function(d){
-    if (d.success) { showToast('✅ ' + p.title + ' added!'); setTimeout(function(){ window.location.reload(); }, 500); }
-    else showToast('❌ ' + (d.error || 'Error'));
+    if (d.success) { showToast(p.title + ' added!'); setTimeout(function(){ window.location.reload(); }, 500); }
+    else showToast(d.error || 'Error');
   });
 };
 
-// Close modal on backdrop click
-document.getElementById('addModal').addEventListener('click', function(e){
-  if (e.target === this) window.closeAdd();
-});
+document.getElementById('addModal').addEventListener('click', function(e){ if (e.target === this) window.closeAdd(); });
 </script>
 </body>
 </html>
