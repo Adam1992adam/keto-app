@@ -1,7 +1,8 @@
 ---
 // src/pages/dashboard/steps.astro — Daily Steps Tracker
 import { requireAuth } from '../../lib/auth';
-import DashNav from '../../components/DashNav.astro';
+import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
+import Sidebar from '../../components/Sidebar.astro';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
 
 const auth = await requireAuth(Astro);
@@ -13,6 +14,10 @@ const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pr
 const userName  = profile.full_name || 'Member';
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
+
+await updateCurrentDay(user.id).catch(() => null);
+const journey = await getUserJourney(user.id, db).catch(() => null);
+const currentDay = journey?.current_day || 1;
 
 const today        = new Date().toISOString().slice(0, 10);
 const sevenDaysAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
@@ -70,30 +75,30 @@ const ringStroke = `${CIRC}`;
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{t('steps.title')} · Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
   <script is:inline>(function(){ var t=localStorage.getItem('keto-theme')||'dark'; document.documentElement.setAttribute('data-theme',t); })();</script>
   <style>
     :root {
-      --bg:#060d09; --card:#0d1a0f; --card2:#111f13;
-      --border:rgba(16,185,129,.1); --border2:rgba(16,185,129,.22);
-      --text:#dfeedd; --soft:#4d7055; --muted:#233328;
-      --green:#10b981; --green2:#34d399; --gold:#f59e0b;
-      --radius:20px;
-    }
-    [data-theme="light"] {
-      --bg:#f0faf4; --card:#fff; --card2:#f5fdf8;
-      --border:rgba(16,185,129,.15); --border2:rgba(16,185,129,.3);
-      --text:#0f2417; --soft:#4d7055; --muted:#b0d4bc;
+      --rv-bg:#FAF6F1;--rv-card:#FFFFFF;--rv-bg-alt:#F2EDE5;--rv-line:#E5DED2;
+      --rv-ink:#16110F;--rv-ink-soft:#4A4340;
+      --rv-accent:#FF5C7A;--rv-warm:#FF914D;
+      --bg:var(--rv-bg);--card:var(--rv-card);--card2:var(--rv-bg-alt);
+      --border:var(--rv-line);--border2:rgba(255,92,122,.3);
+      --text:var(--rv-ink);--soft:var(--rv-ink-soft);--muted:#C8BFBA;
+      --green:#10b981;--green2:#34d399;--gold:#f59e0b;--radius:20px;
     }
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    body { font-family:'Bricolage Grotesque',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{min-width:0;overflow-x:hidden;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}.rv-pg-main{padding-bottom:5.5rem;}}
     @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
     .fade-up { animation:fadeUp .5s ease both; }
     .d1{animation-delay:.07s} .d2{animation-delay:.14s} .d3{animation-delay:.21s} .d4{animation-delay:.28s}
 
-    .page { max-width:760px; margin:0 auto; padding:2rem 1.25rem 5rem; }
-    .page-title { font-family:'Fraunces',serif; font-size:2rem; font-weight:700; margin-bottom:.3rem; }
-    .page-title em { font-style:italic; color:var(--green2); }
+    .page { max-width:760px; margin:0 auto; padding:2rem 1.75rem 4rem; }
+    .page-title { font-family:'Bricolage Grotesque',system-ui,sans-serif; font-size:2rem; font-weight:800; margin-bottom:.3rem; }
+    .page-title em { font-style:italic; color:var(--rv-accent); }
     .page-sub { color:var(--soft); font-size:.88rem; margin-bottom:2rem; }
 
     .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-bottom:1.25rem; }
@@ -189,9 +194,10 @@ const ringStroke = `${CIRC}`;
   </style>
 </head>
 <body>
-  <DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="steps" />
-
-  <div class="page">
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="steps" />
+<div class="rv-pg-main">
+<div class="page">
     <h1 class="page-title fade-up">Daily <em>Steps</em></h1>
     <p class="page-sub fade-up d1">Track your activity — every step counts toward your keto goals.</p>
 
@@ -486,5 +492,6 @@ const ringStroke = `${CIRC}`;
     updateUI(currentSteps, currentGoal);
   })();
   </script>
+</div></div></div>
 </body>
 </html>
