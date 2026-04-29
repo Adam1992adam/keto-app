@@ -1,16 +1,9 @@
 ---
 // src/pages/dashboard/ketones.astro
 import { requireAuth } from '../../lib/auth';
-import DashNav from '../../components/DashNav.astro';
+import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
+import Sidebar from '../../components/Sidebar.astro';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import Activity from 'lucide-astro/Activity';
-import TrendingUp from 'lucide-astro/TrendingUp';
-import Droplets from 'lucide-astro/Droplets';
-import Zap from 'lucide-astro/Zap';
-import Target from 'lucide-astro/Target';
-import Plus from 'lucide-astro/Plus';
-import Calendar from 'lucide-astro/Calendar';
-import BarChart2 from 'lucide-astro/BarChart2';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -21,6 +14,10 @@ const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pr
 const userName  = (profile as any).full_name || (profile as any).email?.split('@')[0] || 'User';
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
+
+await updateCurrentDay(user.id).catch(() => null);
+const journey = await getUserJourney(user.id, db).catch(() => null);
+const currentDay = journey?.current_day || 1;
 
 // Fetch last 30 ketone logs newest-first
 const { data: logs } = await db
@@ -100,23 +97,29 @@ const today = new Date().toISOString().split('T')[0];
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{t('ketones.title')} · Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;1,700&family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg:#FAF6F1;--card:#FFFFFF;--card2:#F2EDE5;
+      --border:rgba(22,17,15,.08);--border2:rgba(255,92,122,.25);
+      --text:#16110F;--soft:#4A4340;--muted:#C8BFBA;
+      --green:#10b981;--green2:#34d399;--gold:#f59e0b;
+      --rv-accent:#FF5C7A;--rv-warm:#FF914D;
+    }
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{min-width:0;overflow-x:hidden;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}.rv-pg-main{padding-bottom:5.5rem;}}
+  </style>
 </head>
 <body>
-
-<DashNav
-  userId={user.id}
-  userName={userName}
-  tierLabel={tierLabel}
-  planType={planType}
-  activePage="ketones"
-/>
-
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="ketones" />
+<div class="rv-pg-main">
 <main class="page">
   <!-- Header -->
   <div class="page-header" style="animation:fadeUp .5s ease both;">
     <div>
-      <h1 class="page-title"><Activity size={26} style="vertical-align:middle;margin-right:.5rem;" /> Ketone Tracker</h1>
+      <h1 class="page-title">📊 Ketone Tracker</h1>
       <p class="page-sub">Monitor your ketosis level and fat-burning zone</p>
     </div>
     <button class="log-btn" id="openModal">+ Log Reading</button>
@@ -167,13 +170,13 @@ const today = new Date().toISOString().split('T')[0];
   <!-- Chart card -->
   <div class="card chart-card" style="animation:fadeUp .5s .16s ease both;">
     <div class="card-head">
-      <span class="card-title"><TrendingUp size={16} style="vertical-align:middle;margin-right:.35rem;" /> Ketone Trend</span>
+      <span class="card-title">📈 Ketone Trend</span>
       <span class="card-sub">Last {Math.min(14, entries.length)} readings</span>
     </div>
 
     {entries.length === 0 && (
       <div class="empty-chart">
-        <div class="empty-icon"><Activity size={32} /></div>
+        <div class="empty-icon" style="font-size:2rem;">📊</div>
         <p>Log your first ketone reading to see your trend chart.</p>
       </div>
     )}
@@ -225,7 +228,7 @@ const today = new Date().toISOString().split('T')[0];
   <!-- Ketone zones guide -->
   <div class="card" style="animation:fadeUp .5s .2s ease both;">
     <div class="card-head">
-      <span class="card-title"><Target size={16} style="vertical-align:middle;margin-right:.35rem;" /> Ketone Zones Guide</span>
+      <span class="card-title">🎯 Ketone Zones Guide</span>
     </div>
     <div class="zones-grid">
       <div class="zone-item zi-gray">
@@ -259,13 +262,13 @@ const today = new Date().toISOString().split('T')[0];
   <!-- History -->
   <div class="card" style="animation:fadeUp .5s .24s ease both;">
     <div class="card-head">
-      <span class="card-title"><Calendar size={16} style="vertical-align:middle;margin-right:.35rem;" /> Reading History</span>
+      <span class="card-title">📅 Reading History</span>
       <span class="card-sub">{entries.length} total</span>
     </div>
 
     {entries.length === 0 && (
       <div class="empty-state">
-        <div class="empty-icon"><BarChart2 size={32} /></div>
+        <div class="empty-icon" style="font-size:2rem;">📋</div>
         <p>No readings yet. Log your first measurement above.</p>
       </div>
     )}
@@ -295,9 +298,9 @@ const today = new Date().toISOString().split('T')[0];
           return (
             <div class="hist-row">
               <span class="hist-icon">
-                {typeIsBlood  && <Activity size={16} />}
-                {typeIsUrine  && <Droplets size={16} />}
-                {typeIsBreath && <Zap size={16} />}
+                {typeIsBlood  && '🩸'}
+                {typeIsUrine  && '💧'}
+                {typeIsBreath && '💨'}
               </span>
               <div class="hist-info">
                 <span class="hist-date">{new Date(e.logged_date + 'T12:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}</span>
@@ -320,7 +323,7 @@ const today = new Date().toISOString().split('T')[0];
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <div class="modal-head">
-      <h3><Activity size={18} style="vertical-align:middle;margin-right:.4rem;" /> Log Ketone Reading</h3>
+      <h3>📊 Log Ketone Reading</h3>
       <button class="modal-close" id="closeModal">×</button>
     </div>
     <form id="ketoneForm" class="modal-body">
@@ -332,9 +335,9 @@ const today = new Date().toISOString().split('T')[0];
       <div class="form-row">
         <label class="form-label">Measurement Type</label>
         <div class="type-btns" id="typeBtns">
-          <button type="button" class="type-btn active" data-type="blood"><Activity size={14} style="vertical-align:middle;margin-right:.3rem;" /> Blood</button>
-          <button type="button" class="type-btn" data-type="urine"><Droplets size={14} style="vertical-align:middle;margin-right:.3rem;" /> Urine</button>
-          <button type="button" class="type-btn" data-type="breath"><Zap size={14} style="vertical-align:middle;margin-right:.3rem;" /> Breath</button>
+          <button type="button" class="type-btn active" data-type="blood">🩸 Blood</button>
+          <button type="button" class="type-btn" data-type="urine">💧 Urine</button>
+          <button type="button" class="type-btn" data-type="breath">💨 Breath</button>
         </div>
       </div>
       <div class="form-row">
@@ -362,20 +365,20 @@ const today = new Date().toISOString().split('T')[0];
 
 <style>
   *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'DM Sans',sans-serif; background:var(--bg,#060d09); color:var(--text,#dfeedd); min-height:100vh; padding-bottom:5rem; }
+  body { font-family:'Bricolage Grotesque',system-ui,sans-serif; background:var(--bg,#FAF6F1); color:var(--text,#16110F); min-height:100vh; }
 
-  .page { max-width:780px; margin:0 auto; padding:2rem 1.25rem; }
+  .page { max-width:780px; margin:0 auto; padding:2rem 1.75rem 4rem; }
 
   /* Header */
   .page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap; }
-  .page-title { font-family:'Fraunces',serif; font-size:1.7rem; font-weight:700; margin-bottom:.2rem; }
-  .page-sub { color:var(--soft,#4d7055); font-size:.85rem; }
+  .page-title { font-family:'Bricolage Grotesque',system-ui,sans-serif; font-size:1.7rem; font-weight:800; margin-bottom:.2rem; }
+  .page-sub { color:var(--soft,#4A4340); font-size:.85rem; }
   .log-btn {
     padding:.6rem 1.25rem; border-radius:12px; font-size:.82rem; font-weight:800;
-    background:var(--green,#10b981); color:#fff; border:none; cursor:pointer;
+    background:var(--rv-accent,#FF5C7A); color:#fff; border:none; cursor:pointer;
     transition:all .2s; white-space:nowrap; flex-shrink:0;
   }
-  .log-btn:hover { background:#059669; transform:translateY(-1px); }
+  .log-btn:hover { background:#e8435f; transform:translateY(-1px); }
 
   /* Zone banner */
   .zone-banner {
@@ -641,5 +644,7 @@ const today = new Date().toISOString().split('T')[0];
 })();
 </script>
 
+</main>
+</div></div>
 </body>
 </html>
