@@ -1,22 +1,9 @@
 ---
 // src/pages/dashboard/weekly.astro
-import { getUserJourney, getMaxJourneyDays } from '../../lib/supabase';
+import { getUserJourney, getMaxJourneyDays, updateCurrentDay } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
-import DashNav from '../../components/DashNav.astro';
+import Sidebar from '../../components/Sidebar.astro';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import BarChart3 from 'lucide-astro/BarChart3';
-import CheckCircle from 'lucide-astro/CheckCircle';
-import Zap from 'lucide-astro/Zap';
-import Target from 'lucide-astro/Target';
-import Flame from 'lucide-astro/Flame';
-import Droplets from 'lucide-astro/Droplets';
-import TrendingUp from 'lucide-astro/TrendingUp';
-import Award from 'lucide-astro/Award';
-import Calendar from 'lucide-astro/Calendar';
-import Home from 'lucide-astro/Home';
-import AlertTriangle from 'lucide-astro/AlertTriangle';
-import Star from 'lucide-astro/Star';
-import Brain from 'lucide-astro/Brain';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -27,6 +14,7 @@ const userName  = profile.full_name?.split(' ')[0] || 'there';
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
 
+await updateCurrentDay(user.id).catch(() => null);
 const journey = await getUserJourney(user.id, db);
 const currentDay  = journey?.current_day  || 1;
 const maxDays     = getMaxJourneyDays(planType);
@@ -164,83 +152,55 @@ const weekStars = Math.round((complianceRate / 100) * 5);
   <title>{t('weekly.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,700;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
   <script is:inline>
     (function(){ const t=localStorage.getItem('keto-theme')||'light'; document.documentElement.setAttribute('data-theme',t); })();
   </script>
   <style>
     :root{
-      --bg:#070d09;--surface:#0c1510;--card:#101d13;
-      --card2:#152019;--border:rgba(16,185,129,.11);
-      --border2:rgba(16,185,129,.24);--border3:rgba(16,185,129,.4);
-      --text:#e2ede2;--soft:#5a7a5a;--muted:#253025;
-      --green:#10b981;--green2:#34d399;--green3:#6ee7b7;
-      --gold:#f59e0b;--amber:#fbbf24;--red:#ef4444;
-      --blue:#3b82f6;--purple:#8b5cf6;--cyan:#06b6d4;
-      --orange:#f97316;--indigo:#6366f1;
-      --nav-h:64px;
-    }
-    [data-theme="light"]{
-      --bg:#eef4ee;--surface:#fff;--card:#fff;--card2:#f3f8f3;
-      --border:rgba(0,0,0,.07);--border2:rgba(16,185,129,.28);
-      --text:#0a1f0a;--soft:#3d6b3d;--muted:#a8c8a8;
+      --rv-bg:#FAF6F1;--rv-card:#FFFFFF;--rv-bg-alt:#F2EDE5;--rv-line:#E5DED2;
+      --rv-ink:#16110F;--rv-ink-soft:#4A4340;--rv-muted:#8A8077;
+      --rv-accent:#FF5C7A;--rv-accent-2:#B6FF3C;--rv-warm:#FF914D;
+      --bg:var(--rv-bg);--card:var(--rv-card);--card2:var(--rv-bg-alt);
+      --border:var(--rv-line);--border2:rgba(255,92,122,.3);--border3:rgba(255,92,122,.5);
+      --text:var(--rv-ink);--soft:var(--rv-ink-soft);--muted:#C8BFBA;
+      --green:#10b981;--green2:#34d399;--gold:#f59e0b;--red:#ef4444;
+      --blue:#3b82f6;--purple:#8b5cf6;--cyan:#06b6d4;--indigo:#6366f1;
     }
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
     html{scroll-behavior:smooth;}
-    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background .3s,color .3s;}
-
-    /* BG */
-    .bg-wrap{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
-    .orb{position:absolute;border-radius:50%;filter:blur(110px);animation:drift ease-in-out infinite;}
-    [data-theme="light"] .orb{opacity:.09;}
-    .o1{width:650px;height:650px;background:rgba(16,185,129,.07);top:-180px;left:-150px;animation-duration:26s;opacity:.45;}
-    .o2{width:500px;height:500px;background:rgba(245,158,11,.05);bottom:-100px;right:-100px;animation-duration:32s;animation-delay:-15s;opacity:.38;}
-    .o3{width:380px;height:380px;background:rgba(99,102,241,.04);top:42%;left:40%;animation-duration:22s;animation-delay:-9s;opacity:.32;}
-    @keyframes drift{0%,100%{transform:translate(0,0) scale(1);}38%{transform:translate(45px,-55px) scale(1.07);}68%{transform:translate(-38px,48px) scale(.94);}}
-
-    /* NAV */
-    nav{position:sticky;top:0;z-index:100;height:var(--nav-h);background:rgba(7,13,9,.88);border-bottom:1px solid var(--border);backdrop-filter:blur(22px);display:flex;align-items:center;transition:background .3s;}
-    [data-theme="light"] nav{background:rgba(255,255,255,.9);}
-    .nav-inner{max-width:1100px;margin:0 auto;padding:0 1.5rem;width:100%;display:flex;align-items:center;gap:1rem;}
-    .nav-brand{display:flex;align-items:center;gap:.5rem;font-family:'Fraunces',serif;font-weight:700;font-size:1.05rem;color:var(--text);text-decoration:none;flex-shrink:0;}
-    .nav-brand span{color:var(--green);}
-    .nav-back{display:flex;align-items:center;gap:.4rem;padding:.4rem .85rem;border-radius:10px;font-size:.79rem;font-weight:600;color:var(--soft);text-decoration:none;background:var(--card);border:1px solid var(--border);transition:all .2s;}
-    .nav-back:hover{border-color:var(--green);color:var(--green);}
-    .nav-sp{flex:1;}
-    .week-pill{display:flex;align-items:center;gap:.4rem;background:rgba(16,185,129,.1);border:1px solid var(--border2);border-radius:99px;padding:.3rem .9rem;font-size:.74rem;font-weight:800;color:var(--green);}
-    .icon-btn{width:36px;height:36px;border-radius:10px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.9rem;transition:all .2s;}
-    .icon-btn:hover{border-color:var(--green);}
+    body{font-family:'Bricolage Grotesque',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{min-width:0;overflow-x:hidden;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}.rv-pg-main{padding-bottom:5.5rem;}}
 
     /* PAGE */
-    .page{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:2rem 1.5rem 6rem;}
+    .page{max-width:1000px;margin:0 auto;padding:2rem 1.75rem 4rem;}
 
     /* HERO */
     .hero{
       border-radius:24px;padding:2.5rem;
-      background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(245,158,11,.06),rgba(99,102,241,.06));
-      border:1px solid rgba(16,185,129,.2);
+      background:linear-gradient(135deg,rgba(255,92,122,.06),rgba(255,145,77,.04),rgba(182,255,60,.03));
+      border:1px solid rgba(255,92,122,.18);
       margin-bottom:2rem;position:relative;overflow:hidden;
       animation:fadeUp .5s ease both;
     }
-    .hero::after{content:'';position:absolute;top:-80px;right:-80px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(16,185,129,.1),transparent 65%);animation:glow 7s ease-in-out infinite;pointer-events:none;}
-    @keyframes glow{0%,100%{transform:scale(1);}50%{transform:scale(1.3);}}
     .hero-inner{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;}
-    .hero-badge{display:inline-flex;align-items:center;gap:.4rem;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.28);border-radius:99px;padding:.3rem .85rem;font-size:.7rem;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.875rem;}
-    .hero-title{font-family:'Fraunces',serif;font-size:clamp(1.6rem,3vw,2.4rem);font-weight:900;line-height:1.1;margin-bottom:.4rem;}
-    .hero-title em{font-style:italic;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .hero-badge{display:inline-flex;align-items:center;gap:.4rem;background:rgba(255,92,122,.08);border:1px solid rgba(255,92,122,.2);border-radius:99px;padding:.3rem .85rem;font-size:.7rem;font-weight:800;color:var(--rv-accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.875rem;}
+    .hero-title{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:clamp(1.6rem,3vw,2.4rem);font-weight:900;line-height:1.1;margin-bottom:.4rem;}
+    .hero-title em{font-style:italic;background:linear-gradient(135deg,var(--rv-accent),var(--rv-warm));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
     .hero-sub{font-size:.85rem;color:var(--soft);line-height:1.6;max-width:440px;}
     .hero-rstats{display:flex;gap:.7rem;}
-    .rstat{text-align:center;padding:.875rem 1.1rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:14px;min-width:75px;transition:all .25s;}
-    [data-theme="light"] .rstat{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.08);}
+    .rstat{text-align:center;padding:.875rem 1.1rem;background:rgba(255,255,255,.7);border:1px solid var(--rv-line);border-radius:14px;min-width:75px;transition:all .25s;}
     .rstat:hover{border-color:var(--green);}
-    .rstat-val{font-family:'Fraunces',serif;font-size:1.7rem;font-weight:900;line-height:1;margin-bottom:.2rem;}
+    .rstat-val{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.7rem;font-weight:900;line-height:1;margin-bottom:.2rem;}
     .rstat-lbl{font-size:.62rem;font-weight:800;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;}
 
     /* TABS */
     .tabs{display:flex;gap:.4rem;margin-bottom:1.75rem;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:.4rem;animation:fadeUp .4s .05s ease both;}
-    .tab{flex:1;padding:.6rem 1rem;border-radius:10px;font-size:.8rem;font-weight:800;text-align:center;cursor:pointer;transition:all .22s;color:var(--soft);border:none;background:transparent;font-family:'DM Sans',sans-serif;}
+    .tab{flex:1;padding:.6rem 1rem;border-radius:10px;font-size:.8rem;font-weight:800;text-align:center;cursor:pointer;transition:all .22s;color:var(--soft);border:none;background:transparent;font-family:'Bricolage Grotesque',system-ui,sans-serif;}
     .tab:hover{color:var(--text);}
-    .tab.active{background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;box-shadow:0 4px 12px rgba(16,185,129,.3);}
+    .tab.active{background:linear-gradient(135deg,var(--rv-accent),#FF7A95);color:#fff;box-shadow:0 4px 12px rgba(255,92,122,.3);}
 
     /* PANEL */
     .tab-panel{display:none;animation:fadeUp .3s ease both;}
@@ -258,7 +218,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
     .card:hover{border-color:var(--border2);}
     .card-head{display:flex;align-items:center;gap:.875rem;padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);}
     .ch-icon{width:38px;height:38px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;}
-    .ch-title{font-family:'Fraunces',serif;font-size:.95rem;font-weight:700;flex:1;}
+    .ch-title{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:.95rem;font-weight:700;flex:1;}
     .ch-chip{font-size:.65rem;font-weight:800;padding:.2rem .6rem;border-radius:99px;}
     .card-body{padding:1.25rem 1.5rem;}
 
@@ -266,7 +226,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
     .stat-box{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:1.1rem;transition:all .25s;text-align:center;}
     .stat-box:hover{border-color:var(--border2);transform:translateY(-2px);}
     .sb-icon{font-size:1.4rem;margin-bottom:.4rem;}
-    .sb-val{font-family:'Fraunces',serif;font-size:1.8rem;font-weight:900;line-height:1;margin-bottom:.2rem;}
+    .sb-val{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.8rem;font-weight:900;line-height:1;margin-bottom:.2rem;}
     .sb-lbl{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);}
     .sb-change{font-size:.72rem;font-weight:800;margin-top:.3rem;padding:.15rem .5rem;border-radius:99px;display:inline-block;}
     .change-good{background:rgba(16,185,129,.12);color:var(--green);}
@@ -325,11 +285,11 @@ const weekStars = Math.round((complianceRate / 100) * 5);
     /* FORM */
     .field{margin-bottom:1.1rem;}
     .field-label{display:block;font-size:.72rem;font-weight:800;color:var(--soft);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.45rem;}
-    .field-input{width:100%;background:var(--card2);border:1.5px solid var(--border);border-radius:11px;padding:.8rem 1rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.875rem;font-weight:500;outline:none;transition:all .22s;}
+    .field-input{width:100%;background:var(--card2);border:1.5px solid var(--border);border-radius:11px;padding:.8rem 1rem;color:var(--text);font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:.875rem;font-weight:500;outline:none;transition:all .22s;}
     .field-input::placeholder{color:var(--muted);}
     .field-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(16,185,129,.1);background:rgba(16,185,129,.03);}
     .mood-row{display:flex;gap:.5rem;}
-    .mood-btn{flex:1;padding:.65rem;background:var(--card2);border:1.5px solid var(--border);border-radius:10px;font-size:1.1rem;text-align:center;cursor:pointer;transition:all .22s;font-family:'DM Sans',sans-serif;}
+    .mood-btn{flex:1;padding:.65rem;background:var(--card2);border:1.5px solid var(--border);border-radius:10px;font-size:1.1rem;text-align:center;cursor:pointer;transition:all .22s;font-family:'Bricolage Grotesque',system-ui,sans-serif;}
     .mood-btn:hover{border-color:var(--border2);transform:scale(1.05);}
     .mood-btn.active{background:rgba(16,185,129,.12);border-color:var(--green);}
 
@@ -346,12 +306,12 @@ const weekStars = Math.round((complianceRate / 100) * 5);
     .sb-title{font-weight:800;font-size:.875rem;}
     .sb-sub{font-size:.72rem;color:var(--soft);margin-top:.1rem;}
     .sb-btns{display:flex;gap:.65rem;}
-    .btn{display:inline-flex;align-items:center;gap:.45rem;padding:.7rem 1.4rem;border-radius:11px;font-family:'DM Sans',sans-serif;font-weight:800;font-size:.82rem;border:none;cursor:pointer;transition:all .22s;position:relative;overflow:hidden;}
+    .btn{display:inline-flex;align-items:center;gap:.45rem;padding:.7rem 1.4rem;border-radius:11px;font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;font-size:.82rem;border:none;cursor:pointer;transition:all .22s;position:relative;overflow:hidden;}
     .btn::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);transform:translateX(-100%);transition:transform .45s;}
     .btn:hover::before{transform:translateX(100%);}
     .btn:hover{transform:translateY(-2px);}
-    .btn-primary{background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;box-shadow:0 4px 14px rgba(16,185,129,.3);}
-    .btn-primary:hover{box-shadow:0 8px 22px rgba(16,185,129,.42);}
+    .btn-primary{background:linear-gradient(135deg,var(--rv-accent),#FF7A95);color:#fff;box-shadow:0 4px 14px rgba(255,92,122,.3);}
+    .btn-primary:hover{box-shadow:0 8px 22px rgba(255,92,122,.4);}
     .btn-secondary{background:var(--card);border:1.5px solid var(--border);color:var(--soft);}
     .btn-secondary:hover{border-color:var(--green);color:var(--green);}
     .btn-spin{display:none;width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .7s linear infinite;}
@@ -395,18 +355,16 @@ const weekStars = Math.round((complianceRate / 100) * 5);
   </style>
 </head>
 <body>
-<div class="bg-wrap"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
-
-<!-- NAV -->
-<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="weekly" />
-
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="weekly" />
+<div class="rv-pg-main">
 <div class="page">
 
   <!-- HERO -->
   <div class="hero">
     <div class="hero-inner">
       <div>
-        <div class="hero-badge"><BarChart3 size={14} style="display:inline;vertical-align:middle;" /> Weekly Report · Week {currentWeek}</div>
+        <div class="hero-badge">📊 Weekly Report · Week {currentWeek}</div>
         <h1 class="hero-title">{userName}'s <em>Week {currentWeek}</em><br/>Performance Report</h1>
         <p class="hero-sub">Your complete analysis — what worked, what to improve, and your adjusted targets for next week.</p>
       </div>
@@ -437,10 +395,10 @@ const weekStars = Math.round((complianceRate / 100) * 5);
 
   <!-- TABS -->
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('overview',this)"><BarChart3 size={14} style="display:inline;vertical-align:middle;" /> Overview</button>
-    <button class="tab" onclick="switchTab('checkin',this)"><CheckCircle size={14} style="display:inline;vertical-align:middle;" /> Check-in</button>
-    <button class="tab" onclick="switchTab('insights',this)"><Brain size={14} style="display:inline;vertical-align:middle;" /> Insights</button>
-    <button class="tab" onclick="switchTab('history',this)"><Calendar size={14} style="display:inline;vertical-align:middle;" /> History</button>
+    <button class="tab active" onclick="switchTab('overview',this)">📊 Overview</button>
+    <button class="tab" onclick="switchTab('checkin',this)">✅ Check-in</button>
+    <button class="tab" onclick="switchTab('insights',this)">🧠 Insights</button>
+    <button class="tab" onclick="switchTab('history',this)">📅 History</button>
   </div>
 
   <!-- ════════ TAB: OVERVIEW ════════ -->
@@ -449,25 +407,25 @@ const weekStars = Math.round((complianceRate / 100) * 5);
     <!-- Stats Grid -->
     <div class="grid4" style="margin-bottom:1.25rem;animation:fadeUp .4s ease both;">
       <div class="stat-box" style="animation:fadeUp .4s ease both;">
-        <div class="sb-icon"><TrendingUp size={20} color="var(--green)" /></div>
+        <div class="sb-icon">📈</div>
         <div class="sb-val" style="color:var(--green);">{startWeight && latestWeight ? (startWeight - latestWeight).toFixed(1) + 'kg' : '—'}</div>
         <div class="sb-lbl">Weight Lost</div>
         <div class={`sb-change change-${startWeight > latestWeight ? 'good' : 'warn'}`}>{startWeight > latestWeight ? `▼ ${(startWeight - latestWeight).toFixed(1)}kg` : 'No change'}</div>
       </div>
       <div class="stat-box" style="animation:fadeUp .4s ease both;">
-        <div class="sb-icon"><Zap size={20} color="var(--gold)" /></div>
+        <div class="sb-icon">⚡</div>
         <div class="sb-val" style="color:var(--gold);">{avgEnergy}/5</div>
         <div class="sb-lbl">Avg Energy</div>
         <div class="sb-change change-good">{Number(avgEnergy) >= 4 ? 'High' : Number(avgEnergy) >= 3 ? 'Good' : 'Low'}</div>
       </div>
       <div class="stat-box" style="animation:fadeUp .4s ease both;">
-        <div class="sb-icon"><Droplets size={20} color="var(--cyan)" /></div>
+        <div class="sb-icon">💧</div>
         <div class="sb-val" style="color:var(--cyan);">{avgWater} gl</div>
         <div class="sb-lbl">Avg Water</div>
         <div class={`sb-change change-${Number(avgWater) >= 8 ? 'good' : 'warn'}`}>{Number(avgWater) >= 8 ? 'On target' : 'Below goal'}</div>
       </div>
       <div class="stat-box" style="animation:fadeUp .4s ease both;">
-        <div class="sb-icon"><Target size={20} color="var(--blue)" /></div>
+        <div class="sb-icon">🎯</div>
         <div class="sb-val" style="color:var(--blue);">{mealsFollowed}/{checkinCount}</div>
         <div class="sb-lbl">Meals Kept</div>
         <div class={`sb-change change-${complianceRate >= 80 ? 'good' : complianceRate >= 60 ? 'warn' : 'bad'}`}>{complianceRate}%</div>
@@ -484,7 +442,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
           </div>
           {slot.done && (
             <div class="ds-energy">
-              {slot.energy >= 4 ? <Zap size={11} /> : slot.energy >= 3 ? <CheckCircle size={11} /> : slot.energy >= 1 ? <span style="font-size:.7rem;">z</span> : <span>—</span>}
+              {slot.energy >= 4 ? '⚡' : slot.energy >= 3 ? '✅' : slot.energy >= 1 ? '😴' : '—'}
             </div>
           )}
           <div class="ds-bars">
@@ -500,7 +458,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
       <!-- Energy / Mood Chart -->
       <div class="card" style="animation:fadeUp .4s .05s ease both;">
         <div class="card-head">
-          <div class="ch-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.25);"><TrendingUp size={18} /></div>
+          <div class="ch-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.25);">📈</div>
           <div class="ch-title">Energy This Week</div>
         </div>
         <div class="card-body">
@@ -536,14 +494,14 @@ const weekStars = Math.round((complianceRate / 100) * 5);
       <!-- Weight Progress -->
       <div class="card" style="animation:fadeUp .4s .1s ease both;">
         <div class="card-head">
-          <div class="ch-icon" style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 10px rgba(16,185,129,.25);"><TrendingUp size={18} /></div>
+          <div class="ch-icon" style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 10px rgba(16,185,129,.25);">📈</div>
           <div class="ch-title">Weight Progress</div>
         </div>
         <div class="card-body">
           {weightLogs && weightLogs.length >= 2 ? (
             <>
               <div style="display:flex;align-items:baseline;gap:.75rem;margin-bottom:1rem;">
-                <div style="font-family:'Fraunces',serif;font-size:2.2rem;font-weight:900;color:var(--green);">{latestWeight}kg</div>
+                <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:2.2rem;font-weight:900;color:var(--green);">{latestWeight}kg</div>
                 <div>
                   <div style="font-size:.72rem;font-weight:800;color:var(--green);">↓ {(startWeight - latestWeight).toFixed(1)}kg lost</div>
                   <div style="font-size:.68rem;color:var(--soft);">from {startWeight}kg start</div>
@@ -589,7 +547,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
             </>
           ) : (
             <div style="text-align:center;padding:1.5rem 0;font-size:.82rem;color:var(--soft);">
-              <div style="margin-bottom:.5rem;"><TrendingUp size={32} color="var(--soft)" /></div>
+              <div style="margin-bottom:.5rem;font-size:2rem;">📈</div>
               Log your weight in the check-in to<br/>see your progress chart here.
             </div>
           )}
@@ -601,7 +559,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
     {macroGoals && (
       <div class="card" style="animation:fadeUp .4s .15s ease both;">
         <div class="card-head">
-          <div class="ch-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 4px 10px rgba(139,92,246,.25);"><Target size={18} /></div>
+          <div class="ch-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 4px 10px rgba(139,92,246,.25);">🎯</div>
           <div class="ch-title">Your Macro Targets</div>
           <div class="ch-chip" style="background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);color:var(--purple);">Personalized</div>
         </div>
@@ -617,7 +575,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
             ].map(m => (
               <div class="stat-box" style="text-align:left;padding:.875rem 1rem;">
                 <div style="font-size:1.1rem;margin-bottom:.35rem;">{m.icon}</div>
-                <div style={`font-family:'Fraunces',serif;font-size:1.4rem;font-weight:900;color:${m.color};margin-bottom:.15rem;`}>
+                <div style={`font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;font-weight:900;color:${m.color};margin-bottom:.15rem;`}>
                   {m.val}<span style="font-size:.7rem;font-weight:600;margin-left:.2rem;">{m.unit}</span>
                 </div>
                 <div class="sb-lbl">{m.label}</div>
@@ -632,9 +590,9 @@ const weekStars = Math.round((complianceRate / 100) * 5);
     {/* ── HABITS WEEK SUMMARY ── */}
     {habitsForWeek.length > 0 && (
       <div class="card" style="animation:fadeUp .4s .1s ease both;margin-top:1.25rem;">
-        <div class="card-title"><Target size={16} style="display:inline;vertical-align:middle;" /> Habit Compliance This Week</div>
+        <div class="card-title">🎯 Habit Compliance This Week</div>
         <div style="display:flex;align-items:center;gap:1.25rem;margin-bottom:1rem;">
-          <div style="font-family:'Fraunces',serif;font-size:2.5rem;font-weight:900;color:var(--green);">{habitCompliancePct}%</div>
+          <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:2.5rem;font-weight:900;color:var(--green);">{habitCompliancePct}%</div>
           <div>
             <div style="font-size:.82rem;font-weight:700;">{totalHabitDone} completions</div>
             <div style="font-size:.72rem;color:var(--soft);">out of {totalHabitOpportunities} possible this week</div>
@@ -670,19 +628,19 @@ const weekStars = Math.round((complianceRate / 100) * 5);
 
     {existingReport ? (
       <div style="text-align:center;padding:3rem;background:var(--card);border:1px solid var(--border2);border-radius:20px;animation:fadeUp .4s ease both;">
-        <div style="margin-bottom:1rem;"><CheckCircle size={56} color="var(--green)" /></div>
-        <h2 style="font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;margin-bottom:.6rem;">Week {currentWeek} <span style="font-style:italic;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">submitted!</span></h2>
+        <div style="margin-bottom:1rem;font-size:3.5rem;">✅</div>
+        <h2 style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.6rem;font-weight:900;margin-bottom:.6rem;">Week {currentWeek} <span style="font-style:italic;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">submitted!</span></h2>
         <p style="font-size:.875rem;color:var(--soft);max-width:340px;margin:0 auto .5rem;line-height:1.6;">Your weekly check-in is complete. Check the Insights tab for your personalized analysis.</p>
         <div style="margin-top:1.5rem;display:flex;justify-content:center;gap:.75rem;flex-wrap:wrap;">
-          <button class="btn btn-secondary" onclick="switchTab('insights', document.querySelector('.tab:nth-child(3)'))"><Brain size={14} style="display:inline;vertical-align:middle;" /> View Insights</button>
-          <a href="/dashboard" class="btn btn-primary" style="text-decoration:none;"><Home size={14} style="display:inline;vertical-align:middle;" /> Dashboard</a>
+          <button class="btn btn-secondary" onclick="switchTab('insights', document.querySelector('.tab:nth-child(3)'))">🧠 View Insights</button>
+          <a href="/dashboard" class="btn btn-primary" style="text-decoration:none;">🏠 Dashboard</a>
         </div>
       </div>
     ) : (
       <>
       <div class="card" style="animation:fadeUp .4s ease both;">
         <div class="card-head">
-          <div class="ch-icon" style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 10px rgba(16,185,129,.25);"><TrendingUp size={18} /></div>
+          <div class="ch-icon" style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 10px rgba(16,185,129,.25);">📈</div>
           <div class="ch-title">This Week's Weight</div>
         </div>
         <div class="card-body">
@@ -710,7 +668,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
 
       <div class="card" style="animation:fadeUp .4s .06s ease both;">
         <div class="card-head">
-          <div class="ch-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 10px rgba(239,68,68,.25);"><AlertTriangle size={18} /></div>
+          <div class="ch-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 10px rgba(239,68,68,.25);">⚠️</div>
           <div class="ch-title">Biggest Challenges This Week</div>
         </div>
         <div class="card-body">
@@ -736,7 +694,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
 
       <div class="card" style="animation:fadeUp .4s .12s ease both;">
         <div class="card-head">
-          <div class="ch-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(59,130,246,.25);"><Award size={18} /></div>
+          <div class="ch-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(59,130,246,.25);">🏆</div>
           <div class="ch-title">Wins & Notes</div>
         </div>
         <div class="card-body">
@@ -757,7 +715,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
           <div class="sb-title">Submit Week {currentWeek} Report</div>
           <div class="sb-sub">Generates your personalized next-week plan</div>
         </div>
-        <div class="xp-pill"><Star size={13} style="display:inline;vertical-align:middle;" /> +100 XP</div>
+        <div class="xp-pill">⭐ +100 XP</div>
         <div class="sb-btns">
           <button class="btn btn-secondary" onclick="window.print()">PDF</button>
           <button class="btn btn-primary" id="saveWeekBtn" onclick="saveWeeklyReport()">
@@ -781,7 +739,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
   <div class="tab-panel" id="tab-history">
     <div class="card" style="animation:fadeUp .4s ease both;">
       <div class="card-head">
-        <div class="ch-icon" style="background:linear-gradient(135deg,#6366f1,#4f46e5);box-shadow:0 4px 10px rgba(99,102,241,.25);"><Calendar size={18} /></div>
+        <div class="ch-icon" style="background:linear-gradient(135deg,#6366f1,#4f46e5);box-shadow:0 4px 10px rgba(99,102,241,.25);">📅</div>
         <div class="ch-title">Weekly Report History</div>
         <div class="ch-chip" style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);color:var(--indigo);">{prevReports?.length || 0} weeks</div>
       </div>
@@ -818,7 +776,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
           </table>
         ) : (
           <div style="text-align:center;padding:2.5rem;font-size:.85rem;color:var(--soft);">
-            <div style="margin-bottom:.75rem;"><BarChart3 size={40} color="var(--soft)" /></div>
+            <div style="margin-bottom:.75rem;font-size:2.5rem;">📊</div>
             Complete your first weekly check-in to start<br/>building your history.
           </div>
         )}
@@ -998,14 +956,14 @@ function buildInsightsTab() {
             />
           </svg>
           <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
-            <div style="font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;color:${scoreColor};line-height:1;">${score}</div>
+            <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.6rem;font-weight:900;color:${scoreColor};line-height:1;">${score}</div>
             <div style="font-size:.55rem;font-weight:800;color:var(--soft);text-transform:uppercase;">/100</div>
           </div>
         </div>
         <div style="font-weight:900;font-size:.85rem;color:${scoreColor};">${scoreLabel}</div>
       </div>
       <div style="flex:1;min-width:200px;">
-        <div style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;margin-bottom:.4rem;">Week ${currentWeek} Performance Score</div>
+        <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.3rem;font-weight:900;margin-bottom:.4rem;">Week ${currentWeek} Performance Score</div>
         <p style="font-size:.82rem;color:var(--soft);line-height:1.6;">
           ${score >= 75 ? `Exceptional week. You're building unstoppable momentum. At this rate, you'll hit your target ${targetWeight ? `of ${targetWeight}kg ` : ''}ahead of schedule.`
             : score >= 55 ? `Solid week with room to grow. The adjustments below will help you break through to the next level.`
@@ -1128,5 +1086,6 @@ window.addEventListener('load', () => {
 });
 
 </script>
+</div></div></div>
 </body>
 </html>
