@@ -1,16 +1,9 @@
 ---
 // src/pages/dashboard/keto-calculator.astro
 import { requireAuth } from '../../lib/auth';
-import DashNav from '../../components/DashNav.astro';
+import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
+import Sidebar from '../../components/Sidebar.astro';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import Calculator from 'lucide-astro/Calculator';
-import Flame from 'lucide-astro/Flame';
-import Beef from 'lucide-astro/Beef';
-import Droplets from 'lucide-astro/Droplets';
-import Zap from 'lucide-astro/Zap';
-import Target from 'lucide-astro/Target';
-import RefreshCw from 'lucide-astro/RefreshCw';
-import Info from 'lucide-astro/Info';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -20,6 +13,10 @@ const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pr
 const userName  = profile.full_name?.split(' ')[0] || 'there';
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
+
+await updateCurrentDay(user.id).catch(() => null);
+const journey = await getUserJourney(user.id, db).catch(() => null);
+const currentDay = journey?.current_day || 1;
 
 // Pre-fill from onboarding — graceful fallback to profile/defaults if DB unavailable
 let onboarding = null as any;
@@ -50,18 +47,40 @@ const prefillWeightDisplay = units === 'imperial'
   <title>{t('calc.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Fraunces:ital,wght@1,700;1,800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --rv-bg:#FAF6F1;--rv-card:#FFFFFF;--rv-bg-alt:#F2EDE5;--rv-line:#E5DED2;
+      --rv-ink:#16110F;--rv-ink-soft:#4A4340;--rv-muted:#8A8077;
+      --rv-accent:#FF5C7A;--rv-accent-2:#B6FF3C;--rv-warm:#FF914D;
+      --r-xs:6px;--r-sm:10px;--r:16px;--r-lg:22px;--r-xl:28px;
+      --bg:var(--rv-bg);--bg2:var(--rv-bg-alt);--card:var(--rv-card);--card2:var(--rv-bg-alt);
+      --border:rgba(22,17,15,.08);--border2:rgba(255,92,122,.25);
+      --text:var(--rv-ink);--soft:var(--rv-ink-soft);--muted:#C8BFBA;
+      --green:#16a34a;--green2:#22c55e;--green3:#4ade80;
+      --green-bg:#f0fdf4;--green-ring:rgba(22,163,74,.15);
+      --gold:#f59e0b;--red:#ef4444;--blue:#3b82f6;--purple:#8b5cf6;--cyan:#06b6d4;
+      --shadow-xs:0 1px 2px rgba(0,0,0,.04);
+      --shadow-sm:0 1px 4px rgba(0,0,0,.06),0 2px 8px rgba(0,0,0,.03);
+      --shadow:0 4px 20px rgba(0,0,0,.06),0 2px 6px rgba(0,0,0,.03);
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Bricolage Grotesque',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{min-width:0;overflow-x:hidden;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}.rv-pg-main{padding-bottom:5.5rem;}}
+  </style>
 </head>
 <body>
-
-<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="keto-calculator" />
-
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="keto-calculator" />
+<div class="rv-pg-main">
 <main class="page">
 
   <!-- ── Header ───────────────────────────────────────────── -->
   <header class="page-header fade-up">
     <div class="header-icon">
-      <Calculator size={22} />
+      🧮
     </div>
     <div>
       <h1 class="page-title">Keto Calculator</h1>
@@ -186,7 +205,7 @@ const prefillWeightDisplay = units === 'imperial'
       </div>
 
       <button class="reset-btn" onclick="resetForm()">
-        <RefreshCw size={14} />
+        🔄
         Reset
       </button>
     </section>
@@ -197,7 +216,7 @@ const prefillWeightDisplay = units === 'imperial'
       <!-- TDEE card -->
       <div class="card result-card fade-up" style="animation-delay:.1s">
         <div class="result-header">
-          <Zap size={16} class="result-header-icon amber" />
+          <span class="result-header-icon amber" style="font-size:1rem;">⚡</span>
           <h3 class="result-title">Daily Calories</h3>
         </div>
         <div class="tdee-row">
@@ -224,7 +243,7 @@ const prefillWeightDisplay = units === 'imperial'
       <!-- Macros card -->
       <div class="card result-card fade-up" style="animation-delay:.15s">
         <div class="result-header">
-          <Target size={16} class="result-header-icon green" />
+          <span class="result-header-icon green" style="font-size:1rem;">🎯</span>
           <h3 class="result-title">Daily Macros</h3>
         </div>
 
@@ -296,7 +315,7 @@ const prefillWeightDisplay = units === 'imperial'
       <!-- Tips card -->
       <div class="card tips-card fade-up" style="animation-delay:.2s">
         <div class="result-header">
-          <Info size={16} class="result-header-icon blue" />
+          <span class="result-header-icon blue" style="font-size:1rem;">ℹ️</span>
           <h3 class="result-title">Keto Tips</h3>
         </div>
         <div class="tips-list" id="tipsList">
@@ -307,7 +326,7 @@ const prefillWeightDisplay = units === 'imperial'
       <!-- Water card -->
       <div class="card water-card fade-up" style="animation-delay:.25s">
         <div class="result-header">
-          <Droplets size={16} class="result-header-icon cyan" />
+          <span class="result-header-icon cyan" style="font-size:1rem;">💧</span>
           <h3 class="result-title">Daily Water</h3>
         </div>
         <div class="water-row">
@@ -321,6 +340,7 @@ const prefillWeightDisplay = units === 'imperial'
   </div><!-- /layout -->
 
 </main>
+</div></div>
 
 <style>
 /* ── Page layout ──────────────────────────────────────────── */
@@ -343,7 +363,7 @@ const prefillWeightDisplay = units === 'imperial'
   color: var(--green); flex-shrink: 0;
 }
 .page-title {
-  font-family: 'Fraunces', serif;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
   font-style: italic; font-size: 1.8rem; font-weight: 800;
   color: var(--text); margin: 0;
 }
@@ -442,8 +462,8 @@ const prefillWeightDisplay = units === 'imperial'
 }
 .goal-btn:hover { border-color: var(--border2); transform: translateY(-1px); }
 .goal-btn.active {
-  border-color: var(--green); background: var(--green-bg);
-  box-shadow: 0 0 0 3px var(--green-ring);
+  border-color: var(--rv-accent); background: rgba(255,92,122,.06);
+  box-shadow: 0 0 0 3px rgba(255,92,122,.12);
 }
 .goal-icon { display:flex; align-items:center; justify-content:center; font-size: 1.3rem; }
 .goal-label { font-size: .78rem; font-weight: 700; color: var(--text); }
@@ -490,7 +510,7 @@ const prefillWeightDisplay = units === 'imperial'
   background: var(--green-bg); border-color: var(--border2);
 }
 .tdee-val {
-  font-family: 'Fraunces', serif; font-style: italic;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-style: italic;
   font-size: 1.6rem; font-weight: 800; color: var(--text); line-height: 1;
 }
 .tdee-val.green { color: var(--green); }
@@ -516,7 +536,7 @@ const prefillWeightDisplay = units === 'imperial'
 .ring-prot { stroke: var(--green); stroke-width: 12; }
 .ring-carb { stroke: var(--blue);  stroke-width: 10; }
 .ring-center-num {
-  font-family: 'Fraunces', serif; font-style: italic;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-style: italic;
   font-size: 22px; font-weight: 800; fill: var(--text);
   text-anchor: middle; transform: rotate(90deg);
   transform-origin: 80px 80px;
@@ -536,7 +556,7 @@ const prefillWeightDisplay = units === 'imperial'
 .legend-dot.prot { background: var(--green); }
 .legend-dot.carb { background: var(--blue);  }
 .legend-macro {
-  font-family: 'Fraunces', serif; font-style: italic;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-style: italic;
   font-size: 1.15rem; font-weight: 800; color: var(--text);
 }
 .legend-label { font-size: .76rem; color: var(--soft); }
@@ -575,7 +595,7 @@ const prefillWeightDisplay = units === 'imperial'
 .water-card { }
 .water-row { display: flex; align-items: baseline; gap: .75rem; margin-bottom: .5rem; }
 .water-val {
-  font-family: 'Fraunces', serif; font-style: italic;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-style: italic;
   font-size: 2rem; font-weight: 800; color: var(--cyan);
 }
 .water-sub { font-size: .85rem; color: var(--soft); }
