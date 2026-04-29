@@ -1,25 +1,9 @@
 ---
 // src/pages/dashboard/checkin.astro
-import { getUserJourney, getDailyTasks } from '../../lib/supabase';
+import { getUserJourney, getDailyTasks, updateCurrentDay } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import DashNav from '../../components/DashNav.astro';
-import CheckCircle from 'lucide-astro/CheckCircle';
-import Zap from 'lucide-astro/Zap';
-import Droplets from 'lucide-astro/Droplets';
-import Target from 'lucide-astro/Target';
-import Flame from 'lucide-astro/Flame';
-import Activity from 'lucide-astro/Activity';
-import Brain from 'lucide-astro/Brain';
-import Calendar from 'lucide-astro/Calendar';
-import Edit3 from 'lucide-astro/Edit3';
-import BarChart3 from 'lucide-astro/BarChart3';
-import AlertTriangle from 'lucide-astro/AlertTriangle';
-import Utensils from 'lucide-astro/Utensils';
-import BookOpen from 'lucide-astro/BookOpen';
-import Star from 'lucide-astro/Star';
-import Home from 'lucide-astro/Home';
-import Moon from 'lucide-astro/Moon';
+import Sidebar from '../../components/Sidebar.astro';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -28,6 +12,8 @@ const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+
+await updateCurrentDay(user.id).catch(() => null);
 
 // All 5 queries fire in parallel — none depend on each other
 const today = new Date().toISOString().split('T')[0];
@@ -96,66 +82,35 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
   <title>{t('checkin.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
   <script is:inline>
     (function(){ const t=localStorage.getItem('keto-theme')||'light'; document.documentElement.setAttribute('data-theme',t); })();
   </script>
   <style>
-    :root {
-      --bg:#070d0a; --surface:#0d1510; --card:#111d13;
-      --card2:#162019; --border:rgba(16,185,129,.12);
-      --border2:rgba(16,185,129,.25); --border3:rgba(16,185,129,.42);
-      --text:#e4efe4; --soft:#618063; --muted:#2c3e2e;
-      --green:#10b981; --green2:#34d399; --green3:#6ee7b7;
-      --gold:#f59e0b; --red:#ef4444; --red2:#fca5a5;
-      --blue:#3b82f6; --purple:#8b5cf6; --cyan:#06b6d4;
-      --orange:#f97316; --amber:#fbbf24;
-      --nav-h:64px;
-    }
-    [data-theme="light"] {
-      --bg:#f0f5f0; --surface:#fff; --card:#fff; --card2:#f4f9f4;
-      --border:rgba(0,0,0,.07); --border2:rgba(16,185,129,.3);
-      --text:#0f1f0f; --soft:#4a7a4a; --muted:#b0c8b0;
+    :root{
+      --rv-bg:#FAF6F1;--rv-card:#FFFFFF;--rv-bg-alt:#F2EDE5;--rv-line:#E5DED2;
+      --rv-ink:#16110F;--rv-ink-soft:#4A4340;--rv-muted:#8A8077;
+      --rv-accent:#FF5C7A;--rv-accent-2:#B6FF3C;--rv-warm:#FF914D;
+      --bg:var(--rv-bg);--card:var(--rv-card);--card2:var(--rv-bg-alt);--surface:var(--rv-bg-alt);
+      --border:var(--rv-line);--border2:rgba(255,92,122,.3);--border3:rgba(255,92,122,.5);
+      --text:var(--rv-ink);--soft:var(--rv-ink-soft);--muted:#C8BFBA;
+      --green:#10b981;--green2:#34d399;--gold:#f59e0b;--red:#ef4444;--red2:#fca5a5;
+      --blue:#3b82f6;--purple:#8b5cf6;--cyan:#06b6d4;
     }
 
-    *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
-    html { scroll-behavior:smooth; }
-    body {
-      font-family:'DM Sans',sans-serif;
-      background:var(--bg); color:var(--text);
-      min-height:100vh; overflow-x:hidden;
-      transition:background .3s,color .3s;
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html{scroll-behavior:smooth;}
+    body{
+      font-family:'Bricolage Grotesque',system-ui,sans-serif;
+      background:var(--bg);color:var(--text);
+      min-height:100vh;overflow-x:hidden;
     }
-
-    /* ── BG ── */
-    .bg-wrap { position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
-    .orb { position:absolute; border-radius:50%; filter:blur(100px); animation:drift ease-in-out infinite; }
-    [data-theme="light"] .orb { opacity:.08; }
-    .o1{width:600px;height:600px;background:rgba(16,185,129,.07);top:-200px;left:-100px;animation-duration:25s;opacity:.5;}
-    .o2{width:450px;height:450px;background:rgba(245,158,11,.05);bottom:-100px;right:-100px;animation-duration:30s;animation-delay:-14s;opacity:.4;}
-    .o3{width:300px;height:300px;background:rgba(59,130,246,.04);top:40%;left:38%;animation-duration:20s;animation-delay:-8s;opacity:.35;}
-    @keyframes drift{0%,100%{transform:translate(0,0);}40%{transform:translate(40px,-50px);}70%{transform:translate(-30px,40px);}}
-
-    /* ── NAV ── */
-    nav{
-      position:sticky;top:0;z-index:100;height:var(--nav-h);
-      background:rgba(7,13,10,.88);border-bottom:1px solid var(--border);
-      backdrop-filter:blur(20px);display:flex;align-items:center;
-      transition:background .3s;
-    }
-    [data-theme="light"] nav{background:rgba(255,255,255,.9);}
-    .nav-inner{max-width:900px;margin:0 auto;padding:0 1.5rem;width:100%;display:flex;align-items:center;gap:1rem;}
-    .nav-brand{display:flex;align-items:center;gap:.5rem;font-family:'Fraunces',serif;font-weight:700;font-size:1.05rem;color:var(--text);text-decoration:none;flex-shrink:0;}
-    .nav-brand span{color:var(--green);}
-    .nav-back{display:flex;align-items:center;gap:.4rem;padding:.42rem .85rem;border-radius:10px;font-size:.8rem;font-weight:600;color:var(--soft);text-decoration:none;background:var(--card);border:1px solid var(--border);transition:all .2s;}
-    .nav-back:hover{border-color:var(--green);color:var(--green);}
-    .nav-spacer{flex:1;}
-    .icon-btn{width:36px;height:36px;border-radius:10px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.9rem;transition:all .2s;}
-    .icon-btn:hover{border-color:var(--green);}
-    .day-pill{display:flex;align-items:center;gap:.4rem;background:rgba(16,185,129,.1);border:1px solid var(--border2);border-radius:99px;padding:.3rem .85rem;font-size:.75rem;font-weight:800;color:var(--green);}
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{min-width:0;overflow-x:hidden;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}.rv-pg-main{padding-bottom:5.5rem;}}
 
     /* ── PAGE ── */
-    .page{position:relative;z-index:1;max-width:700px;margin:0 auto;padding:2rem 1.5rem 6rem;}
+    .page{max-width:700px;margin:0 auto;padding:2rem 1.75rem 4rem;}
 
     /* ── ALREADY DONE ── */
     .done-card{
@@ -164,8 +119,8 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
       animation:fadeUp .5s ease both;
     }
     .done-icon{font-size:4rem;margin-bottom:1.25rem;}
-    .done-title{font-family:'Fraunces',serif;font-size:2rem;font-weight:900;margin-bottom:.6rem;}
-    .done-title em{font-style:italic;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .done-title{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:2rem;font-weight:900;margin-bottom:.6rem;}
+    .done-title em{font-style:italic;background:linear-gradient(135deg,var(--rv-accent),var(--rv-warm));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
     .done-sub{font-size:.9rem;color:var(--soft);line-height:1.6;max-width:380px;margin:0 auto 2rem;}
 
     /* ── HERO ── */
@@ -174,10 +129,10 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
       margin-bottom:2rem;animation:fadeUp .5s ease both;
     }
     .hero-greet{
-      font-family:'Fraunces',serif;
+      font-family:'Bricolage Grotesque',system-ui,sans-serif;
       font-size:clamp(1.5rem,3vw,2rem);font-weight:900;line-height:1.15;
     }
-    .hero-greet em{font-style:italic;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .hero-greet em{font-style:italic;background:linear-gradient(135deg,var(--rv-accent),var(--rv-warm));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
     .hero-sub{font-size:.82rem;color:var(--soft);margin-top:.3rem;}
     .hero-stats{display:flex;gap:.6rem;flex-shrink:0;}
     .hstat{
@@ -186,7 +141,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
       min-width:64px;transition:all .2s;
     }
     .hstat:hover{border-color:var(--border2);}
-    .hstat-val{font-family:'Fraunces',serif;font-size:1.35rem;font-weight:900;line-height:1;}
+    .hstat-val{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.35rem;font-weight:900;line-height:1;}
     .hstat-lbl{font-size:.6rem;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;margin-top:.15rem;}
 
     /* ── KETO FLU ALERT ── */
@@ -232,11 +187,11 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
       width:38px;height:38px;border-radius:11px;flex-shrink:0;
       display:flex;align-items:center;justify-content:center;font-size:1rem;
     }
-    .sh-title{font-family:'Fraunces',serif;font-size:.95rem;font-weight:700;flex:1;}
+    .sh-title{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:.95rem;font-weight:700;flex:1;}
     .sh-chip{
       font-size:.65rem;font-weight:800;padding:.2rem .6rem;
-      border-radius:99px;background:rgba(16,185,129,.1);
-      border:1px solid rgba(16,185,129,.2);color:var(--green);
+      border-radius:99px;background:rgba(255,92,122,.08);
+      border:1px solid rgba(255,92,122,.2);color:var(--rv-accent);
     }
     .section-body{padding:1.25rem 1.5rem;}
 
@@ -315,7 +270,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
     .wglass:hover{border-color:var(--cyan);transform:scale(1.1);}
     .wglass.full{background:rgba(6,182,212,.15);border-color:rgba(6,182,212,.4);}
     .water-count{
-      font-family:'Fraunces',serif;font-size:2rem;font-weight:900;
+      font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:2rem;font-weight:900;
       color:var(--cyan);min-width:40px;text-align:center;
     }
     .water-lbl{font-size:.68rem;color:var(--soft);text-align:center;}
@@ -324,13 +279,13 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
     .note-area{
       width:100%;background:var(--card2);border:1.5px solid var(--border);
       border-radius:12px;padding:.875rem 1rem;
-      color:var(--text);font-family:'DM Sans',sans-serif;
+      color:var(--text);font-family:'Bricolage Grotesque',system-ui,sans-serif;
       font-size:.85rem;resize:none;outline:none;
       transition:all .22s;min-height:90px;
       line-height:1.6;
     }
     .note-area::placeholder{color:var(--muted);}
-    .note-area:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(16,185,129,.1);}
+    .note-area:focus{border-color:var(--rv-accent);box-shadow:0 0 0 3px rgba(255,92,122,.1);}
 
     /* ── FASTING SECTION ── */
     .fasting-card{
@@ -380,13 +335,12 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
     /* ── SAVE BUTTON ── */
     .save-wrap{
       position:sticky;bottom:1.5rem;z-index:50;
-      background:rgba(7,13,10,.92);border:1px solid var(--border2);
+      background:rgba(250,246,241,.96);border:1px solid var(--border2);
       border-radius:16px;padding:1rem 1.5rem;
       display:flex;align-items:center;justify-content:space-between;gap:1rem;
-      backdrop-filter:blur(20px);box-shadow:0 16px 48px rgba(0,0,0,.4);
+      backdrop-filter:blur(20px);box-shadow:0 16px 48px rgba(0,0,0,.12);
       animation:fadeUp .4s .3s ease both;
     }
-    [data-theme="light"] .save-wrap{background:rgba(255,255,255,.95);}
     .save-info{flex:1;}
     .save-title{font-weight:800;font-size:.875rem;margin-bottom:.12rem;}
     .save-sub{font-size:.72rem;color:var(--soft);}
@@ -399,15 +353,15 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
     .btn-save{
       display:flex;align-items:center;justify-content:center;gap:.5rem;
       padding:.75rem 1.6rem;border-radius:12px;
-      background:linear-gradient(135deg,var(--green),var(--green2));
-      border:none;color:#fff;font-family:'DM Sans',sans-serif;
+      background:linear-gradient(135deg,var(--rv-accent),#FF7A95);
+      border:none;color:#fff;font-family:'Bricolage Grotesque',system-ui,sans-serif;
       font-weight:800;font-size:.875rem;cursor:pointer;transition:all .25s;
-      box-shadow:0 4px 16px rgba(16,185,129,.3);min-width:120px;
+      box-shadow:0 4px 16px rgba(255,92,122,.3);min-width:120px;
       position:relative;overflow:hidden;
     }
-    .btn-save::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);transform:translateX(-100%);transition:transform .5s;}
+    .btn-save::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);transform:translateX(-100%);transition:transform .5s;}
     .btn-save:hover::before{transform:translateX(100%);}
-    .btn-save:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,.4);}
+    .btn-save:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(255,92,122,.4);}
     .btn-save:disabled{opacity:.5;cursor:not-allowed;transform:none;}
     .btn-spin{display:none;width:16px;height:16px;border-radius:50%;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .7s linear infinite;}
     @keyframes spin{to{transform:rotate(360deg);}}
@@ -415,7 +369,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
     /* ── SUCCESS OVERLAY ── */
     .success-overlay{
       display:none;position:fixed;inset:0;z-index:9999;
-      background:rgba(7,13,10,.96);backdrop-filter:blur(20px);
+      background:rgba(250,246,241,.97);backdrop-filter:blur(20px);
       flex-direction:column;align-items:center;justify-content:center;
       text-align:center;padding:2rem;
     }
@@ -423,8 +377,8 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
     @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
     .so-icon{font-size:5rem;margin-bottom:1.5rem;animation:bounceIn .5s ease both;}
     @keyframes bounceIn{0%{transform:scale(0);}70%{transform:scale(1.15);}100%{transform:scale(1);}}
-    .so-title{font-family:'Fraunces',serif;font-size:2.2rem;font-weight:900;margin-bottom:.75rem;}
-    .so-title em{font-style:italic;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .so-title{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:2.2rem;font-weight:900;margin-bottom:.75rem;}
+    .so-title em{font-style:italic;background:linear-gradient(135deg,var(--rv-accent),var(--rv-warm));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
     .so-xp{
       display:inline-flex;align-items:center;gap:.5rem;
       background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);
@@ -460,8 +414,8 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
 
     /* ── CHECKIN HERO CARD ── */
     .ci-hero {
-      background: linear-gradient(135deg, rgba(16,185,129,.13) 0%, rgba(245,158,11,.07) 60%, rgba(59,130,246,.06) 100%);
-      border: 1.5px solid rgba(16,185,129,.28);
+      background: linear-gradient(135deg, rgba(255,92,122,.06) 0%, rgba(255,145,77,.04) 60%, rgba(182,255,60,.03) 100%);
+      border: 1.5px solid rgba(255,92,122,.2);
       border-radius: 24px;
       padding: 1.75rem 1.75rem 1.5rem;
       margin-bottom: 1.5rem;
@@ -472,7 +426,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
     .ci-hero::before {
       content: '';
       position: absolute; top: 0; left: 0; right: 0; height: 3px;
-      background: linear-gradient(90deg, var(--green), var(--gold), var(--blue));
+      background: linear-gradient(90deg, var(--rv-accent), var(--rv-warm), var(--rv-accent-2));
     }
     .ci-hero-top {
       display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
@@ -485,7 +439,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
     }
     .ci-hero-title em {
       font-style: italic;
-      background: linear-gradient(135deg, var(--green), var(--green2));
+      background: linear-gradient(135deg, var(--rv-accent), var(--rv-warm));
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
     .ci-hero-sub { font-size: .82rem; color: var(--soft); line-height: 1.5; }
@@ -517,7 +471,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
       height: 2px; background: var(--muted);
       width: calc(100% - 4px); z-index: 0;
     }
-    .ci-step.done:not(:last-child)::after { background: var(--green); }
+    .ci-step.done:not(:last-child)::after { background: var(--rv-accent); }
     .ci-step-dot {
       width: 28px; height: 28px; border-radius: 50%;
       border: 2px solid var(--muted); background: var(--card2);
@@ -526,18 +480,18 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
       transition: all .3s;
     }
     .ci-step.done .ci-step-dot {
-      background: var(--green); border-color: var(--green);
-      color: #fff; box-shadow: 0 0 10px rgba(16,185,129,.4);
+      background: var(--rv-accent); border-color: var(--rv-accent);
+      color: #fff; box-shadow: 0 0 10px rgba(255,92,122,.35);
     }
     .ci-step.active .ci-step-dot {
-      background: var(--card); border-color: var(--green);
-      color: var(--green); box-shadow: 0 0 0 3px rgba(16,185,129,.15);
+      background: var(--card); border-color: var(--rv-accent);
+      color: var(--rv-accent); box-shadow: 0 0 0 3px rgba(255,92,122,.15);
     }
     .ci-step-lbl {
       font-size: .58rem; font-weight: 700; color: var(--soft);
       text-align: center; white-space: nowrap; text-transform: uppercase; letter-spacing: .04em;
     }
-    .ci-step.active .ci-step-lbl { color: var(--green); }
+    .ci-step.active .ci-step-lbl { color: var(--rv-accent); }
 
     /* ── SLIDER SECTION ── */
     .slider-section {
@@ -577,16 +531,16 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
     input[type=range].ci-range::-webkit-slider-thumb {
       -webkit-appearance: none; appearance: none;
       width: 22px; height: 22px; border-radius: 50%;
-      background: linear-gradient(135deg, var(--green), var(--green2));
+      background: linear-gradient(135deg, var(--rv-accent), #FF7A95);
       border: 2px solid #fff;
-      box-shadow: 0 2px 8px rgba(16,185,129,.45);
+      box-shadow: 0 2px 8px rgba(255,92,122,.4);
       cursor: pointer; transition: transform .15s;
     }
     input[type=range].ci-range::-moz-range-thumb {
       width: 22px; height: 22px; border-radius: 50%;
-      background: linear-gradient(135deg, var(--green), var(--green2));
+      background: linear-gradient(135deg, var(--rv-accent), #FF7A95);
       border: 2px solid #fff;
-      box-shadow: 0 2px 8px rgba(16,185,129,.45);
+      box-shadow: 0 2px 8px rgba(255,92,122,.4);
       cursor: pointer;
     }
     input[type=range].ci-range:hover::-webkit-slider-thumb { transform: scale(1.2); }
@@ -659,22 +613,22 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
       width: 100%;
       padding: 1rem 2rem;
       border-radius: 14px;
-      background: linear-gradient(135deg, var(--green), var(--green2));
+      background: linear-gradient(135deg, var(--rv-accent), #FF7A95);
       border: none; color: #fff;
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Bricolage Grotesque', system-ui, sans-serif;
       font-weight: 900; font-size: 1rem;
       cursor: pointer; transition: all .25s;
-      box-shadow: 0 6px 20px rgba(16,185,129,.35);
+      box-shadow: 0 6px 20px rgba(255,92,122,.3);
       display: flex; align-items: center; justify-content: center; gap: .6rem;
       position: relative; overflow: hidden;
     }
     .btn-save-big::before {
       content: ''; position: absolute; inset: 0;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
       transform: translateX(-100%); transition: transform .55s;
     }
     .btn-save-big:hover::before { transform: translateX(100%); }
-    .btn-save-big:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(16,185,129,.45); }
+    .btn-save-big:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(255,92,122,.4); }
     .btn-save-big:disabled { opacity: .5; cursor: not-allowed; transform: none; }
 
     @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
@@ -696,21 +650,17 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
   </style>
 </head>
 <body>
-
-<div class="bg-wrap"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
-
-<!-- NAV -->
-<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="checkin" />
-
-<!-- PAGE -->
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="checkin" />
+<div class="rv-pg-main">
 <div class="page">
 
   {/* ── ALREADY DONE BANNER (update mode) ── */}
   {alreadyDone && (
-    <div style="background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(52,211,153,.08));border:1px solid rgba(16,185,129,.35);border-radius:16px;padding:1rem 1.25rem;display:flex;align-items:center;gap:.875rem;margin-bottom:1rem;">
-      <CheckCircle size={24} color="var(--green2)" />
+    <div style="background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(52,211,153,.05));border:1px solid rgba(16,185,129,.25);border-radius:16px;padding:1rem 1.25rem;display:flex;align-items:center;gap:.875rem;margin-bottom:1rem;">
+      <span style="font-size:1.4rem;">✅</span>
       <div>
-        <div style="font-weight:700;color:var(--green2);font-size:.9rem;">{t('checkin.already_done')}</div>
+        <div style="font-weight:700;color:#10b981;font-size:.9rem;">{t('checkin.already_done')}</div>
         <div style="font-size:.8rem;color:var(--soft);">You can update your check-in anytime — changes save instantly.</div>
       </div>
     </div>
@@ -720,13 +670,13 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
   <div class="ci-hero">
     <div class="ci-hero-top">
       <div>
-        <h1 class="ci-hero-title">{alreadyDone ? <Edit3 size={22} style="display:inline;vertical-align:middle;" /> : <BookOpen size={22} style="display:inline;vertical-align:middle;" />} <em>Check-in</em></h1>
+        <h1 class="ci-hero-title">{alreadyDone ? '✏️' : '📋'} <em>Check-in</em></h1>
         <p class="ci-hero-sub">{alreadyDone ? `Update today's check-in, ${userName}` : `${greeting}, ${userName} — share how you feel today and earn XP`}</p>
       </div>
       <div class="ci-badges">
-        <span class="ci-badge-day"><Calendar size={12} style="display:inline;vertical-align:middle;" /> Day {currentDay}</span>
-        {!alreadyDone && <span class="ci-badge-xp"><Zap size={12} style="display:inline;vertical-align:middle;" /> Earn +50 XP</span>}
-        {alreadyDone  && <span class="ci-badge-xp" style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.3);color:var(--green2);"><CheckCircle size={12} style="display:inline;vertical-align:middle;" /> Updating</span>}
+        <span class="ci-badge-day">📅 Day {currentDay}</span>
+        {!alreadyDone && <span class="ci-badge-xp">⚡ Earn +50 XP</span>}
+        {alreadyDone  && <span class="ci-badge-xp" style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.3);color:#10b981;">✅ Updating</span>}
       </div>
     </div>
     {/* 5-step progress indicator */}
@@ -758,7 +708,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
   {isFirstWeek && (
     <div class="flu-alert" id="fluAlert">
       <div class="flu-head">
-        <div class="flu-icon"><AlertTriangle size={20} /></div>
+        <div class="flu-icon">⚠️</div>
         <div>
           <div class="flu-title">Week 1 — Watch for Keto Flu</div>
           <div class="flu-desc">Days 2-5 are the hardest. Your body is switching from sugar to fat as fuel. These symptoms are normal and temporary.</div>
@@ -788,7 +738,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
   {/* ── HOW DO YOU FEEL — SLIDERS ── */}
   <div class="slider-section" style="animation-delay:.05s;">
     <div class="section-head">
-      <div class="sh-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.25);"><Activity size={18} /></div>
+      <div class="sh-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.25);">📊</div>
       <div class="sh-title">How do you feel today?</div>
       <div class="sh-chip">Slide to rate</div>
     </div>
@@ -901,7 +851,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
   {isFirstWeek && (
     <div class="section" style="animation-delay:.1s;">
       <div class="section-head">
-        <div class="sh-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 10px rgba(239,68,68,.25);"><Activity size={18} /></div>
+        <div class="sh-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 10px rgba(239,68,68,.25);">📊</div>
         <div class="sh-title">Any keto flu symptoms?</div>
         <div class="sh-chip" style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.2);color:var(--red2);">Week 1</div>
       </div>
@@ -937,7 +887,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
   {/* ── COMPLIANCE ── */}
   <div class="section" style="animation-delay:.15s;">
     <div class="section-head">
-      <div class="sh-icon" style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 10px rgba(16,185,129,.25);"><CheckCircle size={18} /></div>
+      <div class="sh-icon" style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 10px rgba(16,185,129,.25);">✅</div>
       <div class="sh-title">Today's Compliance</div>
     </div>
     <div class="section-body">
@@ -971,7 +921,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
   {/* ── WATER ── */}
   <div class="section" style="animation-delay:.2s;">
     <div class="section-head">
-      <div class="sh-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2);box-shadow:0 4px 10px rgba(6,182,212,.25);"><Droplets size={18} /></div>
+      <div class="sh-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2);box-shadow:0 4px 10px rgba(6,182,212,.25);">💧</div>
       <div class="sh-title">{t('checkin.water')}</div>
       <div class="sh-chip" style="background:rgba(6,182,212,.1);border-color:rgba(6,182,212,.2);color:var(--cyan);" id="waterChip">0 / 8 glasses</div>
     </div>
@@ -979,7 +929,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
       <div class="water-visual-row">
         <div class="water-glasses-row" id="waterGlasses">
           {[1,2,3,4,5,6,7,8].map((n) => (
-            <button class="wglass-btn" data-n={n} onclick="window.setWater(this)" title={`${n} glass${n > 1 ? 'es' : ''}`}><Droplets size={16} /></button>
+            <button class="wglass-btn" data-n={n} onclick="window.setWater(this)" title={`${n} glass${n > 1 ? 'es' : ''}`}>💧</button>
           ))}
         </div>
         <div class="water-stat">
@@ -989,7 +939,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
         </div>
       </div>
       <div style="margin-top:.875rem;font-size:.75rem;color:var(--soft);line-height:1.5;">
-        <Target size={13} style="display:inline;vertical-align:middle;" /> Goal: <strong style="color:var(--cyan);">{isFirstWeek ? '10–12 glasses' : '8–10 glasses'}</strong> — {isFirstWeek ? 'Extra water in week 1 flushes out adaptation toxins' : 'Consistent hydration maintains ketosis efficiency'}
+        🎯 Goal: <strong style="color:var(--cyan);">{isFirstWeek ? '10–12 glasses' : '8–10 glasses'}</strong> — {isFirstWeek ? 'Extra water in week 1 flushes out adaptation toxins' : 'Consistent hydration maintains ketosis efficiency'}
       </div>
     </div>
   </div>
@@ -997,7 +947,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
   {/* ── ELECTROLYTES (always shown — essential for keto) ── */}
   <div class="section" style="animation-delay:.25s;">
     <div class="section-head">
-      <div class="sh-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 4px 10px rgba(139,92,246,.25);"><Zap size={18} /></div>
+      <div class="sh-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 4px 10px rgba(139,92,246,.25);">⚡</div>
       <div class="sh-title">Electrolytes Today</div>
       <div class="sh-chip" style="background:rgba(139,92,246,.1);border-color:rgba(139,92,246,.2);color:var(--purple);">Essential</div>
     </div>
@@ -1025,7 +975,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
   {/* ── NOTE ── */}
   <div class="section" style="animation-delay:.3s;">
     <div class="section-head">
-      <div class="sh-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(59,130,246,.25);"><Edit3 size={18} /></div>
+      <div class="sh-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(59,130,246,.25);">✏️</div>
       <div class="sh-title">{t('checkin.notes')}</div>
       <div class="sh-chip" style="background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.2);color:var(--blue);">Optional</div>
     </div>
@@ -1042,7 +992,7 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
   {/* ── SLEEP TRACKING ── */}
   <div class="section" style="animation-delay:.32s;">
     <div class="section-head">
-      <div class="sh-icon" style="background:linear-gradient(135deg,#6366f1,#4f46e5);box-shadow:0 4px 10px rgba(99,102,241,.25);"><Moon size={18} /></div>
+      <div class="sh-icon" style="background:linear-gradient(135deg,#6366f1,#4f46e5);box-shadow:0 4px 10px rgba(99,102,241,.25);">🌙</div>
       <div class="sh-title">Last Night's Sleep</div>
       <div class="sh-chip" style="background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.2);color:#a5b4fc;">Optional</div>
     </div>
@@ -1091,16 +1041,16 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
 
 <!-- SUCCESS OVERLAY -->
 <div class="success-overlay" id="successOverlay">
-  <div class="so-icon"><CheckCircle size={72} color="var(--green)" /></div>
+  <div class="so-icon">✅</div>
   <h2 class="so-title">{t('checkin.done')} <em id="soDay">{currentDay}</em></h2>
-  <div class="so-xp"><Star size={18} style="display:inline;vertical-align:middle;" /> +<span id="soXP">30</span> XP earned</div>
+  <div class="so-xp">⭐ +<span id="soXP">30</span> XP earned</div>
   <p class="so-sub" id="soSub">Great work staying consistent. Every check-in is one step closer to your goal.</p>
   <div class="so-insights">
-    <div class="so-insight-title"><BarChart3 size={14} style="display:inline;vertical-align:middle;" /> Tonight's Analysis</div>
+    <div class="so-insight-title">📊 Tonight's Analysis</div>
     <div id="soInsightsList"></div>
   </div>
   <a href="/dashboard" style="display:inline-flex;align-items:center;gap:.5rem;padding:.875rem 2rem;border-radius:13px;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;font-weight:800;font-size:.9rem;text-decoration:none;box-shadow:0 4px 16px rgba(16,185,129,.3);">
-    <Home size={16} /> {t('common.back')}
+    🏠 {t('common.back')}
   </a>
 </div>
 
@@ -1513,5 +1463,6 @@ window.toggleComp   = toggleComp;
 window.toggleElec   = toggleElec;
 window.saveCheckin  = saveCheckin;
 </script>
+</div></div></div>
 </body>
 </html>
