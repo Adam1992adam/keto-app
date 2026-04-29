@@ -2,9 +2,9 @@
 // src/pages/dashboard/guide.astro
 // /dashboard/guide — Interactive new-user feature guide
 import { requireAuth } from '../../lib/auth';
-import { getMaxJourneyDays, getUserJourney } from '../../lib/supabase';
+import { getMaxJourneyDays, getUserJourney, updateCurrentDay } from '../../lib/supabase';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import DashNav from '../../components/DashNav.astro';
+import Sidebar from '../../components/Sidebar.astro';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -18,6 +18,7 @@ const firstName = profile.full_name?.split(' ')[0] || 'there';
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
 
+await updateCurrentDay(user.id).catch(() => null);
 const today = new Date().toISOString().split('T')[0];
 
 // All queries fire in parallel — each fails independently
@@ -57,30 +58,31 @@ const isPro   = planType === 'pro_6' || isElite;
   <title>{t('guide.title')} · Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
   <script is:inline>(function(){const t=localStorage.getItem('keto-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
   <style>
     :root{
-      --bg:#060d09;--card:#0d1a0f;--card2:#111f13;
-      --border:rgba(16,185,129,.1);--border2:rgba(16,185,129,.22);
-      --text:#dfeedd;--soft:#4d7055;--muted:#233328;
+      --rv-bg:#FAF6F1;--rv-card:#FFFFFF;--rv-bg-alt:#F2EDE5;--rv-line:#E5DED2;
+      --rv-ink:#16110F;--rv-ink-soft:#4A4340;--rv-muted:#8A8077;
+      --rv-accent:#FF5C7A;--rv-accent-2:#B6FF3C;--rv-warm:#FF914D;
+      --bg:var(--rv-bg);--card:var(--rv-card);--card2:var(--rv-bg-alt);
+      --border:var(--rv-line);--border2:rgba(255,92,122,.3);
+      --text:var(--rv-ink);--soft:var(--rv-ink-soft);--muted:#C8BFBA;
       --green:#10b981;--green2:#34d399;--amber:#f59e0b;
       --purple:#8b5cf6;--blue:#3b82f6;--red:#ef4444;
     }
-    [data-theme="light"]{
-      --bg:#f0fdf4;--card:#fff;--card2:#f6fef9;
-      --border:rgba(16,185,129,.15);--border2:rgba(16,185,129,.3);
-      --text:#0f2e1a;--soft:#3d6b4a;--muted:#c8e6d0;
-    }
     *{box-sizing:border-box;margin:0;padding:0;}
-    body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
-    .page{max-width:760px;margin:0 auto;padding:5.5rem 1.25rem 6rem;}
+    body{background:var(--bg);color:var(--text);font-family:'Bricolage Grotesque',system-ui,sans-serif;min-height:100vh;}
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{min-width:0;overflow-x:hidden;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}.rv-pg-main{padding-bottom:5.5rem;}}
+    .page{max-width:760px;margin:0 auto;padding:2rem 1.75rem 4rem;}
 
     /* HERO */
     .guide-hero{text-align:center;padding:2.5rem 1.5rem 2rem;margin-bottom:2rem;}
     .gh-badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.72rem;font-weight:800;padding:.3rem .9rem;border-radius:99px;border:1px solid;margin-bottom:1rem;}
-    .gh-title{font-family:'Fraunces',serif;font-size:2.2rem;font-weight:900;line-height:1.15;margin-bottom:.6rem;}
-    .gh-title em{font-style:italic;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .gh-title{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:2.2rem;font-weight:900;line-height:1.15;margin-bottom:.6rem;}
+    .gh-title em{font-style:italic;background:linear-gradient(135deg,var(--rv-accent),var(--rv-warm));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
     .gh-sub{font-size:.95rem;color:var(--soft);max-width:500px;margin:0 auto 1.5rem;line-height:1.7;}
     .gh-stats{display:inline-flex;gap:.75rem;flex-wrap:wrap;justify-content:center;}
     .ghs-pill{font-size:.75rem;font-weight:700;padding:.35rem .8rem;border-radius:99px;background:var(--card);border:1px solid var(--border);}
@@ -102,7 +104,7 @@ const isPro   = planType === 'pro_6' || isElite;
     .guide-section{margin-bottom:2.5rem;}
     .gs-header{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;}
     .gs-num{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:900;color:#fff;flex-shrink:0;}
-    .gs-title{font-family:'Fraunces',serif;font-size:1.25rem;font-weight:900;}
+    .gs-title{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.25rem;font-weight:900;}
     .gs-badge{font-size:.65rem;font-weight:800;padding:.2rem .55rem;border-radius:6px;text-transform:uppercase;letter-spacing:.05em;}
 
     /* FEATURE CARDS */
@@ -138,7 +140,7 @@ const isPro   = planType === 'pro_6' || isElite;
 
     /* CTA */
     .guide-cta{background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(52,211,153,.07));border:1.5px solid rgba(16,185,129,.28);border-radius:20px;padding:2rem;text-align:center;margin-top:2rem;}
-    .gc-title{font-family:'Fraunces',serif;font-size:1.4rem;font-weight:900;margin-bottom:.4rem;}
+    .gc-title{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;font-weight:900;margin-bottom:.4rem;}
     .gc-sub{font-size:.85rem;color:var(--soft);margin-bottom:1.25rem;line-height:1.6;}
     .gc-btn{display:inline-block;padding:.875rem 2rem;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;font-weight:900;font-size:.95rem;border-radius:14px;text-decoration:none;box-shadow:0 6px 20px rgba(16,185,129,.35);}
 
@@ -158,8 +160,9 @@ const isPro   = planType === 'pro_6' || isElite;
   </style>
 </head>
 <body>
-<DashNav userId={user.id} userName={firstName} tierLabel={tierLabel} planType={planType} activePage="guide" />
-
+<div class="rv-pg-shell">
+<Sidebar userName={firstName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="guide" />
+<div class="rv-pg-main">
 <div class="page">
 
   <!-- HERO -->
@@ -517,5 +520,6 @@ if ('IntersectionObserver' in window) {
   document.querySelectorAll('.guide-section').forEach(function(s) { seen.observe(s); });
 }
 </script>
+</div></div></div>
 </body>
 </html>
