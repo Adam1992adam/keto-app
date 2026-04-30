@@ -3,10 +3,10 @@
 // Notification Preferences — toggle notification types on/off
 
 import { requireAuth } from '../../lib/auth';
-import DashNav from '../../components/DashNav.astro';
+import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
+import Sidebar from '../../components/Sidebar.astro';
 import PushPermission from '../../components/PushPermission.astro';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import Bell from 'lucide-astro/Bell';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -17,6 +17,9 @@ const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pr
 const userName  = profile.full_name?.split(' ')[0] || 'there';
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
+await updateCurrentDay(user.id).catch(() => null);
+const journey    = await getUserJourney(user.id, db).catch(() => null);
+const currentDay = journey?.current_day || 1;
 
 const { data: existingPrefs } = await db
   .from('notification_preferences')
@@ -105,58 +108,38 @@ const enabledCount = toggleItems.filter(t => t.value).length;
   <title>{t('notif_prefs.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
-  <script is:inline>
-    (function(){ var t=localStorage.getItem('keto-theme')||'light'; document.documentElement.setAttribute('data-theme',t); })();
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet"/>
   <style>
-    /* ── Tokens ── */
     :root {
-      --bg:      #060d09;
-      --card:    #0d1a0f;
-      --card2:   #111f13;
-      --border:  rgba(16,185,129,.1);
-      --border2: rgba(16,185,129,.22);
-      --text:    #dfeedd;
-      --soft:    #4d7055;
-      --muted:   #233328;
-      --green:   #10b981;
-      --green2:  #34d399;
-      --gold:    #f59e0b;
-      --purple:  #8b5cf6;
-      --blue:    #3b82f6;
-      --red:     #ef4444;
-      --nav-h:   64px;
-    }
-    [data-theme="light"] {
-      --bg:      #eef5ee;
-      --card:    #ffffff;
-      --card2:   #f5faf5;
-      --border:  rgba(0,0,0,.07);
-      --border2: rgba(16,185,129,.3);
-      --text:    #071807;
-      --soft:    #3a6040;
-      --muted:   #b8cfb8;
+      --bg:#FAF6F1; --card:#FFFFFF; --card2:#F2EDE5;
+      --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
+      --text:#1A110D; --soft:#7A5C52; --muted:#C8B5AD;
+      --green:#10b981; --green2:#34d399; --gold:#f59e0b;
+      --purple:#8b5cf6; --blue:#3b82f6; --red:#ef4444;
+      --rv-accent:#FF5C7A;
     }
     *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
     html { scroll-behavior:smooth; }
     body {
-      font-family:'DM Sans',sans-serif;
+      font-family:'Bricolage Grotesque',system-ui,sans-serif;
       background:var(--bg); color:var(--text);
-      min-height:100vh; overflow-x:hidden;
+      min-height:100vh;
     }
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{overflow-y:auto;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}}
 
     /* ── Layout ── */
     .page-wrap {
       max-width:720px; margin:0 auto;
-      padding: calc(var(--nav-h) + 2rem) 1.25rem 6rem;
+      padding: 2rem 1.25rem 6rem;
       display:flex; flex-direction:column; gap:1.5rem;
     }
 
     /* ── Header ── */
     .page-header { display:flex; flex-direction:column; gap:.4rem; }
     .page-header h1 {
-      font-family:'Fraunces',serif; font-size:1.9rem; font-weight:900;
+      font-size:1.9rem; font-weight:800;
       line-height:1.15; color:var(--text);
     }
     .page-header h1 em { color:var(--green); font-style:italic; }
@@ -232,9 +215,9 @@ const enabledCount = toggleItems.filter(t => t.value).length;
     .actions { display:flex; gap:.75rem; flex-wrap:wrap; }
     .btn-save {
       flex:1; min-width:140px;
-      background:var(--green); color:#fff;
+      background:var(--rv-accent); color:#fff;
       border:none; border-radius:14px;
-      font-family:'DM Sans',sans-serif; font-weight:800; font-size:.95rem;
+      font-weight:800; font-size:.95rem;
       padding:.75rem 1.5rem; cursor:pointer;
       transition:opacity .2s, transform .15s;
     }
@@ -245,7 +228,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
     .btn-all {
       background:transparent; color:var(--soft);
       border:1px solid var(--border2); border-radius:14px;
-      font-family:'DM Sans',sans-serif; font-weight:700; font-size:.85rem;
+      font-weight:700; font-size:.85rem;
       padding:.75rem 1.1rem; cursor:pointer;
       transition:color .2s, border-color .2s, background .2s;
     }
@@ -295,14 +278,9 @@ const enabledCount = toggleItems.filter(t => t.value).length;
 </head>
 <body>
 
-<DashNav
-  userId={user.id}
-  userName={userName}
-  tierLabel={tierLabel}
-  planType={planType}
-  activePage="notifications"
-/>
-
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="notifications" />
+<div class="rv-pg-main">
 <div class="page-wrap">
 
   <!-- Back -->
@@ -315,7 +293,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
     <h1>Notification <em>Preferences</em></h1>
     <p>Choose which alerts you want to receive on your keto journey.</p>
     <div class="summary-badge" id="summaryBadge">
-      <Bell size={14} style="vertical-align:middle;margin-right:.3rem;" /> {enabledCount} of {toggleItems.length} types enabled
+      🔔 {enabledCount} of {toggleItems.length} types enabled
     </div>
   </div>
 
@@ -444,5 +422,8 @@ const enabledCount = toggleItems.filter(t => t.value).length;
 })();
 </script>
 
+</div>
+</div>
+</div>
 </body>
 </html>

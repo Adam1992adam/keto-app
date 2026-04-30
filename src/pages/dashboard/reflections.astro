@@ -1,17 +1,8 @@
 ---
 import { requireAuth } from '../../lib/auth';
-import DashNav from '../../components/DashNav.astro';
+import Sidebar from '../../components/Sidebar.astro';
+import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import BookOpen from 'lucide-astro/BookOpen';
-import Heart from 'lucide-astro/Heart';
-import Star from 'lucide-astro/Star';
-import Edit3 from 'lucide-astro/Edit3';
-import Calendar from 'lucide-astro/Calendar';
-import Droplets from 'lucide-astro/Droplets';
-import CheckCircle from 'lucide-astro/CheckCircle';
-import X from 'lucide-astro/X';
-import Zap from 'lucide-astro/Zap';
-import Moon from 'lucide-astro/Moon';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -20,6 +11,10 @@ const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'Friend';
+
+await updateCurrentDay(user.id).catch(() => null);
+const journey    = await getUserJourney(user.id, db).catch(() => null);
+const currentDay = journey?.current_day || 1;
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
 
@@ -111,17 +106,28 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{t('journal.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
   <style>
+    :root{
+      --bg:#FAF6F1;--card:#FFFFFF;--card2:#F2EDE5;
+      --border:rgba(22,17,15,.08);--border2:rgba(255,92,122,.25);
+      --text:#16110F;--soft:#4A4340;--muted:#C8BFBA;
+      --green:#10b981;--green2:#34d399;--gold:#f59e0b;
+      --blue:#3b82f6;--purple:#8b5cf6;--red:#ef4444;
+      --rv-accent:#FF5C7A;--rv-warm:#FF914D;
+    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: var(--bg, #060d09);
-      color: var(--text, #dfeedd);
-      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Bricolage Grotesque', system-ui, sans-serif;
       min-height: 100vh;
     }
+
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{min-width:0;overflow-x:hidden;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}.rv-pg-main{padding-bottom:5.5rem;}}
 
     .page-wrap {
       max-width: 780px;
@@ -332,17 +338,12 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
   </style>
 </head>
 <body>
-  <DashNav
-    userId={user.id}
-    userName={userName}
-    tierLabel={tierLabel}
-    planType={planType}
-    activePage="reflections"
-  />
-
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="reflections" />
+<div class="rv-pg-main">
   <div class="page-wrap">
     <div class="page-header">
-      <h1><BookOpen size={28} style="display:inline;vertical-align:middle;" /> Daily Reflections</h1>
+      <h1>📖 Daily Reflections</h1>
       {hasData && (
         <p class="subtitle">Your last 30 days of check-ins and reflections</p>
       )}
@@ -350,7 +351,7 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
 
     {!hasData ? (
       <div class="empty-state">
-        <div class="empty-icon"><BookOpen size={48} color="var(--soft)" /></div>
+        <div class="empty-icon">📖</div>
         <h2>Nothing logged yet</h2>
         <p>Complete your first daily check-in to start your reflection history.</p>
         <a href="/dashboard/checkin" class="btn-checkin">Start Check-in</a>
@@ -418,21 +419,21 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
                     {entry.water > 0 && (
                       <div class="vital-item">
                         <span class="vital-label">Water</span>
-                        <span class="vital-value"><Droplets size={13} style="display:inline;vertical-align:middle;" /> {entry.water}</span>
+                        <span class="vital-value">💧 {entry.water}</span>
                       </div>
                     )}
                     <div class="vital-item">
                       <span class="vital-label">Meals</span>
                       {entry.mealOk ? (
-                        <span class="vital-value badge-ok"><CheckCircle size={13} style="display:inline;vertical-align:middle;" /> Followed</span>
+                        <span class="vital-value badge-ok">✓ Followed</span>
                       ) : (
-                        <span class="vital-value badge-no"><X size={13} style="display:inline;vertical-align:middle;" /> Skipped</span>
+                        <span class="vital-value badge-no">✗ Skipped</span>
                       )}
                     </div>
                     {entry.sleepH > 0 && (
                       <div class="vital-item">
                         <span class="vital-label">Sleep</span>
-                        <span class="vital-value"><Moon size={13} style="display:inline;vertical-align:middle;" /> {entry.sleepH}h</span>
+                        <span class="vital-value">🌙 {entry.sleepH}h</span>
                       </div>
                     )}
                   </div>
@@ -448,10 +449,10 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
                   {(entry.highlights || entry.challenges) && (
                     <div class="entry-extras">
                       {entry.highlights && (
-                        <span class="extra-chip"><Star size={12} style="display:inline;vertical-align:middle;" /> <strong>Win:</strong> {entry.highlights}</span>
+                        <span class="extra-chip">⭐ <strong>Win:</strong> {entry.highlights}</span>
                       )}
                       {entry.challenges && (
-                        <span class="extra-chip"><Zap size={12} style="display:inline;vertical-align:middle;" /> <strong>Challenge:</strong> {entry.challenges}</span>
+                        <span class="extra-chip">⚡ <strong>Challenge:</strong> {entry.challenges}</span>
                       )}
                     </div>
                   )}
@@ -463,6 +464,7 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
       </>
     )}
   </div>
+</div></div>
 
   <!-- ── Add Reflection FAB ── -->
   <button class="fab" onclick="openReflModal()" title="Add today's reflection">＋ Reflect</button>
@@ -470,7 +472,7 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
   <!-- ── Reflection Modal ── -->
   <div id="reflModal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);overflow-y:auto;padding:1.5rem;" onclick="closeReflModal(event)">
     <div style="background:var(--card,#0d1a0f);border:1px solid var(--border2,rgba(16,185,129,.22));border-radius:24px;max-width:500px;margin:3rem auto;padding:2rem;" onclick="event.stopPropagation()">
-      <h2 style="font-family:'Fraunces',serif;font-size:1.4rem;margin-bottom:1.5rem;"><BookOpen size={20} style="display:inline;vertical-align:middle;" /> Today's Reflection</h2>
+      <h2 style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;margin-bottom:1.5rem;">📖 Today's Reflection</h2>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem;">
         <div>

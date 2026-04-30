@@ -2,7 +2,8 @@
 // src/pages/dashboard/recipes/[bookId].astro
 // Shows all recipes belonging to a specific recipe book + tier access guard
 import { requireAuth } from '../../../lib/auth';
-import DashNav from '../../../components/DashNav.astro';
+import { getUserJourney, updateCurrentDay } from '../../../lib/supabase';
+import Sidebar from '../../../components/Sidebar.astro';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -11,6 +12,9 @@ const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'Friend';
+await updateCurrentDay(user.id).catch(() => null);
+const journey    = await getUserJourney(user.id, db).catch(() => null);
+const currentDay = journey?.current_day || 1;
 
 const bookId = Astro.params.bookId || '';
 
@@ -150,25 +154,22 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{book.title} · Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;1,700;1,900&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <script is:inline>(function(){ var t=localStorage.getItem('keto-theme')||'dark'; document.documentElement.setAttribute('data-theme',t); })();</script>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg:#060d09; --card:#0d1a0f; --card2:#111f13; --surface:#0a1209;
-      --border:rgba(16,185,129,.1); --border2:rgba(16,185,129,.22);
-      --text:#dfeedd; --soft:#4d7055; --muted:#233328;
+      --bg:#FAF6F1; --card:#FFFFFF; --card2:#F2EDE5; --surface:#F2EDE5;
+      --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
+      --text:#1A110D; --soft:#7A5C52; --muted:#C8B5AD;
       --green:#10b981; --green2:#34d399; --gold:#f59e0b;
       --blue:#3b82f6; --purple:#8b5cf6; --red:#ef4444;
-      --radius:20px;
-    }
-    [data-theme="light"] {
-      --bg:#f0faf4; --card:#fff; --card2:#f5fdf8; --surface:#f8fdf9;
-      --border:rgba(16,185,129,.15); --border2:rgba(16,185,129,.3);
-      --text:#0f2417; --soft:#4d7055; --muted:#b0d4bc;
+      --rv-accent:#FF5C7A; --radius:20px;
     }
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
     html { scroll-behavior:smooth; }
-    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    body { font-family:'Bricolage Grotesque',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{overflow-y:auto;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}}
     @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:none} }
 
     .page { max-width:1200px; margin:0 auto; padding:2rem 1.5rem 6rem; }
@@ -211,7 +212,7 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
       color:var(--hero-accent);
     }
     .hero-title {
-      font-family:'Fraunces',serif; font-size:clamp(1.6rem,3vw,2.2rem);
+      font-size:clamp(1.6rem,3vw,2.2rem);
       font-weight:700; line-height:1.15; margin-bottom:.5rem;
     }
     .hero-desc { font-size:.9rem; color:var(--soft); line-height:1.6; margin-bottom:1rem; }
@@ -239,7 +240,7 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
       width:100%; padding:.5rem .75rem .5rem 2.1rem;
       border-radius:9px; border:1.5px solid var(--border);
       background:var(--surface); color:var(--text); font-size:.84rem;
-      font-family:'DM Sans',sans-serif; transition:border-color .2s; outline:none;
+      transition:border-color .2s; outline:none;
     }
     .search-inp:focus { border-color:var(--green); }
     .search-inp::placeholder { color:var(--soft); }
@@ -247,7 +248,7 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
     .sort-select {
       padding:.5rem .85rem; border-radius:9px; border:1.5px solid var(--border);
       background:var(--surface); color:var(--text); font-size:.82rem;
-      font-family:'DM Sans',sans-serif; cursor:pointer; outline:none; transition:border-color .2s;
+      cursor:pointer; outline:none; transition:border-color .2s;
     }
     .sort-select:focus { border-color:var(--green); }
     .tb-count { font-size:.78rem; color:var(--soft); font-weight:600; margin-left:auto; white-space:nowrap; }
@@ -330,7 +331,7 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
       animation:fadeUp .5s ease both;
     }
     .empty-icon { font-size:4rem; margin-bottom:1rem; display:block; }
-    .empty-title { font-family:'Fraunces',serif; font-size:1.4rem; font-weight:700; color:var(--text); margin-bottom:.6rem; }
+    .empty-title { font-size:1.4rem; font-weight:700; color:var(--text); margin-bottom:.6rem; }
     .empty-sub   { font-size:.9rem; line-height:1.65; max-width:380px; margin:0 auto 1.5rem; }
     .empty-back  {
       display:inline-flex; align-items:center; gap:.5rem;
@@ -363,8 +364,9 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
   </style>
 </head>
 <body>
-  <DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="recipes" />
-
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="recipes" />
+<div class="rv-pg-main">
   <div class="page">
 
     <!-- Hero -->
@@ -561,5 +563,7 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
       });
     }
   </script>
+</div>
+</div>
 </body>
 </html>

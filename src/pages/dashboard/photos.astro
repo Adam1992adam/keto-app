@@ -1,18 +1,10 @@
 ---
 // src/pages/dashboard/photos.astro
 // Progress Photo Gallery — full-featured with upload, compare, timeline
-import { getUserJourney } from '../../lib/supabase';
+import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import DashNav from '../../components/DashNav.astro';
-import Camera from 'lucide-astro/Camera';
-import Image from 'lucide-astro/Image';
-import Plus from 'lucide-astro/Plus';
-import Calendar from 'lucide-astro/Calendar';
-import TrendingUp from 'lucide-astro/TrendingUp';
-import Trash2 from 'lucide-astro/Trash2';
-import Upload from 'lucide-astro/Upload';
-import BarChart2 from 'lucide-astro/BarChart2';
+import Sidebar from '../../components/Sidebar.astro';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -24,6 +16,7 @@ const userName  = profile.full_name?.split(' ')[0] || 'there';
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
 
+await updateCurrentDay(user.id).catch(() => null);
 const journey = await getUserJourney(user.id, db);
 const startDate   = journey?.start_date  ? new Date(journey.start_date)  : new Date();
 const currentDay  = journey?.current_day || 1;
@@ -68,14 +61,28 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
 ---
 
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{t('photos.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700;1,900&family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:#FAF6F1; --card:#FFFFFF; --card2:#F2EDE5;
+      --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
+      --text:#1A110D; --soft:#7A5C52; --muted:#C8B5AD;
+      --green:#10b981; --green2:#34d399; --gold:#f59e0b; --red:#ef4444;
+      --rv-accent:#FF5C7A;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Bricolage Grotesque',system-ui,sans-serif;}
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{overflow-y:auto;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}}
+  </style>
   <style>
     /* ── Page layout ── */
     .page-wrap {
@@ -94,13 +101,13 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       flex-wrap: wrap;
     }
     .page-title {
-      font-family: 'Fraunces', serif;
+      font-family: 'Bricolage Grotesque', system-ui, sans-serif;
       font-size: 1.85rem;
-      font-weight: 900;
+      font-weight: 800;
       color: var(--text);
       line-height: 1.1;
     }
-    .page-title span { color: var(--green); font-style: italic; }
+    .page-title span { color: var(--rv-accent); }
     .header-actions {
       display: flex;
       gap: .6rem;
@@ -115,18 +122,18 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       cursor: pointer;
       border: 1px solid var(--border);
       transition: all .2s;
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Bricolage Grotesque', system-ui, sans-serif;
       text-decoration: none;
       display: inline-flex;
       align-items: center;
       gap: .4rem;
     }
     .btn-primary {
-      background: var(--green);
+      background: var(--rv-accent);
       color: #fff;
-      border-color: var(--green);
+      border-color: var(--rv-accent);
     }
-    .btn-primary:hover { background: var(--green2); border-color: var(--green2); }
+    .btn-primary:hover { background: #e8435f; border-color: #e8435f; }
     .btn-ghost {
       background: var(--card);
       color: var(--soft);
@@ -173,7 +180,6 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       animation: fadeUp .4s ease both;
     }
     .upload-title {
-      font-family: 'Fraunces', serif;
       font-weight: 700;
       font-size: 1.05rem;
       margin-bottom: 1rem;
@@ -243,7 +249,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       border-radius: 10px;
       padding: .6rem .85rem;
       color: var(--text);
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Bricolage Grotesque', system-ui, sans-serif;
       font-size: .85rem;
       transition: border-color .2s;
     }
@@ -756,14 +762,9 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
   </style>
 </head>
 <body>
-  <DashNav
-    userId={user.id}
-    userName={userName}
-    tierLabel={tierLabel}
-    planType={planType}
-    activePage="photos"
-  />
-
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="photos" />
+<div class="rv-pg-main">
   <div class="page-wrap">
 
     <!-- Page Header -->
@@ -776,10 +777,10 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       </div>
       <div class="header-actions">
         <button class="btn btn-ghost" id="btnCompare" onclick="window.toggleCompareMode()">
-          <Image size={15} style="vertical-align:middle;margin-right:.3rem;" /> Compare
+          🖼 Compare
         </button>
         <button class="btn btn-ghost" id="btnUploadToggle" onclick="window.toggleUpload()">
-          <Upload size={15} style="vertical-align:middle;margin-right:.3rem;" /> Upload
+          ⬆ Upload
         </button>
       </div>
     </div>
@@ -787,30 +788,30 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
     <!-- Insights Banner (2+ photos) -->
     {totalPhotos >= 2 && (
       <div class="insights-banner">
-        <div class="insight-pill"><Camera size={13} style="vertical-align:middle;margin-right:.2rem;" /> {totalPhotos} photo{totalPhotos === 1 ? '' : 's'}</div>
+        <div class="insight-pill">📷 {totalPhotos} photo{totalPhotos === 1 ? '' : 's'}</div>
         {spanDays > 0 && (
-          <div class="insight-pill"><Calendar size={13} style="vertical-align:middle;margin-right:.2rem;" /> Over {spanDays} days</div>
+          <div class="insight-pill">📅 Over {spanDays} days</div>
         )}
         {daysSinceLast !== null && daysSinceLast > 7 && (
-          <div class="insight-pill warn"><TrendingUp size={13} style="vertical-align:middle;margin-right:.2rem;" /> Last photo {daysSinceLast} days ago — time for an update!</div>
+          <div class="insight-pill warn">📈 Last photo {daysSinceLast} days ago — time for an update!</div>
         )}
         {daysSinceLast !== null && daysSinceLast <= 7 && (
-          <div class="insight-pill"><TrendingUp size={13} style="vertical-align:middle;margin-right:.2rem;" /> Last photo {daysSinceLast === 0 ? 'today' : daysSinceLast + 'd ago'}</div>
+          <div class="insight-pill">📈 Last photo {daysSinceLast === 0 ? 'today' : daysSinceLast + 'd ago'}</div>
         )}
-        <p class="insight-tip"><Plus size={13} style="vertical-align:middle;margin-right:.2rem;" /> Take photos weekly on the same day for best comparison</p>
+        <p class="insight-tip">+ Take photos weekly on the same day for best comparison</p>
       </div>
     )}
 
     <!-- Upload Section (hidden by default) -->
     <div class="upload-section" id="uploadSection" style="display:none;">
-      <div class="upload-title"><Camera size={18} style="vertical-align:middle;margin-right:.4rem;" /> Upload a Progress Photo</div>
+      <div class="upload-title">📷 Upload a Progress Photo</div>
       <div class="upload-grid">
         <!-- Drop Zone -->
         <div>
           <div class="drop-zone" id="dropZone">
             <input type="file" id="fileInput" accept="image/*" />
             <div id="dropZoneContent">
-              <div class="drop-icon"><Camera size={36} /></div>
+              <div class="drop-icon">📷</div>
               <div class="drop-label">Drop image here or click to select</div>
               <div class="drop-sub">Images only · Max 5MB · Auto-compressed</div>
             </div>
@@ -857,7 +858,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
           ⊞ Grid
         </button>
         <button class="btn btn-ghost" id="btnTimeline" onclick="window.switchView('timeline')">
-          <Calendar size={15} style="vertical-align:middle;margin-right:.3rem;" /> Timeline
+          📅 Timeline
         </button>
       </div>
     </div>
@@ -866,14 +867,14 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
     <div id="gridView">
       {photosWithDay.length === 0 && (
         <div class="empty-state">
-          <div class="empty-icon"><Camera size={42} /></div>
+          <div class="empty-icon">📷</div>
           <div class="empty-title">Your gallery is empty</div>
           <p class="empty-sub">
             Upload your first progress photo to start tracking your transformation.<br />
             Seeing is believing — every photo tells your story.
           </p>
           <button class="btn btn-primary" style="margin-top:1.25rem;" onclick="window.toggleUpload()">
-            <Upload size={15} style="vertical-align:middle;margin-right:.3rem;" /> Upload First Photo
+            ⬆ Upload First Photo
           </button>
         </div>
       )}
@@ -919,7 +920,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
     <div id="timelineView" class="timeline-view">
       {photosTimeline.length === 0 && (
         <div class="empty-state">
-          <div class="empty-icon"><Calendar size={42} /></div>
+          <div class="empty-icon">📅</div>
           <div class="empty-title">No photos yet</div>
           <p class="empty-sub">Upload photos to see your timeline.</p>
         </div>
@@ -965,7 +966,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
   <div class="compare-panel" id="comparePanel">
     <div class="compare-inner">
       <div class="compare-header">
-        <span class="compare-heading"><BarChart2 size={16} style="vertical-align:middle;margin-right:.4rem;" /> Side-by-Side Comparison</span>
+        <span class="compare-heading">📊 Side-by-Side Comparison</span>
         <div style="display:flex;gap:.5rem;">
           <button class="btn btn-active" id="btnSlider" onclick="window.openSlider()" style="display:none;">
             ⟺ Slider View
@@ -1435,5 +1436,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
   })();
   </script>
 
+</div>
+</div>
 </body>
 </html>

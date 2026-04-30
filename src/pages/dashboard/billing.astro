@@ -1,14 +1,8 @@
 ---
 import { requireAuth } from '../../lib/auth';
-import { getUserJourney, getMaxJourneyDays } from '../../lib/supabase';
-import DashNav from '../../components/DashNav.astro';
+import { getUserJourney, getMaxJourneyDays, updateCurrentDay } from '../../lib/supabase';
+import Sidebar from '../../components/Sidebar.astro';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import Zap          from 'lucide-astro/Zap';
-import ShieldCheck  from 'lucide-astro/ShieldCheck';
-import Receipt      from 'lucide-astro/Receipt';
-import MessageCircle from 'lucide-astro/MessageCircle';
-import FileText     from 'lucide-astro/FileText';
-import AlertTriangle from 'lucide-astro/AlertTriangle';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -21,6 +15,7 @@ const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
 
 // Actual journey progress from user_journey (same source as dashboard)
+await updateCurrentDay(user.id).catch(() => null);
 const journey    = await getUserJourney(user.id, db);
 const currentDay = journey?.current_day || 1;
 
@@ -71,36 +66,31 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
 ---
 
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{t('billing.title')} · Keto Journey</title>
   <meta name="robots" content="noindex"/>
-  <script is:inline>
-    (function(){ var t = localStorage.getItem('keto-theme') || 'dark'; document.documentElement.setAttribute('data-theme', t); })();
-  </script>
   <link rel="icon" type="image/png" sizes="32x32" href="/icon-72.png"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet"/>
   <style>
     :root {
-      --bg:#060d09; --card:#0d1a0f; --card2:#111f13;
-      --border:rgba(16,185,129,.1); --border2:rgba(16,185,129,.22);
-      --text:#dfeedd; --soft:#4d7055; --muted:#233328;
+      --bg:#FAF6F1; --card:#FFFFFF; --card2:#F2EDE5;
+      --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
+      --text:#1A110D; --soft:#7A5C52; --muted:#C8B5AD;
       --green:#10b981; --green2:#34d399; --gold:#f59e0b;
-      --red:#ef4444; --purple:#8b5cf6;
-    }
-    [data-theme="light"] {
-      --bg:#f4faf6; --card:#ffffff; --card2:#f0f7f2;
-      --border:rgba(16,185,129,.15); --border2:rgba(16,185,129,.3);
-      --text:#0d1f10; --soft:#4d7055; --muted:#c8e0cc;
+      --red:#ef4444; --purple:#8b5cf6; --rv-accent:#FF5C7A;
     }
     *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    body { font-family:'Bricolage Grotesque',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{overflow-y:auto;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}}
 
     .page { max-width:860px; margin:0 auto; padding:2rem 1.25rem 5rem; }
-    h1 { font-family:'Fraunces',serif; font-weight:900; font-size:clamp(1.6rem,3vw,2.2rem); margin-bottom:.35rem; }
+    h1 { font-weight:800; font-size:clamp(1.6rem,3vw,2.2rem); margin-bottom:.35rem; }
     .sub { font-size:.88rem; color:var(--soft); margin-bottom:2rem; }
 
     /* ── Plan card ── */
@@ -123,7 +113,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
       font-size:.72rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
       color:#fff; background:var(--plan-gradient);
     }
-    .plan-title { font-family:'Fraunces',serif; font-size:1.5rem; font-weight:900; }
+    .plan-title { font-size:1.5rem; font-weight:800; }
     .plan-status {
       padding:.3rem .85rem; border-radius:99px; font-size:.72rem; font-weight:800;
       letter-spacing:.06em; text-transform:uppercase;
@@ -146,7 +136,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
     }
     .progress-stats { display:flex; gap:1.5rem; margin-top:1rem; flex-wrap:wrap; }
     .pstat { font-size:.82rem; }
-    .pstat-num { font-family:'Fraunces',serif; font-size:1.3rem; font-weight:900; color:var(--text); line-height:1; }
+    .pstat-num { font-size:1.3rem; font-weight:800; color:var(--text); line-height:1; }
     .pstat-label { font-size:.72rem; color:var(--soft); margin-top:.15rem; }
 
     /* Features list */
@@ -178,7 +168,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
       border-radius:16px; padding:1.25rem 1.5rem;
     }
     .info-card-label { font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:var(--soft); margin-bottom:.4rem; }
-    .info-card-val { font-family:'Fraunces',serif; font-size:1.15rem; font-weight:700; color:var(--text); }
+    .info-card-val { font-size:1.15rem; font-weight:700; color:var(--text); }
 
     /* Action cards */
     .actions-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
@@ -214,7 +204,9 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
 </head>
 <body>
 
-<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="profile" />
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="billing" />
+<div class="rv-pg-main">
 
 <div class="page">
   <h1>My Plan</h1>
@@ -292,7 +284,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
     <!-- Upgrade (hidden for Elite) -->
     {!isElite && (
       <div class="action-card">
-        <div class="action-card-icon"><Zap size={18} /></div>
+        <div class="action-card-icon">⚡</div>
         <div class="action-card-title">Upgrade your plan</div>
         <div class="action-card-body">
           {isPro
@@ -307,7 +299,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
 
     <!-- Refund -->
     <div class="action-card">
-      <div class="action-card-icon"><ShieldCheck size={18} /></div>
+      <div class="action-card-icon">🛡</div>
       <div class="action-card-title">30-Day Money-Back Guarantee</div>
       <div class="action-card-body">
         {refundEligible
@@ -326,14 +318,14 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
       )}
       {refundEligible && (
         <div class="refund-warning">
-          <AlertTriangle size={13} style="display:inline;vertical-align:middle;margin-right:.3rem;" /> Requesting a refund will cancel your access immediately.
+          ⚠️ Requesting a refund will cancel your access immediately.
         </div>
       )}
     </div>
 
     <!-- Customer Portal -->
     <div class="action-card">
-      <div class="action-card-icon"><Receipt size={18} /></div>
+      <div class="action-card-icon">🧾</div>
       <div class="action-card-title">Billing Portal</div>
       <div class="action-card-body">
         View your order, download your invoice, or manage your purchase directly through our billing provider.
@@ -346,7 +338,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
 
     <!-- Support -->
     <div class="action-card">
-      <div class="action-card-icon"><MessageCircle size={18} /></div>
+      <div class="action-card-icon">💬</div>
       <div class="action-card-title">Contact Support</div>
       <div class="action-card-body">
         Questions about your plan, billing, or the app? Our team typically responds within 1–2 business days.
@@ -358,7 +350,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
 
     <!-- View policy -->
     <div class="action-card">
-      <div class="action-card-icon"><FileText size={18} /></div>
+      <div class="action-card-icon">📄</div>
       <div class="action-card-title">Refund Policy</div>
       <div class="action-card-body">
         Read the full details of our 30-day money-back guarantee, eligibility criteria, and processing timeline.
@@ -405,5 +397,7 @@ async function openPortal() {
 }
 </script>
 
+</div>
+</div>
 </body>
 </html>

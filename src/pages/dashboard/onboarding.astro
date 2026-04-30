@@ -3,17 +3,6 @@
 // Shown once after first login — before dashboard
 import { supabase } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
-import Target from 'lucide-astro/Target';
-import Zap from 'lucide-astro/Zap';
-import Calendar from 'lucide-astro/Calendar';
-import Bell from 'lucide-astro/Bell';
-import BarChart2 from 'lucide-astro/BarChart2';
-import CheckCircle from 'lucide-astro/CheckCircle';
-import Flame from 'lucide-astro/Flame';
-import Utensils from 'lucide-astro/Utensils';
-import Droplets from 'lucide-astro/Droplets';
-import TrendingDown from 'lucide-astro/TrendingDown';
-import Sparkles from 'lucide-astro/Sparkles';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -40,22 +29,23 @@ const tier = profile.subscription_tier || 'basic_30';
   <title>Set Up Your Journey — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,700;1,9..144,900&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet"/>
   <style>
     /* ─── TOKENS ─── */
     :root {
-      --bg:#070d0a; --surface:#0e1812; --card:#142010;
-      --card2:#1a2a1a; --border:rgba(16,185,129,.13);
-      --border2:rgba(16,185,129,.28); --border3:rgba(16,185,129,.45);
-      --text:#e6f0e6; --soft:#6b8c6b; --muted:#2e4030;
+      --bg:#FAF6F1; --surface:#F2EDE5; --card:#FFFFFF;
+      --card2:#F2EDE5; --border:rgba(255,90,122,.12);
+      --border2:rgba(255,90,122,.28); --border3:rgba(255,90,122,.45);
+      --text:#1A110D; --soft:#7A5C52; --muted:#C8B5AD;
       --green:#10b981; --green2:#34d399; --green3:#6ee7b7;
       --gold:#f59e0b; --red:#ef4444; --blue:#3b82f6;
       --purple:#8b5cf6; --cyan:#06b6d4; --orange:#f97316;
+      --rv-accent:#FF5C7A;
     }
     *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
     html { scroll-behavior:smooth; }
     body {
-      font-family:'DM Sans',sans-serif;
+      font-family:'Bricolage Grotesque',system-ui,sans-serif;
       background:var(--bg); color:var(--text);
       min-height:100vh; overflow-x:hidden;
       display:flex; flex-direction:column; align-items:center;
@@ -93,7 +83,7 @@ const tier = profile.subscription_tier || 'basic_30';
       margin-bottom:2rem;
     }
     .logo {
-      font-family:'Fraunces',serif; font-weight:700; font-size:1.1rem;
+      font-weight:700; font-size:1.1rem;
       color:var(--text); text-decoration:none; display:flex; align-items:center; gap:.5rem;
     }
     .logo span { color:var(--green); }
@@ -168,8 +158,7 @@ const tier = profile.subscription_tier || 'basic_30';
       text-transform:uppercase; letter-spacing:.09em; margin-bottom:1rem;
     }
     .card-title {
-      font-family:'Fraunces',serif;
-      font-size:clamp(1.6rem,3vw,2.2rem);
+            font-size:clamp(1.6rem,3vw,2.2rem);
       font-weight:900; line-height:1.1; margin-bottom:.5rem;
     }
     .card-title em {
@@ -252,7 +241,7 @@ const tier = profile.subscription_tier || 'basic_30';
     }
     .num-btn:hover { border-color:var(--green); color:var(--green); }
     .num-val {
-      font-family:'Fraunces',serif; font-size:1.4rem; font-weight:900;
+      font-size:1.4rem; font-weight:900;
       min-width:52px; text-align:center;
     }
     .num-unit { font-size:.72rem; color:var(--soft); text-align:center; margin-top:-.3rem; }
@@ -262,7 +251,7 @@ const tier = profile.subscription_tier || 'basic_30';
     .slider-head { display:flex; justify-content:space-between; margin-bottom:.5rem; }
     .slider-lbl { font-weight:800; font-size:.875rem; }
     .slider-val {
-      font-family:'Fraunces',serif; font-size:1.1rem; font-weight:900; color:var(--green);
+      font-size:1.1rem; font-weight:900; color:var(--green);
     }
     .slider-unit { font-size:.72rem; color:var(--soft); margin-left:.2rem; }
     input[type=range] {
@@ -286,8 +275,7 @@ const tier = profile.subscription_tier || 'basic_30';
     .text-input {
       width:100%; background:var(--card2); border:1.5px solid var(--border);
       border-radius:12px; padding:.825rem 1.1rem;
-      color:var(--text); font-family:'DM Sans',sans-serif;
-      font-size:.9rem; font-weight:500; outline:none;
+      color:var(--text);      font-size:.9rem; font-weight:500; outline:none;
       transition:all .22s;
     }
     .text-input::placeholder { color:var(--muted); }
@@ -343,9 +331,9 @@ const tier = profile.subscription_tier || 'basic_30';
       position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
       text-align:center;
     }
-    .ring-cal { font-family:'Fraunces',serif; font-size:1.75rem; font-weight:900; color:var(--green); line-height:1; }
+    .ring-cal { font-size:1.75rem; font-weight:900; color:var(--green); line-height:1; }
     .ring-unit { font-size:.65rem; font-weight:700; color:var(--soft); text-transform:uppercase; letter-spacing:.06em; }
-    .macro-title { font-family:'Fraunces',serif; font-size:1.1rem; font-weight:700; margin-bottom:.25rem; }
+    .macro-title { font-size:1.1rem; font-weight:700; margin-bottom:.25rem; }
     .macro-sub { font-size:.78rem; color:var(--soft); }
 
     .macro-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem; margin:1.25rem 0; }
@@ -356,7 +344,7 @@ const tier = profile.subscription_tier || 'basic_30';
     }
     .macro-card:hover { border-color:var(--border2); transform:translateY(-2px); }
     .mc-icon { font-size:1.3rem; margin-bottom:.4rem; }
-    .mc-val { font-family:'Fraunces',serif; font-size:1.5rem; font-weight:900; line-height:1; margin-bottom:.2rem; }
+    .mc-val { font-size:1.5rem; font-weight:900; line-height:1; margin-bottom:.2rem; }
     .mc-lbl { font-size:.68rem; font-weight:700; color:var(--soft); text-transform:uppercase; letter-spacing:.05em; }
     .mc-pct { font-size:.72rem; color:var(--soft); margin-top:.1rem; }
 
@@ -435,7 +423,7 @@ const tier = profile.subscription_tier || 'basic_30';
       0%{transform:scale(0);}70%{transform:scale(1.15);}100%{transform:scale(1);}
     }
     .success-title {
-      font-family:'Fraunces',serif; font-size:2.5rem; font-weight:900;
+      font-size:2.5rem; font-weight:900;
       margin-bottom:.75rem;
     }
     .success-title em {
@@ -493,7 +481,7 @@ const tier = profile.subscription_tier || 'basic_30';
     <!-- ════════════════ STEP 1: GOAL ════════════════ -->
     <div class="step-panel active" id="step1">
       <div class="card-head">
-        <div class="step-badge"><Target size={14} style="vertical-align:middle;margin-right:.3rem;" /> Step 1 · Goal</div>
+        <div class="step-badge">🎯 Step 1 · Goal</div>
         <h2 class="card-title">What's your main <em>goal</em>,<br/>{userName}?</h2>
         <p class="card-sub">This shapes your entire 30-day plan. Be honest — your results depend on it.</p>
       </div>
@@ -525,14 +513,14 @@ const tier = profile.subscription_tier || 'basic_30';
     <!-- ════════════════ STEP 2: BODY STATS ════════════════ -->
     <div class="step-panel" id="step2">
       <div class="card-head">
-        <div class="step-badge"><BarChart2 size={14} style="vertical-align:middle;margin-right:.3rem;" /> Step 2 · Body Stats</div>
+        <div class="step-badge">📊 Step 2 · Body Stats</div>
         <h2 class="card-title">Tell us about your <em>body</em></h2>
         <p class="card-sub">We calculate your personal macros — calories, protein, fat — based on these numbers.</p>
       </div>
       <div class="card-body">
         <!-- Age -->
         <div class="num-group">
-          <div class="num-icon"><Calendar size={22} /></div>
+          <div class="num-icon">📅</div>
           <div class="num-label-wrap">
             <div class="num-label">Age</div>
             <div class="num-sublabel">Your biological age</div>
@@ -604,7 +592,7 @@ const tier = profile.subscription_tier || 'basic_30';
     <!-- ════════════════ STEP 3: LIFESTYLE ════════════════ -->
     <div class="step-panel" id="step3">
       <div class="card-head">
-        <div class="step-badge"><Zap size={14} style="vertical-align:middle;margin-right:.3rem;" /> Step 3 · Lifestyle</div>
+        <div class="step-badge">⚡ Step 3 · Lifestyle</div>
         <h2 class="card-title">How active are <em>you</em>?</h2>
         <p class="card-sub">Your activity level determines how many calories you burn daily — crucial for your plan.</p>
       </div>
@@ -638,7 +626,7 @@ const tier = profile.subscription_tier || 'basic_30';
     <!-- ════════════════ STEP 4: DIET PREFERENCES ════════════════ -->
     <div class="step-panel" id="step4">
       <div class="card-head">
-        <div class="step-badge"><Utensils size={14} style="vertical-align:middle;margin-right:.3rem;" /> Step 4 · Diet Preferences</div>
+        <div class="step-badge">🍽️ Step 4 · Diet Preferences</div>
         <h2 class="card-title">Any food <em>preferences</em>?</h2>
         <p class="card-sub">We'll filter your meal plan and recipes to match your needs. Select all that apply.</p>
       </div>
@@ -687,7 +675,7 @@ const tier = profile.subscription_tier || 'basic_30';
     <!-- ════════════════ STEP 5: FASTING + EXTRAS ════════════════ -->
     <div class="step-panel" id="step5">
       <div class="card-head">
-        <div class="step-badge"><Sparkles size={14} style="vertical-align:middle;margin-right:.3rem;" /> Step 5 · Advanced Options</div>
+        <div class="step-badge">✨ Step 5 · Advanced Options</div>
         <h2 class="card-title">Power up your <em>results</em></h2>
         <p class="card-sub">These optional features can dramatically accelerate your transformation. You can change them anytime.</p>
       </div>
@@ -712,7 +700,7 @@ const tier = profile.subscription_tier || 'basic_30';
         <div class="sec-label">Enable Features</div>
         <div class="toggle-row">
           <div class="tr-left">
-            <div class="tr-icon"><Droplets size={20} /></div>
+            <div class="tr-icon">💧</div>
             <div>
               <div class="tr-label">Electrolytes Tracker</div>
               <div class="tr-sub">Daily reminders for sodium, potassium & magnesium — prevents keto flu</div>
@@ -722,7 +710,7 @@ const tier = profile.subscription_tier || 'basic_30';
         </div>
         <div class="toggle-row">
           <div class="tr-left">
-            <div class="tr-icon"><BarChart2 size={20} /></div>
+            <div class="tr-icon">📊</div>
             <div>
               <div class="tr-label">Daily Keto Check-in</div>
               <div class="tr-sub">Evening check-in tracks energy, hunger & ketosis signals</div>
@@ -732,7 +720,7 @@ const tier = profile.subscription_tier || 'basic_30';
         </div>
         <div class="toggle-row">
           <div class="tr-left">
-            <div class="tr-icon"><Calendar size={20} /></div>
+            <div class="tr-icon">📅</div>
             <div>
               <div class="tr-label">Weekly Progress Report</div>
               <div class="tr-sub">Downloadable PDF every Sunday with your stats</div>
@@ -742,7 +730,7 @@ const tier = profile.subscription_tier || 'basic_30';
         </div>
         <div class="toggle-row">
           <div class="tr-left">
-            <div class="tr-icon"><Bell size={20} /></div>
+            <div class="tr-icon">🔔</div>
             <div>
               <div class="tr-label">Smart Reminders</div>
               <div class="tr-sub">Meal, water, and streak reminders at your preferred times</div>
@@ -754,7 +742,7 @@ const tier = profile.subscription_tier || 'basic_30';
       <div class="card-foot">
         <button class="btn-back" onclick="prevStep(5)">← Back</button>
         <button class="btn-next" onclick="nextStep(5)" id="next5">
-          Calculate My Plan <Zap size={16} style="vertical-align:middle;margin-left:.3rem;" />
+          Calculate My Plan ⚡
         </button>
       </div>
     </div>
@@ -762,7 +750,7 @@ const tier = profile.subscription_tier || 'basic_30';
     <!-- ════════════════ STEP 6: RESULTS ════════════════ -->
     <div class="step-panel" id="step6">
       <div class="card-head">
-        <div class="step-badge"><Sparkles size={14} style="vertical-align:middle;margin-right:.3rem;" /> Step 6 · Your Personal Plan</div>
+        <div class="step-badge">✨ Step 6 · Your Personal Plan</div>
         <h2 class="card-title">Your plan is <em>ready</em>!</h2>
         <p class="card-sub">Based on your data, we've calculated your personal keto macros and built your 30-day roadmap.</p>
       </div>
@@ -792,19 +780,19 @@ const tier = profile.subscription_tier || 'basic_30';
         <!-- 3 Macro Cards -->
         <div class="macro-grid">
           <div class="macro-card">
-            <div class="mc-icon"><Zap size={22} /></div>
+            <div class="mc-icon">⚡</div>
             <div class="mc-val" id="mcProtein" style="color:#3b82f6;">—</div>
             <div class="mc-lbl">Protein</div>
             <div class="mc-pct" id="mcProteinPct">—</div>
           </div>
           <div class="macro-card">
-            <div class="mc-icon"><Flame size={22} /></div>
+            <div class="mc-icon">🔥</div>
             <div class="mc-val" id="mcFat" style="color:#f59e0b;">—</div>
             <div class="mc-lbl">Fat</div>
             <div class="mc-pct" id="mcFatPct">—</div>
           </div>
           <div class="macro-card">
-            <div class="mc-icon"><TrendingDown size={22} /></div>
+            <div class="mc-icon">📉</div>
             <div class="mc-val" id="mcCarbs" style="color:#10b981;">—</div>
             <div class="mc-lbl">Net Carbs</div>
             <div class="mc-pct" id="mcCarbsPct">—</div>
@@ -820,7 +808,7 @@ const tier = profile.subscription_tier || 'basic_30';
         <button class="btn-back" onclick="prevStep(6)">← Back</button>
         <button class="btn-next" onclick="saveAndStart()" id="next6">
           <div class="btn-spin" id="saveSpin"></div>
-          <span id="saveTxt"><Sparkles size={16} style="vertical-align:middle;margin-right:.3rem;" /> Start My Journey</span>
+          <span id="saveTxt">✨ Start My Journey</span>
         </button>
       </div>
     </div>
@@ -834,7 +822,7 @@ const tier = profile.subscription_tier || 'basic_30';
 
 <!-- SUCCESS OVERLAY -->
 <div class="success-overlay" id="successOverlay">
-  <div class="success-icon"><CheckCircle size={52} /></div>
+  <div class="success-icon">✅</div>
   <h2 class="success-title">Your journey<br/><em>starts now</em>!</h2>
   <p class="success-sub">Your 30-day keto plan is personalized and ready. Let's go!</p>
   <div class="success-bar"><div class="success-fill" id="successFill"></div></div>

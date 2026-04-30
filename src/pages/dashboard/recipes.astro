@@ -1,19 +1,8 @@
 ---
 import { getUserJourney, getDailyTasks, getPlan } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
-import DashNav from '../../components/DashNav.astro';
+import Sidebar from '../../components/Sidebar.astro';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import UtensilsCrossed from 'lucide-astro/UtensilsCrossed';
-import Search from 'lucide-astro/Search';
-import Star from 'lucide-astro/Star';
-import Clock from 'lucide-astro/Clock';
-import Flame from 'lucide-astro/Flame';
-import BookOpen from 'lucide-astro/BookOpen';
-import Filter from 'lucide-astro/Filter';
-import Lock from 'lucide-astro/Lock';
-import Unlock from 'lucide-astro/Unlock';
-import Zap from 'lucide-astro/Zap';
-import Layers from 'lucide-astro/Layers';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -222,29 +211,23 @@ const totalBooks    = bookCategories.length * 12;
   <title>{t('recipes.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
-
-  <script is:inline>
-    (function(){ const t=localStorage.getItem('keto-theme')||'light'; document.documentElement.setAttribute('data-theme',t); })();
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet"/>
 
   <style>
     :root {
-      --bg:#0c1117; --surface:#131b24; --card:#1a2535; --card2:#1e2d42;
-      --border:rgba(255,255,255,.07); --border2:rgba(255,255,255,.12);
-      --text:#e8edf5; --muted:#4a5a6e; --soft:#8a9ab0;
+      --bg:#FAF6F1; --surface:#F2EDE5; --card:#FFFFFF; --card2:#F2EDE5;
+      --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
+      --text:#1A110D; --muted:#C8B5AD; --soft:#7A5C52;
       --green:#10b981; --green2:#34d399; --blue:#3b82f6;
       --purple:#8b5cf6; --gold:#f59e0b; --red:#ef4444; --cyan:#06b6d4;
-      --radius:20px; --nav-h:64px;
-    }
-    [data-theme="light"] {
-      --bg:#f0f4f8; --surface:#fff; --card:#fff; --card2:#f8fafc;
-      --border:rgba(0,0,0,.07); --border2:rgba(0,0,0,.12);
-      --text:#0f172a; --muted:#94a3b8; --soft:#64748b;
+      --rv-accent:#FF5C7A; --radius:20px;
     }
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
     html{scroll-behavior:smooth;}
-    body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;transition:background .3s,color .3s;}
+    body{font-family:'Bricolage Grotesque',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{overflow-y:auto;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}}
 
     /* BG */
     .bg-mesh{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
@@ -259,7 +242,7 @@ const totalBooks    = bookCategories.length * 12;
     nav{position:sticky;top:0;z-index:100;height:var(--nav-h);background:rgba(12,17,23,.85);border-bottom:1px solid var(--border);backdrop-filter:blur(20px);display:flex;align-items:center;transition:background .3s;}
     [data-theme="light"] nav{background:rgba(255,255,255,.88);}
     .nav-inner{max-width:1280px;margin:0 auto;padding:0 1.5rem;width:100%;display:flex;align-items:center;gap:1.5rem;}
-    .nav-brand{display:flex;align-items:center;gap:.6rem;text-decoration:none;font-family:'Fraunces',serif;font-weight:700;font-size:1.1rem;color:var(--text);flex-shrink:0;}
+    .nav-brand{display:flex;align-items:center;gap:.6rem;text-decoration:none;font-weight:700;font-size:1.1rem;color:var(--text);flex-shrink:0;}
     .nav-links{display:flex;align-items:center;gap:.25rem;flex:1;overflow-x:auto;}
     .nav-links::-webkit-scrollbar{display:none;}
     .nav-link{display:flex;align-items:center;gap:.4rem;padding:.45rem .9rem;border-radius:10px;font-size:.82rem;font-weight:600;color:var(--soft);text-decoration:none;white-space:nowrap;transition:all .2s;}
@@ -286,7 +269,7 @@ const totalBooks    = bookCategories.length * 12;
     /* HERO */
     .hero{margin-bottom:2.5rem;animation:fadeUp .5s ease both;}
     .hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:99px;padding:.4rem 1.1rem;font-size:.78rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1.25rem;}
-    .hero-title{font-family:'Fraunces',serif;font-size:clamp(2rem,4vw,3rem);font-weight:900;line-height:1.1;margin-bottom:.75rem;}
+    .hero-title{font-size:clamp(2rem,4vw,3rem);font-weight:900;line-height:1.1;margin-bottom:.75rem;}
     .hero-title .hl{font-style:italic;background:linear-gradient(135deg,var(--green),var(--green2),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
 
     /* PLAN STATS ROW */
@@ -294,7 +277,7 @@ const totalBooks    = bookCategories.length * 12;
     .plan-stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem 1.5rem;display:flex;align-items:center;gap:.875rem;transition:all .25s;animation:fadeUp .4s ease both;}
     .plan-stat:hover{border-color:var(--border2);transform:translateY(-2px);}
     .ps-icon{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
-    .ps-val{font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;line-height:1;}
+    .ps-val{font-size:1.6rem;font-weight:900;line-height:1;}
     .ps-lbl{font-size:.7rem;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;margin-top:.15rem;}
 
     /* PLAN PROGRESS */
@@ -335,7 +318,7 @@ const totalBooks    = bookCategories.length * 12;
     .cat-h-inner{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;}
     .cat-h-left{display:flex;align-items:center;gap:1.25rem;}
     .cat-big-icon{width:70px;height:70px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;}
-    .cat-h-title{font-family:'Fraunces',serif;font-size:1.8rem;font-weight:900;margin-bottom:.2rem;}
+    .cat-h-title{font-size:1.8rem;font-weight:900;margin-bottom:.2rem;}
     .cat-h-desc{font-size:.875rem;opacity:.8;}
     .cat-h-stats{display:flex;gap:.75rem;flex-wrap:wrap;}
     .cat-stat-pill{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:.4rem 1rem;font-size:.78rem;font-weight:700;color:#fff;backdrop-filter:blur(8px);}
@@ -395,7 +378,7 @@ const totalBooks    = bookCategories.length * 12;
     }
 
     .book-top{padding:1rem 1.25rem .875rem;position:relative;}
-    .book-title{font-family:'Fraunces',serif;font-size:.96rem;font-weight:700;line-height:1.3;margin-bottom:.35rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+    .book-title{font-size:.96rem;font-weight:700;line-height:1.3;margin-bottom:.35rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
     .book-desc{font-size:.76rem;color:var(--soft);line-height:1.5;margin-bottom:.75rem;}
     .book-meta{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;}
     .book-pages-badge{padding:.2rem .6rem;border-radius:99px;font-size:.68rem;font-weight:700;background:var(--surface);border:1px solid var(--border);color:var(--soft);}
@@ -443,7 +426,7 @@ const totalBooks    = bookCategories.length * 12;
       border:1px solid rgba(99,102,241,.25);border-radius:var(--radius);
       padding:2.5rem;text-align:center;margin-top:2rem;
     }
-    .upgrade-cta-title{font-family:'Fraunces',serif;font-size:1.6rem;font-weight:900;margin-bottom:.75rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .upgrade-cta-title{font-size:1.6rem;font-weight:900;margin-bottom:.75rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
     .upgrade-cta-sub{font-size:.9rem;color:var(--soft);margin-bottom:1.75rem;line-height:1.6;}
     .upgrade-tiers{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:1.75rem;}
     .upgrade-tier-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;text-align:center;min-width:140px;transition:all .25s;}
@@ -464,7 +447,7 @@ const totalBooks    = bookCategories.length * 12;
 
     /* LOCK MODAL */
     .lock-modal-icon{font-size:3rem;margin-bottom:1rem;}
-    .lock-modal-title{font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;margin-bottom:.5rem;}
+    .lock-modal-title{font-size:1.3rem;font-weight:900;margin-bottom:.5rem;}
     .lock-modal-sub{font-size:.875rem;color:var(--soft);line-height:1.6;margin-bottom:1.5rem;}
     .lock-tiers-row{display:flex;gap:.75rem;justify-content:center;margin-bottom:1.5rem;flex-wrap:wrap;}
     .lock-tier-pill{padding:.5rem 1.1rem;border-radius:99px;font-size:.78rem;font-weight:800;border:1.5px solid;}
@@ -490,8 +473,7 @@ const totalBooks    = bookCategories.length * 12;
     .filter-search{
       width:100%;padding:.6rem .75rem .6rem 2.25rem;
       border-radius:10px;border:1.5px solid var(--border);
-      background:var(--surface);color:var(--text);font-size:.85rem;font-family:'DM Sans',sans-serif;
-      transition:border-color .2s;outline:none;
+      background:var(--surface);color:var(--text);font-size:.85rem;      transition:border-color .2s;outline:none;
     }
     .filter-search:focus{border-color:var(--green);}
     .filter-search::placeholder{color:var(--soft);}
@@ -564,27 +546,26 @@ const totalBooks    = bookCategories.length * 12;
   </style>
 </head>
 <body>
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="recipes" />
+<div class="rv-pg-main">
 
-<div class="bg-mesh" aria-hidden="true">
-  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+<div style="display:none" aria-hidden="true">
 </div>
-
-<!-- NAV -->
-<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="recipes" />
 
 <!-- PAGE -->
 <div class="page">
 
   <!-- HERO -->
   <div class="hero">
-    <div class="hero-badge"><BookOpen size={14} style="display:inline;vertical-align:middle;" /> Recipe Library</div>
+    <div class="hero-badge">📖 Recipe Library</div>
     <h1 class="hero-title">Your Keto <span class="hl">Recipe Books</span></h1>
     <p style="font-size:.95rem;color:var(--soft);max-width:500px;line-height:1.6;">
       {totalUnlocked} books unlocked across 7 categories — based on your <strong style="color:var(--text);">{plan.name} Plan</strong>.
     </p>
     <!-- Global search trigger -->
     <button class="global-search-btn" id="globalSearchBtn" onclick="window.openSearch()">
-      <Search size={16} style="display:inline;vertical-align:middle;flex-shrink:0;" />
+      🔍
       <span>Search all recipes…</span>
       <span class="gsb-kbd">⌘K</span>
     </button>
@@ -600,28 +581,28 @@ const totalBooks    = bookCategories.length * 12;
       </div>
     </div>
     <div class="plan-stat" style="animation-delay:.1s;">
-      <div class="ps-icon" style="background:linear-gradient(135deg,var(--blue),#2563eb);"><BookOpen size={18} /></div>
+      <div class="ps-icon" style="background:linear-gradient(135deg,var(--blue),#2563eb);">📖</div>
       <div>
         <div class="ps-val" style="color:var(--blue);">{totalUnlocked}</div>
         <div class="ps-lbl">Books Unlocked</div>
       </div>
     </div>
     <div class="plan-stat" style="animation-delay:.15s;">
-      <div class="ps-icon" style="background:linear-gradient(135deg,var(--muted),#334155);"><Lock size={18} /></div>
+      <div class="ps-icon" style="background:linear-gradient(135deg,var(--muted),#334155);">🔒</div>
       <div>
         <div class="ps-val" style="color:var(--soft);">{totalBooks - totalUnlocked}</div>
         <div class="ps-lbl">Books Locked</div>
       </div>
     </div>
     <div class="plan-stat" style="animation-delay:.2s;">
-      <div class="ps-icon" style="background:linear-gradient(135deg,var(--purple),#7c3aed);"><Layers size={18} /></div>
+      <div class="ps-icon" style="background:linear-gradient(135deg,var(--purple),#7c3aed);">📚</div>
       <div>
         <div class="ps-val" style="color:var(--purple);">7</div>
         <div class="ps-lbl">Categories</div>
       </div>
     </div>
     <div class="plan-stat" style="animation-delay:.25s;">
-      <div class="ps-icon" style="background:linear-gradient(135deg,var(--gold),#d97706);"><Star size={18} /></div>
+      <div class="ps-icon" style="background:linear-gradient(135deg,var(--gold),#d97706);">⭐</div>
       <div>
         <div class="ps-val" style="color:var(--gold);">{unlockedCount}/12</div>
         <div class="ps-lbl">Per Category</div>
@@ -718,10 +699,10 @@ const totalBooks    = bookCategories.length * 12;
               {unlockedCount} Unlocked
             </span>
             <span class="cat-stat-pill" style="background:var(--surface);border-color:var(--border);color:var(--soft);">
-              <Lock size={11} style="display:inline;vertical-align:middle;" /> {12 - unlockedCount} Locked
+              🔒 {12 - unlockedCount} Locked
             </span>
             <span class="cat-stat-pill" style={`background:${cat.accent}20;border-color:${cat.accent}40;color:${cat.accent};`}>
-              <BookOpen size={11} style="display:inline;vertical-align:middle;" /> 12 Total
+              📖 12 Total
             </span>
           </div>
         </div>
@@ -775,7 +756,7 @@ const totalBooks    = bookCategories.length * 12;
                     class="btn-locked"
                     onclick={`openLockModal('${requiredPlan}','${requiredEmoji}','${book.title}')`}
                   >
-                    <Lock size={14} style="display:inline;vertical-align:middle;" />
+                    🔒
                     <span>Unlock with {requiredPlan}+</span>
                   </button>
                 )}
@@ -788,7 +769,7 @@ const totalBooks    = bookCategories.length * 12;
       <!-- Upgrade CTA (only if not elite) -->
       {tier !== 'elite_12' && (
         <div class="upgrade-cta">
-          <div class="upgrade-cta-title"><Unlock size={16} style="display:inline;vertical-align:middle;" /> Unlock More {cat.name} Books</div>
+          <div class="upgrade-cta-title">🔓 Unlock More {cat.name} Books</div>
           <p class="upgrade-cta-sub">
             You have <strong style="color:var(--text);">{unlockedCount} out of 12</strong> books unlocked in this category.<br/>
             Upgrade to access all {cat.name} recipes.
@@ -807,7 +788,7 @@ const totalBooks    = bookCategories.length * 12;
             ))}
           </div>
           <a href="/dashboard/upgrade" class="btn-upgrade-cta">
-            <Zap size={16} />
+            ⚡
             <span>Upgrade Plan</span>
           </a>
         </div>
@@ -822,7 +803,7 @@ const totalBooks    = bookCategories.length * 12;
 <div class="modal-overlay" id="lockModal">
   <div class="modal">
     <button class="modal-close" onclick="closeLockModal()">×</button>
-    <div class="lock-modal-icon"><Lock size={32} /></div>
+    <div class="lock-modal-icon">🔒</div>
     <div class="lock-modal-title" id="lockModalTitle">Premium Content</div>
     <p class="lock-modal-sub" id="lockModalSub">This book requires a higher plan to unlock.</p>
     <div class="lock-tiers-row">
@@ -831,7 +812,7 @@ const totalBooks    = bookCategories.length * 12;
       <span class="lock-tier-pill" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:#fbbf24;">👑 Elite: 12 books</span>
     </div>
     <a href="/dashboard/upgrade" class="modal-btn-upgrade" onclick="closeLockModal()">
-      <Zap size={16} /><span>Upgrade to Unlock</span>
+      ⚡<span>Upgrade to Unlock</span>
     </a>
     <button class="modal-btn-close" onclick="closeLockModal()">Not Now</button>
   </div>
@@ -1197,5 +1178,6 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') { window.closeSearch(); }
 });
 </script>
+</div></div>
 </body>
 </html>

@@ -1,20 +1,9 @@
 ---
 // src/pages/dashboard/referrals.astro
-import { getUserJourney } from '../../lib/supabase';
+import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
-import DashNav from '../../components/DashNav.astro';
+import Sidebar from '../../components/Sidebar.astro';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import Gift        from 'lucide-astro/Gift';
-import Copy        from 'lucide-astro/Copy';
-import Share2      from 'lucide-astro/Share2';
-import Zap         from 'lucide-astro/Zap';
-import Users       from 'lucide-astro/Users';
-import Trophy      from 'lucide-astro/Trophy';
-import Check       from 'lucide-astro/Check';
-import Link        from 'lucide-astro/Link';
-import MessageCircle from 'lucide-astro/MessageCircle';
-import Mail        from 'lucide-astro/Mail';
-import Upload      from 'lucide-astro/Upload';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -25,7 +14,8 @@ const userName  = profile.full_name?.split(' ')[0] || 'there';
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
 
-const journey = await getUserJourney(user.id, db);
+await updateCurrentDay(user.id).catch(() => null);
+const journey    = await getUserJourney(user.id, db).catch(() => null);
 const currentDay = journey?.current_day || 1;
 
 // Load existing code + stats (server-side for initial render)
@@ -60,20 +50,37 @@ const previewUses    = codeRow?.uses_count || 0;
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{t('referrals.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Fraunces:ital,wght@1,700;1,800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg:#FAF6F1;--card:#FFFFFF;--card2:#F2EDE5;
+      --bg2:#F2EDE5;--green-bg:rgba(16,185,129,.1);
+      --border:rgba(22,17,15,.08);--border2:rgba(255,92,122,.25);
+      --text:#16110F;--soft:#4A4340;--muted:#C8BFBA;
+      --green:#10b981;--green2:#34d399;--gold:#f59e0b;
+      --blue:#3b82f6;--purple:#8b5cf6;--red:#ef4444;
+      --amber:#f59e0b;--amber-bg:rgba(245,158,11,.1);
+      --r:12px;--r-sm:10px;--r-lg:20px;
+      --shadow-sm:0 2px 8px rgba(22,17,15,.06);
+      --shadow-lg:0 12px 40px rgba(22,17,15,.15);
+      --rv-accent:#FF5C7A;--rv-warm:#FF914D;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Bricolage Grotesque',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{min-width:0;overflow-x:hidden;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}.rv-pg-main{padding-bottom:5.5rem;}}
+  </style>
 </head>
 <body>
-
-<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="referrals" />
-
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="referrals" />
+<div class="rv-pg-main">
 <main class="page">
 
   <!-- ── Header ─────────────────────────────────────────── -->
   <header class="page-header fade-up">
-    <div class="header-icon">
-      <Gift size={22} />
-    </div>
+    <div class="header-icon">🎁</div>
     <div>
       <h1 class="page-title">Refer Friends</h1>
       <p class="page-sub">You earn <strong>{xpPerReferral} XP</strong> · your friend gets <strong>{xpBonusReferred} XP</strong> welcome bonus</p>
@@ -83,17 +90,17 @@ const previewUses    = codeRow?.uses_count || 0;
   <!-- ── Stats row ──────────────────────────────────────── -->
   <div class="stats-row fade-up" style="animation-delay:.04s">
     <div class="stat-card">
-      <Users size={18} class="stat-icon blue" />
+      <div class="stat-icon blue">👥</div>
       <div class="stat-val" id="statTotal">{refList.length}</div>
       <div class="stat-label">Referred</div>
     </div>
     <div class="stat-card">
-      <Trophy size={18} class="stat-icon green" />
+      <div class="stat-icon green">🏆</div>
       <div class="stat-val" id="statCompleted">{completed}</div>
       <div class="stat-label">Joined</div>
     </div>
     <div class="stat-card">
-      <Zap size={18} class="stat-icon amber" />
+      <div class="stat-icon amber">⚡</div>
       <div class="stat-val" id="statXP">{totalXP}</div>
       <div class="stat-label">XP Earned</div>
     </div>
@@ -108,7 +115,7 @@ const previewUses    = codeRow?.uses_count || 0;
       <!-- Code card -->
       <div class="card code-card fade-up" style="animation-delay:.08s">
         <div class="card-header">
-          <Link size={16} class="card-header-icon" />
+          <span class="card-header-icon">🔗</span>
           <h2 class="card-title">Your Referral Code</h2>
         </div>
 
@@ -118,19 +125,16 @@ const previewUses    = codeRow?.uses_count || 0;
 
         <div class="code-actions">
           <button class="btn-copy" id="copyCodeBtn" onclick="copyCode()" title="Copy code">
-            <Copy size={15} />
-            Copy Code
+            📋 Copy Code
           </button>
           <button class="btn-copy btn-link" id="copyLinkBtn" onclick="copyLink()" title="Copy link">
-            <Link size={15} />
-            Copy Link
+            🔗 Copy Link
           </button>
         </div>
 
         {!hasCode && (
           <button class="btn-generate" id="generateBtn" onclick="generateCode()">
-            <Gift size={15} />
-            Generate My Code
+            🎁 Generate My Code
           </button>
         )}
 
@@ -142,34 +146,22 @@ const previewUses    = codeRow?.uses_count || 0;
       <!-- Share card -->
       <div class="card share-card fade-up" style="animation-delay:.12s">
         <div class="card-header">
-          <Share2 size={16} class="card-header-icon" />
+          <span class="card-header-icon">📤</span>
           <h2 class="card-title">Share</h2>
         </div>
 
         <div class="share-btns">
-          <button class="share-btn whatsapp" onclick="shareWhatsApp()">
-            <MessageCircle size={15} />
-            WhatsApp
-          </button>
-          <button class="share-btn twitter" onclick="shareTwitter()">
-            <span class="share-icon" style="font-weight:900;font-size:.9rem;line-height:1;">𝕏</span>
-            Twitter / X
-          </button>
-          <button class="share-btn email-btn" onclick="shareEmail()">
-            <Mail size={15} />
-            Email
-          </button>
-          <button class="share-btn native" id="nativeShareBtn" onclick="nativeShare()" style="display:none">
-            <Upload size={15} />
-            Share
-          </button>
+          <button class="share-btn whatsapp" onclick="shareWhatsApp()">💬 WhatsApp</button>
+          <button class="share-btn twitter" onclick="shareTwitter()">𝕏 Twitter</button>
+          <button class="share-btn email-btn" onclick="shareEmail()">✉️ Email</button>
+          <button class="share-btn native" id="nativeShareBtn" onclick="nativeShare()" style="display:none">📤 Share</button>
         </div>
       </div>
 
       <!-- How it works -->
       <div class="card how-card fade-up" style="animation-delay:.16s">
         <div class="card-header">
-          <Trophy size={16} class="card-header-icon" />
+          <span class="card-header-icon">🏆</span>
           <h2 class="card-title">How It Works</h2>
         </div>
         <ol class="how-list">
@@ -202,7 +194,7 @@ const previewUses    = codeRow?.uses_count || 0;
     <div class="right-col">
       <div class="card history-card fade-up" style="animation-delay:.1s">
         <div class="card-header">
-          <Users size={16} class="card-header-icon" />
+          <span class="card-header-icon">👥</span>
           <h2 class="card-title">Referral History</h2>
           <span class="history-count" id="historyCount">{refList.length}</span>
         </div>
@@ -210,7 +202,7 @@ const previewUses    = codeRow?.uses_count || 0;
         <div id="historyList">
           {refList.length === 0 && (
             <div class="empty-state">
-              <div class="empty-icon"><Link size={28} /></div>
+              <div class="empty-icon">🔗</div>
               <p class="empty-title">No referrals yet</p>
               <p class="empty-sub">Share your code above and your referrals will appear here.</p>
             </div>
@@ -227,9 +219,7 @@ const previewUses    = codeRow?.uses_count || 0;
                 </div>
                 <div class="ref-status-wrap">
                   {isComplete && (
-                    <span class="ref-badge complete">
-                      <Check size={11} /> Joined
-                    </span>
+                    <span class="ref-badge complete">✓ Joined</span>
                   )}
                   {!isComplete && (
                     <span class="ref-badge pending">Pending</span>
@@ -245,7 +235,7 @@ const previewUses    = codeRow?.uses_count || 0;
       <!-- XP breakdown -->
       <div class="card xp-card fade-up" style="animation-delay:.14s">
         <div class="card-header">
-          <Zap size={16} class="card-header-icon amber" />
+          <span class="card-header-icon amber">⚡</span>
           <h2 class="card-title">XP Breakdown</h2>
         </div>
         <div class="xp-row">
@@ -270,7 +260,7 @@ const previewUses    = codeRow?.uses_count || 0;
   <!-- ── Apply a referral code (for users who haven't used one) -->
   <div class="card apply-card fade-up" style="animation-delay:.2s">
     <div class="card-header">
-      <Gift size={16} class="card-header-icon" />
+      <span class="card-header-icon">🎁</span>
       <h2 class="card-title">Have a Referral Code?</h2>
     </div>
     <p class="apply-sub">If a friend invited you, enter their code below to credit them with XP.</p>
@@ -283,6 +273,7 @@ const previewUses    = codeRow?.uses_count || 0;
   </div>
 
 </main>
+</div></div>
 
 <!-- ── Toast ─────────────────────────────────────────────── -->
 <div id="toast" class="toast" aria-live="polite"></div>
@@ -305,7 +296,6 @@ const previewUses    = codeRow?.uses_count || 0;
   color: var(--green); flex-shrink: 0;
 }
 .page-title {
-  font-family: 'Fraunces', serif; font-style: italic;
   font-size: 1.8rem; font-weight: 800; color: var(--text); margin: 0;
 }
 .page-sub { color: var(--soft); font-size: .88rem; margin: 0; }
@@ -327,7 +317,6 @@ const previewUses    = codeRow?.uses_count || 0;
 .stat-icon.green  { color: var(--green); }
 .stat-icon.amber  { color: var(--amber); }
 .stat-val {
-  font-family: 'Fraunces', serif; font-style: italic;
   font-size: 1.9rem; font-weight: 800; color: var(--text); line-height: 1;
 }
 .stat-label { font-size: .72rem; font-weight: 700; color: var(--soft); text-transform: uppercase; letter-spacing: .04em; }
@@ -355,7 +344,6 @@ const previewUses    = codeRow?.uses_count || 0;
 
 /* Code display */
 .code-display {
-  font-family: 'Fraunces', serif; font-style: italic;
   font-size: 2.4rem; font-weight: 800;
   color: var(--green); text-align: center;
   letter-spacing: .12em; padding: 1rem;
@@ -488,7 +476,7 @@ const previewUses    = codeRow?.uses_count || 0;
 /* Toast */
 .toast {
   position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
-  background: #0d1a0f; border: 1px solid var(--border2);
+  background: var(--text); border: 1px solid var(--border2); color: var(--bg);
   color: var(--text); border-radius: 10px; padding: .65rem 1.25rem;
   font-size: .82rem; font-weight: 700; z-index: 9000;
   box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none;
@@ -519,7 +507,7 @@ var currentCode = hasCode ? previewCode : null;
     if (display) display.textContent = 'Click below to generate';
     display && (display.style.color = 'var(--soft)');
     display && (display.style.fontSize = '1.1rem');
-    display && (display.style.fontFamily = 'DM Sans, sans-serif');
+    display && (display.style.fontFamily = "'Bricolage Grotesque', system-ui, sans-serif");
     display && (display.style.fontStyle = 'normal');
   }
 })();
@@ -545,7 +533,7 @@ function generateCode() {
         display.textContent  = data.code;
         display.style.color = 'var(--green)';
         display.style.fontSize = '2.4rem';
-        display.style.fontFamily = 'Fraunces, serif';
+        display.style.fontFamily = "'Bricolage Grotesque', system-ui, sans-serif";
         display.style.fontStyle = 'italic';
       }
       if (btn) btn.style.display = 'none';

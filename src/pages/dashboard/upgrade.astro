@@ -1,14 +1,8 @@
 ---
 import { getPlan, getUserJourney, getDailyTasks } from '../../lib/supabase';
 import { requireLogin } from '../../lib/auth';
-import DashNav from '../../components/DashNav.astro';
+import Sidebar from '../../components/Sidebar.astro';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import Zap from 'lucide-astro/Zap';
-import Lock from 'lucide-astro/Lock';
-import CheckCircle from 'lucide-astro/CheckCircle';
-import Users from 'lucide-astro/Users';
-import Award from 'lucide-astro/Award';
-import ChevronRight from 'lucide-astro/ChevronRight';
 
 const auth = await requireLogin(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -138,99 +132,33 @@ const plans = [
   <title>{t('upgrade.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
-
-  <script is:inline>
-    (function(){
-      const t = localStorage.getItem('keto-theme') || 'dark';
-      document.documentElement.setAttribute('data-theme', t);
-    })();
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet"/>
 
   <style>
     :root {
-      --bg:      #0c1117;
-      --surface: #131b24;
-      --card:    #1a2535;
-      --card2:   #1e2d42;
-      --border:  rgba(255,255,255,.07);
-      --border2: rgba(255,255,255,.12);
-      --text:    #e8edf5;
-      --muted:   #4a5a6e;
-      --soft:    #8a9ab0;
-      --green:   #10b981;
-      --green2:  #34d399;
-      --blue:    #3b82f6;
-      --purple:  #8b5cf6;
-      --gold:    #f59e0b;
-      --red:     #ef4444;
-      --cyan:    #06b6d4;
-      --radius:  20px;
-      --nav-h:   64px;
-    }
-    [data-theme="light"] {
-      --bg:      #f0f4f8;
-      --surface: #ffffff;
-      --card:    #ffffff;
-      --card2:   #f8fafc;
-      --border:  rgba(0,0,0,.07);
-      --border2: rgba(0,0,0,.12);
-      --text:    #0f172a;
-      --muted:   #94a3b8;
-      --soft:    #64748b;
+      --bg:#FAF6F1; --card:#FFFFFF; --card2:#F2EDE5;
+      --surface:#F2EDE5;
+      --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
+      --text:#1A110D; --soft:#7A5C52; --muted:#C8B5AD;
+      --green:#10b981; --green2:#34d399;
+      --gold:#f59e0b; --purple:#8b5cf6; --blue:#3b82f6; --red:#ef4444;
+      --cyan:#06b6d4; --radius:20px;
+      --rv-accent:#FF5C7A;
     }
 
     *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
     html { scroll-behavior:smooth; }
     body {
-      font-family:'DM Sans',sans-serif;
+      font-family:'Bricolage Grotesque',system-ui,sans-serif;
       background:var(--bg); color:var(--text);
       min-height:100vh; overflow-x:hidden;
-      transition:background .3s,color .3s;
     }
-
-    /* BG MESH */
-    .bg-mesh { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
-    .orb { position:absolute; border-radius:50%; filter:blur(110px); animation:orbDrift ease-in-out infinite; }
-    [data-theme="light"] .orb { opacity:.2; }
-    .o1{width:700px;height:700px;background:rgba(16,185,129,.06);top:-200px;left:-200px;animation-duration:24s;opacity:.5;}
-    .o2{width:600px;height:600px;background:rgba(99,102,241,.05);bottom:-150px;right:-150px;animation-duration:30s;animation-delay:-14s;opacity:.4;}
-    .o3{width:400px;height:400px;background:rgba(245,158,11,.04);top:40%;left:40%;animation-duration:20s;animation-delay:-8s;opacity:.35;}
-    @keyframes orbDrift{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(50px,-60px) scale(1.07);}66%{transform:translate(-40px,50px) scale(.94);}}
-
-    /* NAV */
-    nav {
-      position:sticky; top:0; z-index:100; height:var(--nav-h);
-      background:rgba(12,17,23,.85); border-bottom:1px solid var(--border);
-      backdrop-filter:blur(20px); display:flex; align-items:center;
-      transition:background .3s;
-    }
-    [data-theme="light"] nav { background:rgba(255,255,255,.88); }
-    .nav-inner { max-width:1280px; margin:0 auto; padding:0 1.5rem; width:100%; display:flex; align-items:center; gap:1.5rem; }
-    .nav-brand { display:flex; align-items:center; gap:.6rem; text-decoration:none; font-family:'Fraunces',serif; font-weight:700; font-size:1.1rem; color:var(--text); flex-shrink:0; }
-    .nav-links { display:flex; align-items:center; gap:.25rem; flex:1; overflow-x:auto; }
-    .nav-links::-webkit-scrollbar{display:none;}
-    .nav-link { display:flex; align-items:center; gap:.4rem; padding:.45rem .9rem; border-radius:10px; font-size:.82rem; font-weight:600; color:var(--soft); text-decoration:none; white-space:nowrap; transition:all .2s; }
-    .nav-link:hover,.nav-link.active { background:rgba(16,185,129,.1); color:var(--green); }
-    .nav-link.active { font-weight:700; }
-    .nav-right { display:flex; align-items:center; gap:.75rem; flex-shrink:0; }
-    .theme-btn { width:38px; height:38px; border-radius:10px; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1rem; transition:all .2s; }
-    .theme-btn:hover { border-color:var(--green); }
-    .notif-wrap { position:relative; }
-    .notif-btn { width:38px; height:38px; border-radius:10px; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1rem; position:relative; transition:all .2s; }
-    .notif-btn:hover { border-color:var(--green); }
-    .notif-badge { position:absolute; top:-5px; right:-5px; background:var(--red); color:#fff; width:18px; height:18px; border-radius:50%; font-size:.65rem; font-weight:800; display:flex; align-items:center; justify-content:center; animation:pulseBadge 2s infinite; }
-    @keyframes pulseBadge{0%,100%{transform:scale(1);}50%{transform:scale(1.2);}}
-    .notif-dropdown { position:absolute; top:calc(100% + .5rem); right:0; width:340px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.4); display:none; z-index:200; }
-    .notif-dropdown.open { display:block; animation:dropIn .25s ease; }
-    @keyframes dropIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
-    .notif-item { display:flex; align-items:center; gap:.875rem; padding:.875rem 1.25rem; border-bottom:1px solid var(--border); cursor:pointer; transition:background .2s; }
-    .notif-item:hover { background:rgba(16,185,129,.06); }
-    .nav-avatar { width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,var(--green),var(--blue)); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:.95rem; text-decoration:none; transition:all .2s; }
-    .nav-avatar:hover { transform:scale(1.05); }
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{overflow-y:auto;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}}
 
     /* PAGE */
-    .page { position:relative; z-index:1; max-width:1280px; margin:0 auto; padding:2rem 1.5rem 5rem; }
+    .page { max-width:1280px; margin:0 auto; padding:2rem 1.5rem 5rem; }
 
     /* HERO SECTION */
     .hero {
@@ -246,7 +174,6 @@ const plans = [
       margin-bottom:1.5rem;
     }
     .hero-title {
-      font-family:'Fraunces',serif;
       font-size:clamp(2.2rem,5vw,3.5rem);
       font-weight:900; line-height:1.1; margin-bottom:1rem;
     }
@@ -347,7 +274,7 @@ const plans = [
       position:relative; z-index:1;
     }
     .plan-name {
-      font-family:'Fraunces',serif; font-size:1.6rem; font-weight:900;
+      font-size:1.6rem; font-weight:900;
       margin-bottom:.2rem; position:relative; z-index:1;
     }
     .plan-tagline {
@@ -358,10 +285,10 @@ const plans = [
 
     .plan-price-block { position:relative; z-index:1; }
     .plan-price {
-      font-family:'Fraunces',serif; font-size:3.5rem; font-weight:900;
+      font-size:3.5rem; font-weight:900;
       line-height:1; display:flex; align-items:flex-start; gap:.1rem;
     }
-    .plan-price sup { font-size:1.4rem; margin-top:.4rem; font-family:'DM Sans',sans-serif; font-weight:700; }
+    .plan-price sup { font-size:1.4rem; margin-top:.4rem; font-weight:700; }
     .plan-duration { font-size:.82rem; color:var(--soft); font-weight:600; margin-top:.3rem; }
     .plan-per-month {
       display:inline-flex; align-items:center; gap:.3rem;
@@ -378,10 +305,9 @@ const plans = [
     .plan-features { padding:1.5rem 2rem; }
     .feature-item {
       display:flex; align-items:center; gap:.75rem;
-      padding:.55rem 0; border-bottom:1px solid rgba(255,255,255,.04);
+      padding:.55rem 0; border-bottom:1px solid rgba(0,0,0,.04);
       font-size:.85rem; transition:all .2s;
     }
-    [data-theme="light"] .feature-item { border-bottom-color:rgba(0,0,0,.04); }
     .feature-item:last-child { border:none; }
     .feature-item.off { color:var(--muted); }
     .feature-item.off .feat-text { text-decoration:line-through; opacity:.6; }
@@ -391,8 +317,7 @@ const plans = [
       font-size:.7rem; font-weight:900;
     }
     .feat-check.yes { background:rgba(16,185,129,.15); color:var(--green); }
-    .feat-check.no  { background:rgba(255,255,255,.04); color:var(--muted); }
-    [data-theme="light"] .feat-check.no { background:rgba(0,0,0,.04); }
+    .feat-check.no  { background:rgba(0,0,0,.04); color:var(--muted); }
 
     /* PLAN FOOTER */
     .plan-footer { padding:1.25rem 2rem 2rem; }
@@ -430,7 +355,7 @@ const plans = [
       margin-bottom:3rem; animation:fadeUp .5s .2s ease both;
     }
     .compare-title {
-      font-family:'Fraunces',serif; font-size:1.4rem; font-weight:700;
+      font-size:1.4rem; font-weight:800;
       padding:1.75rem 2rem 1.5rem;
       background:linear-gradient(135deg,var(--green),var(--green2));
       -webkit-background-clip:text; -webkit-text-fill-color:transparent;
@@ -448,8 +373,7 @@ const plans = [
     .compare-cell.center { text-align:center; }
     .compare-cell.header-cell { font-weight:800; font-size:.78rem; text-transform:uppercase; letter-spacing:.06em; color:var(--soft); }
     .compare-cell.feat-name { font-weight:600; color:var(--text); }
-    .compare-row:hover { background:rgba(255,255,255,.02); }
-    [data-theme="light"] .compare-row:hover { background:rgba(0,0,0,.02); }
+    .compare-row:hover { background:rgba(0,0,0,.02); }
 
     /* GUARANTEE */
     .guarantee {
@@ -459,13 +383,13 @@ const plans = [
       animation:fadeUp .5s .3s ease both;
     }
     .guarantee-icon { font-size:2.5rem; margin-bottom:.75rem; }
-    .guarantee-title { font-family:'Fraunces',serif; font-size:1.3rem; font-weight:700; margin-bottom:.5rem; }
+    .guarantee-title { font-size:1.3rem; font-weight:800; margin-bottom:.5rem; }
     .guarantee-sub { font-size:.875rem; color:var(--soft); max-width:400px; margin:0 auto; line-height:1.6; }
 
     /* FAQ */
     .faq-section { margin-bottom:3rem; animation:fadeUp .5s .35s ease both; }
     .faq-title {
-      font-family:'Fraunces',serif; font-size:1.5rem; font-weight:700;
+      font-size:1.5rem; font-weight:800;
       margin-bottom:1.25rem;
       background:linear-gradient(135deg,var(--green),var(--green2));
       -webkit-background-clip:text; -webkit-text-fill-color:transparent;
@@ -502,7 +426,7 @@ const plans = [
       pointer-events:none;
     }
     @keyframes popIn{from{opacity:0;transform:scale(.9) translateY(20px);}to{opacity:1;transform:scale(1) translateY(0);}}
-    .modal-title { font-family:'Fraunces',serif; font-size:1.5rem; font-weight:900; margin-bottom:.5rem; }
+    .modal-title { font-size:1.5rem; font-weight:900; margin-bottom:.5rem; }
     .modal-sub { font-size:.875rem; color:var(--soft); line-height:1.6; margin-bottom:1.5rem; }
     .modal-plan-box {
       background:var(--surface); border:1px solid var(--border);
@@ -548,21 +472,16 @@ const plans = [
   </style>
 </head>
 <body>
-
-<div class="bg-mesh" aria-hidden="true">
-  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
-</div>
-
-<!-- NAV -->
-<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="upgrade" />
-
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="upgrade" />
+<div class="rv-pg-main">
 
 <!-- PAGE -->
 <div class="page">
 
   <!-- HERO -->
   <div class="hero">
-    <div class="hero-badge"><Zap size={14} style="vertical-align:middle;margin-right:.3rem;" /> Level Up Your Journey</div>
+    <div class="hero-badge">⚡ Level Up Your Journey</div>
     <h1 class="hero-title">
       Choose Your<br/><span class="hl">Keto Plan</span>
     </h1>
@@ -572,19 +491,19 @@ const plans = [
   <!-- TRUST BADGES -->
   <div class="trust-row">
     <div class="trust-item">
-      <div class="trust-icon"><Award size={20} /></div>
+      <div class="trust-icon">🏅</div>
       <span>30-Day Guarantee</span>
     </div>
     <div class="trust-item">
-      <div class="trust-icon"><Lock size={20} /></div>
+      <div class="trust-icon">🔒</div>
       <span>Secure Checkout</span>
     </div>
     <div class="trust-item">
-      <div class="trust-icon"><Zap size={20} /></div>
+      <div class="trust-icon">⚡</div>
       <span>Instant Access</span>
     </div>
     <div class="trust-item">
-      <div class="trust-icon"><Users size={20} /></div>
+      <div class="trust-icon">👥</div>
       <span>10,000+ Users</span>
     </div>
   </div>
@@ -666,7 +585,7 @@ const plans = [
               data-plan-url={planCheckoutUrls[plan.id] || ''}
               onclick="openModal(this)"
             >
-              <span><ChevronRight size={16} /></span>
+              <span>›</span>
               <span>Get {plan.name} — ${plan.price}</span>
             </button>
           )}
@@ -729,18 +648,20 @@ const plans = [
 
   <!-- GUARANTEE -->
   <div class="guarantee">
-    <div class="guarantee-icon"><Award size={36} /></div>
+    <div class="guarantee-icon">🏅</div>
     <div class="guarantee-title">30-Day Money-Back Guarantee</div>
     <p class="guarantee-sub">Not satisfied with your results? Contact us within 30 days for a full refund — no questions asked. We stand behind every plan.</p>
   </div>
 
 </div><!-- /page -->
+</div>
+</div>
 
 <!-- MODAL -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <button class="modal-close" onclick="closeModal()">×</button>
-    <div class="modal-title">Confirm Upgrade <Zap size={18} style="vertical-align:middle;margin-left:.3rem;" /></div>
+    <div class="modal-title">Confirm Upgrade ⚡</div>
     <p class="modal-sub">You'll be redirected to our secure checkout to complete your payment instantly.</p>
     <div class="modal-plan-box">
       <div class="modal-plan-emoji" id="modalEmoji"></div>
@@ -759,27 +680,6 @@ const plans = [
 <div class="toast" id="toast"></div>
 
 <script is:inline define:vars={{ userEmail, userName: userFullName, userId, appUrl }}>
-
-// ── THEME ──
-var html     = document.documentElement;
-var themeBtn = document.getElementById('themeBtn');
-function applyTheme(t) {
-  html.setAttribute('data-theme', t);
-  localStorage.setItem('keto-theme', t);
-  if (themeBtn) themeBtn.textContent = t === 'dark' ? '☀️' : '🌙';
-}
-applyTheme(localStorage.getItem('keto-theme') || 'dark');
-themeBtn?.addEventListener('click', function() {
-  applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-});
-
-// ── NOTIFS ──
-var notifBtn  = document.getElementById('notifBtn');
-var notifDrop = document.getElementById('notifDropdown');
-notifBtn?.addEventListener('click', function(e) { e.stopPropagation(); notifDrop?.classList.toggle('open'); });
-document.addEventListener('click', function(e) {
-  if (notifDrop && !notifDrop.contains(e.target) && e.target !== notifBtn) notifDrop.classList.remove('open');
-});
 
 // ── CHECKOUT URL builder ──────────────────────────────────────────────────────
 // Prefills email, name, and user_id so the webhook can directly upgrade the account.

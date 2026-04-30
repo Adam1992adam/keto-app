@@ -1,13 +1,8 @@
 ---
 import { requireAuth } from '../../lib/auth';
-import DashNav from '../../components/DashNav.astro';
+import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
+import Sidebar from '../../components/Sidebar.astro';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import CalendarDays from 'lucide-astro/CalendarDays';
-import ChevronLeft from 'lucide-astro/ChevronLeft';
-import ChevronRight from 'lucide-astro/ChevronRight';
-import Plus from 'lucide-astro/Plus';
-import X from 'lucide-astro/X';
-import Search from 'lucide-astro/Search';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -18,6 +13,9 @@ const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pr
 const userName  = profile.full_name?.split(' ')[0] || 'Friend';
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
+await updateCurrentDay(user.id).catch(() => null);
+const journey    = await getUserJourney(user.id, db).catch(() => null);
+const currentDay = journey?.current_day || 1;
 
 // Compute current week (Mon–Sun) from ?week= param or today
 function getMonday(dateStr: string): Date {
@@ -88,22 +86,26 @@ const todayStr = new Date().toISOString().slice(0, 10);
   <title>Meal Planner — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:#060d09; --card:#0d1a0f; --card2:#111f13;
-      --border:rgba(16,185,129,.1); --border2:rgba(16,185,129,.22);
-      --text:#dfeedd; --soft:#4d7055; --muted:#233328;
+      --bg:#FAF6F1; --card:#FFFFFF; --card2:#F2EDE5;
+      --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
+      --text:#1A110D; --soft:#7A5C52; --muted:#C8B5AD;
       --green:#10b981; --green2:#34d399;
       --gold:#f59e0b; --purple:#8b5cf6; --blue:#3b82f6; --red:#ef4444;
+      --rv-accent:#FF5C7A;
     }
-    body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; min-height:100vh; }
+    body { background:var(--bg); color:var(--text); font-family:'Bricolage Grotesque',system-ui,sans-serif; min-height:100vh; }
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{overflow-y:auto;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}}
     .page-wrap { max-width:1200px; margin:0 auto; padding:28px 16px 80px; }
 
     /* Header */
     .page-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:24px; animation:fadeUp .4s ease both; }
-    .header-left h1 { font-family:'Fraunces',serif; font-size:clamp(1.4rem,3.5vw,1.9rem); font-weight:700; display:flex; align-items:center; gap:.5rem; }
+    .header-left h1 { font-size:clamp(1.4rem,3.5vw,1.9rem); font-weight:800; display:flex; align-items:center; gap:.5rem; }
     .header-sub { font-size:.85rem; color:var(--soft); margin-top:3px; }
 
     /* Week nav */
@@ -163,7 +165,7 @@ const todayStr = new Date().toISOString().slice(0, 10);
 
     .mobile-planner { animation:fadeUp .4s ease both; }
     .day-tabs { display:flex; gap:.4rem; overflow-x:auto; padding-bottom:.5rem; margin-bottom:12px; }
-    .day-tab { padding:.35rem .75rem; border-radius:10px; border:1.5px solid var(--border); background:transparent; color:var(--soft); font-family:'DM Sans',sans-serif; font-size:.78rem; font-weight:600; cursor:pointer; white-space:nowrap; transition:all .15s; flex-shrink:0; }
+    .day-tab { padding:.35rem .75rem; border-radius:10px; border:1.5px solid var(--border); background:transparent; color:var(--soft); font-size:.78rem; font-weight:600; cursor:pointer; white-space:nowrap; transition:all .15s; flex-shrink:0; }
     .day-tab.active { background:var(--green); border-color:var(--green); color:#fff; }
     .day-tab.today-tab { border-color:var(--green2); color:var(--green2); }
     .day-tab.today-tab.active { background:var(--green); border-color:var(--green); color:#fff; }
@@ -178,11 +180,11 @@ const todayStr = new Date().toISOString().slice(0, 10);
     .modal-backdrop.show { opacity:1; pointer-events:all; }
     .modal { background:var(--card); border:1.5px solid var(--border2); border-radius:20px; width:min(560px,95vw); max-height:80vh; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,.5); overflow:hidden; }
     .modal-head { display:flex; align-items:center; gap:.6rem; padding:.85rem 1rem; border-bottom:1px solid var(--border); }
-    .modal-title { font-family:'Fraunces',serif; font-size:1rem; font-weight:700; flex:1; }
+    .modal-title { font-size:1rem; font-weight:700; flex:1; }
     .modal-close { background:transparent; border:none; color:var(--soft); cursor:pointer; font-size:1rem; padding:.2rem; }
     .modal-search-wrap { display:flex; align-items:center; gap:.4rem; background:var(--card2); border:1.5px solid var(--border); border-radius:10px; padding:.4rem .7rem; margin:.7rem 1rem .5rem; }
     .modal-search-wrap:focus-within { border-color:var(--green); }
-    .modal-search-input { flex:1; background:transparent; border:none; outline:none; color:var(--text); font-family:'DM Sans',sans-serif; font-size:.9rem; }
+    .modal-search-input { flex:1; background:transparent; border:none; outline:none; color:var(--text); font-size:.9rem; }
     .modal-search-input::placeholder { color:var(--soft); }
     .modal-results { flex:1; overflow-y:auto; padding:.3rem .75rem .75rem; }
     .modal-results::-webkit-scrollbar { width:4px; }
@@ -196,27 +198,28 @@ const todayStr = new Date().toISOString().slice(0, 10);
     .ms-title { font-size:.87rem; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .ms-meta { font-size:.73rem; color:var(--soft); margin-top:.15rem; }
 
-    .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:#1a3d25; border:1px solid var(--border2); border-radius:12px; padding:.6rem 1.1rem; font-size:.87rem; color:var(--text); opacity:0; pointer-events:none; transition:all .3s; z-index:9999; white-space:nowrap; }
+    .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--card); border:1px solid var(--border2); border-radius:12px; padding:.6rem 1.1rem; font-size:.87rem; color:var(--text); opacity:0; pointer-events:none; transition:all .3s; z-index:9999; white-space:nowrap; }
     .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
     @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
   </style>
 </head>
 <body>
-  <DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="meal-planner" />
-
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="meal-planner" />
+<div class="rv-pg-main">
   <div class="page-wrap">
 
     <!-- Header -->
     <div class="page-header">
       <div class="header-left">
-        <h1><CalendarDays size={22} /> Meal Planner</h1>
+        <h1>📅 Meal Planner</h1>
         <div class="header-sub">{weekLabel}</div>
       </div>
       <div class="week-nav">
-        <a href={`/dashboard/meal-planner?week=${prevMonday}`} class="week-btn" aria-label="Previous week"><ChevronLeft size={16} /></a>
+        <a href={`/dashboard/meal-planner?week=${prevMonday}`} class="week-btn" aria-label="Previous week">‹</a>
         <div class="week-label">{weekLabel}</div>
-        <a href={`/dashboard/meal-planner?week=${nextMonday}`} class="week-btn" aria-label="Next week"><ChevronRight size={16} /></a>
+        <a href={`/dashboard/meal-planner?week=${nextMonday}`} class="week-btn" aria-label="Next week">›</a>
       </div>
     </div>
 
@@ -254,11 +257,11 @@ const todayStr = new Date().toISOString().slice(0, 10);
                       }
                       <a href={`/dashboard/recipe/${e.recipe_id}`} style="flex:1;text-decoration:none;color:inherit;" class="mp-chip-name">{e.recipes?.title || 'Recipe'}</a>
                       {e.recipes?.calories && <span class="mp-chip-cal">{e.recipes.calories}cal</span>}
-                      <button class="mp-chip-del" aria-label="Remove" onclick={`window.removeEntry('${e.id}')`}><X size={11} /></button>
+                      <button class="mp-chip-del" aria-label="Remove" onclick={`window.removeEntry('${e.id}')`}>✕</button>
                     </div>
                   ))}
                   <button class="add-slot-btn" onclick={`window.openPicker('${d.date}','${mealType}')`}>
-                    <Plus size={11} /> Add
+                    + Add
                   </button>
                 </div>
               );
@@ -296,11 +299,11 @@ const todayStr = new Date().toISOString().slice(0, 10);
                       }
                       <a href={`/dashboard/recipe/${e.recipe_id}`} style="flex:1;text-decoration:none;color:inherit;" class="mp-chip-name">{e.recipes?.title || 'Recipe'}</a>
                       {e.recipes?.calories && <span class="mp-chip-cal">{e.recipes.calories}cal</span>}
-                      <button class="mp-chip-del" aria-label="Remove" onclick={`window.removeEntry('${e.id}','${d.date}','${mealType}')`}><X size={11} /></button>
+                      <button class="mp-chip-del" aria-label="Remove" onclick={`window.removeEntry('${e.id}','${d.date}','${mealType}')`}>✕</button>
                     </div>
                   ))}
                   <button class="add-slot-btn" onclick={`window.openPicker('${d.date}','${mealType}')`}>
-                    <Plus size={11} /> Add recipe
+                    + Add recipe
                   </button>
                 </div>
               </div>
@@ -320,7 +323,7 @@ const todayStr = new Date().toISOString().slice(0, 10);
         <button class="modal-close" onclick="window.closePicker()">✕</button>
       </div>
       <div class="modal-search-wrap">
-        <Search size={14} style="color:var(--soft);flex-shrink:0;" />
+        🔍
         <input class="modal-search-input" id="pickerSearch" type="text" placeholder="Search recipes…" autocomplete="off" />
       </div>
       <div class="modal-results" id="pickerResults">
@@ -330,6 +333,9 @@ const todayStr = new Date().toISOString().slice(0, 10);
   </div>
 
   <div class="toast" id="toast"></div>
+
+</div>
+</div>
 
   <script is:inline define:vars={{ todayStr }}>
     var pickerDate = '';

@@ -9,7 +9,6 @@ import {
 } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import DashNav from '../../components/DashNav.astro';
 import Sidebar from '../../components/Sidebar.astro';
 
 const auth = await requireAuth(Astro);
@@ -149,7 +148,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
       --rv-card:     #FFFFFF;
       --rv-display:  'Bricolage Grotesque', system-ui, sans-serif;
       --rv-serif:    'Instrument Serif', Georgia, serif;
-      --rv-body:     'Geist', 'DM Sans', system-ui, sans-serif;
+      --rv-body:     'Bricolage Grotesque', system-ui, sans-serif;
       --rv-mono:     'Geist Mono', monospace;
     }
     [data-theme="dark"] {
@@ -640,18 +639,6 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
   </style>
 </head>
 <body>
-
-<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="profile" />
-
-<style is:global>
-  body, body[data-theme="light"] {
-    background: var(--rv-bg, #FAF6F1) !important;
-    color: var(--rv-ink, #16110F) !important;
-  }
-  .dash-nav { display: none !important; }
-  #dn-footer { display: none !important; }
-  .rv-page-wrap { padding-top: 0 !important; }
-</style>
 
 <!-- ════════════════ APP SHELL ════════════════ -->
 <div class="rv-shell">

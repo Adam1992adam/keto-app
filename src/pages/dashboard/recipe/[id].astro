@@ -1,7 +1,6 @@
 ---
 import { getUserJourney } from '../../../lib/supabase';
 import { requireAuth } from '../../../lib/auth';
-import DashNav from '../../../components/DashNav.astro';
 import Sidebar from '../../../components/Sidebar.astro';
 
 const { id } = Astro.params;
@@ -101,7 +100,7 @@ const clientData = {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
-    /* ── Recipe-page extra tokens (complement DashNav's :root tokens) ── */
+    /* ── Recipe-page extra tokens ── */
     :root {
       --bg-alt:   #F2EDE5;
       --ink:      #16110F;
@@ -129,7 +128,7 @@ const clientData = {
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Geist', 'DM Sans', system-ui, sans-serif; background: var(--bg, #FAF6F1); color: var(--ink); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+    body { font-family: 'Bricolage Grotesque', system-ui, sans-serif; background: var(--bg, #FAF6F1); color: var(--ink); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
     a { color: inherit; text-decoration: none; }
     button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
     img { display: block; max-width: 100%; }
@@ -364,8 +363,6 @@ const clientData = {
   </style>
 </head>
 <body>
-
-<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="recipes" />
 
 <style is:global>
   .rv-recipe-shell { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }

@@ -1,18 +1,22 @@
 ---
 // src/pages/dashboard/scanner.astro — Keto Product Scanner
 import { requireAuth } from '../../lib/auth';
-import DashNav from '../../components/DashNav.astro';
+import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
+import Sidebar from '../../components/Sidebar.astro';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
-const { user, profile } = auth;
+const { user, profile, db } = auth;
 
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 const userName  = profile.full_name || 'Member';
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
+await updateCurrentDay(user.id).catch(() => null);
+const journey    = await getUserJourney(user.id, db).catch(() => null);
+const currentDay = journey?.current_day || 1;
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -21,24 +25,21 @@ const t    = getTranslator(lang);
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{t('scanner.title')} · Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <script is:inline>(function(){ const t=localStorage.getItem('keto-theme')||'dark'; document.documentElement.setAttribute('data-theme',t); })();</script>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg:#060d09; --card:#0d1a0f; --card2:#111f13;
-      --border:rgba(16,185,129,.1); --border2:rgba(16,185,129,.22);
-      --text:#dfeedd; --soft:#4d7055; --muted:#233328;
+      --bg:#FAF6F1; --card:#FFFFFF; --card2:#F2EDE5;
+      --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
+      --text:#1A110D; --soft:#7A5C52; --muted:#C8B5AD;
       --green:#10b981; --green2:#34d399; --gold:#f59e0b;
-      --red:#ef4444; --red2:#fca5a5;
+      --red:#ef4444; --red2:#fca5a5; --rv-accent:#FF5C7A;
       --radius:20px;
     }
-    [data-theme="light"] {
-      --bg:#f0faf4; --card:#fff; --card2:#f5fdf8;
-      --border:rgba(16,185,129,.15); --border2:rgba(16,185,129,.3);
-      --text:#0f2417; --soft:#4d7055; --muted:#b0d4bc;
-    }
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    body { font-family:'Bricolage Grotesque',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{overflow-y:auto;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}}
     @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:none} }
     .fade-up { animation:fadeUp .5s ease both; }
     .delay-1 { animation-delay:.08s; }
@@ -47,8 +48,8 @@ const t    = getTranslator(lang);
 
     /* ── Layout ── */
     .page { max-width:700px; margin:0 auto; padding:2rem 1.25rem 5rem; }
-    .page-title { font-family:'Fraunces',serif; font-size:2rem; font-weight:700; margin-bottom:.35rem; }
-    .page-title em { font-style:italic; color:var(--green2); }
+    .page-title { font-size:2rem; font-weight:800; margin-bottom:.35rem; }
+    .page-title em { font-style:normal; color:var(--rv-accent); }
     .page-sub { color:var(--soft); font-size:.9rem; margin-bottom:2rem; }
 
     /* ── Scanner card ── */
@@ -103,7 +104,7 @@ const t    = getTranslator(lang);
     .manual-input {
       flex:1; background:var(--card2); border:1px solid var(--border2);
       border-radius:10px; padding:.75rem 1rem; color:var(--text);
-      font-size:1rem; outline:none; font-family:'DM Sans',sans-serif;
+      font-size:1rem; outline:none; font-family:'Bricolage Grotesque',system-ui,sans-serif;
     }
     .manual-input:focus { border-color:var(--green); }
     .manual-input::placeholder { color:var(--soft); }
@@ -209,8 +210,9 @@ const t    = getTranslator(lang);
   </style>
 </head>
 <body>
-  <DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="scanner" />
-
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="scanner" />
+<div class="rv-pg-main">
   <div class="page">
     <h1 class="page-title fade-up">Keto <em>Scanner</em></h1>
     <p class="page-sub fade-up delay-1">Scan any product barcode to instantly check if it's keto-friendly.</p>
@@ -496,5 +498,7 @@ const t    = getTranslator(lang);
     renderHistory();
   })();
   </script>
+</div>
+</div>
 </body>
 </html>

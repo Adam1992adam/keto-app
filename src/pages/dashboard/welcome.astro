@@ -15,7 +15,7 @@ try {
 } catch (e) {
   console.error('[Welcome] DB error:', e);
   return new Response(
-    `<!DOCTYPE html><html><head><title>Temporarily Unavailable</title><meta http-equiv="refresh" content="15;url=/dashboard/welcome"></head><body style="background:#060d09;color:#dfeedd;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:1.2rem;text-align:center;padding:2rem"><h2 style="font-family:Fraunces,serif;font-size:1.6rem;margin:0;color:#10b981">Keto Journey</h2><p style="font-size:1.1rem;margin:0">Page temporarily unavailable</p><p style="color:#4d7055;margin:0;font-size:.9rem">Retrying automatically in 15 seconds…</p><a href="/dashboard/welcome" style="color:#10b981;font-size:.9rem;margin-top:.5rem">Retry now</a></body></html>`,
+    `<!DOCTYPE html><html><head><title>Temporarily Unavailable</title><meta http-equiv="refresh" content="15;url=/dashboard/welcome"></head><body style="background:#FAF6F1;color:#1A110D;font-family:'Bricolage Grotesque',system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:1.2rem;text-align:center;padding:2rem"><h2 style="font-size:1.6rem;margin:0;color:#FF5C7A">Keto Journey</h2><p style="font-size:1.1rem;margin:0">Page temporarily unavailable</p><p style="color:#7A5C52;margin:0;font-size:.9rem">Retrying automatically in 15 seconds…</p><a href="/dashboard/welcome" style="color:#FF5C7A;font-size:.9rem;margin-top:.5rem">Retry now</a></body></html>`,
     { status: 503, headers: { 'Content-Type': 'text/html' } }
   );
 }
@@ -109,22 +109,22 @@ const dietRestrictions = (onboarding?.dietary_restrictions || [])
   <title>{t('welcome.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet"/>
   <style>
     :root {
-      --bg:#060d09; --card:#0d1a0f; --card2:#111f13;
-      --border:rgba(16,185,129,.1); --border2:rgba(16,185,129,.22);
-      --text:#dfeedd; --soft:#4d7055; --muted:#1a2e1e;
+      --bg:#FAF6F1; --card:#FFFFFF; --card2:#F2EDE5;
+      --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
+      --text:#1A110D; --soft:#7A5C52; --muted:#C8B5AD;
       --green:#10b981; --green2:#34d399; --gold:#f59e0b;
-      --purple:#8b5cf6; --blue:#3b82f6;
+      --purple:#8b5cf6; --blue:#3b82f6; --rv-accent:#FF5C7A;
     }
     *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
     html { background:var(--bg); }
     body {
-      font-family:'DM Sans',sans-serif; color:var(--text);
+      font-family:'Bricolage Grotesque',system-ui,sans-serif; color:var(--text);
       min-height:100vh; display:flex; align-items:center; justify-content:center;
       padding:2rem 1rem;
-      background:radial-gradient(ellipse 80% 60% at 50% -10%, rgba(16,185,129,.12) 0%, transparent 70%);
+      background:radial-gradient(ellipse 80% 60% at 50% -10%, rgba(255,90,122,.06) 0%, transparent 70%);
     }
 
     .wrap { width:100%; max-width:640px; }
@@ -149,7 +149,7 @@ const dietRestrictions = (onboarding?.dietary_restrictions || [])
     }
     .hdr-check svg { width:36px; height:36px; stroke:#fff; stroke-width:2.5; fill:none; }
     .hdr h1 {
-      font-family:'Fraunces',serif; font-size:2.4rem; font-weight:900;
+      font-size:2.4rem; font-weight:900;
       line-height:1.08; margin-bottom:.6rem;
       animation:fadeUp .5s .3s ease both;
     }
@@ -168,14 +168,14 @@ const dietRestrictions = (onboarding?.dietary_restrictions || [])
       margin-bottom:1.25rem;
     }
     .plan-label { font-size:.7rem; font-weight:800; color:var(--soft); text-transform:uppercase; letter-spacing:.08em; }
-    .plan-name { font-family:'Fraunces',serif; font-size:1.3rem; font-weight:900; margin-top:.15rem; }
+    .plan-name { font-size:1.3rem; font-weight:900; margin-top:.15rem; }
     .plan-badge {
       padding:.35rem .9rem; border-radius:99px;
       font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.07em;
     }
     .plan-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
     .ps { text-align:center; }
-    .ps-val { font-family:'Fraunces',serif; font-size:1.6rem; font-weight:900; line-height:1; }
+    .ps-val { font-size:1.6rem; font-weight:900; line-height:1; }
     .ps-lbl { font-size:.65rem; font-weight:700; color:var(--soft); text-transform:uppercase; letter-spacing:.06em; margin-top:.25rem; }
 
     /* ── macro card ── */
@@ -196,7 +196,7 @@ const dietRestrictions = (onboarding?.dietary_restrictions || [])
     .macro-ring {
       width:56px; height:56px; margin:0 auto .5rem;
     }
-    .macro-val { font-family:'Fraunces',serif; font-size:1.1rem; font-weight:900; line-height:1; }
+    .macro-val { font-size:1.1rem; font-weight:900; line-height:1; }
     .macro-unit { font-size:.65rem; color:var(--soft); }
     .macro-lbl { font-size:.65rem; font-weight:700; color:var(--soft); text-transform:uppercase; letter-spacing:.05em; margin-top:.2rem; }
 
@@ -232,7 +232,7 @@ const dietRestrictions = (onboarding?.dietary_restrictions || [])
       width:100%; padding:1.1rem;
       background:linear-gradient(135deg,var(--green),var(--green2));
       border:none; border-radius:16px; color:#fff;
-      font-family:'DM Sans',sans-serif; font-weight:800; font-size:1rem;
+      font-weight:800; font-size:1rem;
       cursor:pointer; text-decoration:none;
       transition:all .25s; position:relative; overflow:hidden;
     }
@@ -361,7 +361,7 @@ const dietRestrictions = (onboarding?.dietary_restrictions || [])
       <!-- Start → Goal bar -->
       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:.6rem;">
         <div style="text-align:center;">
-          <div style="font-family:'Fraunces',serif;font-size:1.5rem;font-weight:900;color:var(--soft);">{startWeightLbs}<span style="font-size:.7rem;margin-left:.2rem;">lbs</span></div>
+          <div style="font-size:1.5rem;font-weight:900;color:var(--soft);">{startWeightLbs}<span style="font-size:.7rem;margin-left:.2rem;">lbs</span></div>
           <div style="font-size:.62rem;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;margin-top:.1rem;">Start</div>
         </div>
         <div style="text-align:center;">
@@ -369,7 +369,7 @@ const dietRestrictions = (onboarding?.dietary_restrictions || [])
           <div style="font-size:.65rem;color:var(--soft);">in ~{weeksToGoal} weeks</div>
         </div>
         <div style="text-align:center;">
-          <div style="font-family:'Fraunces',serif;font-size:1.5rem;font-weight:900;color:var(--green);">{targetWeightLbs}<span style="font-size:.7rem;margin-left:.2rem;">lbs</span></div>
+          <div style="font-size:1.5rem;font-weight:900;color:var(--green);">{targetWeightLbs}<span style="font-size:.7rem;margin-left:.2rem;">lbs</span></div>
           <div style="font-size:.62rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.06em;margin-top:.1rem;">Goal 🎯</div>
         </div>
       </div>

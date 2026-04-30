@@ -1,13 +1,8 @@
 ---
 import { requireAuth } from '../../lib/auth';
-import DashNav from '../../components/DashNav.astro';
+import Sidebar from '../../components/Sidebar.astro';
+import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import Heart from 'lucide-astro/Heart';
-import UtensilsCrossed from 'lucide-astro/UtensilsCrossed';
-import Clock from 'lucide-astro/Clock';
-import Flame from 'lucide-astro/Flame';
-import Trash2 from 'lucide-astro/Trash2';
-import Search from 'lucide-astro/Search';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -16,6 +11,10 @@ const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'Friend';
+
+await updateCurrentDay(user.id).catch(() => null);
+const journey    = await getUserJourney(user.id, db).catch(() => null);
+const currentDay = journey?.current_day || 1;
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
 
@@ -58,17 +57,27 @@ const presentTags = Array.from(new Set(
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{t('favorites.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
   <style>
+    :root{
+      --bg:#FAF6F1;--card:#FFFFFF;--card2:#F2EDE5;
+      --border:rgba(22,17,15,.08);--border2:rgba(255,92,122,.25);
+      --text:#16110F;--soft:#4A4340;--muted:#C8BFBA;
+      --green:#10b981;--green2:#34d399;--gold:#f59e0b;
+      --rv-accent:#FF5C7A;--rv-warm:#FF914D;
+    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: var(--bg, #060d09);
-      color: var(--text, #dfeedd);
-      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Bricolage Grotesque', system-ui, sans-serif;
       min-height: 100vh;
     }
+
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{min-width:0;overflow-x:hidden;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}.rv-pg-main{padding-bottom:5.5rem;}}
 
     .page-wrap {
       max-width: 1100px;
@@ -210,7 +219,7 @@ const presentTags = Array.from(new Set(
     .card-image-placeholder {
       width: 100%;
       height: 100%;
-      background: linear-gradient(135deg, #0d2a18, #1a3d25);
+      background: linear-gradient(135deg, #F2EDE5, #E8DDD0);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -220,7 +229,7 @@ const presentTags = Array.from(new Set(
       position: absolute;
       top: 10px;
       right: 10px;
-      background: rgba(6,13,9,.75);
+      background: rgba(255,255,255,.9);
       border: 1px solid var(--border, rgba(16,185,129,.15));
       border-radius: 50%;
       width: 34px;
@@ -364,17 +373,12 @@ const presentTags = Array.from(new Set(
   </style>
 </head>
 <body>
-  <DashNav
-    userId={user.id}
-    userName={userName}
-    tierLabel={tierLabel}
-    planType={planType}
-    activePage="favorites"
-  />
-
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="favorites" />
+<div class="rv-pg-main">
   <div class="page-wrap">
     <div class="page-header">
-      <h1><Heart size={26} style="vertical-align:middle;margin-right:.5rem;" /> Favourite Recipes</h1>
+      <h1>❤️ Favourite Recipes</h1>
       {favCount > 0 && (
         <p class="subtitle">
           You have <strong>{favCount}</strong> saved recipe{favCount === 1 ? '' : 's'}
@@ -386,7 +390,7 @@ const presentTags = Array.from(new Set(
       <>
         <div class="toolbar">
           <div class="search-box">
-            <span class="search-icon"><Search size={15} /></span>
+            <span class="search-icon">🔍</span>
             <input type="text" id="searchInput" placeholder="Search your favourites…" autocomplete="off" />
           </div>
           <select class="sort-select" id="sortSelect">
@@ -409,7 +413,7 @@ const presentTags = Array.from(new Set(
 
     {favCount === 0 ? (
       <div class="empty-state">
-        <div class="empty-icon"><Heart size={42} /></div>
+        <div class="empty-icon">❤️</div>
         <h2>No favourites yet</h2>
         <p>Heart a recipe to save it here for quick access.</p>
         <a href="/dashboard/recipes" class="btn-browse">Browse Recipes</a>
@@ -440,21 +444,21 @@ const presentTags = Array.from(new Set(
                   {recipe.image_url ? (
                     <img src={recipe.image_url} alt={recipe.title} loading="lazy" width="400" height="160" />
                   ) : (
-                    <div class="card-image-placeholder"><UtensilsCrossed size={32} /></div>
+                    <div class="card-image-placeholder">🍽️</div>
                   )}
                   <button
                     class="unfav-btn"
                     aria-label="Remove from favourites"
                     onclick={`window.removeFav(event, '${recipe.id}')`}
-                  ><Heart size={16} /></button>
+                  >❤️</button>
                 </div>
                 <div class="card-body">
                   <a href={`/dashboard/recipe/${recipe.id}`} class="card-title-link">
                     <div class="card-title">{recipe.title}</div>
                   </a>
                   <div class="card-meta">
-                    {recipe.prep_time && <span><Clock size={13} style="vertical-align:middle;margin-right:.2rem;" /> {recipe.prep_time}m prep</span>}
-                    {recipe.cook_time && <span><Flame size={13} style="vertical-align:middle;margin-right:.2rem;" /> {recipe.cook_time}m cook</span>}
+                    {recipe.prep_time && <span>⏱ {recipe.prep_time}m prep</span>}
+                    {recipe.cook_time && <span>🔥 {recipe.cook_time}m cook</span>}
                   </div>
                   <div class="macro-row">
                     {recipe.calories  && <span class="macro-pill pill-cal">{recipe.calories} kcal</span>}
@@ -477,6 +481,7 @@ const presentTags = Array.from(new Set(
       </>
     )}
   </div>
+</div></div>
 
   <script is:inline>
     var activeTag  = 'all';

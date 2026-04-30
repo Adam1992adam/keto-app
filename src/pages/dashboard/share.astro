@@ -1,16 +1,9 @@
 ---
 // src/pages/dashboard/share.astro
-import { getUserJourney, getMaxJourneyDays } from '../../lib/supabase';
+import { getUserJourney, getMaxJourneyDays, updateCurrentDay } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
-import DashNav from '../../components/DashNav.astro';
+import Sidebar from '../../components/Sidebar.astro';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import Share2   from 'lucide-astro/Share2';
-import Download from 'lucide-astro/Download';
-import Sparkles from 'lucide-astro/Sparkles';
-import Trophy   from 'lucide-astro/Trophy';
-import Flame    from 'lucide-astro/Flame';
-import Scale    from 'lucide-astro/Scale';
-import Zap      from 'lucide-astro/Zap';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -21,6 +14,7 @@ const userName  = profile.full_name?.split(' ')[0] || 'Keto Warrior';
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
 
+await updateCurrentDay(user.id).catch(() => null);
 const journey = await getUserJourney(user.id, db);
 if (!journey) return Astro.redirect('/dashboard');
 
@@ -87,18 +81,40 @@ const canShare = false; // determined client-side
   <title>{t('share.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Fraunces:ital,wght@1,700;1,800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:#FAF6F1; --card:#FFFFFF; --card2:#F2EDE5;
+      --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
+      --text:#1A110D; --soft:#7A5C52; --muted:#C8B5AD;
+      --green:#10b981; --green2:#34d399; --gold:#f59e0b;
+      --purple:#8b5cf6; --blue:#3b82f6; --red:#ef4444;
+      --rv-accent:#FF5C7A; --rv-card:#FFFFFF;
+      --bg2:#F2EDE5; --green-bg:rgba(16,185,129,.1);
+      --amber:#f59e0b; --amber-bg:rgba(245,158,11,.1);
+      --r:12px; --r-sm:10px; --r-lg:20px;
+      --shadow-xs:0 1px 4px rgba(22,17,15,.06);
+      --shadow-sm:0 2px 8px rgba(22,17,15,.06);
+      --shadow-xl:0 20px 60px rgba(22,17,15,.2);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);font-family:'Bricolage Grotesque',system-ui,sans-serif;color:var(--text);}
+    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .rv-pg-main{overflow-y:auto;}
+    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}}
+  </style>
 </head>
 <body>
 
-<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="share" />
-
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="share" />
+<div class="rv-pg-main">
 <main class="page">
 
   <!-- ── Header ──────────────────────────────────────────── -->
   <header class="page-header fade-up">
     <div class="header-icon">
-      <Share2 size={22} />
+      📤
     </div>
     <div>
       <h1 class="page-title">Share Your Progress</h1>
@@ -108,7 +124,7 @@ const canShare = false; // determined client-side
 
   <!-- ── Next milestone banner ───────────────────────────── -->
   <div class="milestone-banner fade-up" style="animation-delay:.04s">
-    <Trophy size={16} />
+    🏆
     <span>Next milestone: <strong>Day {nextMilestone}</strong> — {nextMilestone - currentDay} days to go</span>
   </div>
 
@@ -189,12 +205,10 @@ const canShare = false; // determined client-side
       <!-- Action buttons -->
       <div class="action-btns">
         <button class="btn-download" onclick="downloadCard()">
-          <Download size={16} />
-          Download PNG
+          ⬇ Download PNG
         </button>
         <button class="btn-share" id="shareBtn" onclick="shareCard()" style="display:none">
-          <Share2 size={16} />
-          Share
+          📤 Share
         </button>
       </div>
       <p class="action-note">1080×1080px · Instagram-ready</p>
@@ -211,6 +225,8 @@ const canShare = false; // determined client-side
   </div><!-- /layout -->
 
 </main>
+</div>
+</div>
 
 <style>
 .page {
@@ -225,12 +241,12 @@ const canShare = false; // determined client-side
 }
 .header-icon {
   width: 48px; height: 48px; border-radius: var(--r);
-  background: var(--green-bg); border: 1.5px solid var(--border2);
+  background: rgba(255,92,122,.1); border: 1.5px solid rgba(255,92,122,.2);
   display: flex; align-items: center; justify-content: center;
-  color: var(--green); flex-shrink: 0;
+  font-size: 1.3rem; flex-shrink: 0;
 }
 .page-title {
-  font-family: 'Fraunces', serif; font-style: italic;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
   font-size: 1.8rem; font-weight: 800; color: var(--text); margin: 0;
 }
 .page-sub { color: var(--soft); font-size: .88rem; margin: 0; }
@@ -278,7 +294,7 @@ const canShare = false; // determined client-side
   transition: border-color .15s, background .15s, transform .12s;
 }
 .tpl-btn:hover { border-color: var(--border2); transform: translateY(-1px); }
-.tpl-btn.active { border-color: var(--green); background: var(--green-bg); }
+.tpl-btn.active { border-color: var(--rv-accent); background: rgba(255,92,122,.08); }
 .tpl-emoji { font-size: 1.3rem; }
 .tpl-name { font-size: .68rem; font-weight: 700; color: var(--soft); }
 
@@ -294,7 +310,7 @@ const canShare = false; // determined client-side
   transition: border-color .15s, transform .12s;
 }
 .theme-btn:hover { border-color: var(--border2); transform: translateY(-1px); }
-.theme-btn.active { border-color: var(--green); color: var(--text); }
+.theme-btn.active { border-color: var(--rv-accent); color: var(--text); }
 .theme-swatch {
   width: 28px; height: 28px; border-radius: 8px;
   border: 1.5px solid var(--border);
@@ -346,7 +362,7 @@ const canShare = false; // determined client-side
   cursor: pointer; border: none; transition: opacity .15s, transform .12s;
 }
 .btn-download:hover, .btn-share:hover { opacity: .88; transform: translateY(-1px); }
-.btn-download { background: var(--green); color: #fff; }
+.btn-download { background: var(--rv-accent); color: #fff; }
 .btn-share    { background: var(--blue);  color: #fff; }
 .action-note  { font-size: .72rem; color: var(--soft); margin-top: .5rem; text-align: center; }
 

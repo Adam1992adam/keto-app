@@ -5,15 +5,9 @@
 // ──────────────────────────────────────────────────────────────────
 
 import { requireAuth } from '../../lib/auth';
-import DashNav from '../../components/DashNav.astro';
+import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
+import Sidebar from '../../components/Sidebar.astro';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
-import UtensilsCrossed from 'lucide-astro/UtensilsCrossed';
-import Clock from 'lucide-astro/Clock';
-import Calendar from 'lucide-astro/Calendar';
-import ShoppingCart from 'lucide-astro/ShoppingCart';
-import CheckSquare from 'lucide-astro/CheckSquare';
-import Flame from 'lucide-astro/Flame';
-import Plus from 'lucide-astro/Plus';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
@@ -24,6 +18,9 @@ const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pr
 const userName  = profile.full_name?.split(' ')[0] || 'there';
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
+await updateCurrentDay(user.id).catch(() => null);
+const journey    = await getUserJourney(user.id, db).catch(() => null);
+const currentDay = journey?.current_day || 1;
 
 // ── Load last saved plan ─────────────────────────────────────────
 const { data: savedPlan, error: loadError } = await db
@@ -84,28 +81,19 @@ const planDataJson = JSON.stringify(planData);
   <title>{t('mealprep.title')} · Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;1,700&family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
-  <script is:inline>
-    (function(){ var t = localStorage.getItem('keto-theme') || 'dark'; document.documentElement.setAttribute('data-theme', t); })();
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
 </head>
 <body>
-
-<DashNav
-  userId={user.id}
-  userName={userName}
-  tierLabel={tierLabel}
-  planType={planType}
-  activePage="meal-prep"
-/>
-
+<div class="rv-pg-shell">
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="meal-prep" />
+<div class="rv-pg-main">
 <main class="mp-page">
 
   <!-- ── Header ─────────────────────────────────────────────── -->
   <header class="mp-hero">
     <div class="mp-hero-inner">
       <div>
-        <h1 class="mp-title"><UtensilsCrossed size={26} style="vertical-align:middle;margin-right:.5rem;" /> Meal Prep Planner</h1>
+        <h1 class="mp-title">🍽️ Meal Prep Planner</h1>
         <p class="mp-sub">Plan your full week of keto meals — then save &amp; shop smarter.</p>
         {savedDate && (
           <p class="mp-saved-badge">Last saved: week of {savedDate}</p>
@@ -115,7 +103,7 @@ const planDataJson = JSON.stringify(planData);
         )}
       </div>
       <button class="mp-btn-save" onclick="window.savePlan()">
-        <CheckSquare size={16} style="vertical-align:middle;margin-right:.3rem;" /> Save Plan
+        ✅ Save Plan
       </button>
     </div>
   </header>
@@ -182,7 +170,7 @@ const planDataJson = JSON.stringify(planData);
   <!-- ── Shopping Needs ─────────────────────────────────────── -->
   <section class="mp-shop-section">
     <div class="mp-shop-header">
-      <h2 class="mp-shop-title"><ShoppingCart size={20} style="vertical-align:middle;margin-right:.4rem;" /> Shopping Needs</h2>
+      <h2 class="mp-shop-title">🛒 Shopping Needs</h2>
       <p class="mp-shop-sub">Auto-generated from your typed meal names. Fill in your plan above to see suggestions.</p>
     </div>
     <div id="mpShopList" class="mp-shop-grid">
@@ -191,50 +179,34 @@ const planDataJson = JSON.stringify(planData);
   </section>
 
 </main>
+</div>
+</div>
 
 <style>
-/* ── Design tokens (dark default, light override) ────────────── */
 :root {
-  --bg:      #060d09;
-  --card:    #0d1a0f;
-  --card2:   #111f13;
-  --border:  rgba(16,185,129,.1);
-  --border2: rgba(16,185,129,.22);
-  --text:    #dfeedd;
-  --soft:    #4d7055;
-  --muted:   #233328;
-  --green:   #10b981;
-  --green2:  #34d399;
-  --gold:    #f59e0b;
-  --purple:  #8b5cf6;
-  --blue:    #3b82f6;
-  --red:     #ef4444;
-  --nav-h:   64px;
-}
-[data-theme="light"] {
-  --bg:      #eef5ee;
-  --card:    #ffffff;
-  --card2:   #f5faf5;
-  --border:  rgba(0,0,0,.07);
-  --border2: rgba(16,185,129,.3);
-  --text:    #071807;
-  --soft:    #3a6040;
-  --muted:   #b8cfb8;
+  --bg:#FAF6F1; --card:#FFFFFF; --card2:#F2EDE5;
+  --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
+  --text:#1A110D; --soft:#7A5C52; --muted:#C8B5AD;
+  --green:#10b981; --green2:#34d399;
+  --gold:#f59e0b; --purple:#8b5cf6; --blue:#3b82f6; --red:#ef4444;
+  --rv-accent:#FF5C7A;
 }
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+.rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+.rv-pg-main{overflow-y:auto;}
+@media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}}
 
 /* ── Base ────────────────────────────────────────────────────── */
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
 
 /* ── Page layout ─────────────────────────────────────────────── */
 .mp-page {
-  min-height: calc(100vh - var(--nav-h));
   padding: 2rem 1.5rem 6rem;
   max-width: 1400px;
   margin: 0 auto;
@@ -253,9 +225,8 @@ body {
   flex-wrap: wrap;
 }
 .mp-title {
-  font-family: 'Fraunces', serif;
   font-size: clamp(1.6rem, 4vw, 2.2rem);
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text);
   margin-bottom: .3rem;
 }
@@ -287,7 +258,7 @@ body {
 /* ── Save button ─────────────────────────────────────────────── */
 .mp-btn-save {
   padding: .75rem 1.6rem;
-  background: var(--green);
+  background: var(--rv-accent);
   color: #fff;
   border: none;
   border-radius: 12px;
@@ -391,7 +362,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 9px;
   color: var(--text);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Bricolage Grotesque', system-ui, sans-serif;
   font-size: .82rem;
   padding: .42rem .65rem;
   outline: none;
@@ -411,9 +382,8 @@ body {
 }
 .mp-shop-header { margin-bottom: 1.25rem; }
 .mp-shop-title {
-  font-family: 'Fraunces', serif;
   font-size: 1.35rem;
-  font-weight: 700;
+  font-weight: 800;
   margin-bottom: .25rem;
 }
 .mp-shop-sub {

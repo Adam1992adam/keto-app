@@ -4,29 +4,8 @@ import { getUserJourney, getMaxJourneyDays, getMealCycleDays } from '../../lib/s
 import { requireAuth } from '../../lib/auth';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
 import { generateInsights } from '../../lib/insights';
-import DashNav from '../../components/DashNav.astro';
 import Sidebar from '../../components/Sidebar.astro';
 import UpsellModal from '../../components/UpsellModal.astro';
-// ── Lucide icons ──────────────────────────────────────────
-import Scale         from 'lucide-astro/Scale';
-import Flame         from 'lucide-astro/Flame';
-import Zap           from 'lucide-astro/Zap';
-import CalendarDays  from 'lucide-astro/CalendarDays';
-import ClipboardCheck from 'lucide-astro/ClipboardCheck';
-import Timer         from 'lucide-astro/Timer';
-import BarChart3     from 'lucide-astro/BarChart3';
-import Compass       from 'lucide-astro/Compass';
-import TrendingUp    from 'lucide-astro/TrendingUp';
-import ShoppingCart  from 'lucide-astro/ShoppingCart';
-import CheckCircle2  from 'lucide-astro/CheckCircle2';
-import Utensils      from 'lucide-astro/Utensils';
-import Droplets      from 'lucide-astro/Droplets';
-import Pill          from 'lucide-astro/Pill';
-import Target        from 'lucide-astro/Target';
-import Activity      from 'lucide-astro/Activity';
-import LineChart     from 'lucide-astro/LineChart';
-import Info          from 'lucide-astro/Info';
-import Moon         from 'lucide-astro/Moon';
 import AppTour      from '../../components/AppTour.astro';
 
 const auth = await requireAuth(Astro);
@@ -457,19 +436,8 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
 </head>
 <body>
-<DashNav userId={user.id} userName={userName} tierLabel={tierLabel} planType={planType} activePage="dashboard" />
 <UpsellModal />
 <AppTour />
-
-<style is:global>
-  body, body[data-theme="light"] {
-    background: var(--rv-bg, #FAF6F1) !important;
-    color: var(--rv-ink, #16110F) !important;
-  }
-  .dash-nav { display: none !important; }
-  #dn-footer { display: none !important; }
-  .rv-page-wrap { padding-top: 0 !important; }
-</style>
 
 <!-- ════════════════════════════ APP SHELL ════════════════════════════ -->
 <div class="rv-shell">
@@ -1610,6 +1578,39 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ taskId: id, completed: nowDone }),
+    });
+  });
+
+  /* ── Water glasses ──────────────────────────────────── */
+  var currentWater = rvWater;
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.rv-wg');
+    if (!btn) return;
+    var glassIdx = parseInt(btn.getAttribute('data-glass'), 10);
+    var grid     = document.getElementById('rvWaterGrid');
+    if (!grid) return;
+    var buttons  = grid.querySelectorAll('.rv-wg');
+    var newCount = (btn.classList.contains('rv-wg-on') && glassIdx === currentWater) ? currentWater - 1 : glassIdx;
+    var delta    = newCount - currentWater;
+    if (delta === 0) return;
+    currentWater = newCount;
+    buttons.forEach(function(b, i) {
+      var on = i < newCount;
+      b.classList.toggle('rv-wg-on', on);
+      var path = b.querySelector('path');
+      if (path) {
+        path.setAttribute('fill', on ? 'var(--rv-accent)' : 'none');
+        path.setAttribute('stroke', on ? 'var(--rv-accent)' : 'var(--rv-muted)');
+      }
+    });
+    var numEl = document.getElementById('rvWaterNum');
+    var lblEl = document.getElementById('rvWaterLabel');
+    if (numEl) numEl.textContent = newCount;
+    if (lblEl) lblEl.textContent = newCount + '/8 glasses';
+    fetch('/api/water/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ delta: delta }),
     });
   });
 
