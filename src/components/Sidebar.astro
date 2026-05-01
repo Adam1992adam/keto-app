@@ -1,15 +1,15 @@
 ---
-// src/components/Sidebar.astro — shared sidebar for dashboard pages
+// src/components/Sidebar.astro
 
 interface Props {
   userName:   string;
   planType:   string;
-  tierLabel:  string;
+  tierLabel:  string;   // accepted from pages; not used in template
   currentDay: number;
   activePage?: string;
 }
 
-const { userName, planType, tierLabel, currentDay, activePage = '' } = Astro.props;
+const { userName, planType, currentDay, activePage = '' } = Astro.props;
 const isElite  = planType === 'elite_12';
 const initial  = (userName[0] || 'U').toUpperCase();
 const tierMono = planType === 'elite_12' ? 'ELITE' : planType === 'pro_6' ? 'PRO' : 'BASIC';
@@ -31,42 +31,36 @@ const activeMap: Record<string, string> = {
   'checkin': 'progress', 'photos': 'progress', 'ketones': 'progress', 'steps': 'progress',
   'reflections': 'progress', 'share': 'progress',
   'weekly': 'shopping', 'meal-prep': 'shopping',
-  'notifications': 'notifications', 'notification-preferences': 'notification-preferences',
-  'billing': 'billing',
+  'billing': 'billing', 'notification-preferences': 'notification-preferences',
+  'notifications': 'notifications',
 };
 const activeId = activeMap[activePage] || activePage;
 ---
 
-<!-- Anti-flash: apply saved theme before first paint -->
+<!-- Apply saved theme before first paint (no flash) -->
 <script is:inline>
 (function () {
   try {
-    var t = localStorage.getItem('rv-theme');
-    if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    if (localStorage.getItem('rv-theme') === 'dark')
+      document.documentElement.setAttribute('data-theme', 'dark');
   } catch (e) {}
 })();
 </script>
 
 <style is:global>
-  /* ── Dark mode CSS variable overrides ────────────────────────
-     All dashboard pages use these vars so one override covers all. */
+  /* ── Dark mode: warm dark palette ───────────────────────────
+     Single override covers all dashboard pages via CSS vars.   */
   html[data-theme="dark"] {
-    /* Page & surface */
     --rv-bg:       #0F0A08;
     --rv-bg-alt:   #1E1410;
     --rv-card:     #1A1210;
     --rv-card2:    #221814;
     --rv-line:     rgba(255, 90, 122, .13);
-
-    /* Text */
     --rv-ink:      #F2E8E0;
     --rv-ink-soft: #BCA090;
     --rv-muted:    #6A5248;
-
-    /* Accent colours stay the same */
     --rv-accent:   #FF5C7A;
     --rv-accent-2: #B6FF3C;
-
     /* Legacy vars used on some pages */
     --bg:     #0F0A08;
     --card:   #1A1210;
@@ -77,33 +71,28 @@ const activeId = activeMap[activePage] || activePage;
     --soft:   #BCA090;
     --muted:  #6A5248;
   }
-
-  /* Smooth transition when toggling */
-  html { transition: background-color .2s, color .2s; }
-  *, *::before, *::after { transition: background-color .2s, border-color .2s, color .15s; }
+  html { transition: background-color .2s; }
 </style>
 
 <style>
-  /* ── Sidebar shell ────────────────────────────────────────── */
+  /* ── Sidebar shell ─────────────────────────────────────────── */
   .rv-sb {
-    width: 232px;
-    position: sticky;
-    top: 0;
-    height: 100vh;
+    width: 232px; position: sticky; top: 0; height: 100vh;
     background: var(--rv-card, #fff);
     border-right: 1px solid var(--rv-line, #E5DED2);
-    display: flex;
-    flex-direction: column;
-    padding: 20px 14px;
-    overflow-y: auto;
-    gap: 4px;
-    z-index: 50;
-    flex-shrink: 0;
+    display: flex; flex-direction: column;
+    padding: 20px 14px; overflow-y: auto; gap: 4px;
+    z-index: 50; flex-shrink: 0;
+  }
+
+  /* ── Header row: logo + bell ──────────────────────────────── */
+  .rv-sb-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; padding: 0 4px; flex-shrink: 0;
   }
   .rv-sb-logo {
     display: flex; align-items: center; gap: 10px;
-    text-decoration: none; margin-bottom: 24px; padding: 0 4px;
-    flex-shrink: 0;
+    text-decoration: none;
   }
   .rv-logo-mark {
     width: 30px; height: 30px; border-radius: 7px; flex-shrink: 0;
@@ -117,17 +106,37 @@ const activeId = activeMap[activePage] || activePage;
     font-size: .74rem; font-weight: 500; letter-spacing: .07em;
     color: var(--rv-ink-soft, #4A4340);
   }
-  .rv-logo-word strong { font-weight: 800; color: var(--rv-ink, #16110F); letter-spacing: .05em; }
+  .rv-logo-word strong { font-weight: 800; color: var(--rv-ink, #16110F); }
 
-  /* ── Nav items ────────────────────────────────────────────── */
+  /* ── Bell button ──────────────────────────────────────────── */
+  .rv-bell-btn {
+    position: relative; width: 32px; height: 32px; border-radius: 8px;
+    background: transparent; border: 1px solid var(--rv-line, #E5DED2);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; text-decoration: none; flex-shrink: 0;
+    color: var(--rv-ink-soft, #4A4340);
+    transition: border-color .15s, background .15s;
+  }
+  .rv-bell-btn:hover { border-color: var(--rv-accent, #FF5C7A); background: var(--rv-bg-alt, #F2EDE5); }
+  .rv-bell-ic { width: 15px; height: 15px; }
+  .rv-bell-badge {
+    display: none; position: absolute; top: -5px; right: -5px;
+    min-width: 16px; height: 16px; border-radius: 8px;
+    background: var(--rv-accent, #FF5C7A); color: #fff;
+    font-size: .58rem; font-weight: 700; padding: 0 3px;
+    align-items: center; justify-content: center;
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif; line-height: 1;
+  }
+  .rv-bell-badge.visible { display: flex; }
+
+  /* ── Nav items ─────────────────────────────────────────────── */
   .rv-sb-nav { display: flex; flex-direction: column; gap: 2px; }
   .rv-ni {
     display: flex; align-items: center; gap: 11px;
     padding: 9px 12px; border-radius: 10px; text-decoration: none;
     font-family: 'Bricolage Grotesque', system-ui, sans-serif;
     font-size: .84rem; font-weight: 500;
-    color: var(--rv-ink-soft, #4A4340);
-    transition: all .15s;
+    color: var(--rv-ink-soft, #4A4340); transition: all .15s;
   }
   .rv-ni:hover { background: var(--rv-bg-alt, #F2EDE5); color: var(--rv-ink, #16110F); }
   .rv-ni--active { background: var(--rv-ink, #16110F); color: var(--rv-bg, #FAF6F1) !important; }
@@ -135,7 +144,7 @@ const activeId = activeMap[activePage] || activePage;
   .rv-ni--elite .rv-ni-ic { color: var(--rv-accent, #FF5C7A); }
   .rv-ni-ic { width: 17px; height: 17px; flex-shrink: 0; }
 
-  /* ── Section label ────────────────────────────────────────── */
+  /* ── Section divider ───────────────────────────────────────── */
   .rv-sb-section {
     font-family: 'Bricolage Grotesque', system-ui, sans-serif;
     font-size: .62rem; font-weight: 700; letter-spacing: .1em;
@@ -143,22 +152,7 @@ const activeId = activeMap[activePage] || activePage;
     padding: 12px 12px 4px; margin-top: 4px;
   }
 
-  /* ── Notifications bell item ──────────────────────────────── */
-  .rv-ni-bell-wrap { position: relative; display: inline-flex; }
-  .rv-notif-badge {
-    display: none;
-    position: absolute; top: -4px; right: -4px;
-    min-width: 16px; height: 16px;
-    background: var(--rv-accent, #FF5C7A); color: #fff;
-    border-radius: 8px; font-size: .6rem; font-weight: 700;
-    padding: 0 3px;
-    align-items: center; justify-content: center;
-    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
-    line-height: 1;
-  }
-  .rv-notif-badge.visible { display: flex; }
-
-  /* ── Bottom area: theme toggle + user chip ────────────────── */
+  /* ── Bottom: dark-mode toggle + user chip ─────────────────── */
   .rv-sb-fill { flex: 1; min-height: 16px; }
   .rv-sb-bottom { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
 
@@ -166,34 +160,27 @@ const activeId = activeMap[activePage] || activePage;
     display: flex; align-items: center; justify-content: space-between;
     padding: 6px 12px;
   }
-  .rv-theme-label {
+  .rv-theme-lbl {
     font-family: 'Bricolage Grotesque', system-ui, sans-serif;
     font-size: .78rem; font-weight: 500; color: var(--rv-ink-soft, #4A4340);
   }
-  .rv-theme-toggle {
+  .rv-theme-pill {
     position: relative; width: 40px; height: 22px;
     background: var(--rv-line, #E5DED2); border-radius: 11px;
-    border: none; cursor: pointer; padding: 0;
-    transition: background .2s;
-    flex-shrink: 0;
+    border: none; cursor: pointer; padding: 0; transition: background .2s; flex-shrink: 0;
   }
-  .rv-theme-toggle.dark { background: var(--rv-accent, #FF5C7A); }
-  .rv-theme-toggle::after {
-    content: '';
-    position: absolute; top: 3px; left: 3px;
-    width: 16px; height: 16px; border-radius: 50%;
-    background: #fff;
-    transition: transform .2s;
-    box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  .rv-theme-pill.on { background: var(--rv-accent, #FF5C7A); }
+  .rv-theme-pill::after {
+    content: ''; position: absolute; top: 3px; left: 3px;
+    width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2);
   }
-  .rv-theme-toggle.dark::after { transform: translateX(18px); }
-  .rv-theme-icon { font-size: .9rem; line-height: 1; }
+  .rv-theme-pill.on::after { transform: translateX(18px); }
 
   .rv-sb-user {
     display: flex; align-items: center; gap: 10px; padding: 10px 12px;
     border-radius: 10px; text-decoration: none;
-    border: 1px solid var(--rv-line, #E5DED2);
-    transition: border-color .15s;
+    border: 1px solid var(--rv-line, #E5DED2); transition: border-color .15s;
   }
   .rv-sb-user:hover { border-color: var(--rv-accent, #FF5C7A); }
   .rv-sb-avatar {
@@ -207,12 +194,10 @@ const activeId = activeMap[activePage] || activePage;
   .rv-sb-name { font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: .82rem; font-weight: 600; color: var(--rv-ink, #16110F); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .rv-sb-plan { font-size: .67rem; letter-spacing: .07em; color: var(--rv-muted, #8A8077); font-family: 'Geist Mono', monospace; margin-top: 1px; }
 
-  /* ── Mobile bottom nav ────────────────────────────────────── */
+  /* ── Mobile bottom nav ─────────────────────────────────────── */
   .rv-mobnav {
-    display: none;
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
-    background: var(--rv-card, #fff);
-    border-top: 1px solid var(--rv-line, #E5DED2);
+    display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+    background: var(--rv-card, #fff); border-top: 1px solid var(--rv-line, #E5DED2);
     padding: 6px 0 max(6px, env(safe-area-inset-bottom));
   }
   .rv-mobnav-inner { display: flex; justify-content: space-around; }
@@ -221,8 +206,7 @@ const activeId = activeMap[activePage] || activePage;
     padding: 4px 12px; text-decoration: none;
     font-family: 'Bricolage Grotesque', system-ui, sans-serif;
     font-size: .6rem; font-weight: 500; letter-spacing: .03em;
-    color: var(--rv-ink-soft, #4A4340);
-    transition: color .15s;
+    color: var(--rv-ink-soft, #4A4340); transition: color .15s;
   }
   .rv-mn:hover, .rv-mn.active { color: var(--rv-accent, #FF5C7A); }
   .rv-mn-ic { width: 20px; height: 20px; }
@@ -235,11 +219,23 @@ const activeId = activeMap[activePage] || activePage;
 
 <!-- Desktop sidebar -->
 <aside class="rv-sb">
-  <a href="/dashboard" class="rv-sb-logo">
-    <span class="rv-logo-mark">K</span>
-    <span class="rv-logo-word">KETO<strong>JOURNEY</strong></span>
-  </a>
 
+  <!-- Header: logo + notifications bell -->
+  <div class="rv-sb-head">
+    <a href="/dashboard" class="rv-sb-logo">
+      <span class="rv-logo-mark">K</span>
+      <span class="rv-logo-word">KETO<strong>JOURNEY</strong></span>
+    </a>
+    <a href="/dashboard/notifications" class="rv-bell-btn" aria-label="Notifications">
+      <svg class="rv-bell-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 01-3.46 0"/>
+      </svg>
+      <span class="rv-bell-badge" id="rvNotifBadge"></span>
+    </a>
+  </div>
+
+  <!-- Main navigation -->
   <nav class="rv-sb-nav">
     {nav.map(item => (
       <a href={item.href} class={`rv-ni${activeId === item.id ? ' rv-ni--active' : ''}`}>
@@ -259,19 +255,20 @@ const activeId = activeMap[activePage] || activePage;
     </a>
   </nav>
 
+  <!-- Settings section -->
   <div class="rv-sb-section">Settings</div>
   <nav class="rv-sb-nav">
-    <a href="/dashboard/notifications" class={`rv-ni${activePage === 'notifications' ? ' rv-ni--active' : ''}`}>
-      <span class="rv-ni-bell-wrap">
-        <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-        <span class="rv-notif-badge" id="rvNotifBadge"></span>
-      </span>
-      <span>Notifications</span>
+    <!-- Language -->
+    <a href="/dashboard/profile#language" class={`rv-ni${activePage === 'profile' && false ? ' rv-ni--active' : ''}`}>
+      <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+      <span>Language</span>
     </a>
+    <!-- Notification preferences -->
     <a href="/dashboard/notification-preferences" class={`rv-ni${activePage === 'notification-preferences' ? ' rv-ni--active' : ''}`}>
       <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-      <span>Preferences</span>
+      <span>Alerts</span>
     </a>
+    <!-- Billing -->
     <a href="/dashboard/billing" class={`rv-ni${activePage === 'billing' ? ' rv-ni--active' : ''}`}>
       <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
       <span>Billing</span>
@@ -283,10 +280,10 @@ const activeId = activeMap[activePage] || activePage;
   <div class="rv-sb-bottom">
     <!-- Dark mode toggle -->
     <div class="rv-theme-row">
-      <span class="rv-theme-label" id="rvThemeLabel">Light mode</span>
-      <button class="rv-theme-toggle" id="rvThemeToggle" aria-label="Toggle dark mode"></button>
+      <span class="rv-theme-lbl" id="rvThemeLbl">Light mode</span>
+      <button class="rv-theme-pill" id="rvThemePill" aria-label="Toggle dark mode"></button>
     </div>
-
+    <!-- User chip -->
     <a href="/dashboard/profile" class="rv-sb-user">
       <div class="rv-sb-avatar">{initial}</div>
       <div class="rv-sb-info">
@@ -299,61 +296,48 @@ const activeId = activeMap[activePage] || activePage;
 
 <script is:inline>
 (function () {
-  /* ── Theme toggle ──────────────────────────────────────────── */
-  var btn = document.getElementById('rvThemeToggle');
-  var lbl = document.getElementById('rvThemeLabel');
-  function applyTheme(dark) {
-    if (dark) {
+  /* ── Dark mode toggle ─────────────────────────────────────── */
+  var pill = document.getElementById('rvThemePill');
+  var lbl  = document.getElementById('rvThemeLbl');
+  var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+  function applyTheme(d) {
+    dark = d;
+    if (d) {
       document.documentElement.setAttribute('data-theme', 'dark');
-      if (btn) btn.classList.add('dark');
-      if (lbl) lbl.textContent = 'Dark mode';
+      if (pill) pill.classList.add('on');
+      if (lbl)  lbl.textContent = 'Dark mode';
     } else {
       document.documentElement.removeAttribute('data-theme');
-      if (btn) btn.classList.remove('dark');
-      if (lbl) lbl.textContent = 'Light mode';
+      if (pill) pill.classList.remove('on');
+      if (lbl)  lbl.textContent = 'Light mode';
     }
-  }
-  // Sync toggle state to current theme (anti-flash script may have already applied dark)
-  var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  applyTheme(isDark);
-
-  if (btn) {
-    btn.addEventListener('click', function () {
-      isDark = !isDark;
-      applyTheme(isDark);
-      try { localStorage.setItem('rv-theme', isDark ? 'dark' : 'light'); } catch (e) {}
-    });
+    try { localStorage.setItem('rv-theme', d ? 'dark' : 'light'); } catch (e) {}
   }
 
-  /* ── Notification badge ────────────────────────────────────── */
+  applyTheme(dark); // sync pill state on load
+  if (pill) pill.addEventListener('click', function () { applyTheme(!dark); });
+
+  /* ── Notification badge ───────────────────────────────────── */
   var CACHE_KEY = 'rv_notif_count';
   var CACHE_TTL = 30000;
-  function updateBadge(count) {
-    var badge = document.getElementById('rvNotifBadge');
-    if (!badge) return;
-    if (count > 0) {
-      badge.textContent = count > 99 ? '99+' : count;
-      badge.classList.add('visible');
-    } else {
-      badge.classList.remove('visible');
-    }
+  function updateBadge(n) {
+    var b = document.getElementById('rvNotifBadge');
+    if (!b) return;
+    if (n > 0) { b.textContent = n > 99 ? '99+' : n; b.classList.add('visible'); }
+    else { b.classList.remove('visible'); }
   }
   try {
-    var cached = sessionStorage.getItem(CACHE_KEY);
-    if (cached) {
-      var parsed = JSON.parse(cached);
-      if (Date.now() - parsed.ts < CACHE_TTL) { updateBadge(parsed.count); return; }
-    }
+    var c = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
+    if (c && Date.now() - c.ts < CACHE_TTL) { updateBadge(c.count); return; }
   } catch (e) {}
   fetch('/api/notifications?limit=1', { credentials: 'same-origin' })
-    .then(function(r) { return r.ok ? r.json() : null; })
-    .then(function(d) {
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
       if (!d) return;
-      var count = d.unreadCount || 0;
-      updateBadge(count);
-      try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ count: count, ts: Date.now() })); } catch(e) {}
-    })
-    .catch(function() {});
+      updateBadge(d.unreadCount || 0);
+      try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ count: d.unreadCount || 0, ts: Date.now() })); } catch (e) {}
+    }).catch(function () {});
 })();
 </script>
 
