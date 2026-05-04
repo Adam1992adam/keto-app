@@ -1,0 +1,1038 @@
+---
+const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').replace(/\/$/, '');
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Find Your Perfect Keto Plan — KetoJourney</title>
+  <meta name="description" content="Answer 6 quick questions and get a personalized keto plan built around your goals, lifestyle and experience."/>
+  <link rel="canonical" href={SITE_URL + '/start'}/>
+  <meta property="og:title"       content="Find Your Perfect Keto Plan"/>
+  <meta property="og:description" content="6 questions. Personalized plan. Start your free 7-day trial."/>
+  <meta property="og:image"       content={SITE_URL + '/og-image.png'}/>
+  <meta name="twitter:card"       content="summary_large_image"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="/icon-72.png"/>
+  <meta name="theme-color" content="#FF5C7A"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --bg:#FAF6F1;--card:#fff;--card2:#F2EDE5;
+      --border:rgba(255,90,122,.13);--border2:rgba(255,90,122,.28);
+      --text:#1A0A00;--soft:#7A6055;--muted:#C8B4AA;
+      --accent:#FF5C7A;--accent2:#ff8fa3;--accent-bg:rgba(255,92,122,.07);
+      --green:#10b981;--gold:#f59e0b;--blue:#3b82f6;
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html,body{height:100%;overflow-x:hidden;}
+    body{font-family:'Bricolage Grotesque',sans-serif;background:var(--bg);color:var(--text);}
+
+    /* ── NAV ── */
+    .qnav{
+      position:fixed;top:0;left:0;right:0;z-index:100;
+      padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;
+      background:rgba(250,246,241,.9);backdrop-filter:blur(12px);
+      border-bottom:1px solid var(--border);
+    }
+    .qnav-logo{display:flex;align-items:center;gap:.4rem;font-weight:800;font-size:1rem;color:var(--text);text-decoration:none;}
+    .qnav-logo span{color:var(--accent);}
+    .qnav-login{font-size:.8rem;font-weight:700;color:var(--soft);text-decoration:none;transition:color .2s;}
+    .qnav-login:hover{color:var(--accent);}
+
+    /* ── PROGRESS ── */
+    .prog-wrap{
+      position:fixed;top:52px;left:0;right:0;z-index:99;
+      padding:.5rem 1.5rem .4rem;background:rgba(250,246,241,.9);backdrop-filter:blur(8px);
+    }
+    .prog-bar{height:4px;background:var(--border);border-radius:4px;overflow:hidden;}
+    .prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width .45s ease;}
+    .prog-label{font-size:.68rem;font-weight:700;color:var(--muted);text-align:right;margin-top:.3rem;}
+
+    /* ── MAIN CONTAINER ── */
+    .quiz-wrap{
+      min-height:100vh;padding:6.5rem 1rem 3rem;
+      display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    }
+
+    /* ── STEP ── */
+    .step{display:none;width:100%;max-width:600px;animation:fadeUp .35s ease both;}
+    .step.active{display:block;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+
+    .step-eyebrow{
+      display:inline-flex;align-items:center;gap:.4rem;
+      background:var(--accent-bg);border:1px solid var(--border);
+      border-radius:99px;padding:.28rem .85rem;
+      font-size:.67rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.1em;margin-bottom:1rem;
+    }
+    .step-q{font-size:1.75rem;font-weight:800;line-height:1.15;margin-bottom:.55rem;}
+    .step-q em{font-style:italic;color:var(--accent);}
+    .step-hint{font-size:.82rem;color:var(--soft);margin-bottom:1.75rem;line-height:1.5;}
+
+    /* ── OPTION CARDS ── */
+    .options{display:flex;flex-direction:column;gap:.75rem;}
+    .options.grid2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
+    .opt{
+      display:flex;align-items:center;gap:.9rem;
+      background:var(--card);border:2px solid var(--border);
+      border-radius:16px;padding:1rem 1.15rem;
+      cursor:pointer;transition:all .2s;user-select:none;
+      position:relative;
+    }
+    .opt:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,92,122,.1);}
+    .opt.selected{
+      border-color:var(--accent);background:var(--accent-bg);
+      box-shadow:0 0 0 3px rgba(255,92,122,.12);
+    }
+    .opt-icon{
+      width:44px;height:44px;border-radius:12px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:1.3rem;flex-shrink:0;
+      background:var(--card2);transition:background .2s;
+    }
+    .opt.selected .opt-icon{background:rgba(255,92,122,.14);}
+    .opt-body{flex:1;}
+    .opt-title{font-size:.92rem;font-weight:800;line-height:1.2;}
+    .opt-sub{font-size:.72rem;color:var(--soft);margin-top:.18rem;}
+    .opt-check{
+      width:22px;height:22px;border-radius:50%;
+      border:2px solid var(--muted);flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      transition:all .2s;
+    }
+    .opt.selected .opt-check{background:var(--accent);border-color:var(--accent);}
+    .opt-check svg{display:none;}
+    .opt.selected .opt-check svg{display:block;}
+
+    /* multi-select variant */
+    .opt .opt-check.multi{border-radius:6px;}
+
+    /* ── NEXT BUTTON ── */
+    .next-btn{
+      width:100%;margin-top:1.5rem;padding:1rem;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      border:none;border-radius:14px;color:#fff;
+      font-family:'Bricolage Grotesque',sans-serif;font-size:.95rem;font-weight:800;
+      cursor:pointer;transition:all .25s;
+      display:flex;align-items:center;justify-content:center;gap:.5rem;
+      position:relative;overflow:hidden;
+    }
+    .next-btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;}
+    .next-btn:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(255,92,122,.35);}
+    .next-btn::before{
+      content:'';position:absolute;inset:0;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);
+      transform:translateX(-100%);transition:transform .5s;
+    }
+    .next-btn:not(:disabled):hover::before{transform:translateX(100%);}
+
+    .back-link{
+      display:inline-flex;align-items:center;gap:.3rem;
+      font-size:.78rem;font-weight:700;color:var(--muted);
+      border:none;background:none;cursor:pointer;
+      padding:.4rem 0;margin-bottom:.5rem;
+      transition:color .2s;
+    }
+    .back-link:hover{color:var(--soft);}
+
+    /* ── MULTI-SELECT COUNTER ── */
+    .multi-counter{
+      display:inline-flex;align-items:center;gap:.4rem;
+      font-size:.72rem;color:var(--soft);margin-top:.75rem;
+    }
+    .multi-counter strong{color:var(--accent);}
+
+    /* ── ANALYZING STEP ── */
+    .analyze-wrap{text-align:center;padding:2.5rem 1rem;}
+    .analyze-ring{
+      width:80px;height:80px;border-radius:50%;
+      border:4px solid var(--border);border-top-color:var(--accent);
+      animation:spin .9s linear infinite;margin:0 auto 1.75rem;
+    }
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .analyze-title{font-size:1.5rem;font-weight:800;margin-bottom:.5rem;}
+    .analyze-msg{font-size:.88rem;color:var(--soft);min-height:1.5rem;transition:opacity .3s;}
+    .analyze-steps{
+      margin-top:2rem;display:flex;flex-direction:column;gap:.6rem;
+      max-width:320px;margin-left:auto;margin-right:auto;
+    }
+    .a-step{
+      display:flex;align-items:center;gap:.6rem;
+      font-size:.8rem;color:var(--muted);transition:color .4s;
+    }
+    .a-step.done{color:var(--text);}
+    .a-dot{
+      width:20px;height:20px;border-radius:50%;flex-shrink:0;
+      border:2px solid var(--muted);display:flex;align-items:center;justify-content:center;
+      font-size:.6rem;transition:all .4s;
+    }
+    .a-step.done .a-dot{background:var(--green);border-color:var(--green);color:#fff;}
+
+    /* ── RESULT STEP ── */
+    .result-hero{
+      text-align:center;padding:1.25rem 0 1.5rem;
+    }
+    .result-badge{
+      display:inline-flex;align-items:center;gap:.5rem;
+      background:linear-gradient(135deg,rgba(255,92,122,.12),rgba(255,143,163,.06));
+      border:1.5px solid var(--border2);border-radius:99px;
+      padding:.4rem 1.1rem;font-size:.72rem;font-weight:800;
+      color:var(--accent);margin-bottom:1rem;
+    }
+    .result-title{font-size:2rem;font-weight:800;line-height:1.1;margin-bottom:.5rem;}
+    .result-title em{font-style:italic;color:var(--accent);}
+    .result-sub{font-size:.88rem;color:var(--soft);line-height:1.6;}
+
+    .plan-rec{
+      background:linear-gradient(135deg,rgba(255,92,122,.08),rgba(255,143,163,.03));
+      border:2px solid var(--border2);border-radius:20px;
+      padding:1.25rem 1.4rem;margin:1.25rem 0;
+      display:flex;align-items:center;gap:1rem;
+    }
+    .plan-rec-icon{font-size:2.2rem;flex-shrink:0;}
+    .plan-rec-name{font-size:1.1rem;font-weight:800;}
+    .plan-rec-desc{font-size:.78rem;color:var(--soft);margin-top:.18rem;line-height:1.5;}
+    .plan-rec-tag{
+      margin-left:auto;flex-shrink:0;
+      padding:.3rem .85rem;border-radius:99px;
+      background:var(--accent);color:#fff;
+      font-size:.65rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+    }
+
+    .insights{display:flex;flex-direction:column;gap:.75rem;margin:1.25rem 0;}
+    .insight{
+      display:flex;align-items:flex-start;gap:.85rem;
+      background:var(--card);border:1px solid var(--border);
+      border-radius:14px;padding:.9rem 1rem;
+    }
+    .insight-icon{
+      width:36px;height:36px;border-radius:10px;flex-shrink:0;
+      background:var(--accent-bg);display:flex;align-items:center;justify-content:center;
+      font-size:1rem;border:1px solid var(--border);
+    }
+    .insight-text{font-size:.82rem;line-height:1.55;}
+    .insight-text strong{color:var(--text);}
+
+    /* ── TRIAL SIGNUP FORM ── */
+    .signup-section{
+      background:var(--card);border:1.5px solid var(--border);
+      border-radius:20px;padding:1.4rem 1.5rem;margin-top:1.5rem;
+    }
+    .signup-head{text-align:center;margin-bottom:1.25rem;}
+    .signup-head h3{font-size:1.15rem;font-weight:800;margin-bottom:.3rem;}
+    .signup-head p{font-size:.8rem;color:var(--soft);}
+    .trial-badge{
+      display:inline-flex;align-items:center;gap:.4rem;
+      background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);
+      border-radius:99px;padding:.28rem .85rem;
+      font-size:.7rem;font-weight:800;color:var(--green);
+      margin-bottom:.75rem;
+    }
+    .sf-field{margin-bottom:.9rem;}
+    .sf-label{display:block;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);margin-bottom:.4rem;}
+    .sf-wrap{position:relative;}
+    .sf-icon{position:absolute;left:.85rem;top:50%;transform:translateY(-50%);font-size:.85rem;pointer-events:none;}
+    .sf-input{
+      width:100%;padding:.8rem 1rem .8rem 2.5rem;
+      background:var(--card2);border:1.5px solid var(--border);
+      border-radius:11px;color:var(--text);
+      font-family:'Bricolage Grotesque',sans-serif;font-size:.875rem;font-weight:500;
+      outline:none;transition:all .2s;
+    }
+    .sf-input::placeholder{color:var(--muted);}
+    .sf-input:focus{border-color:var(--accent);background:rgba(255,92,122,.04);box-shadow:0 0 0 3px rgba(255,92,122,.1);}
+    .sf-input.err{border-color:#ef4444;}
+    .sf-err{font-size:.72rem;color:#ef4444;margin-top:.3rem;display:none;}
+    .sf-err.show{display:block;}
+
+    .pw-bars{display:flex;gap:.3rem;margin:.5rem 0 .25rem;}
+    .pw-bar{flex:1;height:3px;border-radius:2px;background:var(--muted);transition:background .3s;}
+    .pw-bar.w{background:#ef4444;}
+    .pw-bar.m{background:var(--gold);}
+    .pw-bar.s{background:var(--green);}
+    .pw-label{font-size:.67rem;color:var(--soft);}
+
+    .pw-toggle{
+      position:absolute;right:.85rem;top:50%;transform:translateY(-50%);
+      background:none;border:none;cursor:pointer;color:var(--soft);
+      font-size:.9rem;transition:color .2s;padding:.2rem;
+    }
+    .pw-toggle:hover{color:var(--text);}
+
+    .signup-btn{
+      width:100%;margin-top:.5rem;padding:.95rem;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      border:none;border-radius:12px;color:#fff;
+      font-family:'Bricolage Grotesque',sans-serif;font-size:.92rem;font-weight:800;
+      cursor:pointer;transition:all .25s;
+      display:flex;align-items:center;justify-content:center;gap:.5rem;
+    }
+    .signup-btn:disabled{opacity:.5;cursor:not-allowed;}
+    .signup-btn:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(255,92,122,.35);}
+    .spin-sm{display:none;width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;animation:spin .7s linear infinite;}
+    .form-err{font-size:.78rem;color:#b91c1c;text-align:center;margin-top:.6rem;display:none;}
+    .form-err.show{display:block;}
+
+    .already-link{text-align:center;font-size:.8rem;color:var(--soft);margin-top:.75rem;}
+    .already-link a{color:var(--accent);font-weight:800;text-decoration:none;}
+    .already-link a:hover{text-decoration:underline;}
+
+    .or-divider{display:flex;align-items:center;gap:.75rem;margin:1.1rem 0 .9rem;}
+    .or-line{flex:1;height:1px;background:var(--border);}
+    .or-text{font-size:.68rem;font-weight:700;color:var(--muted);}
+
+    .ebook-btn{
+      display:flex;align-items:center;justify-content:center;gap:.5rem;
+      width:100%;padding:.8rem;border:1.5px solid var(--border);
+      border-radius:12px;background:transparent;color:var(--soft);
+      font-family:'Bricolage Grotesque',sans-serif;font-size:.85rem;font-weight:700;
+      cursor:pointer;text-decoration:none;transition:all .2s;
+    }
+    .ebook-btn:hover{border-color:var(--border2);color:var(--accent);}
+
+    .trust-row{
+      display:flex;align-items:center;justify-content:center;
+      flex-wrap:wrap;gap:.4rem .8rem;margin-top:1rem;
+      font-size:.7rem;color:var(--muted);
+    }
+    .trust-item{display:flex;align-items:center;gap:.3rem;}
+    .trust-sep{color:var(--border);}
+
+    /* ── SUCCESS ── */
+    .success-wrap{text-align:center;padding:2rem 1rem;}
+    .success-icon{font-size:3.5rem;margin-bottom:.85rem;}
+    .success-title{font-size:1.65rem;font-weight:800;color:var(--accent);margin-bottom:.5rem;}
+    .success-sub{font-size:.85rem;color:var(--soft);line-height:1.65;margin-bottom:1.5rem;}
+    .success-prog{height:4px;background:var(--border);border-radius:4px;overflow:hidden;}
+    .success-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;animation:grow 2.5s ease forwards;}
+    @keyframes grow{from{width:0;}to{width:100%;}}
+
+    @media(max-width:600px){
+      .step-q{font-size:1.4rem;}
+      .options.grid2{grid-template-columns:1fr;}
+      .result-title{font-size:1.6rem;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="qnav">
+  <a href="/" class="qnav-logo">🥑 Keto<span>Journey</span></a>
+  <a href="/login" class="qnav-login">Already a member? Log in →</a>
+</nav>
+
+<!-- PROGRESS -->
+<div class="prog-wrap">
+  <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+  <div class="prog-label" id="progLabel">Step 1 of 6</div>
+</div>
+
+<div class="quiz-wrap">
+
+  <!-- ══ STEP 1: GOAL ══ -->
+  <div class="step active" id="step-1">
+    <div class="step-eyebrow">✨ Quick quiz</div>
+    <h1 class="step-q">What's your <em>main goal</em><br/>with keto?</h1>
+    <p class="step-hint">This shapes every meal, every tip, every day of your plan.</p>
+    <div class="options">
+      <div class="opt" onclick="selectSingle(1,'weight_loss',this)">
+        <div class="opt-icon">🔥</div>
+        <div class="opt-body">
+          <div class="opt-title">Lose weight</div>
+          <div class="opt-sub">Burn fat, feel lighter, fit into your favourite clothes</div>
+        </div>
+        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectSingle(1,'muscle',this)">
+        <div class="opt-icon">💪</div>
+        <div class="opt-body">
+          <div class="opt-title">Build lean muscle</div>
+          <div class="opt-sub">Stay strong and toned while staying keto</div>
+        </div>
+        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectSingle(1,'energy',this)">
+        <div class="opt-icon">⚡</div>
+        <div class="opt-body">
+          <div class="opt-title">Boost energy & focus</div>
+          <div class="opt-sub">End brain fog, power through the day without crashes</div>
+        </div>
+        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectSingle(1,'health',this)">
+        <div class="opt-icon">❤️</div>
+        <div class="opt-body">
+          <div class="opt-title">Improve overall health</div>
+          <div class="opt-sub">Better blood sugar, cholesterol, and metabolic markers</div>
+        </div>
+        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+    </div>
+    <button class="next-btn" id="next-1" disabled onclick="goNext(1)">Continue →</button>
+  </div>
+
+  <!-- ══ STEP 2: EXPERIENCE ══ -->
+  <div class="step" id="step-2">
+    <button class="back-link" onclick="goBack(2)">← Back</button>
+    <div class="step-eyebrow">🥑 Experience</div>
+    <h2 class="step-q">Have you tried<br/><em>keto before?</em></h2>
+    <p class="step-hint">Honest answer helps us set the right pace for your plan.</p>
+    <div class="options">
+      <div class="opt" onclick="selectSingle(2,'new',this)">
+        <div class="opt-icon">🆕</div>
+        <div class="opt-body">
+          <div class="opt-title">Never tried it</div>
+          <div class="opt-sub">I'm completely new to the keto diet</div>
+        </div>
+        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectSingle(2,'tried',this)">
+        <div class="opt-icon">🌱</div>
+        <div class="opt-body">
+          <div class="opt-title">Tried it briefly</div>
+          <div class="opt-sub">Started but couldn't stick with it</div>
+        </div>
+        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectSingle(2,'months',this)">
+        <div class="opt-icon">✅</div>
+        <div class="opt-body">
+          <div class="opt-title">Done it for months</div>
+          <div class="opt-sub">I know the basics, ready to level up</div>
+        </div>
+        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectSingle(2,'current',this)">
+        <div class="opt-icon">🏆</div>
+        <div class="opt-body">
+          <div class="opt-title">Currently eating keto</div>
+          <div class="opt-sub">I want better results and structure</div>
+        </div>
+        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+    </div>
+    <button class="next-btn" id="next-2" disabled onclick="goNext(2)">Continue →</button>
+  </div>
+
+  <!-- ══ STEP 3: CHALLENGES ══ -->
+  <div class="step" id="step-3">
+    <button class="back-link" onclick="goBack(3)">← Back</button>
+    <div class="step-eyebrow">⚡ Challenges</div>
+    <h2 class="step-q">What are your<br/><em>biggest challenges?</em></h2>
+    <p class="step-hint">Pick up to 3 — we'll build solutions into your plan.</p>
+    <div class="options">
+      <div class="opt" onclick="selectMulti(3,'cravings',this,3)">
+        <div class="opt-icon">🍫</div>
+        <div class="opt-body">
+          <div class="opt-title">Carb & sugar cravings</div>
+          <div class="opt-sub">Hard to resist bread, pasta, sweets</div>
+        </div>
+        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectMulti(3,'meal_prep',this,3)">
+        <div class="opt-icon">🍽️</div>
+        <div class="opt-body">
+          <div class="opt-title">Meal planning & prep</div>
+          <div class="opt-sub">Don't know what to cook every day</div>
+        </div>
+        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectMulti(3,'social',this,3)">
+        <div class="opt-icon">🍕</div>
+        <div class="opt-body">
+          <div class="opt-title">Eating out socially</div>
+          <div class="opt-sub">Hard to stay keto at restaurants or events</div>
+        </div>
+        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectMulti(3,'consistent',this,3)">
+        <div class="opt-icon">⏰</div>
+        <div class="opt-body">
+          <div class="opt-title">Staying consistent</div>
+          <div class="opt-sub">Start strong but motivation fades</div>
+        </div>
+        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectMulti(3,'macros',this,3)">
+        <div class="opt-icon">🔢</div>
+        <div class="opt-body">
+          <div class="opt-title">Understanding macros</div>
+          <div class="opt-sub">Confused by fat/carb/protein ratios</div>
+        </div>
+        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectMulti(3,'satisfying',this,3)">
+        <div class="opt-icon">😋</div>
+        <div class="opt-body">
+          <div class="opt-title">Finding satisfying meals</div>
+          <div class="opt-sub">Keto food feels boring or restrictive</div>
+        </div>
+        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+    </div>
+    <div class="multi-counter">Selected: <strong id="challenge-count">0</strong> / 3</div>
+    <button class="next-btn" id="next-3" disabled onclick="goNext(3)">Continue →</button>
+  </div>
+
+  <!-- ══ STEP 4: DIETARY RESTRICTIONS ══ -->
+  <div class="step" id="step-4">
+    <button class="back-link" onclick="goBack(4)">← Back</button>
+    <div class="step-eyebrow">🥗 Diet</div>
+    <h2 class="step-q">Any <em>dietary<br/>restrictions?</em></h2>
+    <p class="step-hint">Select all that apply — we filter recipes accordingly.</p>
+    <div class="options">
+      <div class="opt" id="opt-none" onclick="selectRestriction('none',this)">
+        <div class="opt-icon">✅</div>
+        <div class="opt-body">
+          <div class="opt-title">No restrictions</div>
+          <div class="opt-sub">I eat everything</div>
+        </div>
+        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectRestriction('dairy_free',this)">
+        <div class="opt-icon">🥛</div>
+        <div class="opt-body">
+          <div class="opt-title">Dairy-free</div>
+          <div class="opt-sub">No milk, cheese, butter or cream</div>
+        </div>
+        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectRestriction('nut_free',this)">
+        <div class="opt-icon">🥜</div>
+        <div class="opt-body">
+          <div class="opt-title">Nut-free</div>
+          <div class="opt-sub">Allergic to or avoiding all nuts</div>
+        </div>
+        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectRestriction('vegetarian',this)">
+        <div class="opt-icon">🥦</div>
+        <div class="opt-body">
+          <div class="opt-title">Vegetarian</div>
+          <div class="opt-sub">No meat, but eggs and dairy are fine</div>
+        </div>
+        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectRestriction('gluten_free',this)">
+        <div class="opt-icon">🌾</div>
+        <div class="opt-body">
+          <div class="opt-title">Gluten-free</div>
+          <div class="opt-sub">No wheat, barley or rye</div>
+        </div>
+        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+    </div>
+    <button class="next-btn" id="next-4" onclick="goNext(4)">Continue →</button>
+  </div>
+
+  <!-- ══ STEP 5: ACTIVITY ══ -->
+  <div class="step" id="step-5">
+    <button class="back-link" onclick="goBack(5)">← Back</button>
+    <div class="step-eyebrow">🏃 Activity</div>
+    <h2 class="step-q">How <em>active</em> are<br/>you right now?</h2>
+    <p class="step-hint">We calibrate your calories and macros to your lifestyle.</p>
+    <div class="options">
+      <div class="opt" onclick="selectSingle(5,'sedentary',this)">
+        <div class="opt-icon">🪑</div>
+        <div class="opt-body">
+          <div class="opt-title">Mostly sedentary</div>
+          <div class="opt-sub">Desk job, little to no regular exercise</div>
+        </div>
+        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectSingle(5,'light',this)">
+        <div class="opt-icon">🚶</div>
+        <div class="opt-body">
+          <div class="opt-title">Lightly active</div>
+          <div class="opt-sub">1–2 light workouts or walks per week</div>
+        </div>
+        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectSingle(5,'moderate',this)">
+        <div class="opt-icon">🏃</div>
+        <div class="opt-body">
+          <div class="opt-title">Moderately active</div>
+          <div class="opt-sub">3–4 workouts per week</div>
+        </div>
+        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectSingle(5,'very_active',this)">
+        <div class="opt-icon">🏋️</div>
+        <div class="opt-body">
+          <div class="opt-title">Very active</div>
+          <div class="opt-sub">5+ intense training days per week</div>
+        </div>
+        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+    </div>
+    <button class="next-btn" id="next-5" disabled onclick="goNext(5)">Continue →</button>
+  </div>
+
+  <!-- ══ STEP 6: COMMITMENT ══ -->
+  <div class="step" id="step-6">
+    <button class="back-link" onclick="goBack(6)">← Back</button>
+    <div class="step-eyebrow">🚀 Commitment</div>
+    <h2 class="step-q">How ready are you<br/>to <em>start today?</em></h2>
+    <p class="step-hint">No judgment — this helps us match you with the right plan.</p>
+    <div class="options">
+      <div class="opt" onclick="selectSingle(6,'exploring',this)">
+        <div class="opt-icon">🔍</div>
+        <div class="opt-body">
+          <div class="opt-title">Just exploring options</div>
+          <div class="opt-sub">Still learning, not ready to commit yet</div>
+        </div>
+        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectSingle(6,'ready',this)">
+        <div class="opt-icon">🌟</div>
+        <div class="opt-body">
+          <div class="opt-title">Ready when I find the right plan</div>
+          <div class="opt-sub">I'm motivated, just need the right structure</div>
+        </div>
+        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div class="opt" onclick="selectSingle(6,'committed',this)">
+        <div class="opt-icon">🚀</div>
+        <div class="opt-body">
+          <div class="opt-title">Starting this week — I'm committed!</div>
+          <div class="opt-sub">I'm done waiting, let's do this now</div>
+        </div>
+        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+    </div>
+    <button class="next-btn" id="next-6" disabled onclick="goNext(6)">See my plan →</button>
+  </div>
+
+  <!-- ══ ANALYZING ══ -->
+  <div class="step" id="step-analyzing">
+    <div class="analyze-wrap">
+      <div class="analyze-ring"></div>
+      <div class="analyze-title">Building your plan…</div>
+      <div class="analyze-msg" id="analyzeMsg">Analyzing your goals</div>
+      <div class="analyze-steps">
+        <div class="a-step" id="a1"><div class="a-dot" id="ad1">1</div> Analyzing your goals</div>
+        <div class="a-step" id="a2"><div class="a-dot" id="ad2">2</div> Matching recipes to your restrictions</div>
+        <div class="a-step" id="a3"><div class="a-dot" id="ad3">3</div> Calibrating macros for your activity</div>
+        <div class="a-step" id="a4"><div class="a-dot" id="ad4">4</div> Preparing your personalized dashboard</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ RESULT ══ -->
+  <div class="step" id="step-result">
+    <div class="result-hero">
+      <div class="result-badge">✨ Your plan is ready</div>
+      <h2 class="result-title">Here's your<br/><em>personalized</em> keto plan</h2>
+      <p class="result-sub" id="resultSub">Based on your answers, we built this specifically for you.</p>
+    </div>
+
+    <div class="plan-rec" id="planRec">
+      <div class="plan-rec-icon" id="planIcon">🥑</div>
+      <div>
+        <div class="plan-rec-name" id="planName">Basic Plan</div>
+        <div class="plan-rec-desc" id="planDesc">30-day structured keto journey with daily guidance</div>
+      </div>
+      <div class="plan-rec-tag" id="planTag">Recommended</div>
+    </div>
+
+    <div class="insights" id="insightsWrap"></div>
+
+    <div class="signup-section">
+      <div class="signup-head">
+        <div class="trial-badge">🎁 7-day free trial — no credit card needed</div>
+        <h3>Start your free trial now</h3>
+        <p>Your personalized plan is saved to your account</p>
+      </div>
+
+      <div class="sf-field">
+        <label class="sf-label">Full name</label>
+        <div class="sf-wrap">
+          <span class="sf-icon">👤</span>
+          <input id="trialName" class="sf-input" type="text" placeholder="Enter your full name" autocomplete="name"/>
+        </div>
+        <div class="sf-err" id="nameErr">Please enter your name</div>
+      </div>
+
+      <div class="sf-field">
+        <label class="sf-label">Email address</label>
+        <div class="sf-wrap">
+          <span class="sf-icon">✉️</span>
+          <input id="trialEmail" class="sf-input" type="email" placeholder="your@email.com" autocomplete="email"/>
+        </div>
+        <div class="sf-err" id="emailErr">Please enter a valid email</div>
+      </div>
+
+      <div class="sf-field">
+        <label class="sf-label">Password</label>
+        <div class="sf-wrap">
+          <span class="sf-icon">🔒</span>
+          <input id="trialPw" class="sf-input" type="password" placeholder="Choose a password (min 6 chars)" autocomplete="new-password"/>
+          <button type="button" class="pw-toggle" id="pwToggle">👁️</button>
+        </div>
+        <div class="pw-bars">
+          <div class="pw-bar" id="pb1"></div>
+          <div class="pw-bar" id="pb2"></div>
+          <div class="pw-bar" id="pb3"></div>
+          <div class="pw-bar" id="pb4"></div>
+        </div>
+        <div class="pw-label" id="pwLbl">Enter a password</div>
+        <div class="sf-err" id="pwErr">Password must be at least 6 characters</div>
+      </div>
+
+      <button class="signup-btn" id="trialBtn" onclick="submitTrial()">
+        <div class="spin-sm" id="trialSpin"></div>
+        <span id="trialBtnTxt">Start my free 7-day trial →</span>
+      </button>
+      <div class="form-err" id="formErr"></div>
+
+      <div class="or-divider"><div class="or-line"></div><div class="or-text">already have an account?</div><div class="or-line"></div></div>
+      <div class="already-link"><a href="/login">Log in instead →</a></div>
+
+      <div class="or-divider"><div class="or-line"></div><div class="or-text">not ready yet?</div><div class="or-line"></div></div>
+      <a href="/free-book" class="ebook-btn">📖 Get the free keto recipe book instead</a>
+
+      <div class="trust-row">
+        <span class="trust-item">🔒 Secure & private</span>
+        <span class="trust-sep">·</span>
+        <span class="trust-item">✓ No credit card needed</span>
+        <span class="trust-sep">·</span>
+        <span class="trust-item">⚡ Instant access</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SUCCESS ══ -->
+  <div class="step" id="step-success">
+    <div class="success-wrap">
+      <div class="success-icon">🎉</div>
+      <div class="success-title">Welcome to KetoJourney!</div>
+      <div class="success-sub" id="successMsg">
+        Your free 7-day trial has started. Redirecting to your dashboard…
+      </div>
+      <div class="success-prog"><div class="success-fill"></div></div>
+    </div>
+  </div>
+
+</div><!-- /quiz-wrap -->
+
+<script is:inline>
+var answers = {
+  goal: null,
+  experience: null,
+  challenges: [],
+  restrictions: [],
+  activity: null,
+  commitment: null,
+};
+var currentStep = 1;
+var TOTAL_STEPS  = 6;
+
+/* ── Progress ── */
+function updateProgress(step) {
+  var pct = Math.round(((step - 1) / TOTAL_STEPS) * 100);
+  document.getElementById('progFill').style.width = pct + '%';
+  var lbl = step <= TOTAL_STEPS
+    ? 'Step ' + step + ' of ' + TOTAL_STEPS
+    : 'Almost done!';
+  document.getElementById('progLabel').textContent = lbl;
+}
+
+/* ── Show step ── */
+function showStep(id) {
+  document.querySelectorAll('.step').forEach(function(s) { s.classList.remove('active'); });
+  var el = document.getElementById('step-' + id);
+  if (el) { el.classList.add('active'); window.scrollTo(0, 0); }
+}
+
+/* ── Single select ── */
+function selectSingle(step, value, el) {
+  var container = el.closest('.options');
+  container.querySelectorAll('.opt').forEach(function(o) { o.classList.remove('selected'); });
+  el.classList.add('selected');
+  if (step === 1) answers.goal       = value;
+  if (step === 2) answers.experience = value;
+  if (step === 5) answers.activity   = value;
+  if (step === 6) answers.commitment = value;
+  var btn = document.getElementById('next-' + step);
+  if (btn) btn.disabled = false;
+}
+
+/* ── Multi select (challenges) ── */
+function selectMulti(step, value, el, max) {
+  var idx = answers.challenges.indexOf(value);
+  if (idx > -1) {
+    answers.challenges.splice(idx, 1);
+    el.classList.remove('selected');
+  } else {
+    if (answers.challenges.length >= max) return;
+    answers.challenges.push(value);
+    el.classList.add('selected');
+  }
+  var counter = document.getElementById('challenge-count');
+  if (counter) counter.textContent = answers.challenges.length;
+  var btn = document.getElementById('next-' + step);
+  if (btn) btn.disabled = (answers.challenges.length === 0);
+}
+
+/* ── Restrictions (none = exclusive) ── */
+function selectRestriction(value, el) {
+  if (value === 'none') {
+    answers.restrictions = ['none'];
+    document.querySelectorAll('#step-4 .opt').forEach(function(o) { o.classList.remove('selected'); });
+    el.classList.add('selected');
+  } else {
+    var noneOpt = document.getElementById('opt-none');
+    if (noneOpt) noneOpt.classList.remove('selected');
+    answers.restrictions = answers.restrictions.filter(function(r) { return r !== 'none'; });
+    var idx = answers.restrictions.indexOf(value);
+    if (idx > -1) {
+      answers.restrictions.splice(idx, 1);
+      el.classList.remove('selected');
+    } else {
+      answers.restrictions.push(value);
+      el.classList.add('selected');
+    }
+  }
+}
+
+/* ── Navigation ── */
+function goNext(step) {
+  if (step === 6) {
+    startAnalysis();
+    return;
+  }
+  currentStep = step + 1;
+  updateProgress(currentStep);
+  showStep(currentStep);
+}
+
+function goBack(step) {
+  currentStep = step - 1;
+  updateProgress(currentStep);
+  showStep(currentStep);
+}
+
+/* ── Analysis animation ── */
+function startAnalysis() {
+  updateProgress(7);
+  showStep('analyzing');
+  var steps = ['a1','a2','a3','a4'];
+  steps.forEach(function(id, i) {
+    setTimeout(function() {
+      var el = document.getElementById(id);
+      if (el) el.classList.add('done');
+    }, 600 + i * 700);
+  });
+  setTimeout(buildResult, 3500);
+}
+
+/* ── Plan recommendation ── */
+function recommendPlan() {
+  var g = answers.goal;
+  var e = answers.experience;
+  var c = answers.commitment;
+  var a = answers.activity;
+  if (c === 'committed' && (e === 'months' || e === 'current' || a === 'very_active')) return 'elite';
+  if ((g === 'weight_loss' || g === 'muscle') && c !== 'exploring') return 'pro';
+  if (answers.challenges.length >= 2 && c !== 'exploring') return 'pro';
+  return 'basic';
+}
+
+/* ── Insight messages ── */
+function getInsights() {
+  var ins = [];
+  var g = answers.goal;
+  var e = answers.experience;
+  var top = answers.challenges[0];
+  var a = answers.activity;
+
+  var goalMap = {
+    weight_loss: { icon:'🔥', text:'Your plan is <strong>optimized for fat loss</strong> — every meal is designed to keep you in ketosis and burning fat around the clock.' },
+    muscle:      { icon:'💪', text:'<strong>High-protein keto recipes</strong> are prioritized to preserve muscle mass during your adaptation phase.' },
+    energy:      { icon:'⚡', text:'By day 10–14, expect <strong>sustained mental clarity and energy</strong> — the keto fog lifts and focus kicks in hard.' },
+    health:      { icon:'❤️', text:'<strong>Nutrient-dense whole foods</strong> are at the core of your plan to improve metabolic and cardiovascular markers.' },
+  };
+  if (goalMap[g]) ins.push(goalMap[g]);
+
+  var expMap = {
+    new:     { icon:'🗺️', text:'You get <strong>step-by-step daily guidance</strong> — no keto knowledge needed. We walk you through every meal and every day.' },
+    tried:   { icon:'🔄', text:'This time you have <strong>real structure</strong> — no more guessing. Every meal is planned, every day has a clear action.' },
+    months:  { icon:'📈', text:'Advanced <strong>analytics and progress tracking</strong> help you identify exactly what's holding back your results.' },
+    current: { icon:'🎯', text:'Precision <strong>macro optimization tools</strong> and an AI coach help you dial in for next-level results.' },
+  };
+  if (expMap[e]) ins.push(expMap[e]);
+
+  var challengeMap = {
+    cravings:   { icon:'🍫', text:'Our recipes are <strong>designed to be satisfying</strong> — healthy fats keep you full so cravings become a non-issue.' },
+    meal_prep:  { icon:'📋', text:'Every week comes with a <strong>full shopping list and prep guide</strong> — saving you 2–3 hours of meal planning.' },
+    social:     { icon:'🍕', text:'You get <strong>dining-out guides for 20+ restaurant types</strong> so you stay keto even at social events.' },
+    consistent: { icon:'🔥', text:'Daily <strong>check-ins, streaks, and XP rewards</strong> build a habit loop that keeps you showing up every single day.' },
+    macros:     { icon:'📊', text:'The app <strong>tracks all macros automatically</strong> — just log your food and we handle the math.' },
+    satisfying: { icon:'😋', text:'<strong>87+ delicious recipes</strong> across breakfast, lunch, dinner and snacks — keto never has to be boring.' },
+  };
+  if (top && challengeMap[top]) ins.push(challengeMap[top]);
+  else if (a === 'very_active') ins.push({ icon:'🏋️', text:'Your plan includes <strong>extra protein and calorie targets</strong> calibrated for high-intensity training days.' });
+  else ins.push({ icon:'📅', text:'Your <strong>30-day structured roadmap</strong> lays out exactly what to eat and do — every single day.' });
+
+  return ins.slice(0, 3);
+}
+
+/* ── Build result ── */
+function buildResult() {
+  var plan = recommendPlan();
+  var planData = {
+    basic: { icon:'🥑', name:'Basic Plan — 30 Days', desc:'Perfect for beginners. Daily meal plans, 30+ recipes, check-ins, and progress tracking.', tag:'Great start' },
+    pro:   { icon:'⚡', name:'Pro Plan — 90 Days', desc:'The most popular choice. 87+ recipes, advanced analytics, fasting timer, weekly reports, and meal swap engine.', tag:'Most Popular' },
+    elite: { icon:'👑', name:'Elite Plan — 360 Days', desc:'For the most committed. Everything in Pro plus an AI Keto Coach, 360-day journey, and priority support.', tag:'Best Results' },
+  };
+  var pd = planData[plan];
+  document.getElementById('planIcon').textContent = pd.icon;
+  document.getElementById('planName').textContent = pd.name;
+  document.getElementById('planDesc').textContent = pd.desc;
+  document.getElementById('planTag').textContent  = pd.tag;
+
+  var subMap = {
+    weight_loss: 'Optimized for fat loss — every meal, every day.',
+    muscle:      'Built around muscle preservation and lean gains.',
+    energy:      'Designed to unlock steady energy and sharp focus.',
+    health:      'Focused on nutrient density and metabolic health.',
+  };
+  var sub = subMap[answers.goal] || 'Built around your goals and lifestyle.';
+  document.getElementById('resultSub').textContent = sub;
+
+  var insights = getInsights();
+  var html = '';
+  for (var i = 0; i < insights.length; i++) {
+    html += '<div class="insight"><div class="insight-icon">' + insights[i].icon + '</div><div class="insight-text">' + insights[i].text + '</div></div>';
+  }
+  document.getElementById('insightsWrap').innerHTML = html;
+
+  localStorage.setItem('keto_quiz', JSON.stringify({ answers: answers, plan: plan }));
+  showStep('result');
+  updateProgress(7);
+}
+
+/* ── Password strength ── */
+(function() {
+  var pwInput = document.getElementById('trialPw');
+  if (!pwInput) return;
+  pwInput.addEventListener('input', function() {
+    var val = pwInput.value;
+    var s = 0;
+    if (val.length >= 6)  s++;
+    if (val.length >= 10) s++;
+    if (/[A-Z]/.test(val) || /[0-9]/.test(val)) s++;
+    if (/[!@#$%^&*]/.test(val)) s++;
+    s = Math.min(s, 4);
+    var cls = s <= 1 ? 'w' : s <= 2 ? 'm' : 's';
+    var bars = ['pb1','pb2','pb3','pb4'];
+    for (var i = 0; i < bars.length; i++) {
+      var b = document.getElementById(bars[i]);
+      if (!b) continue;
+      b.className = 'pw-bar';
+      if (i < s) b.classList.add(cls);
+    }
+    var labels = ['','Too weak','Fair','Good','Strong 💪'];
+    var lbl = document.getElementById('pwLbl');
+    if (lbl) lbl.textContent = val ? (labels[s] || 'Strong 💪') : 'Enter a password';
+  });
+  var toggle = document.getElementById('pwToggle');
+  if (toggle) {
+    toggle.addEventListener('click', function() {
+      pwInput.type = pwInput.type === 'text' ? 'password' : 'text';
+      toggle.textContent = pwInput.type === 'text' ? '🙈' : '👁️';
+    });
+  }
+})();
+
+/* ── Trial signup ── */
+window.submitTrial = function() {
+  var nameEl  = document.getElementById('trialName');
+  var emailEl = document.getElementById('trialEmail');
+  var pwEl    = document.getElementById('trialPw');
+  var nameErr = document.getElementById('nameErr');
+  var emailErr= document.getElementById('emailErr');
+  var pwErr   = document.getElementById('pwErr');
+  var formErr = document.getElementById('formErr');
+  var btn     = document.getElementById('trialBtn');
+  var spin    = document.getElementById('trialSpin');
+  var txt     = document.getElementById('trialBtnTxt');
+
+  nameErr.classList.remove('show');
+  emailErr.classList.remove('show');
+  pwErr.classList.remove('show');
+  formErr.classList.remove('show');
+  nameEl.classList.remove('err');
+  emailEl.classList.remove('err');
+  pwEl.classList.remove('err');
+
+  var name  = nameEl.value.trim();
+  var email = emailEl.value.trim().toLowerCase();
+  var pw    = pwEl.value;
+  var ok    = true;
+
+  if (!name)                     { nameErr.classList.add('show');  nameEl.classList.add('err');  ok = false; }
+  if (!email || !email.includes('@')) { emailErr.classList.add('show'); emailEl.classList.add('err'); ok = false; }
+  if (pw.length < 6)             { pwErr.classList.add('show');   pwEl.classList.add('err');   ok = false; }
+  if (!ok) return;
+
+  btn.disabled = true;
+  spin.style.display = 'block';
+  txt.textContent = 'Creating your account…';
+
+  var quiz = null;
+  try { quiz = JSON.parse(localStorage.getItem('keto_quiz') || 'null'); } catch(e) {}
+  var ref = localStorage.getItem('keto_ref') || '';
+
+  fetch('/api/auth/signup-trial', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fullName:     name,
+      email:        email,
+      password:     pw,
+      quizAnswers:  quiz ? quiz.answers  : null,
+      recommendedPlan: quiz ? quiz.plan  : 'basic',
+      referral_code: ref || undefined,
+    }),
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.error) {
+      formErr.textContent = '⚠️ ' + d.error;
+      formErr.classList.add('show');
+      btn.disabled = false;
+      spin.style.display = 'none';
+      txt.textContent = 'Start my free 7-day trial →';
+    } else {
+      localStorage.removeItem('keto_quiz');
+      localStorage.removeItem('keto_ref');
+      var msg = document.getElementById('successMsg');
+      if (msg) msg.textContent = 'Welcome, ' + name.split(' ')[0] + '! Your 7-day trial has started. Taking you to your dashboard…';
+      showStep('success');
+      setTimeout(function() { window.location.href = '/dashboard/onboarding'; }, 2600);
+    }
+  }).catch(function() {
+    formErr.textContent = '⚠️ Something went wrong. Please try again.';
+    formErr.classList.add('show');
+    btn.disabled = false;
+    spin.style.display = 'none';
+    txt.textContent = 'Start my free 7-day trial →';
+  });
+};
+
+/* ── Expose onclick fns to window ── */
+window.selectSingle      = selectSingle;
+window.selectMulti       = selectMulti;
+window.selectRestriction = selectRestriction;
+window.goNext            = goNext;
+window.goBack            = goBack;
+
+/* ── Init ── */
+updateProgress(1);
+</script>
+</body>
+</html>
