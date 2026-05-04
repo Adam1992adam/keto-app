@@ -1,0 +1,418 @@
+---
+import { createClient } from '@supabase/supabase-js';
+
+const adminSession = Astro.cookies.get('admin-session')?.value;
+if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
+
+const env = (Astro.locals as any)?.runtime?.env || {};
+const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL || env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+const db = createClient(SUPABASE_URL, SERVICE_KEY);
+
+const recipeId = Astro.url.searchParams.get('id');
+let recipe: any = null;
+if (recipeId) {
+  const { data } = await db.from('blog_recipes').select('*').eq('id', recipeId).single();
+  recipe = data;
+  if (!recipe) return Astro.redirect('/admin/blog-recipes');
+}
+
+const isEdit = !!recipe;
+---
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{isEdit ? `Edit: ${recipe.title}` : 'New Recipe'} · Admin</title>
+  <meta name="robots" content="noindex,nofollow"/>
+  <style>
+    :root{--bg:#060d09;--card:#0d1a0f;--card2:#111f13;--border:rgba(16,185,129,.12);--border2:rgba(16,185,129,.25);--text:#dfeedd;--soft:#4d7055;--muted:#233328;--green:#10b981;--green2:#34d399;--gold:#f59e0b;--red:#ef4444;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    a{color:var(--green);text-decoration:none;}
+    .nav{background:var(--card);border-bottom:1px solid var(--border);padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+    .nav-brand{font-size:1rem;font-weight:800;color:var(--text);display:flex;align-items:center;gap:.4rem;}
+    .nav-links{display:flex;align-items:center;gap:.5rem;}
+    .nav-link{font-size:.82rem;font-weight:600;color:var(--soft);padding:.4rem .8rem;border-radius:8px;transition:all .2s;}
+    .nav-link:hover{color:var(--text);background:var(--muted);text-decoration:none;}
+    .editor-layout{display:grid;grid-template-columns:1fr 300px;gap:1.5rem;max-width:1300px;margin:0 auto;padding:1.5rem;}
+    @media(max-width:900px){.editor-layout{grid-template-columns:1fr;}}
+    .editor-main{display:flex;flex-direction:column;gap:1rem;}
+    .title-input{width:100%;background:transparent;border:none;border-bottom:2px solid var(--border);padding:.5rem 0;font-size:1.8rem;font-weight:800;color:var(--text);outline:none;transition:border-color .2s;}
+    .title-input:focus{border-bottom-color:var(--green);}
+    .title-input::placeholder{color:var(--muted);}
+    .slug-row{display:flex;align-items:center;gap:.5rem;padding:.4rem 0;}
+    .slug-prefix{font-size:.8rem;color:var(--soft);}
+    .slug-input{flex:1;background:transparent;border:none;border-bottom:1px solid var(--border);padding:.2rem .3rem;font-size:.8rem;color:var(--soft);outline:none;font-family:monospace;}
+    .slug-input:focus{border-bottom-color:var(--green);color:var(--text);}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.25rem;}
+    .card-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin-bottom:.6rem;}
+    .field-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin-bottom:.35rem;display:block;}
+    .field-input{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:.55rem .7rem;font-size:.84rem;color:var(--text);outline:none;font-family:inherit;}
+    .field-input:focus{border-color:var(--green);}
+    select.field-input option{background:var(--card);}
+    .field-textarea{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:.7rem;font-size:.86rem;color:var(--text);outline:none;resize:vertical;font-family:inherit;line-height:1.6;}
+    .field-textarea:focus{border-color:var(--green);}
+    .macros-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;}
+    .macro-field label{font-size:.7rem;color:var(--soft);display:block;margin-bottom:.3rem;}
+    .macro-field input{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:.5rem .6rem;font-size:.9rem;color:var(--text);outline:none;text-align:center;}
+    .macro-field input:focus{border-color:var(--green);}
+    .times-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;}
+    .editor-sidebar{display:flex;flex-direction:column;gap:1rem;}
+    .sidebar-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.2rem;display:flex;flex-direction:column;gap:.9rem;}
+    .cover-preview{width:100%;height:140px;border-radius:10px;object-fit:cover;margin-bottom:.5rem;display:none;}
+    .cover-preview.show{display:block;}
+    .upload-btn{display:flex;align-items:center;gap:.5rem;padding:.55rem .8rem;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;border:1px dashed var(--border);background:transparent;color:var(--soft);width:100%;justify-content:center;transition:all .15s;}
+    .upload-btn:hover{border-color:var(--green);color:var(--green);}
+    .status-pill{display:flex;align-items:center;justify-content:space-between;padding:.6rem .8rem;border-radius:10px;background:var(--card2);border:1px solid var(--border);}
+    .status-dot{width:8px;height:8px;border-radius:50%;margin-right:.4rem;}
+    .status-dot.pub{background:var(--green);}
+    .status-dot.draft{background:var(--gold);}
+    .status-text{font-size:.82rem;font-weight:600;}
+    .btn{display:inline-flex;align-items:center;gap:.4rem;padding:.6rem 1rem;border-radius:10px;font-size:.85rem;font-weight:700;cursor:pointer;border:none;transition:all .15s;width:100%;justify-content:center;}
+    .btn-publish{background:var(--green);color:#fff;}
+    .btn-publish:hover{background:var(--green2);}
+    .btn-draft{background:var(--card2);color:var(--soft);border:1px solid var(--border);}
+    .btn-draft:hover{border-color:var(--border2);color:var(--text);}
+    .btn-danger{background:rgba(239,68,68,.1);color:#ef9494;border:1px solid rgba(239,68,68,.2);}
+    .btn-danger:hover{background:rgba(239,68,68,.2);}
+    .divider{height:1px;background:var(--border);margin:.2rem 0;}
+    .save-status{font-size:.75rem;color:var(--soft);text-align:center;min-height:18px;margin-top:.2rem;}
+    .save-status.ok{color:var(--green2);}
+    .save-status.err{color:#ef9494;}
+    .hint{font-size:.72rem;color:var(--soft);margin-top:.3rem;}
+  </style>
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-brand">
+    <span>⚙️</span>&nbsp; KetoJourney Admin
+    <span style="color:var(--soft);font-weight:400;font-size:.85rem;margin-left:.5rem">
+      / <a href="/admin/blog-recipes" style="color:var(--soft)">Recipes</a>
+      / {isEdit ? recipe.title.slice(0, 40) : 'New Recipe'}
+    </span>
+  </div>
+  <div class="nav-links">
+    <a href="/admin/blog-recipes" class="nav-link">← All Recipes</a>
+    <a href="/admin/blog" class="nav-link">Articles</a>
+  </div>
+</nav>
+
+<div class="editor-layout">
+
+  <!-- ── Left: Recipe content ── -->
+  <div class="editor-main">
+
+    <input id="titleInput" class="title-input" type="text" placeholder="Recipe name…"
+      value={isEdit ? recipe.title : ''} maxlength="200" />
+
+    <div class="slug-row">
+      <span class="slug-prefix">ketojourney.fun/recipes/</span>
+      <input id="slugInput" class="slug-input" type="text" value={isEdit ? recipe.slug : ''} placeholder="keto-recipe-slug" maxlength="120" />
+    </div>
+
+    <!-- Description -->
+    <div class="card">
+      <div class="card-label">Description</div>
+      <textarea id="descInput" class="field-textarea" rows="3" maxlength="1000"
+        placeholder="Short description of the recipe — appears on the recipe card…">{isEdit ? recipe.description : ''}</textarea>
+    </div>
+
+    <!-- Ingredients -->
+    <div class="card">
+      <div class="card-label">Ingredients</div>
+      <p class="hint" style="margin-bottom:.6rem">One ingredient per line. Example: &nbsp;<code style="background:var(--card2);padding:.1rem .3rem;border-radius:4px;font-size:.78rem">200g almond flour</code></p>
+      <textarea id="ingredientsInput" class="field-textarea" rows="10"
+        placeholder="200g almond flour&#10;3 large eggs&#10;60ml olive oil&#10;1 tsp baking powder&#10;Salt to taste">{isEdit ? recipe.ingredients : ''}</textarea>
+    </div>
+
+    <!-- Instructions -->
+    <div class="card">
+      <div class="card-label">Instructions</div>
+      <p class="hint" style="margin-bottom:.6rem">One step per line. They'll be numbered automatically.</p>
+      <textarea id="instructionsInput" class="field-textarea" rows="12"
+        placeholder="Preheat oven to 180°C.&#10;Mix dry ingredients in a bowl.&#10;Add eggs and olive oil. Mix until smooth.&#10;Pour into a greased pan.&#10;Bake for 25 minutes until golden.">{isEdit ? recipe.instructions : ''}</textarea>
+    </div>
+
+    <!-- Nutrition -->
+    <div class="card">
+      <div class="card-label">Nutrition (per serving)</div>
+      <div class="macros-grid">
+        <div class="macro-field">
+          <label>Calories</label>
+          <input id="caloriesInput" type="number" min="0" max="9999" value={isEdit ? recipe.calories : 0} />
+        </div>
+        <div class="macro-field">
+          <label>Protein (g)</label>
+          <input id="proteinInput" type="number" min="0" max="500" step="0.1" value={isEdit ? recipe.protein : 0} />
+        </div>
+        <div class="macro-field">
+          <label>Fat (g)</label>
+          <input id="fatInput" type="number" min="0" max="500" step="0.1" value={isEdit ? recipe.fat : 0} />
+        </div>
+        <div class="macro-field">
+          <label>Total Carbs (g)</label>
+          <input id="carbsInput" type="number" min="0" max="500" step="0.1" value={isEdit ? recipe.carbs : 0} />
+        </div>
+        <div class="macro-field">
+          <label>Fiber (g)</label>
+          <input id="fiberInput" type="number" min="0" max="500" step="0.1" value={isEdit ? recipe.fiber : 0} />
+        </div>
+        <div class="macro-field">
+          <label>Net Carbs (g)</label>
+          <input id="netCarbsInput" type="number" min="0" max="500" step="0.1" value={isEdit ? recipe.net_carbs : 0} />
+        </div>
+      </div>
+      <p class="hint" style="margin-top:.6rem">💡 Net carbs = Total carbs − Fiber. You can set them independently.</p>
+    </div>
+
+    <!-- Times + Servings -->
+    <div class="card">
+      <div class="card-label">Timing & Servings</div>
+      <div class="times-grid">
+        <div>
+          <label class="field-label">Prep time (min)</label>
+          <input id="prepTimeInput" class="field-input" type="number" min="0" max="480" value={isEdit ? recipe.prep_time : 15} />
+        </div>
+        <div>
+          <label class="field-label">Cook time (min)</label>
+          <input id="cookTimeInput" class="field-input" type="number" min="0" max="480" value={isEdit ? recipe.cook_time : 30} />
+        </div>
+        <div>
+          <label class="field-label">Servings</label>
+          <input id="servingsInput" class="field-input" type="number" min="1" max="50" value={isEdit ? recipe.servings : 4} />
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Right: Sidebar ── -->
+  <div class="editor-sidebar">
+
+    <!-- Publish -->
+    <div class="sidebar-card">
+      <div>
+        <div class="status-pill">
+          <div style="display:flex;align-items:center">
+            <div class="status-dot" id="statusDot"></div>
+            <span class="status-text" id="statusText">{isEdit && recipe.published ? 'Published' : 'Draft'}</span>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-publish" onclick="saveRecipe(true)">
+        {isEdit && recipe.published ? '✓ Update & Publish' : '🚀 Publish'}
+      </button>
+      <button class="btn btn-draft" onclick="saveRecipe(false)">
+        💾 Save Draft
+      </button>
+      <div class="save-status" id="saveStatus"></div>
+      {isEdit && (
+        <div>
+          <div class="divider"></div>
+          <button class="btn btn-danger" style="margin-top:.5rem" onclick={`confirmDelete('${recipe.id}')`}>
+            🗑 Delete Recipe
+          </button>
+        </div>
+      )}
+    </div>
+
+    <!-- Cover image -->
+    <div class="sidebar-card">
+      <label class="field-label">Cover Image</label>
+      <img id="coverPreview" class={`cover-preview ${isEdit && recipe.cover_image_url ? 'show' : ''}`} src={isEdit ? recipe.cover_image_url : ''} alt="Cover" />
+      <input id="coverInput" class="field-input" type="url" placeholder="https://…image.jpg" value={isEdit ? recipe.cover_image_url : ''} />
+      <div class="divider" style="margin:.5rem 0"></div>
+      <button class="upload-btn" onclick="document.getElementById('imgFile').click()">
+        📷 Upload image
+      </button>
+      <input type="file" id="imgFile" accept="image/jpeg,image/png,image/webp" style="display:none" />
+      <div id="uploadStatus" style="font-size:.72rem;color:var(--soft);text-align:center;min-height:16px"></div>
+    </div>
+
+    <!-- Difficulty + Tags -->
+    <div class="sidebar-card">
+      <div>
+        <label class="field-label">Difficulty</label>
+        <select id="difficultyInput" class="field-input">
+          {['Easy','Medium','Hard'].map(d => (
+            <option value={d} selected={isEdit && recipe.difficulty === d}>{d}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Tags (comma separated)</label>
+        <input id="tagsInput" class="field-input" type="text"
+          placeholder="keto, breakfast, low-carb"
+          value={isEdit && recipe.tags ? recipe.tags.join(', ') : ''} />
+      </div>
+    </div>
+
+    <!-- SEO -->
+    <div class="sidebar-card">
+      <label class="field-label">🔍 SEO</label>
+      <div>
+        <label class="field-label" style="margin-top:.2rem">Meta Title</label>
+        <input id="seoTitleInput" class="field-input" type="text" maxlength="160"
+          placeholder="Leave blank to use recipe title"
+          value={isEdit ? recipe.seo_title : ''} />
+      </div>
+      <div>
+        <label class="field-label">Meta Description</label>
+        <textarea id="seoDescInput" class="field-textarea" maxlength="300" rows="3"
+          placeholder="Leave blank to use description">{isEdit ? recipe.seo_description : ''}</textarea>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script is:inline define:vars={{ recipeId: isEdit ? recipe.id : null, isPublished: isEdit ? recipe.published : false }}>
+var currentId = recipeId;
+
+/* Status dot init */
+(function() {
+  var dot  = document.getElementById('statusDot');
+  var text = document.getElementById('statusText');
+  if (isPublished) { dot.className = 'status-dot pub'; text.textContent = 'Published'; }
+  else             { dot.className = 'status-dot draft'; text.textContent = 'Draft'; }
+})();
+
+/* Slug auto-gen */
+var titleInput = document.getElementById('titleInput');
+var slugInput  = document.getElementById('slugInput');
+var slugEdited = !!currentId;
+titleInput.addEventListener('input', function() {
+  if (!slugEdited) {
+    slugInput.value = titleInput.value.toLowerCase().trim()
+      .replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').slice(0,80);
+  }
+});
+slugInput.addEventListener('input', function() { slugEdited = true; });
+
+/* Net carbs auto-calc */
+var carbsInput    = document.getElementById('carbsInput');
+var fiberInput    = document.getElementById('fiberInput');
+var netCarbsInput = document.getElementById('netCarbsInput');
+function autoNetCarbs() {
+  var c = parseFloat(carbsInput.value) || 0;
+  var f = parseFloat(fiberInput.value) || 0;
+  netCarbsInput.value = Math.max(0, c - f).toFixed(1);
+}
+carbsInput.addEventListener('input', autoNetCarbs);
+fiberInput.addEventListener('input', autoNetCarbs);
+
+/* Cover preview */
+var coverInput   = document.getElementById('coverInput');
+var coverPreview = document.getElementById('coverPreview');
+coverInput.addEventListener('input', function() {
+  if (coverInput.value) { coverPreview.src = coverInput.value; coverPreview.classList.add('show'); }
+  else                  { coverPreview.classList.remove('show'); }
+});
+coverPreview.addEventListener('error', function() { coverPreview.classList.remove('show'); });
+
+/* Image upload */
+var imgFile = document.getElementById('imgFile');
+var uploadStatus = document.getElementById('uploadStatus');
+imgFile.addEventListener('change', function() {
+  var file = imgFile.files[0]; if (!file) return;
+  uploadStatus.textContent = 'Uploading…';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    fetch('/api/admin/blog-upload', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ imageBase64: e.target.result, imageType: file.type }),
+    }).then(function(r){return r.json();}).then(function(d){
+      if (d.url) {
+        coverInput.value = d.url; coverPreview.src = d.url; coverPreview.classList.add('show');
+        uploadStatus.textContent = '✓ Uploaded';
+        setTimeout(function(){uploadStatus.textContent='';}, 2000);
+      } else { uploadStatus.textContent = 'Error: ' + d.error; }
+    }).catch(function(){uploadStatus.textContent='Upload failed';});
+  };
+  reader.readAsDataURL(file); imgFile.value = '';
+});
+
+/* Status update */
+function setStatus(pub) {
+  var dot  = document.getElementById('statusDot');
+  var text = document.getElementById('statusText');
+  if (pub) { dot.className='status-dot pub'; text.textContent='Published'; }
+  else     { dot.className='status-dot draft'; text.textContent='Draft'; }
+}
+
+/* Save */
+function saveRecipe(publish) {
+  var saveStatus = document.getElementById('saveStatus');
+  var title = document.getElementById('titleInput').value.trim();
+  var slug  = document.getElementById('slugInput').value.trim();
+  if (!title) { saveStatus.textContent='Title is required'; saveStatus.className='save-status err'; return; }
+  if (!slug)  { saveStatus.textContent='Slug is required';  saveStatus.className='save-status err'; return; }
+  saveStatus.textContent='Saving…'; saveStatus.className='save-status';
+
+  var tags = document.getElementById('tagsInput').value
+    .split(',').map(function(t){return t.trim();}).filter(Boolean);
+
+  fetch('/api/admin/blog-recipe-save', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      id:              currentId,
+      title:           title,
+      slug:            slug,
+      description:     document.getElementById('descInput').value,
+      cover_image_url: document.getElementById('coverInput').value,
+      ingredients:     document.getElementById('ingredientsInput').value,
+      instructions:    document.getElementById('instructionsInput').value,
+      prep_time:       document.getElementById('prepTimeInput').value,
+      cook_time:       document.getElementById('cookTimeInput').value,
+      servings:        document.getElementById('servingsInput').value,
+      calories:        document.getElementById('caloriesInput').value,
+      protein:         document.getElementById('proteinInput').value,
+      fat:             document.getElementById('fatInput').value,
+      carbs:           document.getElementById('carbsInput').value,
+      fiber:           document.getElementById('fiberInput').value,
+      net_carbs:       document.getElementById('netCarbsInput').value,
+      difficulty:      document.getElementById('difficultyInput').value,
+      tags:            tags,
+      seo_title:       document.getElementById('seoTitleInput').value,
+      seo_description: document.getElementById('seoDescInput').value,
+      published:       publish,
+    }),
+  }).then(function(r){return r.json();}).then(function(d){
+    if (d.success) {
+      currentId = d.id;
+      history.replaceState({},'',' /admin/blog-recipes/editor?id=' + d.id);
+      setStatus(publish);
+      saveStatus.textContent = publish ? '✓ Published!' : '✓ Draft saved';
+      saveStatus.className = 'save-status ok';
+      setTimeout(function(){saveStatus.textContent='';}, 3000);
+    } else {
+      saveStatus.textContent = 'Error: ' + d.error;
+      saveStatus.className = 'save-status err';
+    }
+  }).catch(function(){
+    saveStatus.textContent='Save failed — check connection';
+    saveStatus.className='save-status err';
+  });
+}
+
+/* Delete */
+function confirmDelete(id) {
+  if (!confirm('Delete this recipe permanently?')) return;
+  fetch('/api/admin/blog-recipe-delete', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({id}),
+  }).then(function(r){return r.json();}).then(function(d){
+    if (d.success) window.location.href='/admin/blog-recipes';
+    else alert('Delete failed: ' + d.error);
+  });
+}
+
+/* Ctrl+S = Save Draft */
+document.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey||e.metaKey) && e.key==='s') { e.preventDefault(); saveRecipe(false); }
+});
+</script>
+</body>
+</html>

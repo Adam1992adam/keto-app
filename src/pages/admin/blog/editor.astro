@@ -1,0 +1,476 @@
+---
+import { createClient } from '@supabase/supabase-js';
+
+const adminSession = Astro.cookies.get('admin-session')?.value;
+if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
+
+const env = (Astro.locals as any)?.runtime?.env || {};
+const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL || env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+const db = createClient(SUPABASE_URL, SERVICE_KEY);
+
+const postId = Astro.url.searchParams.get('id');
+let post: any = null;
+if (postId) {
+  const { data } = await db.from('blog_posts').select('*').eq('id', postId).single();
+  post = data;
+  if (!post) return Astro.redirect('/admin/blog');
+}
+
+const isEdit = !!post;
+const CATEGORIES = ['General','Nutrition','Recipes','Success Stories','Tips & Tricks','Science','Meal Prep','Lifestyle'];
+---
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{isEdit ? `Edit: ${post.title}` : 'New Article'} · Admin</title>
+  <meta name="robots" content="noindex,nofollow"/>
+  <!-- Marked.js for markdown preview -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+  <style>
+    :root {
+      --bg:#060d09;--card:#0d1a0f;--card2:#111f13;
+      --border:rgba(16,185,129,.12);--border2:rgba(16,185,129,.25);
+      --text:#dfeedd;--soft:#4d7055;--muted:#233328;
+      --green:#10b981;--green2:#34d399;--gold:#f59e0b;--red:#ef4444;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    a{color:var(--green);text-decoration:none;}
+    .nav{background:var(--card);border-bottom:1px solid var(--border);padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+    .nav-brand{display:flex;align-items:center;gap:.6rem;font-size:1rem;font-weight:800;color:var(--text);}
+    .nav-links{display:flex;align-items:center;gap:.5rem;}
+    .nav-link{font-size:.82rem;font-weight:600;color:var(--soft);padding:.4rem .8rem;border-radius:8px;transition:all .2s;}
+    .nav-link:hover{color:var(--text);background:var(--muted);text-decoration:none;}
+
+    .editor-layout{display:grid;grid-template-columns:1fr 300px;gap:1.5rem;max-width:1300px;margin:0 auto;padding:1.5rem;}
+    @media(max-width:900px){.editor-layout{grid-template-columns:1fr;}}
+
+    /* Left — main editor */
+    .editor-main{display:flex;flex-direction:column;gap:1rem;}
+    .title-input{width:100%;background:transparent;border:none;border-bottom:2px solid var(--border);padding:.5rem 0;font-size:1.8rem;font-weight:800;color:var(--text);outline:none;transition:border-color .2s;}
+    .title-input:focus{border-bottom-color:var(--green);}
+    .title-input::placeholder{color:var(--muted);}
+    .slug-row{display:flex;align-items:center;gap:.5rem;padding:.4rem 0;}
+    .slug-prefix{font-size:.8rem;color:var(--soft);}
+    .slug-input{flex:1;background:transparent;border:none;border-bottom:1px solid var(--border);padding:.2rem .3rem;font-size:.8rem;color:var(--soft);outline:none;font-family:monospace;}
+    .slug-input:focus{border-bottom-color:var(--green);color:var(--text);}
+
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.25rem;}
+    .card-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin-bottom:.5rem;}
+
+    .excerpt-input{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.7rem;font-size:.85rem;color:var(--text);outline:none;resize:vertical;min-height:60px;font-family:inherit;}
+    .excerpt-input:focus{border-color:var(--green);}
+
+    /* Content editor tabs */
+    .editor-tabs{display:flex;gap:.25rem;margin-bottom:.5rem;}
+    .tab-btn{padding:.35rem .8rem;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--soft);transition:all .15s;}
+    .tab-btn.active{background:var(--green);color:#fff;border-color:var(--green);}
+    .content-area{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.85rem;font-size:.9rem;color:var(--text);outline:none;resize:vertical;min-height:420px;font-family:'Courier New',monospace;line-height:1.65;}
+    .content-area:focus{border-color:var(--green);}
+    .preview-area{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:1.2rem;min-height:420px;font-size:.9rem;line-height:1.7;overflow-y:auto;}
+    .preview-area h1,.preview-area h2,.preview-area h3{color:var(--text);margin:.8rem 0 .4rem;}
+    .preview-area p{color:var(--soft);margin:.4rem 0;}
+    .preview-area ul,.preview-area ol{color:var(--soft);padding-left:1.4rem;margin:.4rem 0;}
+    .preview-area strong{color:var(--text);}
+    .preview-area code{background:var(--muted);padding:.1rem .3rem;border-radius:4px;font-size:.85em;}
+    .preview-area blockquote{border-left:3px solid var(--green);padding-left:.8rem;color:var(--soft);margin:.6rem 0;}
+
+    /* Toolbar */
+    .toolbar{display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.4rem;}
+    .tool-btn{padding:.3rem .55rem;border-radius:6px;font-size:.78rem;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--card2);color:var(--soft);transition:all .15s;}
+    .tool-btn:hover{background:var(--muted);color:var(--text);}
+
+    /* Right — sidebar settings */
+    .editor-sidebar{display:flex;flex-direction:column;gap:1rem;}
+    .sidebar-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.2rem;display:flex;flex-direction:column;gap:.9rem;}
+    .field-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin-bottom:.35rem;display:block;}
+    .field-input{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:.55rem .7rem;font-size:.84rem;color:var(--text);outline:none;font-family:inherit;}
+    .field-input:focus{border-color:var(--green);}
+    select.field-input option{background:var(--card);}
+    .field-textarea{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:.55rem .7rem;font-size:.82rem;color:var(--text);outline:none;resize:vertical;font-family:inherit;}
+    .field-textarea:focus{border-color:var(--green);}
+
+    /* Cover image */
+    .cover-preview{width:100%;height:140px;border-radius:10px;object-fit:cover;margin-bottom:.5rem;display:none;}
+    .cover-preview.show{display:block;}
+    .upload-btn{display:flex;align-items:center;gap:.5rem;padding:.55rem .8rem;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;border:1px dashed var(--border);background:transparent;color:var(--soft);width:100%;justify-content:center;transition:all .15s;}
+    .upload-btn:hover{border-color:var(--green);color:var(--green);}
+
+    /* Status */
+    .status-pill{display:flex;align-items:center;justify-content:space-between;padding:.6rem .8rem;border-radius:10px;background:var(--card2);border:1px solid var(--border);}
+    .status-dot{width:8px;height:8px;border-radius:50%;margin-right:.4rem;}
+    .status-dot.pub{background:var(--green);}
+    .status-dot.draft{background:var(--gold);}
+    .status-text{font-size:.82rem;font-weight:600;}
+
+    /* Buttons */
+    .btn{display:inline-flex;align-items:center;gap:.4rem;padding:.6rem 1rem;border-radius:10px;font-size:.85rem;font-weight:700;cursor:pointer;border:none;transition:all .15s;width:100%;justify-content:center;}
+    .btn-publish{background:var(--green);color:#fff;}
+    .btn-publish:hover{background:var(--green2);}
+    .btn-draft{background:var(--card2);color:var(--soft);border:1px solid var(--border);}
+    .btn-draft:hover{border-color:var(--border2);color:var(--text);}
+    .btn-danger{background:rgba(239,68,68,.1);color:#ef9494;border:1px solid rgba(239,68,68,.2);}
+    .btn-danger:hover{background:rgba(239,68,68,.2);}
+
+    .divider{height:1px;background:var(--border);margin:.2rem 0;}
+    .save-status{font-size:.75rem;color:var(--soft);text-align:center;min-height:18px;margin-top:.2rem;}
+    .save-status.ok{color:var(--green2);}
+    .save-status.err{color:#ef9494;}
+
+    .char-count{font-size:.7rem;color:var(--muted);text-align:right;margin-top:.2rem;}
+  </style>
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-brand">
+    <span>⚙️</span>&nbsp; KetoJourney Admin
+    <span style="color:var(--soft);font-weight:400;font-size:.85rem;margin-left:.5rem">
+      / <a href="/admin/blog" style="color:var(--soft)">Articles</a>
+      / {isEdit ? post.title.slice(0, 40) + (post.title.length > 40 ? '…' : '') : 'New Article'}
+    </span>
+  </div>
+  <div class="nav-links">
+    <a href="/admin/blog" class="nav-link">← All Articles</a>
+    <a href="/admin/blog-recipes" class="nav-link">Recipes</a>
+  </div>
+</nav>
+
+<div class="editor-layout">
+
+  <!-- ── Left: Main editor ── -->
+  <div class="editor-main">
+
+    <input
+      id="titleInput"
+      class="title-input"
+      type="text"
+      placeholder="Article title…"
+      value={isEdit ? post.title : ''}
+      maxlength="200"
+    />
+
+    <div class="slug-row">
+      <span class="slug-prefix">ketojourney.fun/blog/</span>
+      <input id="slugInput" class="slug-input" type="text" value={isEdit ? post.slug : ''} placeholder="auto-generated-slug" maxlength="120" />
+    </div>
+
+    <div class="card">
+      <div class="card-label">Excerpt (shown on blog listing)</div>
+      <textarea id="excerptInput" class="excerpt-input" maxlength="500" placeholder="Short description that appears in search results and the blog card…">{isEdit ? post.excerpt : ''}</textarea>
+      <div class="char-count"><span id="excerptCount">{isEdit ? (post.excerpt || '').length : 0}</span>/500</div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Content</div>
+      <div class="toolbar" id="toolbar">
+        <button class="tool-btn" data-action="bold" title="Bold">B</button>
+        <button class="tool-btn" data-action="italic" title="Italic"><em>I</em></button>
+        <button class="tool-btn" data-action="h2" title="Heading 2">H2</button>
+        <button class="tool-btn" data-action="h3" title="Heading 3">H3</button>
+        <button class="tool-btn" data-action="ul" title="Bullet list">• List</button>
+        <button class="tool-btn" data-action="ol" title="Numbered list">1. List</button>
+        <button class="tool-btn" data-action="blockquote" title="Blockquote">" Quote</button>
+        <button class="tool-btn" data-action="code" title="Code">`Code`</button>
+        <button class="tool-btn" data-action="link" title="Link">🔗 Link</button>
+        <button class="tool-btn" data-action="hr" title="Divider">— HR</button>
+      </div>
+      <div class="editor-tabs">
+        <button class="tab-btn active" id="tabWrite" onclick="switchTab('write')">✏️ Write</button>
+        <button class="tab-btn" id="tabPreview" onclick="switchTab('preview')">👁 Preview</button>
+      </div>
+      <textarea id="contentArea" class="content-area" placeholder="Write your article in Markdown…&#10;&#10;## Section heading&#10;&#10;Your content here…">{isEdit ? post.content : ''}</textarea>
+      <div id="previewArea" class="preview-area" style="display:none"></div>
+    </div>
+
+  </div>
+
+  <!-- ── Right: Sidebar settings ── -->
+  <div class="editor-sidebar">
+
+    <!-- Publish controls -->
+    <div class="sidebar-card">
+      <div>
+        <div class="status-pill">
+          <div style="display:flex;align-items:center">
+            <div class="status-dot" id="statusDot" class:list={[isEdit && post.published ? 'pub' : 'draft']}></div>
+            <span class="status-text" id="statusText">{isEdit && post.published ? 'Published' : 'Draft'}</span>
+          </div>
+          {isEdit && post.published && post.published_at && (
+            <span style="font-size:.72rem;color:var(--soft)">{new Date(post.published_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span>
+          )}
+        </div>
+      </div>
+      <button class="btn btn-publish" onclick="savePost(true)">
+        {isEdit && post.published ? '✓ Update & Publish' : '🚀 Publish'}
+      </button>
+      <button class="btn btn-draft" onclick="savePost(false)">
+        💾 Save Draft
+      </button>
+      <div class="save-status" id="saveStatus"></div>
+      {isEdit && (
+        <div>
+          <div class="divider"></div>
+          <button class="btn btn-danger" style="margin-top:.5rem" onclick={`confirmDelete('${post.id}')`}>
+            🗑 Delete Article
+          </button>
+        </div>
+      )}
+    </div>
+
+    <!-- Cover image -->
+    <div class="sidebar-card">
+      <label class="field-label">Cover Image</label>
+      <img id="coverPreview" class={`cover-preview ${isEdit && post.cover_image_url ? 'show' : ''}`} src={isEdit ? post.cover_image_url : ''} alt="Cover" />
+      <input id="coverInput" class="field-input" type="url" placeholder="https://…image.jpg" value={isEdit ? post.cover_image_url : ''} />
+      <div class="divider" style="margin:.5rem 0"></div>
+      <button class="upload-btn" onclick="document.getElementById('imgFile').click()">
+        📷 Upload image
+      </button>
+      <input type="file" id="imgFile" accept="image/jpeg,image/png,image/webp" style="display:none" />
+      <div id="uploadStatus" style="font-size:.72rem;color:var(--soft);text-align:center;min-height:16px"></div>
+    </div>
+
+    <!-- Category + Tags -->
+    <div class="sidebar-card">
+      <div>
+        <label class="field-label">Category</label>
+        <select id="categoryInput" class="field-input">
+          {CATEGORIES.map(c => (
+            <option value={c} selected={isEdit && post.category === c}>{c}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Tags (comma separated)</label>
+        <input id="tagsInput" class="field-input" type="text" placeholder="keto, weight-loss, recipes" value={isEdit && post.tags ? post.tags.join(', ') : ''} />
+      </div>
+      <div>
+        <label class="field-label">Author</label>
+        <input id="authorInput" class="field-input" type="text" value={isEdit ? post.author_name : 'KetoJourney Team'} maxlength="100" />
+      </div>
+      <div>
+        <label class="field-label">Read time (minutes)</label>
+        <input id="readTimeInput" class="field-input" type="number" min="1" max="60" value={isEdit ? post.read_time_min : 5} />
+      </div>
+    </div>
+
+    <!-- SEO -->
+    <div class="sidebar-card">
+      <label class="field-label">🔍 SEO</label>
+      <div>
+        <label class="field-label" style="margin-top:.2rem">Meta Title</label>
+        <input id="seoTitleInput" class="field-input" type="text" maxlength="160" placeholder="Leave blank to use article title" value={isEdit ? post.seo_title : ''} />
+      </div>
+      <div>
+        <label class="field-label">Meta Description</label>
+        <textarea id="seoDescInput" class="field-textarea" maxlength="300" rows="3" placeholder="Leave blank to use excerpt">{isEdit ? post.seo_description : ''}</textarea>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script is:inline define:vars={{ postId: isEdit ? post.id : null }}>
+var currentId = postId;
+
+/* ── Slug auto-generation ── */
+var titleInput = document.getElementById('titleInput');
+var slugInput  = document.getElementById('slugInput');
+var slugEdited = !!(currentId); // don't auto-update slug on edit
+
+titleInput.addEventListener('input', function() {
+  if (!slugEdited) {
+    slugInput.value = titleInput.value
+      .toLowerCase().trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .slice(0, 80);
+  }
+});
+slugInput.addEventListener('input', function() { slugEdited = true; });
+
+/* ── Excerpt char count ── */
+var excerptInput = document.getElementById('excerptInput');
+var excerptCount = document.getElementById('excerptCount');
+excerptInput.addEventListener('input', function() {
+  excerptCount.textContent = excerptInput.value.length;
+});
+
+/* ── Cover image preview ── */
+var coverInput   = document.getElementById('coverInput');
+var coverPreview = document.getElementById('coverPreview');
+coverInput.addEventListener('input', function() {
+  if (coverInput.value) {
+    coverPreview.src = coverInput.value;
+    coverPreview.classList.add('show');
+  } else {
+    coverPreview.classList.remove('show');
+  }
+});
+coverPreview.addEventListener('error', function() { coverPreview.classList.remove('show'); });
+
+/* ── Image upload ── */
+var imgFile      = document.getElementById('imgFile');
+var uploadStatus = document.getElementById('uploadStatus');
+imgFile.addEventListener('change', function() {
+  var file = imgFile.files[0];
+  if (!file) return;
+  uploadStatus.textContent = 'Uploading…';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    fetch('/api/admin/blog-upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64: e.target.result, imageType: file.type }),
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.url) {
+        coverInput.value = d.url;
+        coverPreview.src = d.url;
+        coverPreview.classList.add('show');
+        uploadStatus.textContent = '✓ Uploaded';
+        setTimeout(function() { uploadStatus.textContent = ''; }, 2000);
+      } else {
+        uploadStatus.textContent = 'Error: ' + d.error;
+      }
+    }).catch(function() { uploadStatus.textContent = 'Upload failed'; });
+  };
+  reader.readAsDataURL(file);
+  imgFile.value = '';
+});
+
+/* ── Markdown toolbar ── */
+var contentArea = document.getElementById('contentArea');
+document.getElementById('toolbar').addEventListener('click', function(e) {
+  var btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  var action = btn.getAttribute('data-action');
+  var start = contentArea.selectionStart;
+  var end   = contentArea.selectionEnd;
+  var sel   = contentArea.value.substring(start, end);
+  var map = {
+    bold:       ['**', '**', sel || 'bold text'],
+    italic:     ['_', '_', sel || 'italic text'],
+    h2:         ['## ', '', sel || 'Heading'],
+    h3:         ['### ', '', sel || 'Heading'],
+    ul:         ['- ', '', sel || 'List item'],
+    ol:         ['1. ', '', sel || 'List item'],
+    blockquote: ['> ', '', sel || 'Quote text'],
+    code:       ['`', '`', sel || 'code'],
+    hr:         ['\n---\n', '', ''],
+    link:       ['[', '](url)', sel || 'link text'],
+  };
+  var parts = map[action];
+  if (!parts) return;
+  var replacement = parts[0] + parts[2] + parts[1];
+  contentArea.value = contentArea.value.substring(0, start) + replacement + contentArea.value.substring(end);
+  var cursor = start + parts[0].length + parts[2].length;
+  contentArea.setSelectionRange(cursor, cursor);
+  contentArea.focus();
+});
+
+/* ── Write / Preview tabs ── */
+function switchTab(tab) {
+  var writeTab   = document.getElementById('tabWrite');
+  var previewTab = document.getElementById('tabPreview');
+  var area       = document.getElementById('contentArea');
+  var preview    = document.getElementById('previewArea');
+  if (tab === 'write') {
+    writeTab.classList.add('active'); previewTab.classList.remove('active');
+    area.style.display = 'block'; preview.style.display = 'none';
+  } else {
+    previewTab.classList.add('active'); writeTab.classList.remove('active');
+    area.style.display = 'none'; preview.style.display = 'block';
+    preview.innerHTML = typeof marked !== 'undefined'
+      ? marked.parse(area.value || '*Nothing to preview*')
+      : '<pre>' + area.value + '</pre>';
+  }
+}
+
+/* ── Status indicator ── */
+function setStatus(pub) {
+  var dot  = document.getElementById('statusDot');
+  var text = document.getElementById('statusText');
+  if (pub) {
+    dot.className  = 'status-dot pub';
+    text.textContent = 'Published';
+  } else {
+    dot.className  = 'status-dot draft';
+    text.textContent = 'Draft';
+  }
+}
+
+/* ── Save ── */
+function savePost(publish) {
+  var saveStatus = document.getElementById('saveStatus');
+  var title = document.getElementById('titleInput').value.trim();
+  var slug  = document.getElementById('slugInput').value.trim();
+  if (!title) { saveStatus.textContent = 'Title is required'; saveStatus.className = 'save-status err'; return; }
+  if (!slug)  { saveStatus.textContent = 'Slug is required';  saveStatus.className = 'save-status err'; return; }
+
+  saveStatus.textContent = 'Saving…'; saveStatus.className = 'save-status';
+
+  var tagsRaw = document.getElementById('tagsInput').value;
+  var tags = tagsRaw.split(',').map(function(t) { return t.trim(); }).filter(Boolean);
+
+  var payload = {
+    id:              currentId,
+    title:           title,
+    slug:            slug,
+    excerpt:         document.getElementById('excerptInput').value,
+    content:         document.getElementById('contentArea').value,
+    cover_image_url: document.getElementById('coverInput').value,
+    category:        document.getElementById('categoryInput').value,
+    tags:            tags,
+    author_name:     document.getElementById('authorInput').value,
+    read_time_min:   parseInt(document.getElementById('readTimeInput').value) || 5,
+    seo_title:       document.getElementById('seoTitleInput').value,
+    seo_description: document.getElementById('seoDescInput').value,
+    published:       publish,
+  };
+
+  fetch('/api/admin/blog-save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.success) {
+      currentId = d.id;
+      history.replaceState({}, '', '/admin/blog/editor?id=' + d.id);
+      setStatus(publish);
+      saveStatus.textContent = publish ? '✓ Published!' : '✓ Draft saved';
+      saveStatus.className = 'save-status ok';
+      setTimeout(function() { saveStatus.textContent = ''; }, 3000);
+    } else {
+      saveStatus.textContent = 'Error: ' + d.error;
+      saveStatus.className = 'save-status err';
+    }
+  }).catch(function() {
+    saveStatus.textContent = 'Save failed — check connection';
+    saveStatus.className = 'save-status err';
+  });
+}
+
+/* ── Delete ── */
+function confirmDelete(id) {
+  if (!confirm('Delete this article permanently?')) return;
+  fetch('/api/admin/blog-delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.success) window.location.href = '/admin/blog';
+    else alert('Delete failed: ' + d.error);
+  });
+}
+
+/* ── Keyboard shortcut: Ctrl+S = Save Draft ── */
+document.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); savePost(false); }
+});
+</script>
+</body>
+</html>
