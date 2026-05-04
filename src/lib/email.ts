@@ -456,3 +456,104 @@ export async function sendWinbackEmail(to: string, name: string, daysMissed: num
     html,
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. FREE BOOK EMAIL — lead magnet delivery
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendFreeBookEmail(to: string) {
+  const recipes = [
+    { name: 'Bacon & Egg Cups', time: '15 min', cal: 280, net: 1, icon: '🥚', desc: 'Crispy bacon-lined muffin tin cups filled with a baked egg. Zero carb, zero effort.' },
+    { name: 'Avocado Tuna Boats', time: '10 min', cal: 320, net: 2, icon: '🥑', desc: 'Halved avocados stuffed with tuna, mayo, and lemon. Perfect for lunch.' },
+    { name: 'Creamy Garlic Butter Chicken', time: '25 min', cal: 490, net: 3, icon: '🍗', desc: 'Pan-seared chicken thighs in a rich parmesan cream sauce.' },
+    { name: 'Cauliflower Fried Rice', time: '20 min', cal: 210, net: 5, icon: '🍚', desc: 'Riced cauliflower stir-fried with eggs, soy sauce, and sesame oil.' },
+    { name: 'Keto Cheesecake Bites', time: '30 min + chill', cal: 180, net: 3, icon: '🍰', desc: 'No-bake cream cheese bites on an almond crust. Sweetened with erythritol.' },
+    { name: 'BLT Lettuce Wraps', time: '10 min', cal: 240, net: 2, icon: '🥬', desc: 'Crispy bacon, tomato, and mayo wrapped in crisp romaine leaves.' },
+    { name: 'Zucchini Noodles & Pesto', time: '15 min', cal: 310, net: 4, icon: '🍝', desc: 'Spiralized zucchini tossed with basil pesto and pine nuts.' },
+  ];
+
+  const recipeCards = recipes.map(r => `
+    <tr><td style="padding:8px 0;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.12);border-radius:14px;">
+        <tr>
+          <td style="padding:14px 16px;width:44px;vertical-align:top;font-size:26px;">${r.icon}</td>
+          <td style="padding:14px 8px 14px 0;vertical-align:top;">
+            <p style="margin:0 0 2px;font-size:14px;font-weight:800;color:#dfeedd;">${r.name}</p>
+            <p style="margin:0 0 5px;font-size:12px;color:#2e4a32;">⏱ ${r.time}</p>
+            <p style="margin:0;font-size:12px;color:#4d7055;line-height:1.5;">${r.desc}</p>
+          </td>
+          <td style="padding:14px 16px;vertical-align:top;text-align:right;white-space:nowrap;">
+            <p style="margin:0;font-size:12px;font-weight:700;color:#10b981;">${r.cal} cal</p>
+            <p style="margin:0;font-size:11px;color:#2e4a32;">${r.net}g net carbs</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>`).join('');
+
+  const freeBookLayout = (content: string, preheader = '') => `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Your Free Keto Recipe Book</title>
+</head>
+<body style="margin:0;padding:0;background:#0a0f0b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${preheader}</div>` : ''}
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0f0b;">
+  <tr><td align="center" style="padding:32px 16px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
+      <tr><td style="padding-bottom:24px;text-align:center;">
+        <span style="font-size:28px;">🥑</span>
+        <span style="font-family:Georgia,serif;font-size:20px;font-weight:900;color:#10b981;letter-spacing:-.5px;margin-left:8px;">Keto Journey</span>
+      </td></tr>
+      <tr><td style="background:#0d1a0f;border:1px solid rgba(16,185,129,.2);border-radius:20px;padding:36px 32px;">
+        ${content}
+      </td></tr>
+      <tr><td style="padding:24px 0 8px;text-align:center;">
+        <p style="margin:0;font-size:12px;color:#2e4a32;line-height:1.6;">
+          You requested the free recipe book at ketojourney.fun<br/>
+          <a href="${APP_URL}/free-book" style="color:#10b981;text-decoration:none;">Unsubscribe</a>
+        </p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+
+  const content = `
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="font-size:52px;">📖</div>
+      <h1 style="margin:12px 0 6px;font-family:Georgia,serif;font-size:26px;font-weight:900;color:#dfeedd;line-height:1.2;">Your Free Keto Recipe Book</h1>
+      <p style="margin:0;font-size:15px;color:#4d7055;">7 delicious recipes · under 5g net carbs each · ready in 30 min or less</p>
+    </div>
+
+    <div style="padding:14px 18px;background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(52,211,153,.06));border:1px solid rgba(16,185,129,.25);border-radius:14px;margin-bottom:24px;">
+      <p style="margin:0;font-size:14px;color:#34d399;line-height:1.6;">
+        ✅ <strong>No fluff.</strong> Every recipe below is keto-verified, macro-tracked, and takes 30 minutes or less.
+      </p>
+    </div>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+      ${recipeCards}
+    </table>
+
+    <div style="padding:20px 24px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:16px;text-align:center;margin-bottom:8px;">
+      <p style="margin:0 0 6px;font-size:18px;font-weight:900;color:#f59e0b;">Want 500+ more recipes like these?</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#6b5a2a;line-height:1.6;">
+        Get a full 30-day keto meal plan, daily coaching, AI food scanner, progress tracking, and more — <strong style="color:#f59e0b;">free for 7 days.</strong>
+      </p>
+      <a href="${APP_URL}/start" style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:15px;border-radius:12px;text-decoration:none;">
+        Start My Free 7-Day Trial →
+      </a>
+    </div>`;
+
+  const html = freeBookLayout(content, '7 keto recipes under 5g net carbs — yours free 🥑');
+
+  const resend = getResend();
+  return resend.emails.send({
+    from: FROM,
+    to,
+    subject: '📖 Your free keto recipe book is here!',
+    html,
+  });
+}
