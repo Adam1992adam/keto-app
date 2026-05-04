@@ -343,7 +343,7 @@ function setStatus(pub) {
 }
 
 /* Save */
-function saveRecipe(publish) {
+window.saveRecipe = function saveRecipe(publish) {
   var saveStatus = document.getElementById('saveStatus');
   var title = document.getElementById('titleInput').value.trim();
   var slug  = document.getElementById('slugInput').value.trim();
@@ -398,7 +398,7 @@ function saveRecipe(publish) {
 }
 
 /* Delete */
-function confirmDelete(id) {
+window.confirmDelete = function confirmDelete(id) {
   if (!confirm('Delete this recipe permanently?')) return;
   fetch('/api/admin/blog-recipe-delete', {
     method:'POST', headers:{'Content-Type':'application/json'},

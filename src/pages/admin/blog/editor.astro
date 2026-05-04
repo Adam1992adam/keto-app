@@ -404,7 +404,7 @@ function setStatus(pub) {
 }
 
 /* ── Save ── */
-function savePost(publish) {
+window.savePost = function savePost(publish) {
   var saveStatus = document.getElementById('saveStatus');
   var title = document.getElementById('titleInput').value.trim();
   var slug  = document.getElementById('slugInput').value.trim();
@@ -455,7 +455,7 @@ function savePost(publish) {
 }
 
 /* ── Delete ── */
-function confirmDelete(id) {
+window.confirmDelete = function confirmDelete(id) {
   if (!confirm('Delete this article permanently?')) return;
   fetch('/api/admin/blog-delete', {
     method: 'POST',
