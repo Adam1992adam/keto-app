@@ -68,7 +68,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     // Save quiz answers
     if (quizAnswers) {
       const plan = typeof recommendedPlan === 'string' ? recommendedPlan.slice(0, 20) : 'basic';
-      await supabase.from('quiz_responses').insert({
+      const { error: quizErr } = await supabase.from('quiz_responses').insert({
         user_id:          userId,
         goal:             quizAnswers.goal             || null,
         experience:       quizAnswers.experience       || null,
@@ -78,7 +78,8 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         commitment:       quizAnswers.commitment        || null,
         recommended_plan: plan,
         created_at:       now.toISOString(),
-      }).catch((err: any) => console.error('[signup-trial] quiz save user:', userId, err));
+      });
+      if (quizErr) console.error('[signup-trial] quiz save user:', userId, quizErr);
     }
 
     // Apply referral code (fire-and-forget)
