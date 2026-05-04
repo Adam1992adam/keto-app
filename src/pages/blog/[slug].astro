@@ -1,0 +1,379 @@
+---
+import { createClient } from '@supabase/supabase-js';
+import { marked } from 'marked';
+
+const supabaseUrl  = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnon = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const db = createClient(supabaseUrl, supabaseAnon);
+
+const { slug } = Astro.params;
+const SITE_URL  = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').replace(/\/$/, '');
+
+const { data: post } = await db
+  .from('blog_posts')
+  .select('*')
+  .eq('slug', slug)
+  .eq('published', true)
+  .single();
+
+if (!post) return Astro.redirect('/blog');
+
+// Related posts (same category, excluding current)
+const { data: relatedRaw } = await db
+  .from('blog_posts')
+  .select('id, title, slug, excerpt, cover_image_url, category, read_time_min, published_at')
+  .eq('published', true)
+  .eq('category', post.category)
+  .neq('id', post.id)
+  .limit(3);
+const related = relatedRaw || [];
+
+const contentHtml = marked.parse(post.content || '');
+
+const pageTitle = post.seo_title || post.title;
+const pageDesc  = post.seo_description || post.excerpt || '';
+const ogImage   = post.cover_image_url || `${SITE_URL}/og-image.png`;
+const publishedDate = post.published_at ? new Date(post.published_at).toISOString() : '';
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{pageTitle} | KetoJourney Blog</title>
+  <meta name="description" content={pageDesc}/>
+  <link rel="canonical" href={`${SITE_URL}/blog/${post.slug}`}/>
+  <meta property="og:type"        content="article"/>
+  <meta property="og:title"       content={pageTitle}/>
+  <meta property="og:description" content={pageDesc}/>
+  <meta property="og:url"         content={`${SITE_URL}/blog/${post.slug}`}/>
+  <meta property="og:image"       content={ogImage}/>
+  <meta name="twitter:card"       content="summary_large_image"/>
+  <meta name="twitter:title"      content={pageTitle}/>
+  <meta name="twitter:description"content={pageDesc}/>
+  <meta name="twitter:image"      content={ogImage}/>
+  {publishedDate && <meta property="article:published_time" content={publishedDate}/>}
+  <meta property="article:author" content={post.author_name}/>
+  <link rel="icon" type="image/png" sizes="32x32" href="/icon-72.png"/>
+  <meta name="theme-color" content="#FF5C7A"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <script type="application/ld+json" set:html={JSON.stringify({
+    "@context":"https://schema.org","@type":"Article",
+    "headline": post.title,
+    "description": pageDesc,
+    "image": ogImage,
+    "author":{"@type":"Person","name": post.author_name},
+    "publisher":{"@type":"Organization","name":"KetoJourney","url":SITE_URL},
+    "datePublished": publishedDate,
+    "mainEntityOfPage": `${SITE_URL}/blog/${post.slug}`
+  })}/>
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    a { color:inherit; text-decoration:none; }
+    img { display:block; max-width:100%; }
+    :root {
+      --bg:#FAF6F1; --bg-alt:#F2EDE5; --ink:#16110F; --ink-soft:#4A4340;
+      --muted:#8A8077; --line:#E5DED2; --accent:#FF5C7A; --accent-2:#B6FF3C;
+      --card:#FFFFFF;
+      --display:'Bricolage Grotesque',system-ui,sans-serif;
+      --serif:'Instrument Serif',serif;
+      --body:'Geist',system-ui,sans-serif;
+    }
+    body { font-family:var(--body); background:var(--bg); color:var(--ink); overflow-x:hidden; }
+
+    /* NAV */
+    .nav { position:sticky; top:0; z-index:100; background:rgba(250,246,241,.92); backdrop-filter:blur(12px); border-bottom:1px solid var(--line); padding:16px 32px; display:flex; align-items:center; justify-content:space-between; }
+    .nav-logo { display:flex; align-items:center; gap:10px; }
+    .nav-logo-mark { width:34px; height:34px; background:var(--ink); border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:var(--display); font-weight:800; font-size:.9rem; color:var(--accent-2); }
+    .nav-logo-text { font-family:var(--display); font-weight:800; font-size:1rem; }
+    .nav-links { display:flex; align-items:center; gap:8px; }
+    .nav-link { font-size:.85rem; font-weight:500; color:var(--ink-soft); padding:6px 12px; border-radius:8px; transition:all .15s; }
+    .nav-link:hover { color:var(--ink); background:var(--bg-alt); }
+    .nav-cta { background:var(--accent); color:#fff; padding:8px 18px; border-radius:999px; font-size:.85rem; font-weight:700; font-family:var(--display); transition:opacity .15s; }
+    .nav-cta:hover { opacity:.88; }
+    @media(max-width:640px){ .nav-links{display:none;} .nav{padding:14px 18px;} }
+
+    /* LAYOUT */
+    .page { max-width:1100px; margin:0 auto; padding:40px 32px 80px; display:grid; grid-template-columns:1fr 320px; gap:48px; align-items:start; }
+    @media(max-width:900px){ .page{grid-template-columns:1fr; padding:32px 18px 64px;} .sidebar{display:none;} }
+
+    /* ARTICLE */
+    .article-header { margin-bottom:32px; }
+    .article-breadcrumb { display:flex; align-items:center; gap:6px; font-size:.78rem; color:var(--muted); margin-bottom:20px; }
+    .article-breadcrumb a { transition:color .15s; }
+    .article-breadcrumb a:hover { color:var(--ink); }
+    .article-cat { display:inline-block; font-size:.72rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); background:rgba(255,92,122,.08); border:1px solid rgba(255,92,122,.2); padding:4px 12px; border-radius:999px; margin-bottom:16px; }
+    .article-title { font-family:var(--display); font-size:clamp(1.7rem,4vw,2.6rem); font-weight:800; line-height:1.15; color:var(--ink); margin-bottom:20px; }
+    .article-meta { display:flex; align-items:center; gap:12px; font-size:.82rem; color:var(--muted); flex-wrap:wrap; margin-bottom:28px; }
+    .article-meta-dot { width:3px; height:3px; border-radius:50%; background:var(--muted); }
+    .article-cover { width:100%; border-radius:20px; aspect-ratio:16/9; object-fit:cover; margin-bottom:36px; }
+
+    /* PROSE */
+    .prose { font-size:1.05rem; line-height:1.8; color:var(--ink-soft); }
+    .prose h1,.prose h2,.prose h3,.prose h4 { font-family:var(--display); color:var(--ink); margin:1.8em 0 .6em; line-height:1.25; }
+    .prose h2 { font-size:1.5rem; font-weight:800; }
+    .prose h3 { font-size:1.2rem; font-weight:700; }
+    .prose p { margin:0 0 1.2em; }
+    .prose ul,.prose ol { padding-left:1.5em; margin:0 0 1.2em; }
+    .prose li { margin-bottom:.4em; }
+    .prose li::marker { color:var(--accent); }
+    .prose strong { color:var(--ink); font-weight:700; }
+    .prose em { font-family:var(--serif); font-style:italic; color:var(--ink); }
+    .prose a { color:var(--accent); text-decoration:underline; text-underline-offset:3px; }
+    .prose blockquote { border-left:3px solid var(--accent); padding:12px 20px; margin:1.5em 0; background:rgba(255,92,122,.04); border-radius:0 10px 10px 0; }
+    .prose blockquote p { margin:0; color:var(--ink); font-style:italic; font-size:1.05em; }
+    .prose code { background:var(--bg-alt); padding:2px 6px; border-radius:5px; font-size:.88em; color:var(--ink); }
+    .prose pre { background:var(--ink); color:var(--bg); padding:20px; border-radius:12px; overflow-x:auto; margin:1.5em 0; }
+    .prose pre code { background:none; padding:0; color:inherit; }
+    .prose hr { border:none; border-top:1px solid var(--line); margin:2.5em 0; }
+    .prose img { border-radius:12px; margin:1.5em auto; }
+    .prose table { width:100%; border-collapse:collapse; margin:1.5em 0; font-size:.9em; }
+    .prose th { background:var(--bg-alt); padding:10px 14px; text-align:left; font-weight:700; color:var(--ink); border:1px solid var(--line); }
+    .prose td { padding:10px 14px; border:1px solid var(--line); }
+
+    /* TAGS */
+    .article-tags { display:flex; gap:8px; flex-wrap:wrap; margin-top:36px; padding-top:28px; border-top:1px solid var(--line); }
+    .tag { padding:5px 14px; border-radius:999px; font-size:.78rem; font-weight:600; background:var(--bg-alt); color:var(--ink-soft); border:1px solid var(--line); }
+
+    /* AUTHOR */
+    .author-box { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px 24px; margin-top:32px; display:flex; align-items:center; gap:16px; }
+    .author-avatar { width:48px; height:48px; border-radius:50%; background:linear-gradient(135deg,var(--accent),#ff8fa3); display:flex; align-items:center; justify-content:center; font-family:var(--display); font-weight:800; font-size:1.1rem; color:#fff; flex-shrink:0; }
+    .author-name { font-weight:700; font-size:.95rem; color:var(--ink); }
+    .author-label { font-size:.78rem; color:var(--muted); }
+
+    /* SIDEBAR */
+    .sidebar { display:flex; flex-direction:column; gap:24px; position:sticky; top:90px; }
+    .sidebar-card { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:24px; }
+    .sidebar-card-title { font-family:var(--display); font-size:1rem; font-weight:800; color:var(--ink); margin-bottom:12px; }
+    .sidebar-cta { background:linear-gradient(135deg,var(--ink) 0%,#2D1F1A 100%); color:#fff; }
+    .sidebar-cta .sidebar-card-title { color:#fff; }
+    .cta-eyebrow { font-size:.68rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-2); margin-bottom:10px; }
+    .cta-sub { font-size:.84rem; color:rgba(255,255,255,.65); line-height:1.55; margin-bottom:16px; }
+    .cta-btn { display:block; text-align:center; padding:11px 20px; border-radius:999px; font-size:.85rem; font-weight:700; font-family:var(--display); transition:opacity .15s; margin-bottom:8px; }
+    .cta-btn-primary { background:var(--accent); color:#fff; }
+    .cta-btn-primary:hover { opacity:.88; }
+    .cta-btn-outline { background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2); }
+    .cta-btn-outline:hover { background:rgba(255,255,255,.18); }
+    .toc-list { list-style:none; display:flex; flex-direction:column; gap:8px; }
+    .toc-item a { font-size:.84rem; color:var(--ink-soft); transition:color .15s; display:block; padding:2px 0; border-left:2px solid transparent; padding-left:10px; }
+    .toc-item a:hover { color:var(--accent); border-left-color:var(--accent); }
+
+    /* RELATED */
+    .related { margin-top:56px; }
+    .related-title { font-family:var(--display); font-size:1.3rem; font-weight:800; color:var(--ink); margin-bottom:24px; }
+    .related-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; }
+    .related-card { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; display:flex; flex-direction:column; transition:transform .2s, box-shadow .2s; }
+    .related-card:hover { transform:translateY(-3px); box-shadow:0 12px 36px rgba(22,17,15,.07); }
+    .related-img { width:100%; aspect-ratio:16/9; object-fit:cover; background:var(--bg-alt); }
+    .related-img-ph { width:100%; aspect-ratio:16/9; background:linear-gradient(135deg,var(--bg-alt),var(--line)); display:flex; align-items:center; justify-content:center; font-size:1.8rem; }
+    .related-body { padding:18px; }
+    .related-cat { font-size:.68rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); margin-bottom:6px; }
+    .related-title-text { font-family:var(--display); font-size:.98rem; font-weight:700; color:var(--ink); line-height:1.3; margin-bottom:6px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .related-meta { font-size:.75rem; color:var(--muted); }
+
+    /* BOTTOM CTA */
+    .bottom-cta { background:var(--ink); border-radius:24px; margin:40px 0 0; padding:44px 40px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
+    .bottom-cta h2 { font-family:var(--display); font-size:1.5rem; font-weight:800; color:#fff; margin-bottom:8px; }
+    .bottom-cta p { font-size:.88rem; color:rgba(255,255,255,.6); max-width:400px; line-height:1.6; }
+    .bottom-cta-btns { display:flex; gap:10px; flex-shrink:0; flex-wrap:wrap; }
+    .bcta-primary { background:var(--accent); color:#fff; padding:12px 24px; border-radius:999px; font-size:.88rem; font-weight:700; font-family:var(--display); transition:opacity .15s; white-space:nowrap; }
+    .bcta-primary:hover { opacity:.88; }
+    .bcta-ghost { background:rgba(255,255,255,.1); color:#fff; padding:12px 24px; border-radius:999px; font-size:.88rem; font-weight:600; border:1px solid rgba(255,255,255,.2); transition:background .15s; white-space:nowrap; }
+    .bcta-ghost:hover { background:rgba(255,255,255,.18); }
+    @media(max-width:640px){ .bottom-cta{flex-direction:column;padding:28px 22px;} }
+
+    /* FOOTER */
+    .footer { border-top:1px solid var(--line); padding:28px 32px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+    .footer-copy { font-size:.8rem; color:var(--muted); }
+    .footer-links { display:flex; gap:20px; }
+    .footer-links a { font-size:.8rem; color:var(--muted); transition:color .15s; }
+    .footer-links a:hover { color:var(--ink); }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <div class="nav-logo-mark">K</div>
+    <span class="nav-logo-text">KetoJourney</span>
+  </a>
+  <div class="nav-links">
+    <a href="/" class="nav-link">Home</a>
+    <a href="/blog" class="nav-link">Blog</a>
+    <a href="/recipes" class="nav-link">Recipes</a>
+  </div>
+  <a href="/signup" class="nav-cta">Start Free Trial</a>
+</nav>
+
+<div class="page">
+
+  <!-- ── Main article ── -->
+  <main>
+    <div class="article-header">
+      <div class="article-breadcrumb">
+        <a href="/">Home</a>
+        <span>/</span>
+        <a href="/blog">Blog</a>
+        <span>/</span>
+        <span>{post.category}</span>
+      </div>
+
+      <span class="article-cat">{post.category}</span>
+      <h1 class="article-title">{post.title}</h1>
+
+      <div class="article-meta">
+        <span>{post.author_name}</span>
+        <span class="article-meta-dot"></span>
+        <span>{post.read_time_min} min read</span>
+        {post.published_at && (
+          <>
+            <span class="article-meta-dot"></span>
+            <time datetime={post.published_at}>
+              {new Date(post.published_at).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}
+            </time>
+          </>
+        )}
+      </div>
+
+      {post.cover_image_url && (
+        <img src={post.cover_image_url} alt={post.title} class="article-cover" loading="eager"/>
+      )}
+    </div>
+
+    <!-- Article body -->
+    <article class="prose" set:html={contentHtml}/>
+
+    <!-- Tags -->
+    {post.tags && post.tags.length > 0 && (
+      <div class="article-tags">
+        {post.tags.map((tag: string) => <span class="tag">#{tag}</span>)}
+      </div>
+    )}
+
+    <!-- Author -->
+    <div class="author-box">
+      <div class="author-avatar">{post.author_name.charAt(0).toUpperCase()}</div>
+      <div>
+        <div class="author-name">{post.author_name}</div>
+        <div class="author-label">KetoJourney Team</div>
+      </div>
+    </div>
+
+    <!-- Bottom CTA -->
+    <div class="bottom-cta">
+      <div>
+        <h2>Ready to start your keto journey?</h2>
+        <p>Get a personalized keto plan, daily coaching, and expert recipes — all in one app.</p>
+      </div>
+      <div class="bottom-cta-btns">
+        <a href="/signup" class="bcta-primary">Start Free 7-Day Trial</a>
+        <a href="/signup" class="bcta-ghost">Get Free Guide</a>
+      </div>
+    </div>
+
+    <!-- Related articles -->
+    {related.length > 0 && (
+      <div class="related">
+        <h2 class="related-title">Keep reading</h2>
+        <div class="related-grid">
+          {related.map(r => (
+            <a href={`/blog/${r.slug}`} class="related-card">
+              {r.cover_image_url
+                ? <img src={r.cover_image_url} alt={r.title} class="related-img" loading="lazy"/>
+                : <div class="related-img-ph">📝</div>
+              }
+              <div class="related-body">
+                <div class="related-cat">{r.category}</div>
+                <div class="related-title-text">{r.title}</div>
+                <div class="related-meta">{r.read_time_min} min read</div>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    )}
+  </main>
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+
+    <!-- CTA card -->
+    <div class="sidebar-card sidebar-cta">
+      <p class="cta-eyebrow">Free 7-Day Trial</p>
+      <div class="sidebar-card-title">Start your keto transformation today</div>
+      <p class="cta-sub">Personalized meal plans, daily coaching, and recipes tailored to your goals.</p>
+      <a href="/signup" class="cta-btn cta-btn-primary">Start Free Trial</a>
+      <a href="/signup" class="cta-btn cta-btn-outline">Get Free Guide</a>
+    </div>
+
+    <!-- Table of contents (auto-generated from headings) -->
+    <div class="sidebar-card" id="tocCard" style="display:none">
+      <div class="sidebar-card-title">In this article</div>
+      <ul class="toc-list" id="tocList"></ul>
+    </div>
+
+    <!-- Share -->
+    <div class="sidebar-card">
+      <div class="sidebar-card-title">Share this article</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+        <a id="shareTwitter" href="#" target="_blank" rel="noopener" style="padding:8px 16px;border-radius:999px;background:var(--bg-alt);font-size:.8rem;font-weight:600;color:var(--ink-soft);border:1px solid var(--line);transition:all .15s" onmouseover="this.style.borderColor='#1DA1F2';this.style.color='#1DA1F2'" onmouseout="this.style.borderColor='var(--line)';this.style.color='var(--ink-soft)'">𝕏 Twitter</a>
+        <a id="shareFacebook" href="#" target="_blank" rel="noopener" style="padding:8px 16px;border-radius:999px;background:var(--bg-alt);font-size:.8rem;font-weight:600;color:var(--ink-soft);border:1px solid var(--line);transition:all .15s" onmouseover="this.style.borderColor='#1877F2';this.style.color='#1877F2'" onmouseout="this.style.borderColor='var(--line)';this.style.color='var(--ink-soft)'">Facebook</a>
+        <button id="copyLink" style="padding:8px 16px;border-radius:999px;background:var(--bg-alt);font-size:.8rem;font-weight:600;color:var(--ink-soft);border:1px solid var(--line);cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--line)';this.style.color='var(--ink-soft)'">Copy link</button>
+      </div>
+    </div>
+
+  </aside>
+</div>
+
+<footer class="footer">
+  <span class="footer-copy">© {new Date().getFullYear()} KetoJourney. All rights reserved.</span>
+  <div class="footer-links">
+    <a href="/privacy-policy">Privacy</a>
+    <a href="/terms">Terms</a>
+    <a href="/blog">Blog</a>
+  </div>
+</footer>
+
+<script is:inline>
+/* Table of contents */
+(function() {
+  var prose   = document.querySelector('.prose');
+  var tocCard = document.getElementById('tocCard');
+  var tocList = document.getElementById('tocList');
+  if (!prose || !tocCard || !tocList) return;
+  var headings = prose.querySelectorAll('h2, h3');
+  if (headings.length < 2) return;
+  headings.forEach(function(h, i) {
+    var id = 'h-' + i;
+    h.id = id;
+    var li = document.createElement('li');
+    li.className = 'toc-item';
+    var a = document.createElement('a');
+    a.href = '#' + id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.style.paddingLeft = '22px';
+    li.appendChild(a); tocList.appendChild(li);
+  });
+  tocCard.style.display = 'block';
+})();
+
+/* Share links */
+(function() {
+  var url   = window.location.href;
+  var title = document.title;
+  var tw = document.getElementById('shareTwitter');
+  var fb = document.getElementById('shareFacebook');
+  var cp = document.getElementById('copyLink');
+  if (tw) tw.href = 'https://twitter.com/intent/tweet?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(title);
+  if (fb) fb.href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url);
+  if (cp) cp.addEventListener('click', function() {
+    navigator.clipboard.writeText(url).then(function() {
+      cp.textContent = '✓ Copied!';
+      setTimeout(function(){ cp.textContent = 'Copy link'; }, 2000);
+    });
+  });
+})();
+</script>
+</body>
+</html>

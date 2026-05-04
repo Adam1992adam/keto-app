@@ -1,0 +1,292 @@
+---
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl  = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnon = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const db = createClient(supabaseUrl, supabaseAnon);
+
+const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').replace(/\/$/, '');
+
+const category = Astro.url.searchParams.get('category') || '';
+
+let query = db
+  .from('blog_posts')
+  .select('id, title, slug, excerpt, cover_image_url, category, tags, read_time_min, author_name, published_at')
+  .eq('published', true)
+  .order('published_at', { ascending: false });
+
+if (category) query = query.eq('category', category);
+
+const { data: posts } = await query;
+const all = posts || [];
+
+const { data: catRows } = await db
+  .from('blog_posts')
+  .select('category')
+  .eq('published', true);
+const categories = [...new Set((catRows || []).map(r => r.category).filter(Boolean))].sort();
+
+const PAGE_TITLE = 'Keto Blog — Recipes, Tips & Success Stories | KetoJourney';
+const PAGE_DESC  = 'Expert keto advice, delicious low-carb recipes, and real success stories. Everything you need to start and succeed on your keto journey.';
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{PAGE_TITLE}</title>
+  <meta name="description" content={PAGE_DESC}/>
+  <link rel="canonical" href={`${SITE_URL}/blog`}/>
+  <meta property="og:type"        content="website"/>
+  <meta property="og:title"       content={PAGE_TITLE}/>
+  <meta property="og:description" content={PAGE_DESC}/>
+  <meta property="og:url"         content={`${SITE_URL}/blog`}/>
+  <meta name="twitter:card"       content="summary_large_image"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="/icon-72.png"/>
+  <meta name="theme-color" content="#FF5C7A"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <script type="application/ld+json" set:html={JSON.stringify({
+    "@context":"https://schema.org","@type":"Blog",
+    "name":"KetoJourney Blog","url":`${SITE_URL}/blog`,
+    "description":PAGE_DESC,"publisher":{"@type":"Organization","name":"KetoJourney","url":SITE_URL}
+  })}/>
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    a { color:inherit; text-decoration:none; }
+    img { display:block; max-width:100%; }
+    :root {
+      --bg:#FAF6F1; --bg-alt:#F2EDE5; --ink:#16110F; --ink-soft:#4A4340;
+      --muted:#8A8077; --line:#E5DED2; --accent:#FF5C7A; --accent-2:#B6FF3C;
+      --card:#FFFFFF;
+      --display:'Bricolage Grotesque',system-ui,sans-serif;
+      --serif:'Instrument Serif',serif;
+      --body:'Geist',system-ui,sans-serif;
+    }
+    body { font-family:var(--body); background:var(--bg); color:var(--ink); overflow-x:hidden; }
+
+    /* NAV */
+    .nav { position:sticky; top:0; z-index:100; background:rgba(250,246,241,.92); backdrop-filter:blur(12px); border-bottom:1px solid var(--line); padding:16px 32px; display:flex; align-items:center; justify-content:space-between; }
+    .nav-logo { display:flex; align-items:center; gap:10px; }
+    .nav-logo-mark { width:34px; height:34px; background:var(--ink); border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:var(--display); font-weight:800; font-size:.9rem; color:var(--accent-2); }
+    .nav-logo-text { font-family:var(--display); font-weight:800; font-size:1rem; color:var(--ink); }
+    .nav-links { display:flex; align-items:center; gap:8px; }
+    .nav-link { font-size:.85rem; font-weight:500; color:var(--ink-soft); padding:6px 12px; border-radius:8px; transition:all .15s; }
+    .nav-link:hover { color:var(--ink); background:var(--bg-alt); }
+    .nav-link.active { color:var(--accent); }
+    .nav-cta { background:var(--accent); color:#fff; padding:8px 18px; border-radius:999px; font-size:.85rem; font-weight:700; font-family:var(--display); transition:opacity .15s; }
+    .nav-cta:hover { opacity:.88; }
+    @media(max-width:640px){ .nav-links{display:none;} .nav{padding:14px 18px;} }
+
+    /* HERO */
+    .hero { padding:64px 32px 48px; max-width:900px; margin:0 auto; text-align:center; }
+    .hero-eyebrow { font-family:var(--display); font-size:.75rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); margin-bottom:14px; }
+    .hero-title { font-family:var(--display); font-size:clamp(2rem,5vw,3.2rem); font-weight:800; line-height:1.1; color:var(--ink); margin-bottom:16px; }
+    .hero-sub { font-size:1.05rem; color:var(--ink-soft); max-width:560px; margin:0 auto; line-height:1.65; }
+
+    /* FILTER CHIPS */
+    .filters { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:0 32px 32px; max-width:1200px; margin:0 auto; }
+    .filter-chip { padding:6px 16px; border-radius:999px; font-size:.82rem; font-weight:600; border:1.5px solid var(--line); color:var(--ink-soft); background:var(--card); cursor:pointer; transition:all .15s; text-decoration:none; }
+    .filter-chip:hover { border-color:var(--accent); color:var(--accent); }
+    .filter-chip.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+    /* GRID */
+    .container { max-width:1200px; margin:0 auto; padding:0 32px 80px; }
+    .posts-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:28px; }
+    @media(max-width:780px){ .posts-grid{grid-template-columns:1fr;} .container{padding:0 18px 60px;} .filters{padding:0 18px 24px;} }
+
+    /* CARD */
+    .post-card { background:var(--card); border:1px solid var(--line); border-radius:20px; overflow:hidden; display:flex; flex-direction:column; transition:transform .2s, box-shadow .2s, border-color .2s; }
+    .post-card:hover { transform:translateY(-4px); box-shadow:0 16px 48px rgba(22,17,15,.08); border-color:#E0D8D0; }
+    .post-card-img { width:100%; aspect-ratio:16/9; object-fit:cover; background:var(--bg-alt); }
+    .post-card-img-placeholder { width:100%; aspect-ratio:16/9; background:linear-gradient(135deg,var(--bg-alt),var(--line)); display:flex; align-items:center; justify-content:center; font-size:2.5rem; }
+    .post-card-body { padding:24px; flex:1; display:flex; flex-direction:column; gap:10px; }
+    .post-card-cat { font-size:.7rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); }
+    .post-card-title { font-family:var(--display); font-size:1.15rem; font-weight:700; color:var(--ink); line-height:1.35; }
+    .post-card-excerpt { font-size:.87rem; color:var(--ink-soft); line-height:1.6; flex:1; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+    .post-card-meta { display:flex; align-items:center; gap:10px; font-size:.76rem; color:var(--muted); margin-top:4px; }
+    .post-card-meta-dot { width:3px; height:3px; border-radius:50%; background:var(--muted); }
+    .post-card-read { display:inline-flex; align-items:center; gap:6px; font-size:.84rem; font-weight:600; color:var(--accent); margin-top:4px; }
+    .post-card-read:hover { text-decoration:underline; }
+
+    /* FEATURED (first post) */
+    .featured-card { background:var(--card); border:1px solid var(--line); border-radius:24px; overflow:hidden; display:grid; grid-template-columns:1fr 1fr; margin-bottom:40px; transition:transform .2s, box-shadow .2s; }
+    .featured-card:hover { transform:translateY(-4px); box-shadow:0 20px 60px rgba(22,17,15,.1); }
+    .featured-img { width:100%; height:100%; min-height:280px; object-fit:cover; background:var(--bg-alt); }
+    .featured-img-placeholder { width:100%; height:100%; min-height:280px; background:linear-gradient(135deg,var(--accent),#ff8fa3); display:flex; align-items:center; justify-content:center; font-size:4rem; }
+    .featured-body { padding:36px 32px; display:flex; flex-direction:column; justify-content:center; gap:14px; }
+    .featured-label { font-size:.72rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); background:rgba(255,92,122,.08); border:1px solid rgba(255,92,122,.2); padding:4px 12px; border-radius:999px; width:fit-content; }
+    .featured-title { font-family:var(--display); font-size:1.5rem; font-weight:800; color:var(--ink); line-height:1.25; }
+    .featured-excerpt { font-size:.9rem; color:var(--ink-soft); line-height:1.65; }
+    .featured-meta { font-size:.78rem; color:var(--muted); display:flex; align-items:center; gap:8px; }
+    .featured-cta { display:inline-flex; align-items:center; gap:6px; background:var(--ink); color:var(--bg); padding:10px 22px; border-radius:999px; font-size:.88rem; font-weight:700; font-family:var(--display); width:fit-content; transition:opacity .15s; }
+    .featured-cta:hover { opacity:.85; }
+    @media(max-width:780px){ .featured-card{grid-template-columns:1fr;} }
+
+    /* EMPTY */
+    .empty { text-align:center; padding:80px 20px; color:var(--muted); }
+    .empty-icon { font-size:3rem; margin-bottom:12px; }
+
+    /* SIDEBAR CTA (inline in grid for large screens) */
+    .cta-card { background:linear-gradient(135deg,var(--ink) 0%,#2D1F1A 100%); border-radius:20px; padding:28px; color:#fff; display:flex; flex-direction:column; gap:14px; }
+    .cta-card-eyebrow { font-size:.7rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-2); }
+    .cta-card-title { font-family:var(--display); font-size:1.2rem; font-weight:800; line-height:1.25; }
+    .cta-card-sub { font-size:.85rem; color:rgba(255,255,255,.65); line-height:1.55; }
+    .cta-btn-accent { background:var(--accent); color:#fff; padding:10px 20px; border-radius:999px; font-size:.85rem; font-weight:700; font-family:var(--display); text-align:center; transition:opacity .15s; }
+    .cta-btn-accent:hover { opacity:.88; }
+    .cta-btn-ghost { background:rgba(255,255,255,.1); color:#fff; padding:10px 20px; border-radius:999px; font-size:.85rem; font-weight:600; text-align:center; transition:background .15s; border:1px solid rgba(255,255,255,.15); }
+    .cta-btn-ghost:hover { background:rgba(255,255,255,.18); }
+
+    /* BOTTOM CTA BANNER */
+    .bottom-cta { background:var(--ink); border-radius:28px; margin:0 32px 64px; padding:52px 48px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
+    .bottom-cta-text h2 { font-family:var(--display); font-size:clamp(1.4rem,3vw,2rem); font-weight:800; color:#fff; line-height:1.2; margin-bottom:10px; }
+    .bottom-cta-text p { font-size:.92rem; color:rgba(255,255,255,.6); line-height:1.6; max-width:480px; }
+    .bottom-cta-btns { display:flex; gap:12px; flex-shrink:0; flex-wrap:wrap; }
+    .bottom-cta-primary { background:var(--accent); color:#fff; padding:14px 28px; border-radius:999px; font-size:.92rem; font-weight:700; font-family:var(--display); white-space:nowrap; transition:opacity .15s; }
+    .bottom-cta-primary:hover { opacity:.88; }
+    .bottom-cta-ghost { background:rgba(255,255,255,.1); color:#fff; padding:14px 28px; border-radius:999px; font-size:.92rem; font-weight:600; white-space:nowrap; border:1px solid rgba(255,255,255,.2); transition:background .15s; }
+    .bottom-cta-ghost:hover { background:rgba(255,255,255,.18); }
+    @media(max-width:768px){ .bottom-cta{flex-direction:column;margin:0 18px 48px;padding:36px 24px;} }
+
+    /* FOOTER */
+    .footer { border-top:1px solid var(--line); padding:32px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+    .footer-copy { font-size:.8rem; color:var(--muted); }
+    .footer-links { display:flex; gap:20px; }
+    .footer-links a { font-size:.8rem; color:var(--muted); transition:color .15s; }
+    .footer-links a:hover { color:var(--ink); }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <div class="nav-logo-mark">K</div>
+    <span class="nav-logo-text">KetoJourney</span>
+  </a>
+  <div class="nav-links">
+    <a href="/" class="nav-link">Home</a>
+    <a href="/blog" class="nav-link active">Blog</a>
+    <a href="/recipes" class="nav-link">Recipes</a>
+  </div>
+  <a href="/signup" class="nav-cta">Start Free Trial</a>
+</nav>
+
+<section class="hero">
+  <p class="hero-eyebrow">Keto Knowledge Hub</p>
+  <h1 class="hero-title">Everything you need to<br/><em style="font-family:var(--serif);font-weight:400">thrive on keto</em></h1>
+  <p class="hero-sub">Expert guides, delicious recipes, and real transformation stories — written to help you succeed.</p>
+</section>
+
+<!-- Category filters -->
+{categories.length > 0 && (
+  <div class="filters">
+    <a href="/blog" class={`filter-chip${!category ? ' active' : ''}`}>All</a>
+    {categories.map(cat => (
+      <a href={`/blog?category=${encodeURIComponent(cat)}`} class={`filter-chip${category === cat ? ' active' : ''}`}>{cat}</a>
+    ))}
+  </div>
+)}
+
+<div class="container">
+
+  {all.length === 0 ? (
+    <div class="empty">
+      <div class="empty-icon">✍️</div>
+      <p>No articles yet — check back soon!</p>
+    </div>
+  ) : (
+    <>
+      {/* Featured first post */}
+      {!category && all[0] && (
+        <a href={`/blog/${all[0].slug}`} class="featured-card">
+          {all[0].cover_image_url
+            ? <img src={all[0].cover_image_url} alt={all[0].title} class="featured-img" loading="eager"/>
+            : <div class="featured-img-placeholder">📖</div>
+          }
+          <div class="featured-body">
+            <span class="featured-label">{all[0].category || 'Article'}</span>
+            <h2 class="featured-title">{all[0].title}</h2>
+            <p class="featured-excerpt">{all[0].excerpt}</p>
+            <div class="featured-meta">
+              <span>{all[0].author_name}</span>
+              <span>·</span>
+              <span>{all[0].read_time_min} min read</span>
+              {all[0].published_at && (
+                <>
+                  <span>·</span>
+                  <span>{new Date(all[0].published_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
+                </>
+              )}
+            </div>
+            <span class="featured-cta">Read article →</span>
+          </div>
+        </a>
+      )}
+
+      {/* Grid — remaining posts + CTA card injected at position 4 */}
+      <div class="posts-grid">
+        {(category ? all : all.slice(1)).map((post, i) => (
+          <>
+            {i === 3 && (
+              <div class="cta-card">
+                <p class="cta-card-eyebrow">Free Resource</p>
+                <p class="cta-card-title">Get the Free Keto Starter Guide</p>
+                <p class="cta-card-sub">Everything you need to start keto confidently — meal plans, shopping lists, and expert tips.</p>
+                <a href="/signup" class="cta-btn-accent">Download Free Guide</a>
+                <a href="/signup" class="cta-btn-ghost">Start 7-Day Trial</a>
+              </div>
+            )}
+            <a href={`/blog/${post.slug}`} class="post-card">
+              {post.cover_image_url
+                ? <img src={post.cover_image_url} alt={post.title} class="post-card-img" loading="lazy"/>
+                : <div class="post-card-img-placeholder">📝</div>
+              }
+              <div class="post-card-body">
+                <span class="post-card-cat">{post.category}</span>
+                <h2 class="post-card-title">{post.title}</h2>
+                <p class="post-card-excerpt">{post.excerpt}</p>
+                <div class="post-card-meta">
+                  <span>{post.author_name}</span>
+                  <span class="post-card-meta-dot"></span>
+                  <span>{post.read_time_min} min read</span>
+                  {post.published_at && (
+                    <>
+                      <span class="post-card-meta-dot"></span>
+                      <span>{new Date(post.published_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
+                    </>
+                  )}
+                </div>
+                <span class="post-card-read">Read more →</span>
+              </div>
+            </a>
+          </>
+        ))}
+      </div>
+    </>
+  )}
+
+</div>
+
+<!-- Bottom CTA banner -->
+<div class="bottom-cta">
+  <div class="bottom-cta-text">
+    <h2>Ready to start your keto transformation?</h2>
+    <p>Join thousands of people who've used KetoJourney to lose weight, boost energy, and build lasting habits — with a personalized plan built just for you.</p>
+  </div>
+  <div class="bottom-cta-btns">
+    <a href="/signup" class="bottom-cta-primary">Start Free 7-Day Trial</a>
+    <a href="/recipes" class="bottom-cta-ghost">Browse Recipes</a>
+  </div>
+</div>
+
+<footer class="footer">
+  <span class="footer-copy">© {new Date().getFullYear()} KetoJourney. All rights reserved.</span>
+  <div class="footer-links">
+    <a href="/privacy-policy">Privacy</a>
+    <a href="/terms">Terms</a>
+    <a href="/disclaimer">Disclaimer</a>
+  </div>
+</footer>
+
+</body>
+</html>

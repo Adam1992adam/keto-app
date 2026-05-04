@@ -1,0 +1,224 @@
+---
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl  = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnon = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const db = createClient(supabaseUrl, supabaseAnon);
+
+const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').replace(/\/$/, '');
+
+const difficulty = Astro.url.searchParams.get('difficulty') || '';
+const tag        = Astro.url.searchParams.get('tag') || '';
+
+let query = db
+  .from('blog_recipes')
+  .select('id, title, slug, description, cover_image_url, calories, net_carbs, protein, fat, prep_time, cook_time, servings, difficulty, tags, published_at')
+  .eq('published', true)
+  .order('published_at', { ascending: false });
+
+if (difficulty) query = query.eq('difficulty', difficulty);
+if (tag)        query = query.contains('tags', [tag]);
+
+const { data: recipes } = await query;
+const all = recipes || [];
+
+const PAGE_TITLE = 'Keto Recipes — Easy Low-Carb Meals | KetoJourney';
+const PAGE_DESC  = 'Hundreds of delicious keto recipes with full nutrition info. Quick, easy low-carb meals the whole family will love.';
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{PAGE_TITLE}</title>
+  <meta name="description" content={PAGE_DESC}/>
+  <link rel="canonical" href={`${SITE_URL}/recipes`}/>
+  <meta property="og:type"        content="website"/>
+  <meta property="og:title"       content={PAGE_TITLE}/>
+  <meta property="og:description" content={PAGE_DESC}/>
+  <meta property="og:url"         content={`${SITE_URL}/recipes`}/>
+  <meta name="twitter:card"       content="summary_large_image"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="/icon-72.png"/>
+  <meta name="theme-color" content="#FF5C7A"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    a { color:inherit; text-decoration:none; }
+    img { display:block; max-width:100%; }
+    :root {
+      --bg:#FAF6F1; --bg-alt:#F2EDE5; --ink:#16110F; --ink-soft:#4A4340;
+      --muted:#8A8077; --line:#E5DED2; --accent:#FF5C7A; --accent-2:#B6FF3C;
+      --card:#FFFFFF;
+      --display:'Bricolage Grotesque',system-ui,sans-serif;
+      --serif:'Instrument Serif',serif;
+      --body:'Geist',system-ui,sans-serif;
+    }
+    body { font-family:var(--body); background:var(--bg); color:var(--ink); overflow-x:hidden; }
+    .nav { position:sticky; top:0; z-index:100; background:rgba(250,246,241,.92); backdrop-filter:blur(12px); border-bottom:1px solid var(--line); padding:16px 32px; display:flex; align-items:center; justify-content:space-between; }
+    .nav-logo { display:flex; align-items:center; gap:10px; }
+    .nav-logo-mark { width:34px; height:34px; background:var(--ink); border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:var(--display); font-weight:800; font-size:.9rem; color:var(--accent-2); }
+    .nav-logo-text { font-family:var(--display); font-weight:800; font-size:1rem; }
+    .nav-links { display:flex; align-items:center; gap:8px; }
+    .nav-link { font-size:.85rem; font-weight:500; color:var(--ink-soft); padding:6px 12px; border-radius:8px; transition:all .15s; }
+    .nav-link:hover { color:var(--ink); background:var(--bg-alt); }
+    .nav-link.active { color:var(--accent); }
+    .nav-cta { background:var(--accent); color:#fff; padding:8px 18px; border-radius:999px; font-size:.85rem; font-weight:700; font-family:var(--display); transition:opacity .15s; }
+    .nav-cta:hover { opacity:.88; }
+    @media(max-width:640px){ .nav-links{display:none;} .nav{padding:14px 18px;} }
+
+    .hero { padding:56px 32px 40px; max-width:860px; margin:0 auto; text-align:center; }
+    .hero-eyebrow { font-family:var(--display); font-size:.75rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); margin-bottom:12px; }
+    .hero-title { font-family:var(--display); font-size:clamp(1.8rem,4.5vw,3rem); font-weight:800; line-height:1.1; margin-bottom:14px; }
+    .hero-sub { font-size:1rem; color:var(--ink-soft); max-width:500px; margin:0 auto; line-height:1.65; }
+
+    /* FILTERS */
+    .filters { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:0 32px 28px; max-width:1200px; margin:0 auto; }
+    .filter-chip { padding:6px 16px; border-radius:999px; font-size:.82rem; font-weight:600; border:1.5px solid var(--line); color:var(--ink-soft); background:var(--card); transition:all .15s; text-decoration:none; }
+    .filter-chip:hover { border-color:var(--accent); color:var(--accent); }
+    .filter-chip.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+    /* STATS BAR */
+    .stats-bar { max-width:1200px; margin:0 auto 28px; padding:0 32px; display:flex; align-items:center; gap:20px; font-size:.84rem; color:var(--muted); }
+    .stats-bar strong { color:var(--ink); }
+
+    /* GRID */
+    .container { max-width:1200px; margin:0 auto; padding:0 32px 80px; }
+    .recipes-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:24px; }
+    @media(max-width:720px){ .recipes-grid{grid-template-columns:1fr;} .container,.filters,.stats-bar{padding-left:18px;padding-right:18px;} }
+
+    /* RECIPE CARD */
+    .recipe-card { background:var(--card); border:1px solid var(--line); border-radius:20px; overflow:hidden; display:flex; flex-direction:column; transition:transform .2s, box-shadow .2s, border-color .2s; }
+    .recipe-card:hover { transform:translateY(-4px); box-shadow:0 16px 48px rgba(22,17,15,.08); border-color:#E0D8D0; }
+    .recipe-img { width:100%; aspect-ratio:4/3; object-fit:cover; background:var(--bg-alt); }
+    .recipe-img-ph { width:100%; aspect-ratio:4/3; background:linear-gradient(135deg,var(--bg-alt),var(--line)); display:flex; align-items:center; justify-content:center; font-size:3rem; }
+    .recipe-body { padding:20px; flex:1; display:flex; flex-direction:column; gap:10px; }
+    .recipe-diff { display:inline-flex; align-items:center; padding:3px 10px; border-radius:999px; font-size:.7rem; font-weight:700; }
+    .diff-easy { background:rgba(16,185,129,.1); color:#059669; }
+    .diff-medium { background:rgba(245,158,11,.1); color:#d97706; }
+    .diff-hard { background:rgba(239,68,68,.1); color:#dc2626; }
+    .recipe-title { font-family:var(--display); font-size:1.05rem; font-weight:700; color:var(--ink); line-height:1.3; }
+    .recipe-desc { font-size:.84rem; color:var(--ink-soft); line-height:1.55; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .recipe-macros { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:4px; }
+    .macro { background:var(--bg-alt); border-radius:10px; padding:7px 6px; text-align:center; }
+    .macro-val { font-size:.9rem; font-weight:700; color:var(--ink); font-family:var(--display); }
+    .macro-label { font-size:.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-top:1px; }
+    .recipe-time { display:flex; align-items:center; gap:12px; font-size:.78rem; color:var(--muted); margin-top:4px; }
+    .recipe-time-item { display:flex; align-items:center; gap:4px; }
+    .recipe-read { display:inline-flex; align-items:center; gap:5px; font-size:.84rem; font-weight:600; color:var(--accent); margin-top:4px; }
+    .recipe-read:hover { text-decoration:underline; }
+
+    /* EMPTY */
+    .empty { text-align:center; padding:80px 20px; color:var(--muted); }
+    .empty-icon { font-size:3rem; margin-bottom:12px; }
+
+    /* BOTTOM CTA */
+    .bottom-cta { background:var(--ink); border-radius:28px; margin:0 32px 64px; padding:52px 48px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
+    .bottom-cta h2 { font-family:var(--display); font-size:clamp(1.4rem,3vw,2rem); font-weight:800; color:#fff; margin-bottom:10px; }
+    .bottom-cta p { font-size:.9rem; color:rgba(255,255,255,.6); max-width:480px; line-height:1.6; }
+    .bottom-cta-btns { display:flex; gap:12px; flex-shrink:0; flex-wrap:wrap; }
+    .bcta-p { background:var(--accent); color:#fff; padding:13px 26px; border-radius:999px; font-size:.9rem; font-weight:700; font-family:var(--display); white-space:nowrap; transition:opacity .15s; }
+    .bcta-p:hover { opacity:.88; }
+    .bcta-g { background:rgba(255,255,255,.1); color:#fff; padding:13px 26px; border-radius:999px; font-size:.9rem; font-weight:600; border:1px solid rgba(255,255,255,.2); white-space:nowrap; transition:background .15s; }
+    .bcta-g:hover { background:rgba(255,255,255,.18); }
+    @media(max-width:768px){ .bottom-cta{flex-direction:column;margin:0 18px 48px;padding:32px 22px;} }
+
+    .footer { border-top:1px solid var(--line); padding:28px 32px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+    .footer-copy { font-size:.8rem; color:var(--muted); }
+    .footer-links { display:flex; gap:20px; }
+    .footer-links a { font-size:.8rem; color:var(--muted); transition:color .15s; }
+    .footer-links a:hover { color:var(--ink); }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <div class="nav-logo-mark">K</div>
+    <span class="nav-logo-text">KetoJourney</span>
+  </a>
+  <div class="nav-links">
+    <a href="/" class="nav-link">Home</a>
+    <a href="/blog" class="nav-link">Blog</a>
+    <a href="/recipes" class="nav-link active">Recipes</a>
+  </div>
+  <a href="/signup" class="nav-cta">Start Free Trial</a>
+</nav>
+
+<section class="hero">
+  <p class="hero-eyebrow">Keto Recipe Library</p>
+  <h1 class="hero-title">Delicious recipes,<br/><em style="font-family:var(--serif);font-weight:400">zero compromises</em></h1>
+  <p class="hero-sub">Low-carb meals that actually taste great. Full nutrition info on every recipe.</p>
+</section>
+
+<div class="filters">
+  <a href="/recipes" class={`filter-chip${!difficulty ? ' active' : ''}`}>All Recipes</a>
+  {['Easy','Medium','Hard'].map(d => (
+    <a href={`/recipes?difficulty=${d}`} class={`filter-chip${difficulty === d ? ' active' : ''}`}>{d}</a>
+  ))}
+</div>
+
+<div class="stats-bar">
+  <span><strong>{all.length}</strong> recipes{difficulty ? ` · ${difficulty}` : ''}{tag ? ` · #${tag}` : ''}</span>
+</div>
+
+<div class="container">
+  {all.length === 0 ? (
+    <div class="empty">
+      <div class="empty-icon">🥗</div>
+      <p>No recipes yet — check back soon!</p>
+    </div>
+  ) : (
+    <div class="recipes-grid">
+      {all.map(recipe => (
+        <a href={`/recipes/${recipe.slug}`} class="recipe-card">
+          {recipe.cover_image_url
+            ? <img src={recipe.cover_image_url} alt={recipe.title} class="recipe-img" loading="lazy"/>
+            : <div class="recipe-img-ph">🥘</div>
+          }
+          <div class="recipe-body">
+            <span class={`recipe-diff ${recipe.difficulty === 'Easy' ? 'diff-easy' : recipe.difficulty === 'Medium' ? 'diff-medium' : 'diff-hard'}`}>
+              {recipe.difficulty}
+            </span>
+            <div class="recipe-title">{recipe.title}</div>
+            {recipe.description && <p class="recipe-desc">{recipe.description}</p>}
+            <div class="recipe-macros">
+              <div class="macro"><div class="macro-val">{recipe.calories}</div><div class="macro-label">kcal</div></div>
+              <div class="macro"><div class="macro-val">{recipe.net_carbs}g</div><div class="macro-label">net carbs</div></div>
+              <div class="macro"><div class="macro-val">{recipe.protein}g</div><div class="macro-label">protein</div></div>
+              <div class="macro"><div class="macro-val">{recipe.fat}g</div><div class="macro-label">fat</div></div>
+            </div>
+            <div class="recipe-time">
+              <span class="recipe-time-item">⏱ {(recipe.prep_time || 0) + (recipe.cook_time || 0)} min</span>
+              <span class="recipe-time-item">👤 {recipe.servings} servings</span>
+            </div>
+            <span class="recipe-read">View recipe →</span>
+          </div>
+        </a>
+      ))}
+    </div>
+  )}
+</div>
+
+<div class="bottom-cta">
+  <div>
+    <h2>Want 500+ more keto recipes?</h2>
+    <p>Get access to our full recipe library, personalized meal plans, and daily coaching — free for 7 days.</p>
+  </div>
+  <div class="bottom-cta-btns">
+    <a href="/signup" class="bcta-p">Start Free Trial</a>
+    <a href="/blog" class="bcta-g">Read the Blog</a>
+  </div>
+</div>
+
+<footer class="footer">
+  <span class="footer-copy">© {new Date().getFullYear()} KetoJourney. All rights reserved.</span>
+  <div class="footer-links">
+    <a href="/privacy-policy">Privacy</a>
+    <a href="/terms">Terms</a>
+    <a href="/blog">Blog</a>
+  </div>
+</footer>
+
+</body>
+</html>
