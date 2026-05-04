@@ -436,7 +436,15 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
 </head>
 <body>
-<UpsellModal />
+<UpsellModal
+  planType={planType}
+  currentDay={currentDay}
+  streakDays={streakDays}
+  weightLost={weightLost}
+  wUnit={wUnit}
+  maxDays={maxDays}
+  checkoutUrl="/dashboard/upgrade"
+/>
 <AppTour />
 
 <!-- ════════════════════════════ APP SHELL ════════════════════════════ -->
