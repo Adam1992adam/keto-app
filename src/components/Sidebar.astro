@@ -37,7 +37,7 @@ const activeMap: Record<string, string> = {
 const activeId = activeMap[activePage] || activePage;
 ---
 
-<!-- Apply saved theme before first paint (no flash) -->
+<!-- Apply saved theme before first paint (prevents flash) -->
 <script is:inline>
 (function () {
   try {
@@ -48,8 +48,7 @@ const activeId = activeMap[activePage] || activePage;
 </script>
 
 <style is:global>
-  /* ── Dark mode: warm dark palette ───────────────────────────
-     Single override covers all dashboard pages via CSS vars.   */
+  /* ── Dark mode: warm dark palette ──────────────────────────── */
   html[data-theme="dark"] {
     --rv-bg:       #0F0A08;
     --rv-bg-alt:   #1E1410;
@@ -72,27 +71,175 @@ const activeId = activeMap[activePage] || activePage;
     --muted:  #6A5248;
   }
   html { transition: background-color .2s; }
+
+  /* ── Floating top-right action bar ─────────────────────────── */
+  .rv-tbar {
+    position: fixed; top: 14px; right: 18px; z-index: 300;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* shared icon button style */
+  .rv-tbar-btn {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--rv-card, #fff);
+    border: 1px solid var(--rv-line, #E5DED2);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; position: relative;
+    color: var(--rv-ink-soft, #4A4340);
+    transition: border-color .15s, background .15s;
+    text-decoration: none;
+  }
+  .rv-tbar-btn:hover { border-color: var(--rv-accent, #FF5C7A); background: var(--rv-bg-alt, #F2EDE5); }
+  .rv-tbar-btn svg { width: 16px; height: 16px; pointer-events: none; }
+
+  /* dark-mode pill inside the button */
+  .rv-dm-pill {
+    width: 34px; height: 18px; border-radius: 9px;
+    background: var(--rv-line, #E5DED2);
+    position: relative; transition: background .2s;
+    border: none; cursor: pointer; flex-shrink: 0;
+  }
+  .rv-dm-pill.on { background: var(--rv-accent, #FF5C7A); }
+  .rv-dm-pill::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 14px; height: 14px; border-radius: 50%; background: #fff;
+    transition: transform .2s; box-shadow: 0 1px 2px rgba(0,0,0,.2);
+  }
+  .rv-dm-pill.on::after { transform: translateX(16px); }
+
+  /* dark-mode button wrapper */
+  .rv-tbar-dm {
+    width: auto; padding: 0 10px; gap: 7px; min-width: 36px;
+    display: flex; align-items: center;
+  }
+  .rv-dm-label {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-size: .72rem; font-weight: 600; white-space: nowrap;
+    color: var(--rv-ink-soft, #4A4340);
+  }
+
+  /* bell badge */
+  .rv-tbar-badge {
+    display: none; position: absolute; top: -5px; right: -5px;
+    min-width: 16px; height: 16px; border-radius: 8px;
+    background: var(--rv-accent, #FF5C7A); color: #fff;
+    font-size: .58rem; font-weight: 700; padding: 0 3px;
+    align-items: center; justify-content: center;
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif; line-height: 1;
+  }
+  .rv-tbar-badge.visible { display: flex; }
+
+  /* ── Notification dropdown ──────────────────────────────────── */
+  .rv-notif-drop {
+    display: none; position: absolute; top: calc(100% + 8px); right: 0;
+    width: 340px; max-height: 480px; overflow-y: auto;
+    background: var(--rv-card, #fff);
+    border: 1px solid var(--rv-line, #E5DED2);
+    border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,.12);
+    z-index: 400;
+  }
+  .rv-notif-drop.open { display: block; }
+
+  .rv-nd-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--rv-line, #E5DED2);
+  }
+  .rv-nd-title {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-size: .88rem; font-weight: 700; color: var(--rv-ink, #16110F);
+  }
+  .rv-nd-see-all {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-size: .72rem; font-weight: 600; color: var(--rv-accent, #FF5C7A);
+    text-decoration: none;
+  }
+  .rv-nd-see-all:hover { text-decoration: underline; }
+
+  .rv-nd-section {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-size: .62rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--rv-muted, #8A8077); padding: 10px 16px 4px;
+  }
+
+  .rv-nd-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 16px; transition: background .12s; cursor: default;
+  }
+  .rv-nd-item:hover { background: var(--rv-bg-alt, #F2EDE5); }
+  .rv-nd-dot {
+    width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0;
+    background: var(--rv-accent, #FF5C7A);
+  }
+  .rv-nd-dot.read { background: var(--rv-line, #E5DED2); }
+  .rv-nd-body { flex: 1; min-width: 0; }
+  .rv-nd-lbl {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-size: .8rem; font-weight: 600; color: var(--rv-ink, #16110F);
+    line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .rv-nd-sub {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-size: .72rem; color: var(--rv-ink-soft, #4A4340); line-height: 1.3;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+
+  .rv-nd-task {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px; transition: background .12s;
+  }
+  .rv-nd-task:hover { background: var(--rv-bg-alt, #F2EDE5); }
+  .rv-nd-task-ic {
+    width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
+    background: rgba(255,90,122,.1); display: flex; align-items: center; justify-content: center;
+    font-size: .72rem;
+  }
+  .rv-nd-task-nm {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-size: .8rem; font-weight: 500; color: var(--rv-ink, #16110F);
+    flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .rv-nd-task-xp {
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-size: .66rem; font-weight: 700; color: var(--rv-accent, #FF5C7A);
+  }
+
+  .rv-nd-empty {
+    padding: 16px; text-align: center;
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-size: .78rem; color: var(--rv-muted, #8A8077);
+  }
+  .rv-nd-footer {
+    border-top: 1px solid var(--rv-line, #E5DED2); padding: 10px 16px;
+  }
+  .rv-nd-dash-link {
+    display: block; text-align: center; text-decoration: none;
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-size: .78rem; font-weight: 600;
+    color: var(--rv-ink-soft, #4A4340); padding: 6px;
+    border-radius: 8px; transition: background .12s;
+  }
+  .rv-nd-dash-link:hover { background: var(--rv-bg-alt, #F2EDE5); color: var(--rv-ink, #16110F); }
+
+  @media (max-width: 900px) {
+    .rv-tbar { top: auto; bottom: 72px; right: 12px; flex-direction: column-reverse; }
+    .rv-notif-drop { right: 0; top: auto; bottom: calc(100% + 8px); }
+    .rv-dm-label { display: none; }
+    .rv-tbar-dm { padding: 0 8px; }
+  }
 </style>
 
 <style>
   /* ── Sidebar shell ─────────────────────────────────────────── */
   .rv-sb {
     width: 232px; position: sticky; top: 0; height: 100vh;
-    background: var(--rv-card, #fff);
-    border-right: 1px solid var(--rv-line, #E5DED2);
-    display: flex; flex-direction: column;
-    padding: 20px 14px; overflow-y: auto; gap: 4px;
-    z-index: 50; flex-shrink: 0;
-  }
-
-  /* ── Header row: logo + bell ──────────────────────────────── */
-  .rv-sb-head {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 24px; padding: 0 4px; flex-shrink: 0;
+    background: var(--rv-card, #fff); border-right: 1px solid var(--rv-line, #E5DED2);
+    display: flex; flex-direction: column; padding: 20px 14px;
+    overflow-y: auto; gap: 4px; z-index: 50; flex-shrink: 0;
   }
   .rv-sb-logo {
     display: flex; align-items: center; gap: 10px;
-    text-decoration: none;
+    text-decoration: none; margin-bottom: 24px; padding: 0 4px; flex-shrink: 0;
   }
   .rv-logo-mark {
     width: 30px; height: 30px; border-radius: 7px; flex-shrink: 0;
@@ -101,42 +248,15 @@ const activeId = activeMap[activePage] || activePage;
     font-family: 'Bricolage Grotesque', system-ui, sans-serif;
     font-weight: 800; font-size: .92rem; color: var(--rv-accent-2, #B6FF3C);
   }
-  .rv-logo-word {
-    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
-    font-size: .74rem; font-weight: 500; letter-spacing: .07em;
-    color: var(--rv-ink-soft, #4A4340);
-  }
+  .rv-logo-word { font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: .74rem; font-weight: 500; letter-spacing: .07em; color: var(--rv-ink-soft, #4A4340); }
   .rv-logo-word strong { font-weight: 800; color: var(--rv-ink, #16110F); }
 
-  /* ── Bell button ──────────────────────────────────────────── */
-  .rv-bell-btn {
-    position: relative; width: 32px; height: 32px; border-radius: 8px;
-    background: transparent; border: 1px solid var(--rv-line, #E5DED2);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; text-decoration: none; flex-shrink: 0;
-    color: var(--rv-ink-soft, #4A4340);
-    transition: border-color .15s, background .15s;
-  }
-  .rv-bell-btn:hover { border-color: var(--rv-accent, #FF5C7A); background: var(--rv-bg-alt, #F2EDE5); }
-  .rv-bell-ic { width: 15px; height: 15px; }
-  .rv-bell-badge {
-    display: none; position: absolute; top: -5px; right: -5px;
-    min-width: 16px; height: 16px; border-radius: 8px;
-    background: var(--rv-accent, #FF5C7A); color: #fff;
-    font-size: .58rem; font-weight: 700; padding: 0 3px;
-    align-items: center; justify-content: center;
-    font-family: 'Bricolage Grotesque', system-ui, sans-serif; line-height: 1;
-  }
-  .rv-bell-badge.visible { display: flex; }
-
-  /* ── Nav items ─────────────────────────────────────────────── */
   .rv-sb-nav { display: flex; flex-direction: column; gap: 2px; }
   .rv-ni {
-    display: flex; align-items: center; gap: 11px;
-    padding: 9px 12px; border-radius: 10px; text-decoration: none;
+    display: flex; align-items: center; gap: 11px; padding: 9px 12px;
+    border-radius: 10px; text-decoration: none;
     font-family: 'Bricolage Grotesque', system-ui, sans-serif;
-    font-size: .84rem; font-weight: 500;
-    color: var(--rv-ink-soft, #4A4340); transition: all .15s;
+    font-size: .84rem; font-weight: 500; color: var(--rv-ink-soft, #4A4340); transition: all .15s;
   }
   .rv-ni:hover { background: var(--rv-bg-alt, #F2EDE5); color: var(--rv-ink, #16110F); }
   .rv-ni--active { background: var(--rv-ink, #16110F); color: var(--rv-bg, #FAF6F1) !important; }
@@ -144,57 +264,29 @@ const activeId = activeMap[activePage] || activePage;
   .rv-ni--elite .rv-ni-ic { color: var(--rv-accent, #FF5C7A); }
   .rv-ni-ic { width: 17px; height: 17px; flex-shrink: 0; }
 
-  /* ── Section divider ───────────────────────────────────────── */
   .rv-sb-section {
     font-family: 'Bricolage Grotesque', system-ui, sans-serif;
     font-size: .62rem; font-weight: 700; letter-spacing: .1em;
-    color: var(--rv-muted, #8A8077); text-transform: uppercase;
-    padding: 12px 12px 4px; margin-top: 4px;
+    color: var(--rv-muted, #8A8077); text-transform: uppercase; padding: 12px 12px 4px; margin-top: 4px;
   }
 
-  /* ── Bottom: dark-mode toggle + user chip ─────────────────── */
   .rv-sb-fill { flex: 1; min-height: 16px; }
-  .rv-sb-bottom { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
-
-  .rv-theme-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 6px 12px;
-  }
-  .rv-theme-lbl {
-    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
-    font-size: .78rem; font-weight: 500; color: var(--rv-ink-soft, #4A4340);
-  }
-  .rv-theme-pill {
-    position: relative; width: 40px; height: 22px;
-    background: var(--rv-line, #E5DED2); border-radius: 11px;
-    border: none; cursor: pointer; padding: 0; transition: background .2s; flex-shrink: 0;
-  }
-  .rv-theme-pill.on { background: var(--rv-accent, #FF5C7A); }
-  .rv-theme-pill::after {
-    content: ''; position: absolute; top: 3px; left: 3px;
-    width: 16px; height: 16px; border-radius: 50%; background: #fff;
-    transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2);
-  }
-  .rv-theme-pill.on::after { transform: translateX(18px); }
-
   .rv-sb-user {
     display: flex; align-items: center; gap: 10px; padding: 10px 12px;
     border-radius: 10px; text-decoration: none;
-    border: 1px solid var(--rv-line, #E5DED2); transition: border-color .15s;
+    border: 1px solid var(--rv-line, #E5DED2); transition: border-color .15s; flex-shrink: 0;
   }
   .rv-sb-user:hover { border-color: var(--rv-accent, #FF5C7A); }
   .rv-sb-avatar {
     width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
     background: var(--rv-accent, #FF5C7A); color: #fff;
     display: flex; align-items: center; justify-content: center;
-    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
-    font-weight: 700; font-size: .88rem;
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-weight: 700; font-size: .88rem;
   }
   .rv-sb-info { display: flex; flex-direction: column; min-width: 0; }
   .rv-sb-name { font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: .82rem; font-weight: 600; color: var(--rv-ink, #16110F); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .rv-sb-plan { font-size: .67rem; letter-spacing: .07em; color: var(--rv-muted, #8A8077); font-family: 'Geist Mono', monospace; margin-top: 1px; }
 
-  /* ── Mobile bottom nav ─────────────────────────────────────── */
   .rv-mobnav {
     display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
     background: var(--rv-card, #fff); border-top: 1px solid var(--rv-line, #E5DED2);
@@ -202,11 +294,9 @@ const activeId = activeMap[activePage] || activePage;
   }
   .rv-mobnav-inner { display: flex; justify-content: space-around; }
   .rv-mn {
-    display: flex; flex-direction: column; align-items: center; gap: 3px;
-    padding: 4px 12px; text-decoration: none;
-    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
-    font-size: .6rem; font-weight: 500; letter-spacing: .03em;
-    color: var(--rv-ink-soft, #4A4340); transition: color .15s;
+    display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 12px;
+    text-decoration: none; font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-size: .6rem; font-weight: 500; letter-spacing: .03em; color: var(--rv-ink-soft, #4A4340); transition: color .15s;
   }
   .rv-mn:hover, .rv-mn.active { color: var(--rv-accent, #FF5C7A); }
   .rv-mn-ic { width: 20px; height: 20px; }
@@ -219,23 +309,11 @@ const activeId = activeMap[activePage] || activePage;
 
 <!-- Desktop sidebar -->
 <aside class="rv-sb">
+  <a href="/dashboard" class="rv-sb-logo">
+    <span class="rv-logo-mark">K</span>
+    <span class="rv-logo-word">KETO<strong>JOURNEY</strong></span>
+  </a>
 
-  <!-- Header: logo + notifications bell -->
-  <div class="rv-sb-head">
-    <a href="/dashboard" class="rv-sb-logo">
-      <span class="rv-logo-mark">K</span>
-      <span class="rv-logo-word">KETO<strong>JOURNEY</strong></span>
-    </a>
-    <a href="/dashboard/notifications" class="rv-bell-btn" aria-label="Notifications">
-      <svg class="rv-bell-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-        <path d="M13.73 21a2 2 0 01-3.46 0"/>
-      </svg>
-      <span class="rv-bell-badge" id="rvNotifBadge"></span>
-    </a>
-  </div>
-
-  <!-- Main navigation -->
   <nav class="rv-sb-nav">
     {nav.map(item => (
       <a href={item.href} class={`rv-ni${activeId === item.id ? ' rv-ni--active' : ''}`}>
@@ -255,20 +333,16 @@ const activeId = activeMap[activePage] || activePage;
     </a>
   </nav>
 
-  <!-- Settings section -->
   <div class="rv-sb-section">Settings</div>
   <nav class="rv-sb-nav">
-    <!-- Language -->
-    <a href="/dashboard/profile#language" class={`rv-ni${activePage === 'profile' && false ? ' rv-ni--active' : ''}`}>
+    <a href="/dashboard/profile#language" class="rv-ni">
       <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
       <span>Language</span>
     </a>
-    <!-- Notification preferences -->
     <a href="/dashboard/notification-preferences" class={`rv-ni${activePage === 'notification-preferences' ? ' rv-ni--active' : ''}`}>
       <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
       <span>Alerts</span>
     </a>
-    <!-- Billing -->
     <a href="/dashboard/billing" class={`rv-ni${activePage === 'billing' ? ' rv-ni--active' : ''}`}>
       <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
       <span>Billing</span>
@@ -277,67 +351,166 @@ const activeId = activeMap[activePage] || activePage;
 
   <div class="rv-sb-fill"></div>
 
-  <div class="rv-sb-bottom">
-    <!-- Dark mode toggle -->
-    <div class="rv-theme-row">
-      <span class="rv-theme-lbl" id="rvThemeLbl">Light mode</span>
-      <button class="rv-theme-pill" id="rvThemePill" aria-label="Toggle dark mode"></button>
+  <a href="/dashboard/profile" class="rv-sb-user">
+    <div class="rv-sb-avatar">{initial}</div>
+    <div class="rv-sb-info">
+      <span class="rv-sb-name">{userName}</span>
+      <span class="rv-sb-plan">{tierMono} · DAY {currentDay}</span>
     </div>
-    <!-- User chip -->
-    <a href="/dashboard/profile" class="rv-sb-user">
-      <div class="rv-sb-avatar">{initial}</div>
-      <div class="rv-sb-info">
-        <span class="rv-sb-name">{userName}</span>
-        <span class="rv-sb-plan">{tierMono} · DAY {currentDay}</span>
-      </div>
-    </a>
-  </div>
+  </a>
 </aside>
+
+<!-- ── Floating top-right action bar (fixed, overlays all pages) ── -->
+<div class="rv-tbar">
+  <!-- Dark mode toggle -->
+  <button class="rv-tbar-btn rv-tbar-dm" id="rvDmBtn" aria-label="Toggle dark mode">
+    <span class="rv-dm-label" id="rvDmLbl">Light</span>
+    <span class="rv-dm-pill" id="rvDmPill"></span>
+  </button>
+
+  <!-- Notification bell -->
+  <button class="rv-tbar-btn" id="rvBellBtn" aria-label="Notifications">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 01-3.46 0"/>
+    </svg>
+    <span class="rv-tbar-badge" id="rvBellBadge"></span>
+
+    <!-- Dropdown -->
+    <div class="rv-notif-drop" id="rvNotifDrop">
+      <div class="rv-nd-head">
+        <span class="rv-nd-title">Notifications</span>
+        <a href="/dashboard/notifications" class="rv-nd-see-all">See all</a>
+      </div>
+      <div id="rvNdBody">
+        <div class="rv-nd-empty">Loading…</div>
+      </div>
+      <div class="rv-nd-footer">
+        <a href="/dashboard" class="rv-nd-dash-link">Go to dashboard →</a>
+      </div>
+    </div>
+  </button>
+</div>
 
 <script is:inline>
 (function () {
-  /* ── Dark mode toggle ─────────────────────────────────────── */
-  var pill = document.getElementById('rvThemePill');
-  var lbl  = document.getElementById('rvThemeLbl');
+  /* ── Dark mode ───────────────────────────────────────────── */
+  var pill = document.getElementById('rvDmPill');
+  var lbl  = document.getElementById('rvDmLbl');
   var dark = document.documentElement.getAttribute('data-theme') === 'dark';
 
   function applyTheme(d) {
     dark = d;
-    if (d) {
-      document.documentElement.setAttribute('data-theme', 'dark');
-      if (pill) pill.classList.add('on');
-      if (lbl)  lbl.textContent = 'Dark mode';
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-      if (pill) pill.classList.remove('on');
-      if (lbl)  lbl.textContent = 'Light mode';
-    }
+    document.documentElement[d ? 'setAttribute' : 'removeAttribute']('data-theme', 'dark');
+    if (pill) pill.classList[d ? 'add' : 'remove']('on');
+    if (lbl)  lbl.textContent = d ? 'Dark' : 'Light';
     try { localStorage.setItem('rv-theme', d ? 'dark' : 'light'); } catch (e) {}
   }
+  applyTheme(dark);
+  var dmBtn = document.getElementById('rvDmBtn');
+  if (dmBtn) dmBtn.addEventListener('click', function () { applyTheme(!dark); });
 
-  applyTheme(dark); // sync pill state on load
-  if (pill) pill.addEventListener('click', function () { applyTheme(!dark); });
+  /* ── Notification dropdown ───────────────────────────────── */
+  var bellBtn  = document.getElementById('rvBellBtn');
+  var drop     = document.getElementById('rvNotifDrop');
+  var badge    = document.getElementById('rvBellBadge');
+  var ndBody   = document.getElementById('rvNdBody');
+  var loaded   = false;
 
-  /* ── Notification badge ───────────────────────────────────── */
-  var CACHE_KEY = 'rv_notif_count';
-  var CACHE_TTL = 30000;
-  function updateBadge(n) {
-    var b = document.getElementById('rvNotifBadge');
-    if (!b) return;
-    if (n > 0) { b.textContent = n > 99 ? '99+' : n; b.classList.add('visible'); }
-    else { b.classList.remove('visible'); }
+  var TASK_ICONS = { breakfast:'🍳', lunch:'🥗', dinner:'🍽️', snack:'🥑', water:'💧', weight:'⚖️', reflection:'📝' };
+
+  function setCount(n) {
+    if (!badge) return;
+    if (n > 0) { badge.textContent = n > 99 ? '99+' : String(n); badge.classList.add('visible'); }
+    else { badge.classList.remove('visible'); }
   }
+
+  function renderDrop(notifs, tasks) {
+    var html = '';
+
+    if (notifs.length) {
+      html += '<div class="rv-nd-section">Notifications</div>';
+      notifs.slice(0, 5).forEach(function (n) {
+        var read = n.is_read;
+        html += '<div class="rv-nd-item">'
+          + '<span class="rv-nd-dot' + (read ? ' read' : '') + '"></span>'
+          + '<div class="rv-nd-body">'
+          + '<div class="rv-nd-lbl">' + (n.title || '') + '</div>'
+          + '<div class="rv-nd-sub">'  + (n.body  || '') + '</div>'
+          + '</div></div>';
+      });
+    } else {
+      html += '<div class="rv-nd-empty">No new notifications</div>';
+    }
+
+    if (tasks.length) {
+      html += '<div class="rv-nd-section">Pending tasks</div>';
+      tasks.slice(0, 5).forEach(function (t) {
+        var ic = TASK_ICONS[t.task_type] || '✅';
+        html += '<div class="rv-nd-task">'
+          + '<span class="rv-nd-task-ic">' + ic + '</span>'
+          + '<span class="rv-nd-task-nm">' + (t.task_title || t.task_type) + '</span>'
+          + (t.xp_earned ? '<span class="rv-nd-task-xp">+' + t.xp_earned + ' XP</span>' : '')
+          + '</div>';
+      });
+    }
+
+    if (ndBody) ndBody.innerHTML = html || '<div class="rv-nd-empty">All clear!</div>';
+  }
+
+  function loadDrop() {
+    if (loaded) return;
+    loaded = true;
+    var CACHE = 'rv_notif_drop';
+    var TTL   = 60000;
+    try {
+      var c = JSON.parse(sessionStorage.getItem(CACHE) || 'null');
+      if (c && Date.now() - c.ts < TTL) { renderDrop(c.notifs, c.tasks); setCount(c.unread); return; }
+    } catch (e) {}
+
+    Promise.all([
+      fetch('/api/notifications?limit=10', { credentials: 'same-origin' }).then(function(r){ return r.ok ? r.json() : null; }),
+      fetch('/api/tasks/today',            { credentials: 'same-origin' }).then(function(r){ return r.ok ? r.json() : null; })
+    ]).then(function (res) {
+      var nd = res[0] || {};
+      var td = res[1] || {};
+      var notifs = nd.notifications || [];
+      var tasks  = td.tasks || [];
+      var unread = nd.unreadCount || 0;
+      renderDrop(notifs, tasks);
+      setCount(unread);
+      try { sessionStorage.setItem(CACHE, JSON.stringify({ notifs: notifs, tasks: tasks, unread: unread, ts: Date.now() })); } catch (e) {}
+    }).catch(function () {
+      if (ndBody) ndBody.innerHTML = '<div class="rv-nd-empty">Could not load</div>';
+    });
+  }
+
+  if (bellBtn) {
+    bellBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var isOpen = drop && drop.classList.contains('open');
+      if (drop) drop.classList.toggle('open');
+      if (!isOpen) loadDrop();
+    });
+  }
+  document.addEventListener('click', function (e) {
+    if (drop && drop.classList.contains('open') && !bellBtn.contains(e.target)) {
+      drop.classList.remove('open');
+    }
+  });
+
+  /* Quick badge count (separate from full dropdown load) */
   try {
-    var c = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
-    if (c && Date.now() - c.ts < CACHE_TTL) { updateBadge(c.count); return; }
+    var bc = JSON.parse(sessionStorage.getItem('rv_notif_count') || 'null');
+    if (bc && Date.now() - bc.ts < 30000) { setCount(bc.count); return; }
   } catch (e) {}
   fetch('/api/notifications?limit=1', { credentials: 'same-origin' })
-    .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (d) {
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
       if (!d) return;
-      updateBadge(d.unreadCount || 0);
-      try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ count: d.unreadCount || 0, ts: Date.now() })); } catch (e) {}
-    }).catch(function () {});
+      setCount(d.unreadCount || 0);
+      try { sessionStorage.setItem('rv_notif_count', JSON.stringify({ count: d.unreadCount || 0, ts: Date.now() })); } catch(e) {}
+    }).catch(function(){});
 })();
 </script>
 

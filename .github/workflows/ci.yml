@@ -23,7 +23,7 @@ jobs:
         run: npm ci
 
       - name: Astro type check
-        run: npx astro check
+        run: npx astro check --minimumSeverity error
         env:
           # Stub env vars so Astro doesn't crash on import.meta.env references
           PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
