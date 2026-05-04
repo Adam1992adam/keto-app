@@ -5,14 +5,11 @@ function json(data: any, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-function adminDb() {
-  const url = process.env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
-  return createClient(url, key);
-}
-
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, cookies, locals }) => {
   if (cookies.get('admin-session')?.value !== 'authenticated') return json({ error: 'Unauthorized' }, 401);
+  const env = (locals as any)?.runtime?.env || {};
+  const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL || env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+  const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
 
   const body = await request.json();
   const {
@@ -24,7 +21,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   if (!title?.trim()) return json({ error: 'Title is required' }, 400);
   if (!slug?.trim())  return json({ error: 'Slug is required' }, 400);
 
-  const db = adminDb();
+  const db = createClient(SUPABASE_URL, SERVICE_KEY);
   const now = new Date().toISOString();
   const row: any = {
     title: title.trim().slice(0, 200),

@@ -382,7 +382,7 @@ function saveRecipe(publish) {
   }).then(function(r){return r.json();}).then(function(d){
     if (d.success) {
       currentId = d.id;
-      history.replaceState({},'',' /admin/blog-recipes/editor?id=' + d.id);
+      history.replaceState({}, '', '/admin/blog-recipes/editor?id=' + d.id);
       setStatus(publish);
       saveStatus.textContent = publish ? '✓ Published!' : '✓ Draft saved';
       saveStatus.className = 'save-status ok';
