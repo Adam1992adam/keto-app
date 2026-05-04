@@ -40,7 +40,8 @@ export interface Profile {
   daily_calorie_target?: number;
   // Subscription
   subscription_tier: PlanTier;
-  subscription_status: 'active' | 'expired' | 'cancelled' | 'none';
+  subscription_status: 'active' | 'trial' | 'expired' | 'cancelled' | 'none';
+  is_trial?: boolean;
   subscription_start_date?: string;
   subscription_end_date?: string;
   sale_id?: string;
@@ -392,7 +393,8 @@ export function toStorageHeight(value: number, units: UnitSystem, inches = 0): n
 
 export function isSubscriptionActive(profile: Profile): boolean {
   if (!profile) return false;
-  if (profile.subscription_status !== 'active') return false;
+  const status = profile.subscription_status;
+  if (status !== 'active' && status !== 'trial') return false;
   if (!profile.subscription_end_date) return false;
   return new Date(profile.subscription_end_date) > new Date();
 }

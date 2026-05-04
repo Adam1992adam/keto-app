@@ -94,7 +94,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const { data: expiredUsers, error: fetchError } = await supabase
       .from('profiles')
       .select('id, email, full_name, subscription_tier, subscription_end_date, subscription_status')
-      .eq('subscription_status', 'active')
+      .in('subscription_status', ['active', 'trial'])
       .lt('subscription_end_date', now);
 
     if (fetchError) {
