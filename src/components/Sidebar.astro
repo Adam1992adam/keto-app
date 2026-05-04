@@ -361,23 +361,23 @@ const activeId = activeMap[activePage] || activePage;
 </aside>
 
 <!-- ── Floating top-right action bar (fixed, overlays all pages) ── -->
-<div class="rv-tbar">
+<div class="rv-tbar" style="position:fixed;top:14px;right:18px;z-index:300;display:flex;align-items:center;gap:6px;">
   <!-- Dark mode toggle -->
-  <button class="rv-tbar-btn rv-tbar-dm" id="rvDmBtn" aria-label="Toggle dark mode">
+  <button class="rv-tbar-btn rv-tbar-dm" id="rvDmBtn" aria-label="Toggle dark mode" style="width:auto;padding:0 10px;gap:7px;display:flex;align-items:center;height:36px;border-radius:10px;background:#fff;border:1px solid #E5DED2;cursor:pointer;">
     <span class="rv-dm-label" id="rvDmLbl">Light</span>
     <span class="rv-dm-pill" id="rvDmPill"></span>
   </button>
 
   <!-- Notification bell -->
-  <button class="rv-tbar-btn" id="rvBellBtn" aria-label="Notifications">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <button class="rv-tbar-btn" id="rvBellBtn" aria-label="Notifications" style="width:36px;height:36px;border-radius:10px;background:#fff;border:1px solid #E5DED2;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;flex-shrink:0;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;pointer-events:none;flex-shrink:0;">
       <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
       <path d="M13.73 21a2 2 0 01-3.46 0"/>
     </svg>
     <span class="rv-tbar-badge" id="rvBellBadge"></span>
 
     <!-- Dropdown -->
-    <div class="rv-notif-drop" id="rvNotifDrop">
+    <div class="rv-notif-drop" id="rvNotifDrop" style="display:none;">
       <div class="rv-nd-head">
         <span class="rv-nd-title">Notifications</span>
         <a href="/dashboard/notifications" class="rv-nd-see-all">See all</a>
@@ -485,18 +485,19 @@ const activeId = activeMap[activePage] || activePage;
     });
   }
 
+  function isDropOpen() { return drop && drop.style.display !== 'none'; }
+  function openDrop()   { if (drop) { drop.style.display = 'block'; drop.classList.add('open'); } }
+  function closeDrop()  { if (drop) { drop.style.display = 'none';  drop.classList.remove('open'); } }
+
   if (bellBtn) {
     bellBtn.addEventListener('click', function (e) {
       e.stopPropagation();
-      var isOpen = drop && drop.classList.contains('open');
-      if (drop) drop.classList.toggle('open');
-      if (!isOpen) loadDrop();
+      var wasOpen = isDropOpen();
+      if (wasOpen) { closeDrop(); } else { openDrop(); loadDrop(); }
     });
   }
   document.addEventListener('click', function (e) {
-    if (drop && drop.classList.contains('open') && !bellBtn.contains(e.target)) {
-      drop.classList.remove('open');
-    }
+    if (isDropOpen() && bellBtn && !bellBtn.contains(e.target)) { closeDrop(); }
   });
 
   /* Quick badge count (separate from full dropdown load) */
