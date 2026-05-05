@@ -173,6 +173,39 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/og-image.png`;
     .cta-btn-primary:hover { opacity:.88; }
     .cta-btn-outline { background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2); }
     .cta-btn-outline:hover { background:rgba(255,255,255,.18); }
+    /* LEAD CAPTURE */
+    .lead-card { background:linear-gradient(135deg,#0d1a0f,#0a1a12); border:1.5px solid rgba(16,185,129,.3); border-radius:20px; padding:22px; }
+    .lead-card-eyebrow { font-size:.68rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#34d399; margin-bottom:8px; }
+    .lead-card-title { font-size:1rem; font-weight:800; color:#dfeedd; font-family:var(--display); line-height:1.3; margin-bottom:8px; }
+    .lead-card-sub { font-size:.8rem; color:rgba(255,255,255,.5); line-height:1.5; margin-bottom:12px; }
+    .lead-input { width:100%; padding:9px 13px; background:rgba(16,185,129,.07); border:1px solid rgba(16,185,129,.25); border-radius:9px; color:#dfeedd; font-size:.83rem; font-family:var(--body); outline:none; box-sizing:border-box; transition:border-color .2s; margin-bottom:8px; }
+    .lead-input:focus { border-color:#10b981; }
+    .lead-input::placeholder { color:rgba(255,255,255,.3); }
+    .lead-submit { width:100%; padding:9px 0; background:linear-gradient(135deg,#10b981,#34d399); border:none; border-radius:9px; color:#fff; font-size:.85rem; font-weight:800; font-family:var(--display); cursor:pointer; transition:opacity .2s; }
+    .lead-submit:hover { opacity:.88; }
+    .lead-submit:disabled { opacity:.6; cursor:not-allowed; }
+    .lead-note { font-size:.7rem; color:rgba(255,255,255,.3); text-align:center; margin-top:7px; }
+    .lead-msg { margin-top:8px; padding:8px 11px; border-radius:8px; font-size:.78rem; font-weight:600; display:none; }
+    .lead-msg.ok { display:block; background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.25); color:#34d399; }
+    .lead-msg.err { display:block; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.2); color:#f87171; }
+    /* Inline lead (mobile) */
+    .inline-lead { background:linear-gradient(135deg,#f7fdf9,#eefaf3); border:1.5px solid rgba(16,185,129,.2); border-radius:20px; padding:26px 22px; margin:36px 0; }
+    .inline-lead-title { font-family:var(--display); font-size:1.15rem; font-weight:800; color:#0a1a10; margin-bottom:6px; }
+    .inline-lead-sub { font-size:.86rem; color:#3d6b4a; line-height:1.6; margin-bottom:14px; }
+    .inline-lead-row { display:flex; gap:10px; }
+    .inline-lead-input { flex:1; padding:10px 13px; background:#fff; border:1px solid rgba(16,185,129,.3); border-radius:9px; color:#0a1a10; font-size:.86rem; font-family:var(--body); outline:none; transition:border-color .2s; }
+    .inline-lead-input:focus { border-color:#10b981; }
+    .inline-lead-input::placeholder { color:#8aab90; }
+    .inline-lead-btn { padding:10px 18px; background:#10b981; border:none; border-radius:9px; color:#fff; font-size:.86rem; font-weight:800; font-family:var(--display); cursor:pointer; white-space:nowrap; transition:opacity .2s; }
+    .inline-lead-btn:hover { opacity:.88; }
+    .inline-lead-btn:disabled { opacity:.6; cursor:not-allowed; }
+    .inline-lead-note { font-size:.7rem; color:#8aab90; margin-top:7px; }
+    .inline-lead-msg { margin-top:9px; padding:9px 12px; border-radius:8px; font-size:.81rem; font-weight:600; display:none; }
+    .inline-lead-msg.ok { display:block; background:rgba(16,185,129,.1); border:1px solid rgba(16,185,129,.25); color:#059669; }
+    .inline-lead-msg.err { display:block; background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.18); color:#dc2626; }
+    @media(min-width:901px){ .inline-lead{ display:none; } }
+    @media(max-width:560px){ .inline-lead-row{flex-direction:column;} }
+
     .nutr-full { display:flex; flex-direction:column; gap:8px; }
     .nutr-row { display:flex; align-items:center; justify-content:space-between; font-size:.84rem; }
     .nutr-row-label { color:var(--ink-soft); }
@@ -335,6 +368,19 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/og-image.png`;
       </div>
     )}
 
+    <!-- Inline lead capture (mobile only) -->
+    <div class="inline-lead">
+      <p style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#10b981;margin-bottom:6px;">📖 Free Recipe Book</p>
+      <div class="inline-lead-title">Get 7 more keto recipes free</div>
+      <p class="inline-lead-sub">Full macros · Under 5g net carbs each · Delivered instantly to your inbox</p>
+      <div class="inline-lead-row">
+        <input type="email" class="inline-lead-input" id="inlineEmail" placeholder="Your email address" autocomplete="email"/>
+        <button class="inline-lead-btn" id="inlineBtn">Send Free →</button>
+      </div>
+      <p class="inline-lead-note">🔒 No spam · Unsubscribe anytime</p>
+      <div class="inline-lead-msg" id="inlineMsg"></div>
+    </div>
+
     <!-- Bottom CTA -->
     <div class="bottom-cta">
       <div>
@@ -342,7 +388,7 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/og-image.png`;
         <p>Access the full recipe library, personalized meal plans, and progress tracking — free for 7 days.</p>
       </div>
       <div class="bottom-cta-btns">
-        <a href="/signup" class="bcta-p">Start Free Trial</a>
+        <a href="/start" class="bcta-p">Start Free Trial</a>
         <a href="/recipes" class="bcta-g">More Recipes</a>
       </div>
     </div>
@@ -372,13 +418,24 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/og-image.png`;
   <!-- ── Sidebar ── -->
   <aside class="sidebar">
 
+    <!-- Free book lead capture card -->
+    <div class="lead-card">
+      <p class="lead-card-eyebrow">📖 Free Recipe Book</p>
+      <div class="lead-card-title">Get 7 keto recipes free — delivered instantly</div>
+      <p class="lead-card-sub">Full macros · Under 5g net carbs · 30 min or less</p>
+      <input type="email" class="lead-input" id="sidebarEmail" placeholder="Your email address" autocomplete="email"/>
+      <button class="lead-submit" id="sidebarBtn">Send My Free Book →</button>
+      <p class="lead-note">🔒 No spam · Unsubscribe anytime</p>
+      <div class="lead-msg" id="sidebarMsg"></div>
+    </div>
+
     <!-- CTA -->
     <div class="sidebar-card sidebar-cta">
       <p class="cta-eyebrow">Free 7-Day Trial</p>
       <div class="sidebar-title">Get this recipe in your meal plan</div>
       <p class="cta-sub">Personalized keto meal plans with shopping lists — tailored to your goals.</p>
-      <a href="/signup" class="cta-btn cta-btn-primary">Start Free Trial</a>
-      <a href="/signup" class="cta-btn cta-btn-outline">Get Free Guide</a>
+      <a href="/start" class="cta-btn cta-btn-primary">Start Free Trial</a>
+      <a href="/free-book" class="cta-btn cta-btn-outline">Get Free Recipe Book</a>
     </div>
 
     <!-- Full nutrition -->
@@ -423,6 +480,58 @@ function toggleStep(i) {
   var step = document.getElementById('step-' + i);
   if (step) step.classList.toggle('done');
 }
+
+/* Lead capture forms */
+(function() {
+  function submitLead(email, btnEl, msgEl, okClass, errClass) {
+    if (!email || !email.includes('@')) {
+      msgEl.textContent = 'Please enter a valid email.';
+      msgEl.className = errClass;
+      return;
+    }
+    btnEl.disabled = true;
+    var orig = btnEl.textContent;
+    btnEl.textContent = 'Sending…';
+    msgEl.className = okClass.replace('ok','').replace('err','').trim();
+    fetch('/api/leads/collect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      if (d.success) {
+        msgEl.textContent = '✅ Check your inbox — recipes on their way!';
+        msgEl.className = okClass;
+        btnEl.textContent = 'Sent ✓';
+      } else {
+        msgEl.textContent = d.error || 'Something went wrong.';
+        msgEl.className = errClass;
+        btnEl.disabled = false;
+        btnEl.textContent = orig;
+      }
+    }).catch(function() {
+      msgEl.textContent = 'Network error. Please try again.';
+      msgEl.className = errClass;
+      btnEl.disabled = false;
+      btnEl.textContent = orig;
+    });
+  }
+
+  var sBtn = document.getElementById('sidebarBtn');
+  var sInp = document.getElementById('sidebarEmail');
+  var sMsg = document.getElementById('sidebarMsg');
+  if (sBtn && sInp && sMsg) {
+    sBtn.addEventListener('click', function(){ submitLead(sInp.value.trim(), sBtn, sMsg, 'lead-msg ok', 'lead-msg err'); });
+    sInp.addEventListener('keydown', function(e){ if(e.key==='Enter') sBtn.click(); });
+  }
+
+  var iBtn = document.getElementById('inlineBtn');
+  var iInp = document.getElementById('inlineEmail');
+  var iMsg = document.getElementById('inlineMsg');
+  if (iBtn && iInp && iMsg) {
+    iBtn.addEventListener('click', function(){ submitLead(iInp.value.trim(), iBtn, iMsg, 'inline-lead-msg ok', 'inline-lead-msg err'); });
+    iInp.addEventListener('keydown', function(e){ if(e.key==='Enter') iBtn.click(); });
+  }
+})();
 </script>
 </body>
 </html>

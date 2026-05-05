@@ -159,6 +159,40 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
     .toc-item a { font-size:.84rem; color:var(--ink-soft); transition:color .15s; display:block; padding:2px 0; border-left:2px solid transparent; padding-left:10px; }
     .toc-item a:hover { color:var(--accent); border-left-color:var(--accent); }
 
+    /* LEAD CAPTURE */
+    .lead-card { background:linear-gradient(135deg,#0d1a0f,#0a1a12); border:1.5px solid rgba(16,185,129,.3); border-radius:20px; padding:24px; }
+    .lead-card-eyebrow { font-size:.68rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#34d399; margin-bottom:8px; }
+    .lead-card-title { font-size:1.05rem; font-weight:800; color:#dfeedd; font-family:var(--display); line-height:1.3; margin-bottom:8px; }
+    .lead-card-sub { font-size:.82rem; color:rgba(255,255,255,.5); line-height:1.55; margin-bottom:14px; }
+    .lead-input { width:100%; padding:10px 14px; background:rgba(16,185,129,.07); border:1px solid rgba(16,185,129,.25); border-radius:10px; color:#dfeedd; font-size:.85rem; font-family:var(--body); outline:none; box-sizing:border-box; transition:border-color .2s; margin-bottom:10px; }
+    .lead-input:focus { border-color:#10b981; }
+    .lead-input::placeholder { color:rgba(255,255,255,.3); }
+    .lead-submit { width:100%; padding:10px 0; background:linear-gradient(135deg,#10b981,#34d399); border:none; border-radius:10px; color:#fff; font-size:.88rem; font-weight:800; font-family:var(--display); cursor:pointer; transition:opacity .2s; }
+    .lead-submit:hover { opacity:.88; }
+    .lead-submit:disabled { opacity:.6; cursor:not-allowed; }
+    .lead-note { font-size:.72rem; color:rgba(255,255,255,.3); text-align:center; margin-top:8px; }
+    .lead-msg { margin-top:10px; padding:9px 12px; border-radius:8px; font-size:.8rem; font-weight:600; display:none; }
+    .lead-msg.ok { display:block; background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.25); color:#34d399; }
+    .lead-msg.err { display:block; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.2); color:#f87171; }
+
+    /* INLINE LEAD (mobile — shown below article, above related) */
+    .inline-lead { background:linear-gradient(135deg,#f7fdf9,#eefaf3); border:1.5px solid rgba(16,185,129,.2); border-radius:20px; padding:28px 24px; margin:40px 0; }
+    .inline-lead-title { font-family:var(--display); font-size:1.2rem; font-weight:800; color:#0a1a10; margin-bottom:6px; }
+    .inline-lead-sub { font-size:.88rem; color:#3d6b4a; line-height:1.6; margin-bottom:16px; }
+    .inline-lead-row { display:flex; gap:10px; }
+    .inline-lead-input { flex:1; padding:11px 14px; background:#fff; border:1px solid rgba(16,185,129,.3); border-radius:10px; color:#0a1a10; font-size:.88rem; font-family:var(--body); outline:none; transition:border-color .2s; }
+    .inline-lead-input:focus { border-color:#10b981; }
+    .inline-lead-input::placeholder { color:#8aab90; }
+    .inline-lead-btn { padding:11px 20px; background:#10b981; border:none; border-radius:10px; color:#fff; font-size:.88rem; font-weight:800; font-family:var(--display); cursor:pointer; white-space:nowrap; transition:opacity .2s; }
+    .inline-lead-btn:hover { opacity:.88; }
+    .inline-lead-btn:disabled { opacity:.6; cursor:not-allowed; }
+    .inline-lead-note { font-size:.72rem; color:#8aab90; margin-top:8px; }
+    .inline-lead-msg { margin-top:10px; padding:9px 12px; border-radius:8px; font-size:.82rem; font-weight:600; display:none; }
+    .inline-lead-msg.ok { display:block; background:rgba(16,185,129,.1); border:1px solid rgba(16,185,129,.25); color:#059669; }
+    .inline-lead-msg.err { display:block; background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.18); color:#dc2626; }
+    @media(min-width:901px){ .inline-lead{ display:none; } }
+    @media(max-width:560px){ .inline-lead-row{flex-direction:column;} }
+
     /* RELATED */
     .related { margin-top:56px; }
     .related-title { font-family:var(--display); font-size:1.3rem; font-weight:800; color:var(--ink); margin-bottom:24px; }
@@ -260,6 +294,19 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
       </div>
     </div>
 
+    <!-- Inline lead capture (mobile only — sidebar hidden below 900px) -->
+    <div class="inline-lead">
+      <p style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#10b981;margin-bottom:6px;">📖 Free Recipe Book</p>
+      <div class="inline-lead-title">Get 7 free keto recipes delivered to your inbox</div>
+      <p class="inline-lead-sub">Full macros included · Under 5g net carbs each · Ready in 30 min or less</p>
+      <div class="inline-lead-row">
+        <input type="email" class="inline-lead-input" id="inlineEmail" placeholder="Your email address" autocomplete="email"/>
+        <button class="inline-lead-btn" id="inlineBtn">Send Free →</button>
+      </div>
+      <p class="inline-lead-note">🔒 No spam · Unsubscribe anytime</p>
+      <div class="inline-lead-msg" id="inlineMsg"></div>
+    </div>
+
     <!-- Bottom CTA -->
     <div class="bottom-cta">
       <div>
@@ -298,13 +345,24 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
   <!-- ── Sidebar ── -->
   <aside class="sidebar">
 
+    <!-- Free book lead capture card -->
+    <div class="lead-card">
+      <p class="lead-card-eyebrow">📖 Free Recipe Book</p>
+      <div class="lead-card-title">Get 7 keto recipes free — delivered instantly</div>
+      <p class="lead-card-sub">Full macros · Under 5g net carbs · 30 min or less</p>
+      <input type="email" class="lead-input" id="sidebarEmail" placeholder="Your email address" autocomplete="email"/>
+      <button class="lead-submit" id="sidebarBtn">Send My Free Book →</button>
+      <p class="lead-note">🔒 No spam · Unsubscribe anytime</p>
+      <div class="lead-msg" id="sidebarMsg"></div>
+    </div>
+
     <!-- CTA card -->
     <div class="sidebar-card sidebar-cta">
       <p class="cta-eyebrow">Free 7-Day Trial</p>
       <div class="sidebar-card-title">Start your keto transformation today</div>
       <p class="cta-sub">Personalized meal plans, daily coaching, and recipes tailored to your goals.</p>
-      <a href="/signup" class="cta-btn cta-btn-primary">Start Free Trial</a>
-      <a href="/signup" class="cta-btn cta-btn-outline">Get Free Guide</a>
+      <a href="/start" class="cta-btn cta-btn-primary">Start Free Trial</a>
+      <a href="/free-book" class="cta-btn cta-btn-outline">Get Free Recipe Book</a>
     </div>
 
     <!-- Table of contents (auto-generated from headings) -->
@@ -373,6 +431,93 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
       setTimeout(function(){ cp.textContent = 'Copy link'; }, 2000);
     });
   });
+})();
+
+/* Lead capture forms */
+(function() {
+  function submitLead(email, btnEl, msgEl) {
+    if (!email || !email.includes('@')) {
+      msgEl.textContent = 'Please enter a valid email.';
+      msgEl.className = 'lead-msg err';
+      return;
+    }
+    btnEl.disabled = true;
+    var origText = btnEl.textContent;
+    btnEl.textContent = 'Sending…';
+    msgEl.className = 'lead-msg';
+    fetch('/api/leads/collect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.success) {
+        msgEl.textContent = '✅ Check your inbox — recipes on their way!';
+        msgEl.className = 'lead-msg ok';
+        btnEl.textContent = 'Sent ✓';
+      } else {
+        msgEl.textContent = d.error || 'Something went wrong.';
+        msgEl.className = 'lead-msg err';
+        btnEl.disabled = false;
+        btnEl.textContent = origText;
+      }
+    }).catch(function() {
+      msgEl.textContent = 'Network error. Please try again.';
+      msgEl.className = 'lead-msg err';
+      btnEl.disabled = false;
+      btnEl.textContent = origText;
+    });
+  }
+
+  /* Sidebar form */
+  var sBtn = document.getElementById('sidebarBtn');
+  var sInp = document.getElementById('sidebarEmail');
+  var sMsg = document.getElementById('sidebarMsg');
+  if (sBtn && sInp && sMsg) {
+    sBtn.addEventListener('click', function() { submitLead(sInp.value.trim(), sBtn, sMsg); });
+    sInp.addEventListener('keydown', function(e) { if (e.key === 'Enter') sBtn.click(); });
+  }
+
+  /* Inline (mobile) form */
+  var iBtn = document.getElementById('inlineBtn');
+  var iInp = document.getElementById('inlineEmail');
+  var iMsg = document.getElementById('inlineMsg');
+  if (iBtn && iInp && iMsg) {
+    /* Reuse same classes but inline variant has different class names */
+    iBtn.addEventListener('click', function() {
+      var email = iInp.value.trim();
+      if (!email || !email.includes('@')) {
+        iMsg.textContent = 'Please enter a valid email.';
+        iMsg.className = 'inline-lead-msg err';
+        return;
+      }
+      iBtn.disabled = true;
+      var orig = iBtn.textContent;
+      iBtn.textContent = 'Sending…';
+      iMsg.className = 'inline-lead-msg';
+      fetch('/api/leads/collect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email })
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.success) {
+          iMsg.textContent = '✅ Check your inbox — recipes on their way!';
+          iMsg.className = 'inline-lead-msg ok';
+          iBtn.textContent = 'Sent ✓';
+        } else {
+          iMsg.textContent = d.error || 'Something went wrong.';
+          iMsg.className = 'inline-lead-msg err';
+          iBtn.disabled = false;
+          iBtn.textContent = orig;
+        }
+      }).catch(function() {
+        iMsg.textContent = 'Network error. Please try again.';
+        iMsg.className = 'inline-lead-msg err';
+        iBtn.disabled = false;
+        iBtn.textContent = orig;
+      });
+    });
+    iInp.addEventListener('keydown', function(e) { if (e.key === 'Enter') iBtn.click(); });
+  }
 })();
 </script>
 </body>

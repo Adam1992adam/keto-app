@@ -103,6 +103,9 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       return json({ error: 'Account created but could not log you in automatically. Please log in manually.' }, 500);
     }
 
+    // Mark lead as converted if they came via free-book flow (fire-and-forget)
+    void supabase.from('leads').update({ converted: true }).eq('email', cleanEmail);
+
     console.log(`✅ Trial signup: ${cleanEmail}`);
 
     cookies.set('sb-access-token', signInData.session.access_token, {

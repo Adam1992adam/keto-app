@@ -557,3 +557,208 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${prehead
     html,
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEAD NURTURE SEQUENCE  (steps 1–4, sent by cron/lead-nurture.ts)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Shared simple layout for nurture emails (no subscription footer)
+function nurtureLayout(content: string, preheader = '') {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Keto Journey</title></head>
+<body style="margin:0;padding:0;background:#0a0f0b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${preheader}</div>` : ''}
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0f0b;">
+<tr><td align="center" style="padding:32px 16px;">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
+<tr><td style="padding-bottom:20px;text-align:center;">
+  <span style="font-size:26px;">🥑</span>
+  <span style="font-family:Georgia,serif;font-size:19px;font-weight:900;color:#10b981;letter-spacing:-.5px;margin-left:8px;">Keto Journey</span>
+</td></tr>
+<tr><td style="background:#0d1a0f;border:1px solid rgba(16,185,129,.2);border-radius:20px;padding:36px 32px;">${content}</td></tr>
+<tr><td style="padding:20px 0 8px;text-align:center;">
+  <p style="margin:0;font-size:11px;color:#2e4a32;">You requested our free recipe book · <a href="${APP_URL}/free-book" style="color:#10b981;">Unsubscribe</a></p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+}
+
+// Lead Nurture Step 1 — Day 2: "Did you try the recipes?"
+export async function sendLeadNurture1(to: string) {
+  const content = `
+    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#dfeedd;">Did you try any of the recipes? 🍳</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#4d7055;line-height:1.7;">Two days ago we sent you 7 keto recipes. If you haven't tried one yet, here's the easiest one to start with tonight — Bacon & Egg Cups.</p>
+    <div style="padding:18px 20px;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.15);border-radius:14px;margin-bottom:20px;">
+      <p style="margin:0 0 10px;font-size:14px;font-weight:800;color:#dfeedd;">🥚 Bacon & Egg Cups — 15 minutes, 1g net carb</p>
+      <p style="margin:0 0 6px;font-size:13px;color:#4d7055;">1. Preheat oven to 200°C / 390°F</p>
+      <p style="margin:0 0 6px;font-size:13px;color:#4d7055;">2. Line a muffin tin with 1 bacon rasher per cup</p>
+      <p style="margin:0 0 6px;font-size:13px;color:#4d7055;">3. Crack 1 egg into each cup, season with salt &amp; pepper</p>
+      <p style="margin:0;font-size:13px;color:#4d7055;">4. Bake 12–15 minutes until whites are set. Done.</p>
+    </div>
+    <p style="margin:0 0 20px;font-size:14px;color:#4d7055;line-height:1.7;">💡 <strong style="color:#dfeedd;">Keto tip:</strong> The hardest part of starting keto isn't the food — it's the first 3 days. After that, your hunger drops dramatically and your energy stabilises. Most people are surprised by how easy it gets.</p>
+    <div style="text-align:center;margin-top:24px;">
+      <a href="${APP_URL}/start" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Start My Free 7-Day Plan →</a>
+      <p style="margin:10px 0 0;font-size:12px;color:#2e4a32;">No credit card · Full app access for 7 days</p>
+    </div>`;
+  const resend = getResend();
+  return resend.emails.send({ from: FROM, to, subject: 'Did you try the keto recipes? 🍳', html: nurtureLayout(content, 'Day 2 — a quick keto win for tonight') });
+}
+
+// Lead Nurture Step 2 — Day 5: "The science behind keto"
+export async function sendLeadNurture2(to: string) {
+  const content = `
+    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#dfeedd;">Why keto works when nothing else does 🔬</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#4d7055;line-height:1.7;">Most diets fail because they fight your body. Keto works <em style="color:#dfeedd;">with</em> it.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
+      ${[
+        ['🔥','Fat becomes fuel','When carbs are cut below 20g/day, your liver converts fat into ketones — a cleaner, more stable energy source than glucose.'],
+        ['😋','Hunger disappears','Ketones suppress ghrelin (the hunger hormone). Most keto dieters report eating less without trying.'],
+        ['🧠','Mental clarity returns','The brain runs up to 25% more efficiently on ketones than on glucose. The "brain fog" lifting is one of the most reported benefits.'],
+        ['⚖️','Weight loss accelerates','Insulin levels drop, signalling your body to release stored fat. Water weight drops first (3–5 lbs in week 1), then steady fat loss follows.'],
+      ].map(([icon, title, desc]) => `
+        <div style="padding:14px 16px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.1);border-radius:12px;">
+          <p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#dfeedd;">${icon} ${title}</p>
+          <p style="margin:0;font-size:13px;color:#4d7055;line-height:1.5;">${desc}</p>
+        </div>`).join('')}
+    </div>
+    <p style="margin:0 0 20px;font-size:14px;color:#4d7055;line-height:1.7;">The first 7 days are the transition. After that, your body is fat-adapted and the results compound. Our free trial gives you a guided 7-day plan with daily check-ins, meal tracking, and coaching so you don't have to figure it out alone.</p>
+    <div style="text-align:center;">
+      <a href="${APP_URL}/start" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Try the 7-Day Free Plan →</a>
+    </div>`;
+  const resend = getResend();
+  return resend.emails.send({ from: FROM, to, subject: 'The science behind why keto actually works 🔬', html: nurtureLayout(content, 'Why keto works when other diets fail — the real science') });
+}
+
+// Lead Nurture Step 3 — Day 8: "The #1 mistake"
+export async function sendLeadNurture3(to: string) {
+  const content = `
+    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#dfeedd;">The #1 mistake that kills keto results ⚠️</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#4d7055;line-height:1.7;">After helping thousands of people through their keto journey, we see the same mistake over and over:</p>
+    <div style="padding:20px 22px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.18);border-radius:14px;margin-bottom:20px;">
+      <p style="margin:0 0 8px;font-size:16px;font-weight:800;color:#f87171;">❌ Going it alone without tracking</p>
+      <p style="margin:0;font-size:14px;color:#4d7055;line-height:1.7;">People cut carbs but unknowingly eat hidden carbs in sauces, dressings, and "healthy" foods. Without tracking, they stall in week 2 and assume keto doesn't work for them. It does — they just missed the carbs hiding in plain sight.</p>
+    </div>
+    ${[
+      ['Hidden carbs in "healthy" yogurt', '12g per serving'],
+      ['Tomato sauce (store-bought)', '8–14g per half cup'],
+      ['Protein bars marketed as "low carb"', '15–20g net carbs'],
+      ['Salad dressings', '5–12g per 2 tbsp'],
+    ].map(([food, carbs]) => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(16,185,129,.08);">
+        <span style="font-size:13px;color:#4d7055;">${food}</span>
+        <span style="font-size:13px;font-weight:700;color:#f87171;">${carbs}</span>
+      </div>`).join('')}
+    <p style="margin:20px 0;font-size:14px;color:#4d7055;line-height:1.7;">Our app tracks every macro automatically, flags hidden carbs, and keeps your net carbs in the safe zone every day. That's why our users see consistent results — not because they're more disciplined, but because they have the right data.</p>
+    <div style="text-align:center;">
+      <a href="${APP_URL}/start" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Track My Macros Free for 7 Days →</a>
+    </div>`;
+  const resend = getResend();
+  return resend.emails.send({ from: FROM, to, subject: 'The #1 mistake that kills keto results (and how to avoid it) ⚠️', html: nurtureLayout(content, 'Are hidden carbs killing your results?') });
+}
+
+// Lead Nurture Step 4 — Day 12: Last nudge
+export async function sendLeadNurture4(to: string) {
+  const content = `
+    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#dfeedd;">Last one from us 👋</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#4d7055;line-height:1.7;">We've sent you a few emails about keto. We won't keep nudging you — but we'd love for you to give it one real shot.</p>
+    <div style="padding:20px 22px;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.15);border-radius:14px;margin-bottom:20px;">
+      <p style="margin:0 0 12px;font-size:14px;font-weight:800;color:#dfeedd;">What you get in the free 7-day trial:</p>
+      ${['✅ Personalized 30-day keto meal plan','✅ Daily check-ins + streak tracking','✅ 500+ keto recipes with full macros','✅ AI food scanner (snap a photo → instant macros)','✅ Daily coaching tips + progress charts','✅ No credit card required — ever'].map(item => `<p style="margin:0 0 6px;font-size:13px;color:#34d399;">${item}</p>`).join('')}
+    </div>
+    <p style="margin:0 0 20px;font-size:14px;color:#4d7055;line-height:1.7;">The trial starts with a 5-minute quiz so we can personalise your plan. Most people complete it in one sitting and start their first keto day the same day.</p>
+    <div style="text-align:center;">
+      <a href="${APP_URL}/start" style="display:inline-block;padding:14px 34px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:15px;border-radius:12px;text-decoration:none;">Start My Free Trial →</a>
+      <p style="margin:10px 0 0;font-size:12px;color:#2e4a32;">Takes 5 minutes · No card needed</p>
+    </div>`;
+  const resend = getResend();
+  return resend.emails.send({ from: FROM, to, subject: "One last thing before we go quiet 👋", html: nurtureLayout(content, 'Your keto transformation is one step away') });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TRIAL NURTURE SEQUENCE  (steps 1–4, sent by cron/trial-nurture.ts)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Trial Nurture Step 1 — Day 1 after expiry
+export async function sendTrialNurture1(to: string, name: string) {
+  const firstName = name.split(' ')[0];
+  const content = `
+    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#dfeedd;">Your free trial has ended, ${firstName} 🔒</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#4d7055;line-height:1.7;">Your 7-day free trial is over — but everything you built is still there, waiting for you.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+      ${[['📅','Your meal plan','30 days ready'],['📊','Your progress','Saved & tracked'],['🍽️','Your recipes','500+ unlocked'],['🔥','Your streak','Ready to resume']].map(([icon,label,val]) => `
+        <div style="padding:14px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.12);border-radius:12px;text-align:center;">
+          <div style="font-size:22px;">${icon}</div>
+          <div style="font-size:12px;color:#4d7055;margin-top:4px;">${label}</div>
+          <div style="font-size:13px;font-weight:700;color:#dfeedd;">${val}</div>
+        </div>`).join('')}
+    </div>
+    <p style="margin:0 0 20px;font-size:14px;color:#4d7055;line-height:1.7;">Subscribing unlocks everything from where you left off. No re-setup, no starting over. Plans start from just a few dollars per week.</p>
+    <div style="text-align:center;">
+      <a href="${APP_URL}/dashboard/upgrade" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Continue My Journey →</a>
+    </div>`;
+  const resend = getResend();
+  return resend.emails.send({ from: FROM, to, subject: `${firstName}, your free trial has ended — here's how to continue`, html: layout(content, 'Your 7-day trial is over — unlock your journey') });
+}
+
+// Trial Nurture Step 2 — Day 4 after expiry
+export async function sendTrialNurture2(to: string, name: string) {
+  const firstName = name.split(' ')[0];
+  const content = `
+    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#dfeedd;">What you proved in 7 days, ${firstName} 💪</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#4d7055;line-height:1.7;">You completed a 7-day keto trial. That already puts you ahead of 80% of people who say they'll "start Monday."</p>
+    <div style="padding:18px 20px;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.15);border-radius:14px;margin-bottom:20px;">
+      <p style="margin:0 0 10px;font-size:14px;font-weight:700;color:#dfeedd;">Here's what typically happens after day 7:</p>
+      ${[['Day 8–14','Fat adaptation completes. Energy stabilises. Hunger drops.'],['Day 15–21','Visible body composition changes begin. Sleep improves.'],['Day 22–30','Metabolic shift locked in. Weight loss becomes predictable.']].map(([d,desc]) => `
+        <div style="display:flex;gap:12px;margin-bottom:8px;">
+          <span style="font-size:12px;font-weight:700;color:#10b981;white-space:nowrap;padding-top:2px;">${d}</span>
+          <span style="font-size:13px;color:#4d7055;line-height:1.5;">${desc}</span>
+        </div>`).join('')}
+    </div>
+    <p style="margin:0 0 20px;font-size:14px;color:#4d7055;line-height:1.7;">You're right at the point where the results accelerate — and the hardest part (adaptation) is already behind you. Don't let that work go to waste.</p>
+    <div style="text-align:center;">
+      <a href="${APP_URL}/dashboard/upgrade" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Continue From Day 8 →</a>
+    </div>`;
+  const resend = getResend();
+  return resend.emails.send({ from: FROM, to, subject: `What typically happens in days 8–30 of keto, ${firstName}`, html: layout(content, "The best results are in days 8–30 — don't stop now") });
+}
+
+// Trial Nurture Step 3 — Day 8 after expiry
+export async function sendTrialNurture3(to: string, name: string) {
+  const firstName = name.split(' ')[0];
+  const content = `
+    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#dfeedd;">Is something holding you back, ${firstName}?</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#4d7055;line-height:1.7;">You haven't subscribed yet. That's completely fine — but I want to make sure it's not because of something we can fix.</p>
+    ${[['💰 Cost concern','Our Basic plan is less than a coffee per week. Less than one skipped takeaway meal pays for a full month.'],['⏰ Not ready yet',"That's fair. But every day in adaptation mode is progress. Pick it back up whenever — your data is saved."],['🤷 Not sure it works','The trial gave you real data on how your body responds to keto. The results don\'t lie — check your progress page.']].map(([q,a]) => `
+      <div style="padding:14px 16px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.1);border-radius:12px;margin-bottom:10px;">
+        <p style="margin:0 0 5px;font-size:14px;font-weight:700;color:#dfeedd;">${q}</p>
+        <p style="margin:0;font-size:13px;color:#4d7055;line-height:1.5;">${a}</p>
+      </div>`).join('')}
+    <div style="text-align:center;margin-top:22px;">
+      <a href="${APP_URL}/dashboard/upgrade" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">See Plans & Pricing →</a>
+    </div>`;
+  const resend = getResend();
+  return resend.emails.send({ from: FROM, to, subject: `Quick question, ${firstName} — what's holding you back?`, html: layout(content, "We want to help — what's in the way?") });
+}
+
+// Trial Nurture Step 4 — Day 14 after expiry: final
+export async function sendTrialNurture4(to: string, name: string) {
+  const firstName = name.split(' ')[0];
+  const content = `
+    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#dfeedd;">Our last email to you, ${firstName}</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#4d7055;line-height:1.7;">We don't believe in spamming people. This is the last time we'll reach out about your trial.</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#4d7055;line-height:1.7;">If you ever want to continue your keto journey — your account, progress, and meal plan are all saved. You can pick it back up any time at the link below.</p>
+    <div style="padding:20px 22px;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.15);border-radius:14px;margin-bottom:20px;text-align:center;">
+      <p style="margin:0 0 6px;font-size:15px;font-weight:800;color:#dfeedd;">Your journey is paused, not over.</p>
+      <p style="margin:0;font-size:13px;color:#4d7055;">Everything you logged during your trial is waiting for you.</p>
+    </div>
+    <div style="text-align:center;">
+      <a href="${APP_URL}/dashboard/upgrade" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Resume My Journey →</a>
+    </div>
+    <p style="margin:20px 0 0;font-size:12px;color:#2e4a32;text-align:center;">After this, we'll stop emailing you about your subscription. You'll only hear from us if you re-activate.</p>`;
+  const resend = getResend();
+  return resend.emails.send({ from: FROM, to, subject: `${firstName}, this is our last email about your trial`, html: layout(content, "Your keto journey is paused, not over") });
+}
