@@ -102,20 +102,13 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
     .options { display: flex; flex-direction: column; gap: .65rem; }
     .options.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; }
     .opt {
-      display: flex; align-items: center; gap: .9rem;
+      display: flex; align-items: center; gap: .85rem;
       background: var(--card); border: 1.5px solid var(--line);
-      border-radius: 14px; padding: 1rem 1.1rem;
+      border-radius: 14px; padding: 1rem 1.15rem;
       cursor: pointer; transition: all .18s; user-select: none; position: relative;
     }
     .opt:hover { border-color: rgba(255,92,122,.4); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(255,92,122,.08); }
-    .opt.selected { border-color: var(--accent); background: rgba(255,92,122,.05); box-shadow: 0 0 0 3px rgba(255,92,122,.1); }
-    .opt-icon {
-      width: 44px; height: 44px; border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.3rem; flex-shrink: 0;
-      background: var(--bg-alt); transition: background .18s;
-    }
-    .opt.selected .opt-icon { background: rgba(255,92,122,.12); }
+    .opt.selected { border-color: var(--accent); background: rgba(255,92,122,.04); box-shadow: 0 0 0 3px rgba(255,92,122,.1); }
     .opt-body { flex: 1; }
     .opt-title { font-family: 'Bricolage Grotesque', sans-serif; font-size: .9rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
     .opt-sub { font-size: .72rem; color: var(--muted); margin-top: .15rem; }
@@ -338,15 +331,18 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
       letter-spacing: 0.1em; text-transform: uppercase;
     }
 
-    .insights-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 18px; }
+    .insights-list { display: flex; flex-direction: column; gap: 0; margin-bottom: 18px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
     .insight-row {
-      display: flex; align-items: flex-start; gap: 9px;
-      font-size: .8rem; line-height: 1.55; color: var(--ink-soft);
+      display: flex; align-items: flex-start; gap: 11px;
+      padding: 12px 14px; border-bottom: 1px solid var(--line);
+      background: var(--card);
     }
-    .insight-row strong { color: var(--ink); }
+    .insight-row:last-child { border-bottom: none; }
+    .insight-row span:last-child { font-size: .8rem; line-height: 1.6; color: var(--ink-soft); padding-top: 1px; }
+    .insight-row strong { color: var(--ink); font-weight: 600; }
     .insight-dot {
-      flex-shrink: 0; margin-top: 2px;
-      width: 16px; height: 16px; border-radius: 50%;
+      flex-shrink: 0; margin-top: 3px;
+      width: 18px; height: 18px; border-radius: 50%;
       background: rgba(255,92,122,.12); display: flex; align-items: center; justify-content: center;
     }
     .insight-dot svg { display: block; }
@@ -519,7 +515,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
       <p class="step-hint">This shapes every meal, every tip, every day of your plan.</p>
       <div class="options">
         <div class="opt" onclick="selectSingle(1,'weight_loss',this)">
-          <div class="opt-icon">🔥</div>
           <div class="opt-body">
             <div class="opt-title">Lose weight</div>
             <div class="opt-sub">Burn fat, feel lighter, fit into your favourite clothes</div>
@@ -527,7 +522,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectSingle(1,'muscle',this)">
-          <div class="opt-icon">💪</div>
           <div class="opt-body">
             <div class="opt-title">Build lean muscle</div>
             <div class="opt-sub">Stay strong and toned while staying keto</div>
@@ -535,7 +529,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectSingle(1,'energy',this)">
-          <div class="opt-icon">⚡</div>
           <div class="opt-body">
             <div class="opt-title">Boost energy &amp; focus</div>
             <div class="opt-sub">End brain fog, power through the day without crashes</div>
@@ -543,7 +536,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectSingle(1,'health',this)">
-          <div class="opt-icon">❤️</div>
           <div class="opt-body">
             <div class="opt-title">Improve overall health</div>
             <div class="opt-sub">Better blood sugar, cholesterol, and metabolic markers</div>
@@ -562,7 +554,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
       <p class="step-hint">Honest answer helps us set the right pace for your plan.</p>
       <div class="options">
         <div class="opt" onclick="selectSingle(2,'new',this)">
-          <div class="opt-icon">🆕</div>
           <div class="opt-body">
             <div class="opt-title">Never tried it</div>
             <div class="opt-sub">I'm completely new to the keto diet</div>
@@ -570,7 +561,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectSingle(2,'tried',this)">
-          <div class="opt-icon">🌱</div>
           <div class="opt-body">
             <div class="opt-title">Tried it briefly</div>
             <div class="opt-sub">Started but couldn't stick with it</div>
@@ -578,7 +568,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectSingle(2,'months',this)">
-          <div class="opt-icon">✅</div>
           <div class="opt-body">
             <div class="opt-title">Done it for months</div>
             <div class="opt-sub">I know the basics, ready to level up</div>
@@ -586,7 +575,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectSingle(2,'current',this)">
-          <div class="opt-icon">🏆</div>
           <div class="opt-body">
             <div class="opt-title">Currently eating keto</div>
             <div class="opt-sub">I want better results and structure</div>
@@ -605,7 +593,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
       <p class="step-hint">Pick up to 3 — we'll build solutions into your plan.</p>
       <div class="options">
         <div class="opt" onclick="selectMulti(3,'cravings',this,3)">
-          <div class="opt-icon">🍫</div>
           <div class="opt-body">
             <div class="opt-title">Carb &amp; sugar cravings</div>
             <div class="opt-sub">Hard to resist bread, pasta, sweets</div>
@@ -613,7 +600,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectMulti(3,'meal_prep',this,3)">
-          <div class="opt-icon">🍽️</div>
           <div class="opt-body">
             <div class="opt-title">Meal planning &amp; prep</div>
             <div class="opt-sub">Don't know what to cook every day</div>
@@ -621,7 +607,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectMulti(3,'social',this,3)">
-          <div class="opt-icon">🍕</div>
           <div class="opt-body">
             <div class="opt-title">Eating out socially</div>
             <div class="opt-sub">Hard to stay keto at restaurants or events</div>
@@ -629,7 +614,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectMulti(3,'consistent',this,3)">
-          <div class="opt-icon">⏰</div>
           <div class="opt-body">
             <div class="opt-title">Staying consistent</div>
             <div class="opt-sub">Start strong but motivation fades</div>
@@ -637,7 +621,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectMulti(3,'macros',this,3)">
-          <div class="opt-icon">🔢</div>
           <div class="opt-body">
             <div class="opt-title">Understanding macros</div>
             <div class="opt-sub">Confused by fat/carb/protein ratios</div>
@@ -645,7 +628,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectMulti(3,'satisfying',this,3)">
-          <div class="opt-icon">😋</div>
           <div class="opt-body">
             <div class="opt-title">Finding satisfying meals</div>
             <div class="opt-sub">Keto food feels boring or restrictive</div>
@@ -665,7 +647,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
       <p class="step-hint">Select all that apply — we filter recipes accordingly.</p>
       <div class="options">
         <div class="opt" id="opt-none" onclick="selectRestriction('none',this)">
-          <div class="opt-icon">✅</div>
           <div class="opt-body">
             <div class="opt-title">No restrictions</div>
             <div class="opt-sub">I eat everything</div>
@@ -673,7 +654,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectRestriction('dairy_free',this)">
-          <div class="opt-icon">🥛</div>
           <div class="opt-body">
             <div class="opt-title">Dairy-free</div>
             <div class="opt-sub">No milk, cheese, butter or cream</div>
@@ -681,7 +661,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectRestriction('nut_free',this)">
-          <div class="opt-icon">🥜</div>
           <div class="opt-body">
             <div class="opt-title">Nut-free</div>
             <div class="opt-sub">Allergic to or avoiding all nuts</div>
@@ -689,7 +668,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectRestriction('vegetarian',this)">
-          <div class="opt-icon">🥦</div>
           <div class="opt-body">
             <div class="opt-title">Vegetarian</div>
             <div class="opt-sub">No meat, but eggs and dairy are fine</div>
@@ -697,7 +675,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectRestriction('gluten_free',this)">
-          <div class="opt-icon">🌾</div>
           <div class="opt-body">
             <div class="opt-title">Gluten-free</div>
             <div class="opt-sub">No wheat, barley or rye</div>
@@ -716,7 +693,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
       <p class="step-hint">We calibrate your calories and macros to your lifestyle.</p>
       <div class="options">
         <div class="opt" onclick="selectSingle(5,'sedentary',this)">
-          <div class="opt-icon">🪑</div>
           <div class="opt-body">
             <div class="opt-title">Mostly sedentary</div>
             <div class="opt-sub">Desk job, little to no regular exercise</div>
@@ -724,7 +700,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectSingle(5,'light',this)">
-          <div class="opt-icon">🚶</div>
           <div class="opt-body">
             <div class="opt-title">Lightly active</div>
             <div class="opt-sub">1–2 light workouts or walks per week</div>
@@ -732,7 +707,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectSingle(5,'moderate',this)">
-          <div class="opt-icon">🏃</div>
           <div class="opt-body">
             <div class="opt-title">Moderately active</div>
             <div class="opt-sub">3–4 workouts per week</div>
@@ -740,7 +714,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectSingle(5,'very_active',this)">
-          <div class="opt-icon">🏋️</div>
           <div class="opt-body">
             <div class="opt-title">Very active</div>
             <div class="opt-sub">5+ intense training days per week</div>
@@ -759,7 +732,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
       <p class="step-hint">No judgment — this helps us match you with the right plan.</p>
       <div class="options">
         <div class="opt" onclick="selectSingle(6,'exploring',this)">
-          <div class="opt-icon">🔍</div>
           <div class="opt-body">
             <div class="opt-title">Just exploring options</div>
             <div class="opt-sub">Still learning, not ready to commit yet</div>
@@ -767,7 +739,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectSingle(6,'ready',this)">
-          <div class="opt-icon">🌟</div>
           <div class="opt-body">
             <div class="opt-title">Ready when I find the right plan</div>
             <div class="opt-sub">I'm motivated, just need the right structure</div>
@@ -775,7 +746,6 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
         <div class="opt" onclick="selectSingle(6,'committed',this)">
-          <div class="opt-icon">🚀</div>
           <div class="opt-body">
             <div class="opt-title">Starting this week — I'm committed!</div>
             <div class="opt-sub">I'm done waiting, let's do this now</div>
@@ -1075,10 +1045,10 @@ function getInsights() {
   if (goalMap[g]) ins.push(goalMap[g]);
 
   var expMap = {
-    new:     { icon:'🗺️', text:'You get <strong>step-by-step daily guidance</strong> — no keto knowledge needed. Every meal and day is mapped out.' },
-    tried:   { icon:'🔄', text:'This time you have <strong>real structure</strong> — no more guessing. Every meal is planned, every day has a clear action.' },
-    months:  { icon:'📈', text:'Advanced <strong>analytics and progress tracking</strong> help you identify exactly what is holding back your results.' },
-    current: { icon:'🎯', text:'Precision <strong>macro optimization tools</strong> and an AI coach help you dial in for next-level results.' },
+    new:     { icon: chk, text:'You get <strong>step-by-step daily guidance</strong> — no keto knowledge needed. Every meal and day is mapped out.' },
+    tried:   { icon: chk, text:'This time you have <strong>real structure</strong> — no more guessing. Every meal is planned, every day has a clear action.' },
+    months:  { icon: chk, text:'Advanced <strong>analytics and progress tracking</strong> help you identify exactly what is holding back your results.' },
+    current: { icon: chk, text:'Precision <strong>macro optimization tools</strong> and an AI coach help you dial in for next-level results.' },
   };
   if (expMap[e]) ins.push(expMap[e]);
 
@@ -1091,8 +1061,8 @@ function getInsights() {
     satisfying: { icon: chk, text:'<strong>87+ delicious recipes</strong> across breakfast, lunch, dinner and snacks — keto never has to be boring.' },
   };
   if (top && challengeMap[top]) ins.push(challengeMap[top]);
-  else if (a === 'very_active') ins.push({ icon:'🏋️', text:'Your plan includes <strong>extra protein and calorie targets</strong> calibrated for high-intensity training days.' });
-  else ins.push({ icon:'📅', text:'Your <strong>30-day structured roadmap</strong> lays out exactly what to eat and do — every single day.' });
+  else if (a === 'very_active') ins.push({ icon: chk, text:'Your plan includes <strong>extra protein and calorie targets</strong> calibrated for high-intensity training days.' });
+  else ins.push({ icon: chk, text:'Your <strong>30-day structured roadmap</strong> lays out exactly what to eat and do — every single day.' });
 
   return ins.slice(0, 3);
 }
