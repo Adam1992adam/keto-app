@@ -448,25 +448,27 @@ const PAGE_DESC  = 'Get 7 delicious keto recipes with full macros delivered to y
 </footer>
 
 <script>
-  const emailInput = document.getElementById('emailInput');
-  const submitBtn  = document.getElementById('submitBtn');
-  const formMsg    = document.getElementById('formMsg');
+  const emailInput = document.getElementById('emailInput') as HTMLInputElement | null;
+  const submitBtn  = document.getElementById('submitBtn')  as HTMLButtonElement | null;
+  const formMsg    = document.getElementById('formMsg')    as HTMLElement | null;
 
-  function showMsg(text, type) {
+  function showMsg(text: string, type: string) {
+    if (!formMsg) return;
     formMsg.textContent = text;
     formMsg.className   = 'form-msg ' + type;
   }
 
-  submitBtn.addEventListener('click', async () => {
+  submitBtn?.addEventListener('click', async () => {
+    if (!emailInput || !submitBtn || !formMsg) return;
     const email = emailInput.value.trim();
     if (!email || !email.includes('@')) {
       showMsg('Please enter a valid email address.', 'error');
       return;
     }
 
-    submitBtn.disabled   = true;
+    submitBtn.disabled    = true;
     submitBtn.textContent = 'Sending…';
-    formMsg.className    = 'form-msg';
+    formMsg.className     = 'form-msg';
 
     try {
       const res  = await fetch('/api/leads/collect', {
@@ -492,8 +494,8 @@ const PAGE_DESC  = 'Get 7 delicious keto recipes with full macros delivered to y
     }
   });
 
-  emailInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') submitBtn.click();
+  emailInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitBtn?.click();
   });
 </script>
 
