@@ -17,708 +17,925 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
   <meta name="theme-color" content="#FF5C7A"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
-    :root{
-      --bg:#FAF6F1;--card:#fff;--card2:#F2EDE5;
-      --border:rgba(255,90,122,.13);--border2:rgba(255,90,122,.28);
-      --text:#1A0A00;--soft:#7A6055;--muted:#C8B4AA;
-      --accent:#FF5C7A;--accent2:#ff8fa3;--accent-bg:rgba(255,92,122,.07);
-      --green:#10b981;--gold:#f59e0b;--blue:#3b82f6;
+    :root {
+      --bg: #FAF6F1; --bg-alt: #F2EDE5; --ink: #16110F; --ink-soft: #4A4340;
+      --muted: #8A8077; --line: #E5DED2;
+      --accent: #FF5C7A; --accent-2: #B6FF3C; --accent-3: #FF914D; --card: #FFFFFF;
+      --green: #10b981; --gold: #f59e0b;
     }
-    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-    html,body{height:100%;overflow-x:hidden;}
-    body{font-family:'Bricolage Grotesque',sans-serif;background:var(--bg);color:var(--text);}
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+    body { font-family: 'Geist', sans-serif; background: var(--bg); color: var(--ink); }
+    a { color: inherit; text-decoration: none; }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+    img { display: block; max-width: 100%; }
+    input { font-family: inherit; }
+    ::selection { background: var(--accent); color: #fff; }
 
-    /* ── NAV ── */
-    .qnav{
-      position:fixed;top:0;left:0;right:0;z-index:100;
-      padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;
-      background:rgba(250,246,241,.9);backdrop-filter:blur(12px);
-      border-bottom:1px solid var(--border);
+    /* ──────────────────────────────────────────
+       QUIZ PHASE
+    ────────────────────────────────────────── */
+    .qnav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: .85rem 1.5rem; display: flex; align-items: center; justify-content: space-between;
+      background: rgba(250,246,241,.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
     }
-    .qnav-logo{display:flex;align-items:center;gap:.4rem;font-weight:800;font-size:1rem;color:var(--text);text-decoration:none;}
-    .qnav-logo span{color:var(--accent);}
-    .qnav-login{font-size:.8rem;font-weight:700;color:var(--soft);text-decoration:none;transition:color .2s;}
-    .qnav-login:hover{color:var(--accent);}
+    .qnav-logo {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 18px; font-weight: 700; letter-spacing: -0.03em; color: var(--ink);
+    }
+    .qnav-logo .dot {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: var(--accent); display: grid; place-items: center;
+      font-family: 'Instrument Serif', serif; font-style: italic;
+      font-size: 16px; color: #fff; font-weight: 400; flex-shrink: 0;
+    }
+    .qnav-logo em { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; color: var(--accent); }
+    .qnav-login {
+      font-family: 'Geist Mono', monospace; font-size: 11px; font-weight: 500;
+      letter-spacing: 0.08em; color: var(--muted); transition: color .2s;
+    }
+    .qnav-login:hover { color: var(--ink); }
 
-    /* ── PROGRESS ── */
-    .prog-wrap{
-      position:fixed;top:52px;left:0;right:0;z-index:99;
-      padding:.5rem 1.5rem .4rem;background:rgba(250,246,241,.9);backdrop-filter:blur(8px);
+    .prog-wrap {
+      position: fixed; top: 52px; left: 0; right: 0; z-index: 99;
+      padding: .45rem 1.5rem .35rem;
+      background: rgba(250,246,241,.9); backdrop-filter: blur(8px);
     }
-    .prog-bar{height:4px;background:var(--border);border-radius:4px;overflow:hidden;}
-    .prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width .45s ease;}
-    .prog-label{font-size:.68rem;font-weight:700;color:var(--muted);text-align:right;margin-top:.3rem;}
-
-    /* ── MAIN CONTAINER ── */
-    .quiz-wrap{
-      min-height:100vh;padding:6.5rem 1rem 3rem;
-      display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
-    }
-
-    /* ── STEP ── */
-    .step{display:none;width:100%;max-width:600px;animation:fadeUp .35s ease both;}
-    .step.active{display:block;}
-    @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
-
-    .step-eyebrow{
-      display:inline-flex;align-items:center;gap:.4rem;
-      background:var(--accent-bg);border:1px solid var(--border);
-      border-radius:99px;padding:.28rem .85rem;
-      font-size:.67rem;font-weight:800;color:var(--accent);
-      text-transform:uppercase;letter-spacing:.1em;margin-bottom:1rem;
-    }
-    .step-q{font-size:1.75rem;font-weight:800;line-height:1.15;margin-bottom:.55rem;}
-    .step-q em{font-style:italic;color:var(--accent);}
-    .step-hint{font-size:.82rem;color:var(--soft);margin-bottom:1.75rem;line-height:1.5;}
-
-    /* ── OPTION CARDS ── */
-    .options{display:flex;flex-direction:column;gap:.75rem;}
-    .options.grid2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
-    .opt{
-      display:flex;align-items:center;gap:.9rem;
-      background:var(--card);border:2px solid var(--border);
-      border-radius:16px;padding:1rem 1.15rem;
-      cursor:pointer;transition:all .2s;user-select:none;
-      position:relative;
-    }
-    .opt:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,92,122,.1);}
-    .opt.selected{
-      border-color:var(--accent);background:var(--accent-bg);
-      box-shadow:0 0 0 3px rgba(255,92,122,.12);
-    }
-    .opt-icon{
-      width:44px;height:44px;border-radius:12px;
-      display:flex;align-items:center;justify-content:center;
-      font-size:1.3rem;flex-shrink:0;
-      background:var(--card2);transition:background .2s;
-    }
-    .opt.selected .opt-icon{background:rgba(255,92,122,.14);}
-    .opt-body{flex:1;}
-    .opt-title{font-size:.92rem;font-weight:800;line-height:1.2;}
-    .opt-sub{font-size:.72rem;color:var(--soft);margin-top:.18rem;}
-    .opt-check{
-      width:22px;height:22px;border-radius:50%;
-      border:2px solid var(--muted);flex-shrink:0;
-      display:flex;align-items:center;justify-content:center;
-      transition:all .2s;
-    }
-    .opt.selected .opt-check{background:var(--accent);border-color:var(--accent);}
-    .opt-check svg{display:none;}
-    .opt.selected .opt-check svg{display:block;}
-
-    /* multi-select variant */
-    .opt .opt-check.multi{border-radius:6px;}
-
-    /* ── NEXT BUTTON ── */
-    .next-btn{
-      width:100%;margin-top:1.5rem;padding:1rem;
-      background:linear-gradient(135deg,var(--accent),var(--accent2));
-      border:none;border-radius:14px;color:#fff;
-      font-family:'Bricolage Grotesque',sans-serif;font-size:.95rem;font-weight:800;
-      cursor:pointer;transition:all .25s;
-      display:flex;align-items:center;justify-content:center;gap:.5rem;
-      position:relative;overflow:hidden;
-    }
-    .next-btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;}
-    .next-btn:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(255,92,122,.35);}
-    .next-btn::before{
-      content:'';position:absolute;inset:0;
-      background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);
-      transform:translateX(-100%);transition:transform .5s;
-    }
-    .next-btn:not(:disabled):hover::before{transform:translateX(100%);}
-
-    .back-link{
-      display:inline-flex;align-items:center;gap:.3rem;
-      font-size:.78rem;font-weight:700;color:var(--muted);
-      border:none;background:none;cursor:pointer;
-      padding:.4rem 0;margin-bottom:.5rem;
-      transition:color .2s;
-    }
-    .back-link:hover{color:var(--soft);}
-
-    /* ── MULTI-SELECT COUNTER ── */
-    .multi-counter{
-      display:inline-flex;align-items:center;gap:.4rem;
-      font-size:.72rem;color:var(--soft);margin-top:.75rem;
-    }
-    .multi-counter strong{color:var(--accent);}
-
-    /* ── ANALYZING STEP ── */
-    .analyze-wrap{text-align:center;padding:2.5rem 1rem;}
-    .analyze-ring{
-      width:80px;height:80px;border-radius:50%;
-      border:4px solid var(--border);border-top-color:var(--accent);
-      animation:spin .9s linear infinite;margin:0 auto 1.75rem;
-    }
-    @keyframes spin{to{transform:rotate(360deg);}}
-    .analyze-title{font-size:1.5rem;font-weight:800;margin-bottom:.5rem;}
-    .analyze-msg{font-size:.88rem;color:var(--soft);min-height:1.5rem;transition:opacity .3s;}
-    .analyze-steps{
-      margin-top:2rem;display:flex;flex-direction:column;gap:.6rem;
-      max-width:320px;margin-left:auto;margin-right:auto;
-    }
-    .a-step{
-      display:flex;align-items:center;gap:.6rem;
-      font-size:.8rem;color:var(--muted);transition:color .4s;
-    }
-    .a-step.done{color:var(--text);}
-    .a-dot{
-      width:20px;height:20px;border-radius:50%;flex-shrink:0;
-      border:2px solid var(--muted);display:flex;align-items:center;justify-content:center;
-      font-size:.6rem;transition:all .4s;
-    }
-    .a-step.done .a-dot{background:var(--green);border-color:var(--green);color:#fff;}
-
-    /* ── RESULT STEP ── */
-    .result-hero{
-      text-align:center;padding:1.25rem 0 1.5rem;
-    }
-    .result-badge{
-      display:inline-flex;align-items:center;gap:.5rem;
-      background:linear-gradient(135deg,rgba(255,92,122,.12),rgba(255,143,163,.06));
-      border:1.5px solid var(--border2);border-radius:99px;
-      padding:.4rem 1.1rem;font-size:.72rem;font-weight:800;
-      color:var(--accent);margin-bottom:1rem;
-    }
-    .result-title{font-size:2rem;font-weight:800;line-height:1.1;margin-bottom:.5rem;}
-    .result-title em{font-style:italic;color:var(--accent);}
-    .result-sub{font-size:.88rem;color:var(--soft);line-height:1.6;}
-
-    .plan-rec{
-      background:linear-gradient(135deg,rgba(255,92,122,.08),rgba(255,143,163,.03));
-      border:2px solid var(--border2);border-radius:20px;
-      padding:1.25rem 1.4rem;margin:1.25rem 0;
-      display:flex;align-items:center;gap:1rem;
-    }
-    .plan-rec-icon{font-size:2.2rem;flex-shrink:0;}
-    .plan-rec-name{font-size:1.1rem;font-weight:800;}
-    .plan-rec-desc{font-size:.78rem;color:var(--soft);margin-top:.18rem;line-height:1.5;}
-    .plan-rec-tag{
-      margin-left:auto;flex-shrink:0;
-      padding:.3rem .85rem;border-radius:99px;
-      background:var(--accent);color:#fff;
-      font-size:.65rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+    .prog-bar { height: 3px; background: var(--line); border-radius: 4px; overflow: hidden; }
+    .prog-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width .45s ease; }
+    .prog-label {
+      font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: 0.16em;
+      text-transform: uppercase; color: var(--muted); text-align: right; margin-top: .28rem;
     }
 
-    .insights{display:flex;flex-direction:column;gap:.75rem;margin:1.25rem 0;}
-    .insight{
-      display:flex;align-items:flex-start;gap:.85rem;
-      background:var(--card);border:1px solid var(--border);
-      border-radius:14px;padding:.9rem 1rem;
+    .quiz-wrap {
+      min-height: 100vh; padding: 7rem 1rem 3rem;
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
     }
-    .insight-icon{
-      width:36px;height:36px;border-radius:10px;flex-shrink:0;
-      background:var(--accent-bg);display:flex;align-items:center;justify-content:center;
-      font-size:1rem;border:1px solid var(--border);
+
+    .step { display: none; width: 100%; max-width: 560px; animation: fadeUp .35s ease both; }
+    .step.active { display: block; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+    .step-eyebrow {
+      font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: 0.22em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 14px;
+      display: inline-flex; align-items: center; gap: 8px;
     }
-    .insight-text{font-size:.82rem;line-height:1.55;}
-    .insight-text strong{color:var(--text);}
-
-    /* ── TRIAL SIGNUP FORM ── */
-    .signup-section{
-      background:var(--card);border:1.5px solid var(--border);
-      border-radius:20px;padding:1.4rem 1.5rem;margin-top:1.5rem;
+    .step-eyebrow::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 0 0 3px rgba(255,92,122,.22);
     }
-    .signup-head{text-align:center;margin-bottom:1.25rem;}
-    .signup-head h3{font-size:1.15rem;font-weight:800;margin-bottom:.3rem;}
-    .signup-head p{font-size:.8rem;color:var(--soft);}
-    .trial-badge{
-      display:inline-flex;align-items:center;gap:.4rem;
-      background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);
-      border-radius:99px;padding:.28rem .85rem;
-      font-size:.7rem;font-weight:800;color:var(--green);
-      margin-bottom:.75rem;
+    .step-q {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 700;
+      letter-spacing: -0.03em; line-height: 1.1; margin-bottom: .55rem;
     }
-    .sf-field{margin-bottom:.9rem;}
-    .sf-label{display:block;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);margin-bottom:.4rem;}
-    .sf-wrap{position:relative;}
-    .sf-icon{position:absolute;left:.85rem;top:50%;transform:translateY(-50%);font-size:.85rem;pointer-events:none;}
-    .sf-input{
-      width:100%;padding:.8rem 1rem .8rem 2.5rem;
-      background:var(--card2);border:1.5px solid var(--border);
-      border-radius:11px;color:var(--text);
-      font-family:'Bricolage Grotesque',sans-serif;font-size:.875rem;font-weight:500;
-      outline:none;transition:all .2s;
+    .step-q em { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; color: var(--accent); }
+    .step-hint { font-size: .85rem; color: var(--ink-soft); margin-bottom: 1.75rem; line-height: 1.55; }
+
+    .options { display: flex; flex-direction: column; gap: .65rem; }
+    .options.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; }
+    .opt {
+      display: flex; align-items: center; gap: .9rem;
+      background: var(--card); border: 1.5px solid var(--line);
+      border-radius: 14px; padding: 1rem 1.1rem;
+      cursor: pointer; transition: all .18s; user-select: none; position: relative;
     }
-    .sf-input::placeholder{color:var(--muted);}
-    .sf-input:focus{border-color:var(--accent);background:rgba(255,92,122,.04);box-shadow:0 0 0 3px rgba(255,92,122,.1);}
-    .sf-input.err{border-color:#ef4444;}
-    .sf-err{font-size:.72rem;color:#ef4444;margin-top:.3rem;display:none;}
-    .sf-err.show{display:block;}
-
-    .pw-bars{display:flex;gap:.3rem;margin:.5rem 0 .25rem;}
-    .pw-bar{flex:1;height:3px;border-radius:2px;background:var(--muted);transition:background .3s;}
-    .pw-bar.w{background:#ef4444;}
-    .pw-bar.m{background:var(--gold);}
-    .pw-bar.s{background:var(--green);}
-    .pw-label{font-size:.67rem;color:var(--soft);}
-
-    .pw-toggle{
-      position:absolute;right:.85rem;top:50%;transform:translateY(-50%);
-      background:none;border:none;cursor:pointer;color:var(--soft);
-      font-size:.9rem;transition:color .2s;padding:.2rem;
+    .opt:hover { border-color: rgba(255,92,122,.4); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(255,92,122,.08); }
+    .opt.selected { border-color: var(--accent); background: rgba(255,92,122,.05); box-shadow: 0 0 0 3px rgba(255,92,122,.1); }
+    .opt-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; flex-shrink: 0;
+      background: var(--bg-alt); transition: background .18s;
     }
-    .pw-toggle:hover{color:var(--text);}
-
-    .signup-btn{
-      width:100%;margin-top:.5rem;padding:.95rem;
-      background:linear-gradient(135deg,var(--accent),var(--accent2));
-      border:none;border-radius:12px;color:#fff;
-      font-family:'Bricolage Grotesque',sans-serif;font-size:.92rem;font-weight:800;
-      cursor:pointer;transition:all .25s;
-      display:flex;align-items:center;justify-content:center;gap:.5rem;
+    .opt.selected .opt-icon { background: rgba(255,92,122,.12); }
+    .opt-body { flex: 1; }
+    .opt-title { font-family: 'Bricolage Grotesque', sans-serif; font-size: .9rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
+    .opt-sub { font-size: .72rem; color: var(--muted); margin-top: .15rem; }
+    .opt-check {
+      width: 20px; height: 20px; border-radius: 50%;
+      border: 1.5px solid var(--line); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .18s;
     }
-    .signup-btn:disabled{opacity:.5;cursor:not-allowed;}
-    .signup-btn:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(255,92,122,.35);}
-    .spin-sm{display:none;width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;animation:spin .7s linear infinite;}
-    .form-err{font-size:.78rem;color:#b91c1c;text-align:center;margin-top:.6rem;display:none;}
-    .form-err.show{display:block;}
+    .opt.selected .opt-check { background: var(--accent); border-color: var(--accent); }
+    .opt-check svg { display: none; }
+    .opt.selected .opt-check svg { display: block; }
+    .opt .opt-check.multi { border-radius: 5px; }
 
-    .already-link{text-align:center;font-size:.8rem;color:var(--soft);margin-top:.75rem;}
-    .already-link a{color:var(--accent);font-weight:800;text-decoration:none;}
-    .already-link a:hover{text-decoration:underline;}
-
-    .or-divider{display:flex;align-items:center;gap:.75rem;margin:1.1rem 0 .9rem;}
-    .or-line{flex:1;height:1px;background:var(--border);}
-    .or-text{font-size:.68rem;font-weight:700;color:var(--muted);}
-
-    .ebook-btn{
-      display:flex;align-items:center;justify-content:center;gap:.5rem;
-      width:100%;padding:.8rem;border:1.5px solid var(--border);
-      border-radius:12px;background:transparent;color:var(--soft);
-      font-family:'Bricolage Grotesque',sans-serif;font-size:.85rem;font-weight:700;
-      cursor:pointer;text-decoration:none;transition:all .2s;
+    .multi-counter {
+      display: inline-flex; align-items: center; gap: .4rem;
+      font-family: 'Geist Mono', monospace; font-size: .7rem; letter-spacing: 0.1em;
+      color: var(--muted); margin-top: .65rem;
     }
-    .ebook-btn:hover{border-color:var(--border2);color:var(--accent);}
+    .multi-counter strong { color: var(--accent); }
 
-    .trust-row{
-      display:flex;align-items:center;justify-content:center;
-      flex-wrap:wrap;gap:.4rem .8rem;margin-top:1rem;
-      font-size:.7rem;color:var(--muted);
+    .back-link {
+      display: inline-flex; align-items: center; gap: .3rem;
+      font-family: 'Geist Mono', monospace; font-size: .72rem; font-weight: 500;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted); padding: .4rem 0; margin-bottom: .5rem;
+      background: none; border: none; cursor: pointer; transition: color .2s;
     }
-    .trust-item{display:flex;align-items:center;gap:.3rem;}
-    .trust-sep{color:var(--border);}
+    .back-link:hover { color: var(--ink); }
 
-    /* ── SUCCESS ── */
-    .success-wrap{text-align:center;padding:2rem 1rem;}
-    .success-icon{font-size:3.5rem;margin-bottom:.85rem;}
-    .success-title{font-size:1.65rem;font-weight:800;color:var(--accent);margin-bottom:.5rem;}
-    .success-sub{font-size:.85rem;color:var(--soft);line-height:1.65;margin-bottom:1.5rem;}
-    .success-prog{height:4px;background:var(--border);border-radius:4px;overflow:hidden;}
-    .success-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;animation:grow 2.5s ease forwards;}
-    @keyframes grow{from{width:0;}to{width:100%;}}
+    .next-btn {
+      width: 100%; margin-top: 1.4rem; padding: 1rem;
+      background: var(--ink); color: var(--bg);
+      border: none; border-radius: 13px;
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: .95rem; font-weight: 600; letter-spacing: -0.01em;
+      cursor: pointer; transition: background .15s, transform .1s;
+      display: flex; align-items: center; justify-content: center; gap: .5rem;
+    }
+    .next-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .next-btn:not(:disabled):hover { background: var(--accent); transform: translateY(-1px); }
+    .next-btn:active { transform: scale(.98); }
 
-    @media(max-width:600px){
-      .step-q{font-size:1.4rem;}
-      .options.grid2{grid-template-columns:1fr;}
-      .result-title{font-size:1.6rem;}
+    .analyze-wrap { text-align: center; padding: 2.5rem 1rem; }
+    .analyze-ring {
+      width: 72px; height: 72px; border-radius: 50%;
+      border: 3px solid var(--line); border-top-color: var(--accent);
+      animation: spin .9s linear infinite; margin: 0 auto 1.75rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .analyze-title {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 1.5rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: .5rem;
+    }
+    .analyze-msg { font-size: .88rem; color: var(--ink-soft); min-height: 1.5rem; }
+    .analyze-steps {
+      margin-top: 2rem; display: flex; flex-direction: column; gap: .55rem;
+      max-width: 300px; margin-left: auto; margin-right: auto;
+    }
+    .a-step { display: flex; align-items: center; gap: .6rem; font-size: .8rem; color: var(--muted); transition: color .4s; }
+    .a-step.done { color: var(--ink); }
+    .a-dot {
+      width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+      border: 1.5px solid var(--line); display: flex; align-items: center; justify-content: center;
+      font-family: 'Geist Mono', monospace; font-size: .6rem; transition: all .4s;
+    }
+    .a-step.done .a-dot { background: var(--green); border-color: var(--green); color: #fff; }
+
+    /* ──────────────────────────────────────────
+       RESULT PHASE — AUTH.HTML SPLIT PANEL
+    ────────────────────────────────────────── */
+    .auth-shell {
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      align-items: start;
+      min-height: 100vh;
+    }
+
+    /* BRAND PANEL */
+    .brand {
+      position: sticky; top: 0; height: 100vh; overflow: hidden;
+      background: var(--ink); color: var(--bg);
+      display: flex; flex-direction: column;
+      padding: 36px 44px;
+    }
+    .brand-img { position: absolute; inset: 0; z-index: 0; opacity: 0.55; }
+    .brand-img img { width: 100%; height: 100%; object-fit: cover; filter: saturate(1.05); }
+    .brand-img::after {
+      content: ''; position: absolute; inset: 0;
+      background:
+        linear-gradient(180deg, rgba(0,0,0,.35) 0%, transparent 35%, rgba(22,17,15,1) 95%),
+        linear-gradient(90deg, rgba(0,0,0,.55) 0%, transparent 60%);
+    }
+    .brand-glow {
+      position: absolute; width: 700px; height: 700px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,92,122,.35), transparent 65%);
+      filter: blur(80px); bottom: -200px; left: -200px; z-index: 0; pointer-events: none;
+    }
+    .brand-inner { position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; flex: 1; }
+    .brand-logo {
+      font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; font-weight: 700;
+      letter-spacing: -0.03em; display: inline-flex; align-items: center; gap: 10px; color: var(--bg);
+    }
+    .brand-logo .dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--accent); display: grid; place-items: center;
+      font-family: 'Instrument Serif', serif; font-style: italic;
+      font-size: 18px; color: #fff; font-weight: 400;
+    }
+    .brand-logo em { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; color: var(--accent); }
+
+    .brand-mid { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 52px 0; }
+    .brand-eyebrow {
+      font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.22em;
+      text-transform: uppercase; color: var(--accent-2);
+      display: inline-flex; align-items: center; gap: 10px; margin-bottom: 24px;
+    }
+    .brand-eyebrow::before {
+      content: ''; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent-2); box-shadow: 0 0 0 4px rgba(182,255,60,.25);
+    }
+    .brand-h {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: clamp(40px, 5vw, 76px); font-weight: 700;
+      letter-spacing: -0.045em; line-height: 0.92;
+      max-width: 14ch; color: var(--bg);
+    }
+    .brand-h em { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; color: var(--accent); }
+    .brand-stats {
+      display: flex; gap: 34px; margin-top: 34px; padding-top: 26px;
+      border-top: 1px solid rgba(250,246,241,.18); max-width: 400px;
+    }
+    .brand-stat .l {
+      font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: 0.18em;
+      text-transform: uppercase; color: rgba(250,246,241,.55);
+    }
+    .brand-stat .v {
+      font-family: 'Bricolage Grotesque', sans-serif; font-size: 28px; font-weight: 700;
+      letter-spacing: -0.03em; line-height: 1; margin-top: 4px;
+    }
+    .brand-stat .v em { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; color: var(--accent); font-size: 16px; margin-left: 2px; }
+
+    .brand-quote {
+      margin-top: auto; padding: 20px 22px;
+      background: rgba(250,246,241,.08); border: 1px solid rgba(250,246,241,.14);
+      border-radius: 18px; backdrop-filter: blur(8px); max-width: 480px;
+    }
+    .brand-quote .mark {
+      font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+    }
+    .brand-quote .body {
+      font-family: 'Instrument Serif', serif; font-style: italic;
+      font-size: 17px; line-height: 1.48; color: var(--bg);
+    }
+    .brand-quote .meta {
+      margin-top: 14px; display: flex; align-items: center; gap: 10px;
+      padding-top: 14px; border-top: 1px dashed rgba(250,246,241,.14);
+    }
+    .brand-quote .name { font-weight: 600; font-size: 13px; color: var(--bg); }
+    .brand-quote .dot-sep { width: 3px; height: 3px; border-radius: 50%; background: rgba(250,246,241,.35); }
+    .brand-quote .loss { font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: 0.16em; color: var(--accent-2); }
+    .brand-quote .when { font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: 0.14em; color: rgba(250,246,241,.55); }
+    .quote-dots { display: flex; gap: 6px; margin-top: 12px; }
+    .quote-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: rgba(250,246,241,.22); cursor: pointer;
+      transition: width .2s, background .2s;
+    }
+    .quote-dot.on { width: 22px; border-radius: 3px; background: var(--accent); }
+
+    /* FORM PANE */
+    .form-pane {
+      background: var(--bg); display: flex; flex-direction: column;
+      padding: 36px 52px; min-height: 100vh;
+    }
+    .form-top {
+      display: flex; justify-content: flex-end; align-items: center;
+      font-family: 'Geist Mono', monospace; font-size: 12px;
+      letter-spacing: 0.04em; color: var(--muted);
+    }
+    .form-top a { color: var(--ink); font-weight: 500; margin-left: 6px; }
+    .form-top a:hover { color: var(--accent); }
+
+    .form-mid {
+      flex: 1; display: flex; flex-direction: column; justify-content: flex-start;
+      max-width: 420px; width: 100%; margin: 0 auto; padding: 32px 0;
+    }
+
+    /* Plan section */
+    .plan-eyebrow {
+      font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: 0.22em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 12px;
+    }
+    .plan-h {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: clamp(26px, 3.2vw, 38px); font-weight: 700;
+      letter-spacing: -0.04em; line-height: 0.95; margin-bottom: 8px;
+    }
+    .plan-h em { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; color: var(--accent); }
+    .plan-sub { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 16px; color: var(--ink-soft); line-height: 1.4; margin-bottom: 16px; }
+
+    .plan-card {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--card); border: 1.5px solid var(--line);
+      border-radius: 16px; padding: 15px 16px; margin-bottom: 10px;
+    }
+    .plan-card-icon { font-size: 1.9rem; flex-shrink: 0; }
+    .plan-card-body { flex: 1; min-width: 0; }
+    .plan-card-name { font-family: 'Bricolage Grotesque', sans-serif; font-size: .95rem; font-weight: 700; letter-spacing: -0.02em; }
+    .plan-card-desc { font-size: .73rem; color: var(--muted); margin-top: 2px; line-height: 1.5; }
+    .plan-card-tag {
+      flex-shrink: 0; padding: .28rem .75rem; border-radius: 99px;
+      background: var(--accent); color: #fff;
+      font-family: 'Geist Mono', monospace; font-size: .6rem; font-weight: 500;
+      letter-spacing: 0.1em; text-transform: uppercase;
+    }
+
+    .insights-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 18px; }
+    .insight-row {
+      display: flex; align-items: flex-start; gap: 9px;
+      font-size: .8rem; line-height: 1.55; color: var(--ink-soft);
+    }
+    .insight-row strong { color: var(--ink); }
+    .insight-dot { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+    /* Form section */
+    .form-divider { height: 1px; background: var(--line); margin: 18px 0; }
+    .form-eyebrow {
+      font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: 0.22em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 12px;
+    }
+    .form-h {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: clamp(26px, 3.2vw, 38px); font-weight: 700;
+      letter-spacing: -0.04em; line-height: 0.95;
+    }
+    .form-h em { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; color: var(--accent); }
+    .form-sub {
+      margin-top: 9px; margin-bottom: 20px;
+      font-family: 'Instrument Serif', serif; font-style: italic;
+      font-size: 16px; color: var(--ink-soft); line-height: 1.4;
+    }
+
+    .form-grid { display: flex; flex-direction: column; gap: 13px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field-l {
+      font-family: 'Geist Mono', monospace; font-size: 10px;
+      letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+    }
+    .field-input-wrap { position: relative; }
+    .field input {
+      width: 100%; padding: 13px 15px;
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 12px; font-family: 'Geist', sans-serif;
+      font-size: 15px; color: var(--ink); outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255,92,122,.12); }
+    .field input::placeholder { color: var(--muted); }
+    .field input.err { border-color: #ef4444; }
+    .field-toggle {
+      position: absolute; top: 50%; right: 12px; transform: translateY(-50%);
+      font-family: 'Geist Mono', monospace; font-size: 10px; letter-spacing: 0.16em;
+      text-transform: uppercase; color: var(--muted); padding: 4px 8px; border-radius: 99px;
+    }
+    .field-toggle:hover { color: var(--ink); background: var(--bg-alt); }
+
+    .pw-strength { display: flex; gap: 4px; margin-top: 8px; }
+    .pw-bar { flex: 1; height: 4px; border-radius: 2px; background: var(--line); transition: background .25s; }
+    .pw-bar.w { background: var(--accent); }
+    .pw-bar.m { background: var(--accent-3); }
+    .pw-bar.s { background: var(--accent-2); }
+    .pw-strength-label {
+      font-family: 'Geist Mono', monospace; font-size: 10px;
+      letter-spacing: 0.14em; text-transform: uppercase; margin-top: 4px;
+    }
+    .field-err { font-size: .72rem; color: #ef4444; margin-top: 3px; display: none; }
+    .field-err.show { display: block; }
+
+    .submit {
+      width: 100%; margin-top: 16px; padding: 15px;
+      background: var(--ink); color: var(--bg); border-radius: 13px;
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
+      display: inline-flex; justify-content: center; align-items: center; gap: 8px;
+      transition: background .15s, transform .1s; cursor: pointer;
+    }
+    .submit:hover { background: var(--accent); }
+    .submit:active { transform: scale(.98); }
+    .submit:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .submit .arr { font-family: 'Instrument Serif', serif; font-size: 18px; }
+    .spin-sm {
+      display: none; width: 15px; height: 15px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
+      animation: spin .7s linear infinite; flex-shrink: 0;
+    }
+    .form-err { font-size: .78rem; color: #b91c1c; text-align: center; margin-top: .55rem; display: none; }
+    .form-err.show { display: block; }
+
+    .switch-row {
+      text-align: center; margin-top: 18px;
+      font-size: 13px; color: var(--muted);
+    }
+    .switch-row a {
+      color: var(--ink); font-weight: 600; cursor: pointer; margin-left: 4px;
+      text-decoration: underline; text-underline-offset: 4px;
+      text-decoration-color: var(--accent); text-decoration-thickness: 2px;
+    }
+    .switch-row a:hover { color: var(--accent); }
+    .alt-link-row { margin-top: 10px; text-align: center; font-size: 13px; color: var(--muted); }
+    .alt-link-row a { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+    .alt-link-row a:hover { color: var(--ink); }
+
+    .trust-row {
+      display: flex; align-items: center; justify-content: center;
+      flex-wrap: wrap; gap: .3rem .7rem; margin-top: 14px;
+      font-family: 'Geist Mono', monospace; font-size: 10px;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+    }
+    .trust-sep { color: var(--line); }
+
+    .form-foot {
+      margin-top: auto; display: flex; justify-content: space-between; align-items: center;
+      padding-top: 22px; border-top: 1px dashed var(--line);
+      font-family: 'Geist Mono', monospace; font-size: 11px; letter-spacing: 0.1em; color: var(--muted);
+    }
+    .form-foot a:hover { color: var(--ink); }
+
+    /* SUCCESS PANE */
+    #success-pane {
+      justify-content: center; align-items: center; text-align: center;
+    }
+    .success-icon-wrap {
+      width: 60px; height: 60px; border-radius: 16px;
+      background: var(--accent-2); color: var(--ink);
+      display: grid; place-items: center; margin: 0 auto 1.2rem;
+      font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 1.5rem;
+    }
+    .success-h {
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 1.9rem; font-weight: 700; letter-spacing: -0.04em; margin-bottom: .45rem;
+    }
+    .success-h em { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; color: var(--accent); }
+    .success-sub {
+      font-family: 'Instrument Serif', serif; font-style: italic;
+      font-size: 17px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 1.4rem; max-width: 300px;
+    }
+    .success-prog { height: 3px; background: var(--line); border-radius: 4px; overflow: hidden; width: 100%; max-width: 220px; margin: 0 auto; }
+    .success-fill { height: 100%; background: var(--accent); border-radius: 4px; animation: grow 2.5s ease forwards; }
+    @keyframes grow { from { width: 0; } to { width: 100%; } }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 980px) {
+      .auth-shell { grid-template-columns: 1fr; }
+      .brand { position: relative; height: auto; min-height: auto; padding: 28px 22px 36px; }
+      .brand-mid { padding: 36px 0 28px; }
+      .brand-stats { gap: 22px; }
+      .brand-h { font-size: clamp(36px, 8vw, 56px); }
+      .form-pane { padding: 24px 22px 36px; min-height: auto; }
+      .form-mid { padding: 28px 0; }
+    }
+    @media (max-width: 600px) {
+      .step-q { font-size: 1.4rem; }
+      .options.grid2 { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav class="qnav">
-  <a href="/" class="qnav-logo">🥑 Keto<span>Journey</span></a>
-  <a href="/login" class="qnav-login">Already a member? Log in →</a>
-</nav>
+<!-- ══════════════════════════ QUIZ PHASE ══════════════════════════ -->
+<div id="quiz-phase">
 
-<!-- PROGRESS -->
-<div class="prog-wrap">
-  <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
-  <div class="prog-label" id="progLabel">Step 1 of 6</div>
-</div>
+  <nav class="qnav">
+    <a href="/" class="qnav-logo">
+      <span class="dot">k</span>keto<em>journey</em>
+    </a>
+    <a href="/login" class="qnav-login">Already a member? Log in →</a>
+  </nav>
 
-<div class="quiz-wrap">
-
-  <!-- ══ STEP 1: GOAL ══ -->
-  <div class="step active" id="step-1">
-    <div class="step-eyebrow">✨ Quick quiz</div>
-    <h1 class="step-q">What's your <em>main goal</em><br/>with keto?</h1>
-    <p class="step-hint">This shapes every meal, every tip, every day of your plan.</p>
-    <div class="options">
-      <div class="opt" onclick="selectSingle(1,'weight_loss',this)">
-        <div class="opt-icon">🔥</div>
-        <div class="opt-body">
-          <div class="opt-title">Lose weight</div>
-          <div class="opt-sub">Burn fat, feel lighter, fit into your favourite clothes</div>
-        </div>
-        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectSingle(1,'muscle',this)">
-        <div class="opt-icon">💪</div>
-        <div class="opt-body">
-          <div class="opt-title">Build lean muscle</div>
-          <div class="opt-sub">Stay strong and toned while staying keto</div>
-        </div>
-        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectSingle(1,'energy',this)">
-        <div class="opt-icon">⚡</div>
-        <div class="opt-body">
-          <div class="opt-title">Boost energy & focus</div>
-          <div class="opt-sub">End brain fog, power through the day without crashes</div>
-        </div>
-        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectSingle(1,'health',this)">
-        <div class="opt-icon">❤️</div>
-        <div class="opt-body">
-          <div class="opt-title">Improve overall health</div>
-          <div class="opt-sub">Better blood sugar, cholesterol, and metabolic markers</div>
-        </div>
-        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-    </div>
-    <button class="next-btn" id="next-1" disabled onclick="goNext(1)">Continue →</button>
+  <div class="prog-wrap">
+    <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+    <div class="prog-label" id="progLabel">Step 1 of 6</div>
   </div>
 
-  <!-- ══ STEP 2: EXPERIENCE ══ -->
-  <div class="step" id="step-2">
-    <button class="back-link" onclick="goBack(2)">← Back</button>
-    <div class="step-eyebrow">🥑 Experience</div>
-    <h2 class="step-q">Have you tried<br/><em>keto before?</em></h2>
-    <p class="step-hint">Honest answer helps us set the right pace for your plan.</p>
-    <div class="options">
-      <div class="opt" onclick="selectSingle(2,'new',this)">
-        <div class="opt-icon">🆕</div>
-        <div class="opt-body">
-          <div class="opt-title">Never tried it</div>
-          <div class="opt-sub">I'm completely new to the keto diet</div>
-        </div>
-        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectSingle(2,'tried',this)">
-        <div class="opt-icon">🌱</div>
-        <div class="opt-body">
-          <div class="opt-title">Tried it briefly</div>
-          <div class="opt-sub">Started but couldn't stick with it</div>
-        </div>
-        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectSingle(2,'months',this)">
-        <div class="opt-icon">✅</div>
-        <div class="opt-body">
-          <div class="opt-title">Done it for months</div>
-          <div class="opt-sub">I know the basics, ready to level up</div>
-        </div>
-        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectSingle(2,'current',this)">
-        <div class="opt-icon">🏆</div>
-        <div class="opt-body">
-          <div class="opt-title">Currently eating keto</div>
-          <div class="opt-sub">I want better results and structure</div>
-        </div>
-        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-    </div>
-    <button class="next-btn" id="next-2" disabled onclick="goNext(2)">Continue →</button>
-  </div>
+  <div class="quiz-wrap">
 
-  <!-- ══ STEP 3: CHALLENGES ══ -->
-  <div class="step" id="step-3">
-    <button class="back-link" onclick="goBack(3)">← Back</button>
-    <div class="step-eyebrow">⚡ Challenges</div>
-    <h2 class="step-q">What are your<br/><em>biggest challenges?</em></h2>
-    <p class="step-hint">Pick up to 3 — we'll build solutions into your plan.</p>
-    <div class="options">
-      <div class="opt" onclick="selectMulti(3,'cravings',this,3)">
-        <div class="opt-icon">🍫</div>
-        <div class="opt-body">
-          <div class="opt-title">Carb & sugar cravings</div>
-          <div class="opt-sub">Hard to resist bread, pasta, sweets</div>
+    <!-- ══ STEP 1: GOAL ══ -->
+    <div class="step active" id="step-1">
+      <div class="step-eyebrow">Quick quiz</div>
+      <h1 class="step-q">What's your <em>main goal</em><br/>with keto?</h1>
+      <p class="step-hint">This shapes every meal, every tip, every day of your plan.</p>
+      <div class="options">
+        <div class="opt" onclick="selectSingle(1,'weight_loss',this)">
+          <div class="opt-icon">🔥</div>
+          <div class="opt-body">
+            <div class="opt-title">Lose weight</div>
+            <div class="opt-sub">Burn fat, feel lighter, fit into your favourite clothes</div>
+          </div>
+          <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
-        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectMulti(3,'meal_prep',this,3)">
-        <div class="opt-icon">🍽️</div>
-        <div class="opt-body">
-          <div class="opt-title">Meal planning & prep</div>
-          <div class="opt-sub">Don't know what to cook every day</div>
+        <div class="opt" onclick="selectSingle(1,'muscle',this)">
+          <div class="opt-icon">💪</div>
+          <div class="opt-body">
+            <div class="opt-title">Build lean muscle</div>
+            <div class="opt-sub">Stay strong and toned while staying keto</div>
+          </div>
+          <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
-        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectMulti(3,'social',this,3)">
-        <div class="opt-icon">🍕</div>
-        <div class="opt-body">
-          <div class="opt-title">Eating out socially</div>
-          <div class="opt-sub">Hard to stay keto at restaurants or events</div>
+        <div class="opt" onclick="selectSingle(1,'energy',this)">
+          <div class="opt-icon">⚡</div>
+          <div class="opt-body">
+            <div class="opt-title">Boost energy &amp; focus</div>
+            <div class="opt-sub">End brain fog, power through the day without crashes</div>
+          </div>
+          <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
-        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectMulti(3,'consistent',this,3)">
-        <div class="opt-icon">⏰</div>
-        <div class="opt-body">
-          <div class="opt-title">Staying consistent</div>
-          <div class="opt-sub">Start strong but motivation fades</div>
+        <div class="opt" onclick="selectSingle(1,'health',this)">
+          <div class="opt-icon">❤️</div>
+          <div class="opt-body">
+            <div class="opt-title">Improve overall health</div>
+            <div class="opt-sub">Better blood sugar, cholesterol, and metabolic markers</div>
+          </div>
+          <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
-        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
       </div>
-      <div class="opt" onclick="selectMulti(3,'macros',this,3)">
-        <div class="opt-icon">🔢</div>
-        <div class="opt-body">
-          <div class="opt-title">Understanding macros</div>
-          <div class="opt-sub">Confused by fat/carb/protein ratios</div>
-        </div>
-        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectMulti(3,'satisfying',this,3)">
-        <div class="opt-icon">😋</div>
-        <div class="opt-body">
-          <div class="opt-title">Finding satisfying meals</div>
-          <div class="opt-sub">Keto food feels boring or restrictive</div>
-        </div>
-        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-    </div>
-    <div class="multi-counter">Selected: <strong id="challenge-count">0</strong> / 3</div>
-    <button class="next-btn" id="next-3" disabled onclick="goNext(3)">Continue →</button>
-  </div>
-
-  <!-- ══ STEP 4: DIETARY RESTRICTIONS ══ -->
-  <div class="step" id="step-4">
-    <button class="back-link" onclick="goBack(4)">← Back</button>
-    <div class="step-eyebrow">🥗 Diet</div>
-    <h2 class="step-q">Any <em>dietary<br/>restrictions?</em></h2>
-    <p class="step-hint">Select all that apply — we filter recipes accordingly.</p>
-    <div class="options">
-      <div class="opt" id="opt-none" onclick="selectRestriction('none',this)">
-        <div class="opt-icon">✅</div>
-        <div class="opt-body">
-          <div class="opt-title">No restrictions</div>
-          <div class="opt-sub">I eat everything</div>
-        </div>
-        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectRestriction('dairy_free',this)">
-        <div class="opt-icon">🥛</div>
-        <div class="opt-body">
-          <div class="opt-title">Dairy-free</div>
-          <div class="opt-sub">No milk, cheese, butter or cream</div>
-        </div>
-        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectRestriction('nut_free',this)">
-        <div class="opt-icon">🥜</div>
-        <div class="opt-body">
-          <div class="opt-title">Nut-free</div>
-          <div class="opt-sub">Allergic to or avoiding all nuts</div>
-        </div>
-        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectRestriction('vegetarian',this)">
-        <div class="opt-icon">🥦</div>
-        <div class="opt-body">
-          <div class="opt-title">Vegetarian</div>
-          <div class="opt-sub">No meat, but eggs and dairy are fine</div>
-        </div>
-        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectRestriction('gluten_free',this)">
-        <div class="opt-icon">🌾</div>
-        <div class="opt-body">
-          <div class="opt-title">Gluten-free</div>
-          <div class="opt-sub">No wheat, barley or rye</div>
-        </div>
-        <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-    </div>
-    <button class="next-btn" id="next-4" onclick="goNext(4)">Continue →</button>
-  </div>
-
-  <!-- ══ STEP 5: ACTIVITY ══ -->
-  <div class="step" id="step-5">
-    <button class="back-link" onclick="goBack(5)">← Back</button>
-    <div class="step-eyebrow">🏃 Activity</div>
-    <h2 class="step-q">How <em>active</em> are<br/>you right now?</h2>
-    <p class="step-hint">We calibrate your calories and macros to your lifestyle.</p>
-    <div class="options">
-      <div class="opt" onclick="selectSingle(5,'sedentary',this)">
-        <div class="opt-icon">🪑</div>
-        <div class="opt-body">
-          <div class="opt-title">Mostly sedentary</div>
-          <div class="opt-sub">Desk job, little to no regular exercise</div>
-        </div>
-        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectSingle(5,'light',this)">
-        <div class="opt-icon">🚶</div>
-        <div class="opt-body">
-          <div class="opt-title">Lightly active</div>
-          <div class="opt-sub">1–2 light workouts or walks per week</div>
-        </div>
-        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectSingle(5,'moderate',this)">
-        <div class="opt-icon">🏃</div>
-        <div class="opt-body">
-          <div class="opt-title">Moderately active</div>
-          <div class="opt-sub">3–4 workouts per week</div>
-        </div>
-        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectSingle(5,'very_active',this)">
-        <div class="opt-icon">🏋️</div>
-        <div class="opt-body">
-          <div class="opt-title">Very active</div>
-          <div class="opt-sub">5+ intense training days per week</div>
-        </div>
-        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-    </div>
-    <button class="next-btn" id="next-5" disabled onclick="goNext(5)">Continue →</button>
-  </div>
-
-  <!-- ══ STEP 6: COMMITMENT ══ -->
-  <div class="step" id="step-6">
-    <button class="back-link" onclick="goBack(6)">← Back</button>
-    <div class="step-eyebrow">🚀 Commitment</div>
-    <h2 class="step-q">How ready are you<br/>to <em>start today?</em></h2>
-    <p class="step-hint">No judgment — this helps us match you with the right plan.</p>
-    <div class="options">
-      <div class="opt" onclick="selectSingle(6,'exploring',this)">
-        <div class="opt-icon">🔍</div>
-        <div class="opt-body">
-          <div class="opt-title">Just exploring options</div>
-          <div class="opt-sub">Still learning, not ready to commit yet</div>
-        </div>
-        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectSingle(6,'ready',this)">
-        <div class="opt-icon">🌟</div>
-        <div class="opt-body">
-          <div class="opt-title">Ready when I find the right plan</div>
-          <div class="opt-sub">I'm motivated, just need the right structure</div>
-        </div>
-        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-      <div class="opt" onclick="selectSingle(6,'committed',this)">
-        <div class="opt-icon">🚀</div>
-        <div class="opt-body">
-          <div class="opt-title">Starting this week — I'm committed!</div>
-          <div class="opt-sub">I'm done waiting, let's do this now</div>
-        </div>
-        <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
-      </div>
-    </div>
-    <button class="next-btn" id="next-6" disabled onclick="goNext(6)">See my plan →</button>
-  </div>
-
-  <!-- ══ ANALYZING ══ -->
-  <div class="step" id="step-analyzing">
-    <div class="analyze-wrap">
-      <div class="analyze-ring"></div>
-      <div class="analyze-title">Building your plan…</div>
-      <div class="analyze-msg" id="analyzeMsg">Analyzing your goals</div>
-      <div class="analyze-steps">
-        <div class="a-step" id="a1"><div class="a-dot" id="ad1">1</div> Analyzing your goals</div>
-        <div class="a-step" id="a2"><div class="a-dot" id="ad2">2</div> Matching recipes to your restrictions</div>
-        <div class="a-step" id="a3"><div class="a-dot" id="ad3">3</div> Calibrating macros for your activity</div>
-        <div class="a-step" id="a4"><div class="a-dot" id="ad4">4</div> Preparing your personalized dashboard</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ RESULT ══ -->
-  <div class="step" id="step-result">
-    <div class="result-hero">
-      <div class="result-badge">✨ Your plan is ready</div>
-      <h2 class="result-title">Here's your<br/><em>personalized</em> keto plan</h2>
-      <p class="result-sub" id="resultSub">Based on your answers, we built this specifically for you.</p>
+      <button class="next-btn" id="next-1" disabled onclick="goNext(1)">Continue →</button>
     </div>
 
-    <div class="plan-rec" id="planRec">
-      <div class="plan-rec-icon" id="planIcon">🥑</div>
-      <div>
-        <div class="plan-rec-name" id="planName">Basic Plan</div>
-        <div class="plan-rec-desc" id="planDesc">30-day structured keto journey with daily guidance</div>
+    <!-- ══ STEP 2: EXPERIENCE ══ -->
+    <div class="step" id="step-2">
+      <button class="back-link" onclick="goBack(2)">← Back</button>
+      <div class="step-eyebrow">Experience</div>
+      <h2 class="step-q">Have you tried<br/><em>keto before?</em></h2>
+      <p class="step-hint">Honest answer helps us set the right pace for your plan.</p>
+      <div class="options">
+        <div class="opt" onclick="selectSingle(2,'new',this)">
+          <div class="opt-icon">🆕</div>
+          <div class="opt-body">
+            <div class="opt-title">Never tried it</div>
+            <div class="opt-sub">I'm completely new to the keto diet</div>
+          </div>
+          <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+        <div class="opt" onclick="selectSingle(2,'tried',this)">
+          <div class="opt-icon">🌱</div>
+          <div class="opt-body">
+            <div class="opt-title">Tried it briefly</div>
+            <div class="opt-sub">Started but couldn't stick with it</div>
+          </div>
+          <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+        <div class="opt" onclick="selectSingle(2,'months',this)">
+          <div class="opt-icon">✅</div>
+          <div class="opt-body">
+            <div class="opt-title">Done it for months</div>
+            <div class="opt-sub">I know the basics, ready to level up</div>
+          </div>
+          <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+        <div class="opt" onclick="selectSingle(2,'current',this)">
+          <div class="opt-icon">🏆</div>
+          <div class="opt-body">
+            <div class="opt-title">Currently eating keto</div>
+            <div class="opt-sub">I want better results and structure</div>
+          </div>
+          <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
       </div>
-      <div class="plan-rec-tag" id="planTag">Recommended</div>
+      <button class="next-btn" id="next-2" disabled onclick="goNext(2)">Continue →</button>
     </div>
 
-    <div class="insights" id="insightsWrap"></div>
-
-    <div class="signup-section">
-      <div class="signup-head">
-        <div class="trial-badge">🎁 7-day free trial — no credit card needed</div>
-        <h3>Start your free trial now</h3>
-        <p>Your personalized plan is saved to your account</p>
-      </div>
-
-      <div class="sf-field">
-        <label class="sf-label">Full name</label>
-        <div class="sf-wrap">
-          <span class="sf-icon">👤</span>
-          <input id="trialName" class="sf-input" type="text" placeholder="Enter your full name" autocomplete="name"/>
+    <!-- ══ STEP 3: CHALLENGES ══ -->
+    <div class="step" id="step-3">
+      <button class="back-link" onclick="goBack(3)">← Back</button>
+      <div class="step-eyebrow">Challenges</div>
+      <h2 class="step-q">What are your<br/><em>biggest challenges?</em></h2>
+      <p class="step-hint">Pick up to 3 — we'll build solutions into your plan.</p>
+      <div class="options">
+        <div class="opt" onclick="selectMulti(3,'cravings',this,3)">
+          <div class="opt-icon">🍫</div>
+          <div class="opt-body">
+            <div class="opt-title">Carb &amp; sugar cravings</div>
+            <div class="opt-sub">Hard to resist bread, pasta, sweets</div>
+          </div>
+          <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
-        <div class="sf-err" id="nameErr">Please enter your name</div>
-      </div>
-
-      <div class="sf-field">
-        <label class="sf-label">Email address</label>
-        <div class="sf-wrap">
-          <span class="sf-icon">✉️</span>
-          <input id="trialEmail" class="sf-input" type="email" placeholder="your@email.com" autocomplete="email"/>
+        <div class="opt" onclick="selectMulti(3,'meal_prep',this,3)">
+          <div class="opt-icon">🍽️</div>
+          <div class="opt-body">
+            <div class="opt-title">Meal planning &amp; prep</div>
+            <div class="opt-sub">Don't know what to cook every day</div>
+          </div>
+          <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
-        <div class="sf-err" id="emailErr">Please enter a valid email</div>
-      </div>
-
-      <div class="sf-field">
-        <label class="sf-label">Password</label>
-        <div class="sf-wrap">
-          <span class="sf-icon">🔒</span>
-          <input id="trialPw" class="sf-input" type="password" placeholder="Choose a password (min 6 chars)" autocomplete="new-password"/>
-          <button type="button" class="pw-toggle" id="pwToggle">👁️</button>
+        <div class="opt" onclick="selectMulti(3,'social',this,3)">
+          <div class="opt-icon">🍕</div>
+          <div class="opt-body">
+            <div class="opt-title">Eating out socially</div>
+            <div class="opt-sub">Hard to stay keto at restaurants or events</div>
+          </div>
+          <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
-        <div class="pw-bars">
-          <div class="pw-bar" id="pb1"></div>
-          <div class="pw-bar" id="pb2"></div>
-          <div class="pw-bar" id="pb3"></div>
-          <div class="pw-bar" id="pb4"></div>
+        <div class="opt" onclick="selectMulti(3,'consistent',this,3)">
+          <div class="opt-icon">⏰</div>
+          <div class="opt-body">
+            <div class="opt-title">Staying consistent</div>
+            <div class="opt-sub">Start strong but motivation fades</div>
+          </div>
+          <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
-        <div class="pw-label" id="pwLbl">Enter a password</div>
-        <div class="sf-err" id="pwErr">Password must be at least 6 characters</div>
+        <div class="opt" onclick="selectMulti(3,'macros',this,3)">
+          <div class="opt-icon">🔢</div>
+          <div class="opt-body">
+            <div class="opt-title">Understanding macros</div>
+            <div class="opt-sub">Confused by fat/carb/protein ratios</div>
+          </div>
+          <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+        <div class="opt" onclick="selectMulti(3,'satisfying',this,3)">
+          <div class="opt-icon">😋</div>
+          <div class="opt-body">
+            <div class="opt-title">Finding satisfying meals</div>
+            <div class="opt-sub">Keto food feels boring or restrictive</div>
+          </div>
+          <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
       </div>
+      <div class="multi-counter">Selected: <strong id="challenge-count">0</strong> / 3</div>
+      <button class="next-btn" id="next-3" disabled onclick="goNext(3)">Continue →</button>
+    </div>
 
-      <button class="signup-btn" id="trialBtn" onclick="submitTrial()">
-        <div class="spin-sm" id="trialSpin"></div>
-        <span id="trialBtnTxt">Start my free 7-day trial →</span>
-      </button>
-      <div class="form-err" id="formErr"></div>
+    <!-- ══ STEP 4: DIETARY RESTRICTIONS ══ -->
+    <div class="step" id="step-4">
+      <button class="back-link" onclick="goBack(4)">← Back</button>
+      <div class="step-eyebrow">Diet</div>
+      <h2 class="step-q">Any <em>dietary<br/>restrictions?</em></h2>
+      <p class="step-hint">Select all that apply — we filter recipes accordingly.</p>
+      <div class="options">
+        <div class="opt" id="opt-none" onclick="selectRestriction('none',this)">
+          <div class="opt-icon">✅</div>
+          <div class="opt-body">
+            <div class="opt-title">No restrictions</div>
+            <div class="opt-sub">I eat everything</div>
+          </div>
+          <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+        <div class="opt" onclick="selectRestriction('dairy_free',this)">
+          <div class="opt-icon">🥛</div>
+          <div class="opt-body">
+            <div class="opt-title">Dairy-free</div>
+            <div class="opt-sub">No milk, cheese, butter or cream</div>
+          </div>
+          <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+        <div class="opt" onclick="selectRestriction('nut_free',this)">
+          <div class="opt-icon">🥜</div>
+          <div class="opt-body">
+            <div class="opt-title">Nut-free</div>
+            <div class="opt-sub">Allergic to or avoiding all nuts</div>
+          </div>
+          <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+        <div class="opt" onclick="selectRestriction('vegetarian',this)">
+          <div class="opt-icon">🥦</div>
+          <div class="opt-body">
+            <div class="opt-title">Vegetarian</div>
+            <div class="opt-sub">No meat, but eggs and dairy are fine</div>
+          </div>
+          <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+        <div class="opt" onclick="selectRestriction('gluten_free',this)">
+          <div class="opt-icon">🌾</div>
+          <div class="opt-body">
+            <div class="opt-title">Gluten-free</div>
+            <div class="opt-sub">No wheat, barley or rye</div>
+          </div>
+          <div class="opt-check multi"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+      </div>
+      <button class="next-btn" id="next-4" onclick="goNext(4)">Continue →</button>
+    </div>
 
-      <div class="or-divider"><div class="or-line"></div><div class="or-text">already have an account?</div><div class="or-line"></div></div>
-      <div class="already-link"><a href="/login">Log in instead →</a></div>
+    <!-- ══ STEP 5: ACTIVITY ══ -->
+    <div class="step" id="step-5">
+      <button class="back-link" onclick="goBack(5)">← Back</button>
+      <div class="step-eyebrow">Activity</div>
+      <h2 class="step-q">How <em>active</em> are<br/>you right now?</h2>
+      <p class="step-hint">We calibrate your calories and macros to your lifestyle.</p>
+      <div class="options">
+        <div class="opt" onclick="selectSingle(5,'sedentary',this)">
+          <div class="opt-icon">🪑</div>
+          <div class="opt-body">
+            <div class="opt-title">Mostly sedentary</div>
+            <div class="opt-sub">Desk job, little to no regular exercise</div>
+          </div>
+          <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+        <div class="opt" onclick="selectSingle(5,'light',this)">
+          <div class="opt-icon">🚶</div>
+          <div class="opt-body">
+            <div class="opt-title">Lightly active</div>
+            <div class="opt-sub">1–2 light workouts or walks per week</div>
+          </div>
+          <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+        <div class="opt" onclick="selectSingle(5,'moderate',this)">
+          <div class="opt-icon">🏃</div>
+          <div class="opt-body">
+            <div class="opt-title">Moderately active</div>
+            <div class="opt-sub">3–4 workouts per week</div>
+          </div>
+          <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+        <div class="opt" onclick="selectSingle(5,'very_active',this)">
+          <div class="opt-icon">🏋️</div>
+          <div class="opt-body">
+            <div class="opt-title">Very active</div>
+            <div class="opt-sub">5+ intense training days per week</div>
+          </div>
+          <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+      </div>
+      <button class="next-btn" id="next-5" disabled onclick="goNext(5)">Continue →</button>
+    </div>
 
-      <div class="or-divider"><div class="or-line"></div><div class="or-text">not ready yet?</div><div class="or-line"></div></div>
-      <a href="/free-book" class="ebook-btn">📖 Get the free keto recipe book instead</a>
+    <!-- ══ STEP 6: COMMITMENT ══ -->
+    <div class="step" id="step-6">
+      <button class="back-link" onclick="goBack(6)">← Back</button>
+      <div class="step-eyebrow">Commitment</div>
+      <h2 class="step-q">How ready are you<br/>to <em>start today?</em></h2>
+      <p class="step-hint">No judgment — this helps us match you with the right plan.</p>
+      <div class="options">
+        <div class="opt" onclick="selectSingle(6,'exploring',this)">
+          <div class="opt-icon">🔍</div>
+          <div class="opt-body">
+            <div class="opt-title">Just exploring options</div>
+            <div class="opt-sub">Still learning, not ready to commit yet</div>
+          </div>
+          <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+        <div class="opt" onclick="selectSingle(6,'ready',this)">
+          <div class="opt-icon">🌟</div>
+          <div class="opt-body">
+            <div class="opt-title">Ready when I find the right plan</div>
+            <div class="opt-sub">I'm motivated, just need the right structure</div>
+          </div>
+          <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+        <div class="opt" onclick="selectSingle(6,'committed',this)">
+          <div class="opt-icon">🚀</div>
+          <div class="opt-body">
+            <div class="opt-title">Starting this week — I'm committed!</div>
+            <div class="opt-sub">I'm done waiting, let's do this now</div>
+          </div>
+          <div class="opt-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        </div>
+      </div>
+      <button class="next-btn" id="next-6" disabled onclick="goNext(6)">See my plan →</button>
+    </div>
 
-      <div class="trust-row">
-        <span class="trust-item">🔒 Secure & private</span>
-        <span class="trust-sep">·</span>
-        <span class="trust-item">✓ No credit card needed</span>
-        <span class="trust-sep">·</span>
-        <span class="trust-item">⚡ Instant access</span>
+    <!-- ══ ANALYZING ══ -->
+    <div class="step" id="step-analyzing">
+      <div class="analyze-wrap">
+        <div class="analyze-ring"></div>
+        <div class="analyze-title">Building your plan…</div>
+        <div class="analyze-msg" id="analyzeMsg">Analyzing your goals</div>
+        <div class="analyze-steps">
+          <div class="a-step" id="a1"><div class="a-dot" id="ad1">1</div> Analyzing your goals</div>
+          <div class="a-step" id="a2"><div class="a-dot" id="ad2">2</div> Matching recipes to your restrictions</div>
+          <div class="a-step" id="a3"><div class="a-dot" id="ad3">3</div> Calibrating macros for your activity</div>
+          <div class="a-step" id="a4"><div class="a-dot" id="ad4">4</div> Preparing your personalized dashboard</div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- ══ SUCCESS ══ -->
-  <div class="step" id="step-success">
-    <div class="success-wrap">
-      <div class="success-icon">🎉</div>
-      <div class="success-title">Welcome to KetoJourney!</div>
-      <div class="success-sub" id="successMsg">
-        Your free 7-day trial has started. Redirecting to your dashboard…
+  </div><!-- /quiz-wrap -->
+</div><!-- /quiz-phase -->
+
+<!-- ══════════════════════════ RESULT PHASE ══════════════════════════ -->
+<div id="result-phase" style="display:none">
+  <div class="auth-shell">
+
+    <!-- LEFT: BRAND PANEL -->
+    <section class="brand">
+      <div class="brand-img">
+        <img src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=1400&q=85" alt="" loading="lazy"/>
       </div>
-      <div class="success-prog"><div class="success-fill"></div></div>
-    </div>
-  </div>
+      <div class="brand-glow"></div>
+      <div class="brand-inner">
+        <a href="/" class="brand-logo">
+          <span class="dot">k</span>keto<em>journey</em>
+        </a>
+        <div class="brand-mid">
+          <div class="brand-eyebrow">Sustainable · Personal · Delicious</div>
+          <h2 class="brand-h">Begin the body you'll <em>actually</em> want.</h2>
+          <div class="brand-stats">
+            <div class="brand-stat"><div class="l">Members</div><div class="v">42<em>k+</em></div></div>
+            <div class="brand-stat"><div class="l">Avg. loss</div><div class="v">−9.2<em>kg</em></div></div>
+            <div class="brand-stat"><div class="l">Rating</div><div class="v">4.8<em>★</em></div></div>
+          </div>
+        </div>
+        <div class="brand-quote">
+          <div class="mark" id="quoteDay">— member · day 40</div>
+          <p class="body" id="quoteBody">"Lost the weight, kept the pasta nights once a week, and slept better than I have in years. The check-ins make it feel like a friend, not an app."</p>
+          <div class="meta">
+            <span class="name" id="quoteName">Priya R.</span>
+            <span class="dot-sep"></span>
+            <span class="loss" id="quoteLoss">−12.4 kg</span>
+            <span class="dot-sep"></span>
+            <span class="when" id="quoteWhen">90 days</span>
+          </div>
+          <div class="quote-dots" id="quoteDots">
+            <span class="quote-dot on" onclick="setQuote(0)"></span>
+            <span class="quote-dot" onclick="setQuote(1)"></span>
+            <span class="quote-dot" onclick="setQuote(2)"></span>
+          </div>
+        </div>
+      </div>
+    </section>
 
-</div><!-- /quiz-wrap -->
+    <!-- RIGHT: FORM PANE -->
+    <section class="form-pane">
+      <div class="form-top">
+        Already a member?<a href="/login">Sign in →</a>
+      </div>
+
+      <!-- SIGNUP STATE (default) -->
+      <div class="form-mid" id="signup-pane">
+
+        <div class="plan-eyebrow">Your personalized plan</div>
+        <h1 class="plan-h">Here's your <em>personalized</em><br/>keto plan</h1>
+        <p class="plan-sub" id="resultSub">Built specifically around your goals.</p>
+
+        <div class="plan-card">
+          <div class="plan-card-icon" id="planIcon">🥑</div>
+          <div class="plan-card-body">
+            <div class="plan-card-name" id="planName">Basic Plan</div>
+            <div class="plan-card-desc" id="planDesc">30-day structured keto journey with daily guidance</div>
+          </div>
+          <div class="plan-card-tag" id="planTag">Recommended</div>
+        </div>
+
+        <div class="insights-list" id="insightsWrap"></div>
+
+        <div class="form-divider"></div>
+
+        <div class="form-eyebrow">Create your account</div>
+        <h2 class="form-h">Let's get you <em>started</em></h2>
+        <p class="form-sub">60 seconds to set up. Your first 7 days are on us — no card needed.</p>
+
+        <div class="form-grid">
+          <div class="field">
+            <label class="field-l">Your name</label>
+            <div class="field-input-wrap">
+              <input id="trialName" type="text" placeholder="What should we call you?" autocomplete="name"/>
+            </div>
+            <div class="field-err" id="nameErr">Please enter your name</div>
+          </div>
+          <div class="field">
+            <label class="field-l">Email</label>
+            <div class="field-input-wrap">
+              <input id="trialEmail" type="email" placeholder="you@example.com" autocomplete="email"/>
+            </div>
+            <div class="field-err" id="emailErr">Please enter a valid email</div>
+          </div>
+          <div class="field">
+            <label class="field-l">Password</label>
+            <div class="field-input-wrap">
+              <input id="trialPw" type="password" placeholder="Min. 6 characters" autocomplete="new-password"/>
+              <button class="field-toggle" type="button" id="pwToggle">Show</button>
+            </div>
+            <div class="pw-strength">
+              <div class="pw-bar" id="pb1"></div>
+              <div class="pw-bar" id="pb2"></div>
+              <div class="pw-bar" id="pb3"></div>
+            </div>
+            <div class="pw-strength-label" id="pwLbl"></div>
+            <div class="field-err" id="pwErr">Password must be at least 6 characters</div>
+          </div>
+        </div>
+
+        <button class="submit" id="trialBtn" onclick="submitTrial()">
+          <div class="spin-sm" id="trialSpin"></div>
+          <span id="trialBtnTxt">Start my free 7-day trial</span>
+          <span class="arr">→</span>
+        </button>
+        <div class="form-err" id="formErr"></div>
+
+        <div class="switch-row">
+          Already on the journey?<a href="/login">Sign in</a>
+        </div>
+        <div class="alt-link-row">
+          Not ready yet? <a href="/free-book">Get the free recipe book instead</a>
+        </div>
+        <div class="trust-row">
+          <span>🔒 Secure</span>
+          <span class="trust-sep">·</span>
+          <span>No credit card</span>
+          <span class="trust-sep">·</span>
+          <span>⚡ Instant access</span>
+        </div>
+      </div><!-- /signup-pane -->
+
+      <!-- SUCCESS STATE -->
+      <div class="form-mid" id="success-pane" style="display:none">
+        <div class="success-icon-wrap">✓</div>
+        <div class="success-h">Welcome to keto<em>journey</em></div>
+        <p class="success-sub" id="successMsg">Your 7-day trial has started. Taking you to your dashboard…</p>
+        <div class="success-prog"><div class="success-fill"></div></div>
+      </div>
+
+      <div class="form-foot">
+        <span>© 2026 keto<em style="font-family:'Instrument Serif',serif;font-style:italic;color:var(--accent)">journey</em></span>
+        <span><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></span>
+      </div>
+    </section>
+
+  </div><!-- /auth-shell -->
+</div><!-- /result-phase -->
 
 <script is:inline>
 var answers = {
@@ -732,7 +949,6 @@ var answers = {
 var currentStep = 1;
 var TOTAL_STEPS  = 6;
 
-/* ── Progress ── */
 function updateProgress(step) {
   var pct = Math.round(((step - 1) / TOTAL_STEPS) * 100);
   document.getElementById('progFill').style.width = pct + '%';
@@ -742,14 +958,12 @@ function updateProgress(step) {
   document.getElementById('progLabel').textContent = lbl;
 }
 
-/* ── Show step ── */
 function showStep(id) {
   document.querySelectorAll('.step').forEach(function(s) { s.classList.remove('active'); });
   var el = document.getElementById('step-' + id);
   if (el) { el.classList.add('active'); window.scrollTo(0, 0); }
 }
 
-/* ── Single select ── */
 function selectSingle(step, value, el) {
   var container = el.closest('.options');
   container.querySelectorAll('.opt').forEach(function(o) { o.classList.remove('selected'); });
@@ -762,7 +976,6 @@ function selectSingle(step, value, el) {
   if (btn) btn.disabled = false;
 }
 
-/* ── Multi select (challenges) ── */
 function selectMulti(step, value, el, max) {
   var idx = answers.challenges.indexOf(value);
   if (idx > -1) {
@@ -779,7 +992,6 @@ function selectMulti(step, value, el, max) {
   if (btn) btn.disabled = (answers.challenges.length === 0);
 }
 
-/* ── Restrictions (none = exclusive) ── */
 function selectRestriction(value, el) {
   if (value === 'none') {
     answers.restrictions = ['none'];
@@ -800,12 +1012,8 @@ function selectRestriction(value, el) {
   }
 }
 
-/* ── Navigation ── */
 function goNext(step) {
-  if (step === 6) {
-    startAnalysis();
-    return;
-  }
+  if (step === 6) { startAnalysis(); return; }
   currentStep = step + 1;
   updateProgress(currentStep);
   showStep(currentStep);
@@ -817,7 +1025,6 @@ function goBack(step) {
   showStep(currentStep);
 }
 
-/* ── Analysis animation ── */
 function startAnalysis() {
   updateProgress(7);
   showStep('analyzing');
@@ -831,7 +1038,6 @@ function startAnalysis() {
   setTimeout(buildResult, 3500);
 }
 
-/* ── Plan recommendation ── */
 function recommendPlan() {
   var g = answers.goal;
   var e = answers.experience;
@@ -843,26 +1049,25 @@ function recommendPlan() {
   return 'basic';
 }
 
-/* ── Insight messages ── */
 function getInsights() {
   var ins = [];
-  var g = answers.goal;
-  var e = answers.experience;
+  var g   = answers.goal;
+  var e   = answers.experience;
   var top = answers.challenges[0];
-  var a = answers.activity;
+  var a   = answers.activity;
 
   var goalMap = {
-    weight_loss: { icon:'🔥', text:'Your plan is <strong>optimized for fat loss</strong> — every meal is designed to keep you in ketosis and burning fat around the clock.' },
+    weight_loss: { icon:'🔥', text:'Your plan is <strong>optimized for fat loss</strong> — every meal keeps you in ketosis and burning fat around the clock.' },
     muscle:      { icon:'💪', text:'<strong>High-protein keto recipes</strong> are prioritized to preserve muscle mass during your adaptation phase.' },
-    energy:      { icon:'⚡', text:'By day 10–14, expect <strong>sustained mental clarity and energy</strong> — the keto fog lifts and focus kicks in hard.' },
+    energy:      { icon:'⚡', text:'By day 10–14, expect <strong>sustained mental clarity and energy</strong> — the fog lifts and focus kicks in hard.' },
     health:      { icon:'❤️', text:'<strong>Nutrient-dense whole foods</strong> are at the core of your plan to improve metabolic and cardiovascular markers.' },
   };
   if (goalMap[g]) ins.push(goalMap[g]);
 
   var expMap = {
-    new:     { icon:'🗺️', text:'You get <strong>step-by-step daily guidance</strong> — no keto knowledge needed. We walk you through every meal and every day.' },
+    new:     { icon:'🗺️', text:'You get <strong>step-by-step daily guidance</strong> — no keto knowledge needed. Every meal and day is mapped out.' },
     tried:   { icon:'🔄', text:'This time you have <strong>real structure</strong> — no more guessing. Every meal is planned, every day has a clear action.' },
-    months:  { icon:'📈', text:'Advanced <strong>analytics and progress tracking</strong> help you identify exactly what\'s holding back your results.' },
+    months:  { icon:'📈', text:'Advanced <strong>analytics and progress tracking</strong> help you identify exactly what is holding back your results.' },
     current: { icon:'🎯', text:'Precision <strong>macro optimization tools</strong> and an AI coach help you dial in for next-level results.' },
   };
   if (expMap[e]) ins.push(expMap[e]);
@@ -871,7 +1076,7 @@ function getInsights() {
     cravings:   { icon:'🍫', text:'Our recipes are <strong>designed to be satisfying</strong> — healthy fats keep you full so cravings become a non-issue.' },
     meal_prep:  { icon:'📋', text:'Every week comes with a <strong>full shopping list and prep guide</strong> — saving you 2–3 hours of meal planning.' },
     social:     { icon:'🍕', text:'You get <strong>dining-out guides for 20+ restaurant types</strong> so you stay keto even at social events.' },
-    consistent: { icon:'🔥', text:'Daily <strong>check-ins, streaks, and XP rewards</strong> build a habit loop that keeps you showing up every single day.' },
+    consistent: { icon:'🔥', text:'Daily <strong>check-ins, streaks, and XP rewards</strong> build a habit loop that keeps you showing up every day.' },
     macros:     { icon:'📊', text:'The app <strong>tracks all macros automatically</strong> — just log your food and we handle the math.' },
     satisfying: { icon:'😋', text:'<strong>87+ delicious recipes</strong> across breakfast, lunch, dinner and snacks — keto never has to be boring.' },
   };
@@ -882,12 +1087,11 @@ function getInsights() {
   return ins.slice(0, 3);
 }
 
-/* ── Build result ── */
 function buildResult() {
   var plan = recommendPlan();
   var planData = {
-    basic: { icon:'🥑', name:'Basic Plan — 30 Days', desc:'Perfect for beginners. Daily meal plans, 30+ recipes, check-ins, and progress tracking.', tag:'Great start' },
-    pro:   { icon:'⚡', name:'Pro Plan — 90 Days', desc:'The most popular choice. 87+ recipes, advanced analytics, fasting timer, weekly reports, and meal swap engine.', tag:'Most Popular' },
+    basic: { icon:'🥑', name:'Basic Plan — 30 Days', desc:'Perfect for beginners. Daily meal plans, 30+ recipes, check-ins, and progress tracking.', tag:'Great Start' },
+    pro:   { icon:'⚡', name:'Pro Plan — 90 Days',   desc:'Most popular. 87+ recipes, advanced analytics, fasting timer, weekly reports, and meal swap engine.', tag:'Most Popular' },
     elite: { icon:'👑', name:'Elite Plan — 360 Days', desc:'For the most committed. Everything in Pro plus an AI Keto Coach, 360-day journey, and priority support.', tag:'Best Results' },
   };
   var pd = planData[plan];
@@ -902,19 +1106,50 @@ function buildResult() {
     energy:      'Designed to unlock steady energy and sharp focus.',
     health:      'Focused on nutrient density and metabolic health.',
   };
-  var sub = subMap[answers.goal] || 'Built around your goals and lifestyle.';
-  document.getElementById('resultSub').textContent = sub;
+  document.getElementById('resultSub').textContent = subMap[answers.goal] || 'Built around your goals and lifestyle.';
 
   var insights = getInsights();
   var html = '';
   for (var i = 0; i < insights.length; i++) {
-    html += '<div class="insight"><div class="insight-icon">' + insights[i].icon + '</div><div class="insight-text">' + insights[i].text + '</div></div>';
+    html += '<div class="insight-row"><span class="insight-dot">' + insights[i].icon + '</span><span>' + insights[i].text + '</span></div>';
   }
   document.getElementById('insightsWrap').innerHTML = html;
 
   localStorage.setItem('keto_quiz', JSON.stringify({ answers: answers, plan: plan }));
-  showStep('result');
-  updateProgress(7);
+
+  document.getElementById('quiz-phase').style.display = 'none';
+  document.getElementById('result-phase').style.display = 'block';
+  window.scrollTo(0, 0);
+  startTestimonialRotation();
+}
+
+/* ── Testimonials ── */
+var testimonials = [
+  { day: 40, name: 'Priya R.', loss: '−12.4 kg', when: '90 days', body: "Lost the weight, kept the pasta nights once a week, and slept better than I have in years. The check-ins make it feel like a friend, not an app." },
+  { day: 65, name: 'Marcus T.', loss: '−18.1 kg', when: '6 months', body: "I tried every app. This is the only one that didn't quit on me. The coach reads between the lines." },
+  { day: 28, name: 'Sofia L.', loss: '−7.8 kg', when: '60 days', body: "My energy is unrecognizable. Down two dress sizes. The recipes don't taste like diet food." },
+];
+var quoteIdx = 0;
+
+function setQuote(idx) {
+  quoteIdx = idx;
+  var t = testimonials[idx];
+  document.getElementById('quoteDay').textContent  = '— member · day ' + t.day;
+  document.getElementById('quoteBody').textContent = '"' + t.body + '"';
+  document.getElementById('quoteName').textContent = t.name;
+  document.getElementById('quoteLoss').textContent = t.loss;
+  document.getElementById('quoteWhen').textContent = t.when;
+  document.querySelectorAll('.quote-dot').forEach(function(dot, i) {
+    dot.className = 'quote-dot' + (i === idx ? ' on' : '');
+  });
+}
+
+var quoteTimer = null;
+function startTestimonialRotation() {
+  if (quoteTimer) return;
+  quoteTimer = setInterval(function() {
+    setQuote((quoteIdx + 1) % testimonials.length);
+  }, 6000);
 }
 
 /* ── Password strength ── */
@@ -927,25 +1162,27 @@ function buildResult() {
     if (val.length >= 6)  s++;
     if (val.length >= 10) s++;
     if (/[A-Z]/.test(val) || /[0-9]/.test(val)) s++;
-    if (/[!@#$%^&*]/.test(val)) s++;
-    s = Math.min(s, 4);
+    s = Math.min(s, 3);
     var cls = s <= 1 ? 'w' : s <= 2 ? 'm' : 's';
-    var bars = ['pb1','pb2','pb3','pb4'];
+    var bars = ['pb1','pb2','pb3'];
     for (var i = 0; i < bars.length; i++) {
       var b = document.getElementById(bars[i]);
       if (!b) continue;
       b.className = 'pw-bar';
       if (i < s) b.classList.add(cls);
     }
-    var labels = ['','Too weak','Fair','Good','Strong 💪'];
     var lbl = document.getElementById('pwLbl');
-    if (lbl) lbl.textContent = val ? (labels[s] || 'Strong 💪') : 'Enter a password';
+    if (lbl) {
+      var labels = ['', 'WEAK', 'GOOD', 'STRONG'];
+      lbl.textContent = val ? (labels[s] || 'STRONG') : '';
+      lbl.style.color = s >= 3 ? 'var(--accent-2)' : s >= 2 ? 'var(--accent-3)' : 'var(--accent)';
+    }
   });
   var toggle = document.getElementById('pwToggle');
   if (toggle) {
     toggle.addEventListener('click', function() {
       pwInput.type = pwInput.type === 'text' ? 'password' : 'text';
-      toggle.textContent = pwInput.type === 'text' ? '🙈' : '👁️';
+      toggle.textContent = pwInput.type === 'text' ? 'Hide' : 'Show';
     });
   }
 })();
@@ -956,29 +1193,24 @@ window.submitTrial = function() {
   var emailEl = document.getElementById('trialEmail');
   var pwEl    = document.getElementById('trialPw');
   var nameErr = document.getElementById('nameErr');
-  var emailErr= document.getElementById('emailErr');
+  var emailErr = document.getElementById('emailErr');
   var pwErr   = document.getElementById('pwErr');
   var formErr = document.getElementById('formErr');
   var btn     = document.getElementById('trialBtn');
   var spin    = document.getElementById('trialSpin');
   var txt     = document.getElementById('trialBtnTxt');
 
-  nameErr.classList.remove('show');
-  emailErr.classList.remove('show');
-  pwErr.classList.remove('show');
-  formErr.classList.remove('show');
-  nameEl.classList.remove('err');
-  emailEl.classList.remove('err');
-  pwEl.classList.remove('err');
+  [nameErr, emailErr, pwErr, formErr].forEach(function(e) { e.classList.remove('show'); });
+  [nameEl, emailEl, pwEl].forEach(function(e) { e.classList.remove('err'); });
 
   var name  = nameEl.value.trim();
   var email = emailEl.value.trim().toLowerCase();
   var pw    = pwEl.value;
   var ok    = true;
 
-  if (!name)                     { nameErr.classList.add('show');  nameEl.classList.add('err');  ok = false; }
+  if (!name)                          { nameErr.classList.add('show');  nameEl.classList.add('err');  ok = false; }
   if (!email || !email.includes('@')) { emailErr.classList.add('show'); emailEl.classList.add('err'); ok = false; }
-  if (pw.length < 6)             { pwErr.classList.add('show');   pwEl.classList.add('err');   ok = false; }
+  if (pw.length < 6)                  { pwErr.classList.add('show');   pwEl.classList.add('err');    ok = false; }
   if (!ok) return;
 
   btn.disabled = true;
@@ -993,45 +1225,45 @@ window.submitTrial = function() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      fullName:     name,
-      email:        email,
-      password:     pw,
-      quizAnswers:  quiz ? quiz.answers  : null,
-      recommendedPlan: quiz ? quiz.plan  : 'basic',
-      referral_code: ref || undefined,
+      fullName:        name,
+      email:           email,
+      password:        pw,
+      quizAnswers:     quiz ? quiz.answers : null,
+      recommendedPlan: quiz ? quiz.plan    : 'basic',
+      referral_code:   ref || undefined,
     }),
   }).then(function(r) { return r.json(); }).then(function(d) {
     if (d.error) {
-      formErr.textContent = '⚠️ ' + d.error;
+      formErr.textContent = 'Error: ' + d.error;
       formErr.classList.add('show');
       btn.disabled = false;
       spin.style.display = 'none';
-      txt.textContent = 'Start my free 7-day trial →';
+      txt.textContent = 'Start my free 7-day trial';
     } else {
       localStorage.removeItem('keto_quiz');
       localStorage.removeItem('keto_ref');
       var msg = document.getElementById('successMsg');
       if (msg) msg.textContent = 'Welcome, ' + name.split(' ')[0] + '! Your 7-day trial has started. Taking you to your dashboard…';
-      showStep('success');
+      document.getElementById('signup-pane').style.display = 'none';
+      document.getElementById('success-pane').style.display = 'flex';
       setTimeout(function() { window.location.href = '/dashboard/onboarding'; }, 2600);
     }
   }).catch(function() {
-    formErr.textContent = '⚠️ Something went wrong. Please try again.';
+    formErr.textContent = 'Something went wrong. Please try again.';
     formErr.classList.add('show');
     btn.disabled = false;
     spin.style.display = 'none';
-    txt.textContent = 'Start my free 7-day trial →';
+    txt.textContent = 'Start my free 7-day trial';
   });
 };
 
-/* ── Expose onclick fns to window ── */
 window.selectSingle      = selectSingle;
 window.selectMulti       = selectMulti;
 window.selectRestriction = selectRestriction;
 window.goNext            = goNext;
 window.goBack            = goBack;
+window.setQuote          = setQuote;
 
-/* ── Init ── */
 updateProgress(1);
 </script>
 </body>
