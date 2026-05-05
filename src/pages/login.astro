@@ -149,7 +149,8 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
     .field-wrap { position:relative; }
     .field-icon {
       position:absolute; left:1rem; top:50%; transform:translateY(-50%);
-      font-size:.95rem; pointer-events:none;
+      pointer-events:none; display:flex; align-items:center;
+      color:var(--soft);
     }
     .field-input {
       width:100%; padding:.875rem 1.1rem .875rem 2.75rem;
@@ -246,10 +247,10 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
   <div class="panel-img-bg"></div>
   <div class="panel-img-overlay"></div>
   <div class="panel-content">
-    <a href="/" class="panel-logo">🥑 Keto<span>Journey</span></a>
+    <a href="/" class="panel-logo">Keto<span>Journey</span></a>
 
     <div class="panel-headline">
-      <div class="panel-eyebrow">🔥 30-Day Transformation</div>
+      <div class="panel-eyebrow">30-Day Transformation</div>
       <h2 class="panel-title">
         Welcome<br/><em>back</em> to<br/>your journey
       </h2>
@@ -278,14 +279,14 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
 <!-- RIGHT: Form Panel -->
 <div class="panel-form">
   <div class="form-header">
-    <div class="form-tag">👋 Welcome back</div>
+    <div class="form-tag">Welcome back</div>
     <h1 class="form-title">Log in to your<br/><em>account</em></h1>
     <p class="form-sub">Continue your transformation journey</p>
   </div>
 
   {error && (
     <div class="alert alert-error">
-      <span>⚠️</span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       <span>
         {error === 'invalid'     && 'Wrong email or password. Please try again.'}
         {error === 'auth'        && 'Authentication error. Please try again.'}
@@ -297,7 +298,7 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
 
   {message && (
     <div class="alert alert-success">
-      <span>✅</span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><polyline points="20 6 9 17 4 12"/></svg>
       <span>{message}</span>
     </div>
   )}
@@ -307,7 +308,7 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
     <div class="field" style="animation-delay:.05s;">
       <label class="field-label" for="email">Email Address</label>
       <div class="field-wrap">
-        <span class="field-icon">✉️</span>
+        <span class="field-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
         <input type="email" id="email" name="email" required
           class="field-input" placeholder="your@email.com"/>
       </div>
@@ -316,10 +317,10 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
     <div class="field" style="animation-delay:.1s;">
       <label class="field-label" for="password">Password</label>
       <div class="field-wrap">
-        <span class="field-icon">🔒</span>
+        <span class="field-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></span>
         <input type="password" id="password" name="password" required
           class="field-input" placeholder="••••••••" id="pwField"/>
-        <button type="button" class="field-pw-toggle" id="pwToggle" aria-label="Show password">👁️</button>
+        <button type="button" class="field-pw-toggle" id="pwToggle" aria-label="Show password">Show</button>
       </div>
     </div>
 
@@ -346,9 +347,9 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
   </div>
 
   <div class="trust-row">
-    <div class="trust-item"><span>🔒</span> Secure login</div>
-    <div class="trust-item"><span>🛡️</span> 30-day guarantee</div>
-    <div class="trust-item"><span>⚡</span> Instant access</div>
+    <div class="trust-item">Secure login</div>
+    <div class="trust-item">30-day guarantee</div>
+    <div class="trust-item">Instant access</div>
   </div>
 </div>
 
@@ -360,7 +361,7 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
     pwToggle.addEventListener('click', () => {
       const isText = pwField.type === 'text';
       pwField.type = isText ? 'password' : 'text';
-      pwToggle.textContent = isText ? '👁️' : '🙈';
+      pwToggle.textContent = isText ? 'Show' : 'Hide';
     });
   }
 
