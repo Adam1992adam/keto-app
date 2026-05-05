@@ -257,21 +257,33 @@ ${weightText}
       messages.push({ role: 'user', content: message });
     }
 
-    const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method:  'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'HTTP-Referer':  'https://ketojourney.fun',
-        'X-Title':       'Keto Journey',
-      },
-      body: JSON.stringify({
-        model:       'tencent/hy3-preview:free',
-        messages,
-        max_tokens:  4000,
-        temperature: 0.8,
-      }),
-    });
+    const _ctrl1 = new AbortController();
+    const _t1 = setTimeout(() => _ctrl1.abort(), 15000);
+    let orRes: Response;
+    try {
+      orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'HTTP-Referer':  'https://ketojourney.fun',
+          'X-Title':       'Keto Journey',
+        },
+        body: JSON.stringify({
+          model:       'tencent/hy3-preview:free',
+          messages,
+          max_tokens:  4000,
+          temperature: 0.8,
+        }),
+        signal: _ctrl1.signal,
+      });
+    } catch (fetchErr: any) {
+      if (fetchErr.name === 'AbortError')
+        return json({ error: 'AI service timed out. Please try again.' }, 504);
+      throw fetchErr;
+    } finally {
+      clearTimeout(_t1);
+    }
 
     if (!orRes.ok) {
       const errText = await orRes.text();

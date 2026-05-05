@@ -57,27 +57,39 @@ Rules:
 - If you cannot identify the food at all, use your best estimate and set confidence to "low"
 - Return only the JSON object, nothing else`;
 
-    const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'HTTP-Referer':  'https://ketojourney.fun',
-        'X-Title':       'Keto Journey',
-      },
-      body: JSON.stringify({
-        model: 'tencent/hy3-preview:free',
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image_url', image_url: { url: `data:${imageType};base64,${imageBase64}` } },
-            { type: 'text', text: prompt },
-          ],
-        }],
-        max_tokens:  2000,
-        temperature: 0.2,
-      }),
-    });
+    const _ctrl = new AbortController();
+    const _t = setTimeout(() => _ctrl.abort(), 15000);
+    let orRes: Response;
+    try {
+      orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'HTTP-Referer':  'https://ketojourney.fun',
+          'X-Title':       'Keto Journey',
+        },
+        body: JSON.stringify({
+          model: 'tencent/hy3-preview:free',
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: `data:${imageType};base64,${imageBase64}` } },
+              { type: 'text', text: prompt },
+            ],
+          }],
+          max_tokens:  2000,
+          temperature: 0.2,
+        }),
+        signal: _ctrl.signal,
+      });
+    } catch (fetchErr: any) {
+      if (fetchErr.name === 'AbortError')
+        return json({ error: 'AI analysis timed out. Please try again.' }, 504);
+      throw fetchErr;
+    } finally {
+      clearTimeout(_t);
+    }
 
     if (!orRes.ok) {
       const err = await orRes.text();
