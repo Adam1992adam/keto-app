@@ -323,7 +323,11 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
       background: var(--card); border: 1.5px solid var(--line);
       border-radius: 16px; padding: 15px 16px; margin-bottom: 10px;
     }
-    .plan-card-icon { font-size: 1.9rem; flex-shrink: 0; }
+    .plan-card-icon {
+      flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px;
+      background: rgba(255,92,122,.1); display: flex; align-items: center; justify-content: center;
+    }
+    .plan-card-icon svg { display: block; }
     .plan-card-body { flex: 1; min-width: 0; }
     .plan-card-name { font-family: 'Bricolage Grotesque', sans-serif; font-size: .95rem; font-weight: 700; letter-spacing: -0.02em; }
     .plan-card-desc { font-size: .73rem; color: var(--muted); margin-top: 2px; line-height: 1.5; }
@@ -340,7 +344,12 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
       font-size: .8rem; line-height: 1.55; color: var(--ink-soft);
     }
     .insight-row strong { color: var(--ink); }
-    .insight-dot { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+    .insight-dot {
+      flex-shrink: 0; margin-top: 2px;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: rgba(255,92,122,.12); display: flex; align-items: center; justify-content: center;
+    }
+    .insight-dot svg { display: block; }
 
     /* Form section */
     .form-divider { height: 1px; background: var(--line); margin: 18px 0; }
@@ -851,7 +860,7 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
         <p class="plan-sub" id="resultSub">Built specifically around your goals.</p>
 
         <div class="plan-card">
-          <div class="plan-card-icon" id="planIcon">🥑</div>
+          <div class="plan-card-icon" id="planIcon"></div>
           <div class="plan-card-body">
             <div class="plan-card-name" id="planName">Basic Plan</div>
             <div class="plan-card-desc" id="planDesc">30-day structured keto journey with daily guidance</div>
@@ -912,11 +921,11 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
           Not ready yet? <a href="/free-book">Get the free recipe book instead</a>
         </div>
         <div class="trust-row">
-          <span>🔒 Secure</span>
+          <span>Secure &amp; encrypted</span>
           <span class="trust-sep">·</span>
           <span>No credit card</span>
           <span class="trust-sep">·</span>
-          <span>⚡ Instant access</span>
+          <span>Instant access</span>
         </div>
       </div><!-- /signup-pane -->
 
@@ -1056,11 +1065,12 @@ function getInsights() {
   var top = answers.challenges[0];
   var a   = answers.activity;
 
+  var chk = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
   var goalMap = {
-    weight_loss: { icon:'🔥', text:'Your plan is <strong>optimized for fat loss</strong> — every meal keeps you in ketosis and burning fat around the clock.' },
-    muscle:      { icon:'💪', text:'<strong>High-protein keto recipes</strong> are prioritized to preserve muscle mass during your adaptation phase.' },
-    energy:      { icon:'⚡', text:'By day 10–14, expect <strong>sustained mental clarity and energy</strong> — the fog lifts and focus kicks in hard.' },
-    health:      { icon:'❤️', text:'<strong>Nutrient-dense whole foods</strong> are at the core of your plan to improve metabolic and cardiovascular markers.' },
+    weight_loss: { icon: chk, text:'Your plan is <strong>optimized for fat loss</strong> — every meal keeps you in ketosis and burning fat around the clock.' },
+    muscle:      { icon: chk, text:'<strong>High-protein keto recipes</strong> are prioritized to preserve muscle mass during your adaptation phase.' },
+    energy:      { icon: chk, text:'By day 10–14, expect <strong>sustained mental clarity and energy</strong> — the fog lifts and focus kicks in hard.' },
+    health:      { icon: chk, text:'<strong>Nutrient-dense whole foods</strong> are at the core of your plan to improve metabolic and cardiovascular markers.' },
   };
   if (goalMap[g]) ins.push(goalMap[g]);
 
@@ -1073,12 +1083,12 @@ function getInsights() {
   if (expMap[e]) ins.push(expMap[e]);
 
   var challengeMap = {
-    cravings:   { icon:'🍫', text:'Our recipes are <strong>designed to be satisfying</strong> — healthy fats keep you full so cravings become a non-issue.' },
-    meal_prep:  { icon:'📋', text:'Every week comes with a <strong>full shopping list and prep guide</strong> — saving you 2–3 hours of meal planning.' },
-    social:     { icon:'🍕', text:'You get <strong>dining-out guides for 20+ restaurant types</strong> so you stay keto even at social events.' },
-    consistent: { icon:'🔥', text:'Daily <strong>check-ins, streaks, and XP rewards</strong> build a habit loop that keeps you showing up every day.' },
-    macros:     { icon:'📊', text:'The app <strong>tracks all macros automatically</strong> — just log your food and we handle the math.' },
-    satisfying: { icon:'😋', text:'<strong>87+ delicious recipes</strong> across breakfast, lunch, dinner and snacks — keto never has to be boring.' },
+    cravings:   { icon: chk, text:'Our recipes are <strong>designed to be satisfying</strong> — healthy fats keep you full so cravings become a non-issue.' },
+    meal_prep:  { icon: chk, text:'Every week comes with a <strong>full shopping list and prep guide</strong> — saving you 2–3 hours of meal planning.' },
+    social:     { icon: chk, text:'You get <strong>dining-out guides for 20+ restaurant types</strong> so you stay keto even at social events.' },
+    consistent: { icon: chk, text:'Daily <strong>check-ins, streaks, and XP rewards</strong> build a habit loop that keeps you showing up every day.' },
+    macros:     { icon: chk, text:'The app <strong>tracks all macros automatically</strong> — just log your food and we handle the math.' },
+    satisfying: { icon: chk, text:'<strong>87+ delicious recipes</strong> across breakfast, lunch, dinner and snacks — keto never has to be boring.' },
   };
   if (top && challengeMap[top]) ins.push(challengeMap[top]);
   else if (a === 'very_active') ins.push({ icon:'🏋️', text:'Your plan includes <strong>extra protein and calorie targets</strong> calibrated for high-intensity training days.' });
@@ -1089,13 +1099,16 @@ function getInsights() {
 
 function buildResult() {
   var plan = recommendPlan();
+  var svgLeaf = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>';
+  var svgChart = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>';
+  var svgStar  = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
   var planData = {
-    basic: { icon:'🥑', name:'Basic Plan — 30 Days', desc:'Perfect for beginners. Daily meal plans, 30+ recipes, check-ins, and progress tracking.', tag:'Great Start' },
-    pro:   { icon:'⚡', name:'Pro Plan — 90 Days',   desc:'Most popular. 87+ recipes, advanced analytics, fasting timer, weekly reports, and meal swap engine.', tag:'Most Popular' },
-    elite: { icon:'👑', name:'Elite Plan — 360 Days', desc:'For the most committed. Everything in Pro plus an AI Keto Coach, 360-day journey, and priority support.', tag:'Best Results' },
+    basic: { icon: svgLeaf,  name:'Basic Plan — 30 Days', desc:'Perfect for beginners. Daily meal plans, 30+ recipes, check-ins, and progress tracking.', tag:'Great Start' },
+    pro:   { icon: svgChart, name:'Pro Plan — 90 Days',   desc:'Most popular. 87+ recipes, advanced analytics, fasting timer, weekly reports, and meal swap engine.', tag:'Most Popular' },
+    elite: { icon: svgStar,  name:'Elite Plan — 360 Days', desc:'For the most committed. Everything in Pro plus an AI Keto Coach, 360-day journey, and priority support.', tag:'Best Results' },
   };
   var pd = planData[plan];
-  document.getElementById('planIcon').textContent = pd.icon;
+  document.getElementById('planIcon').innerHTML = pd.icon;
   document.getElementById('planName').textContent = pd.name;
   document.getElementById('planDesc').textContent = pd.desc;
   document.getElementById('planTag').textContent  = pd.tag;
