@@ -42,6 +42,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const { error } = await db.auth.updateUser({ password: newPassword });
   if (error) return json({ error: error.message }, 400);
 
+  // Revoke all other active sessions so a stolen session can't be reused
+  const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (SERVICE_KEY) {
+    try {
+      const adminClient = createClient(SUPABASE_URL!, SERVICE_KEY);
+      await adminClient.auth.admin.signOut(user.id, 'others');
+    } catch {
+      // Non-fatal — password change still succeeded
+    }
+  }
+
   return json({ success: true });
 };
 
