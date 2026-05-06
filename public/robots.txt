@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Block private app pages from indexing
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /admin/
+
+Sitemap: https://ketojourney.fun/sitemap-index.xml
