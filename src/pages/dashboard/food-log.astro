@@ -965,7 +965,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
 
     <div>
       <label class="rv-label">Food name *</label>
-      <input class="rv-input" id="flName" placeholder="e.g. Scrambled eggs" autocomplete="off"/>
+      <input class="rv-input" id="flName" placeholder="e.g. Scrambled eggs" autocomplete="off" maxlength="200"/>
     </div>
     <div class="rv-fm-row">
       <div>
@@ -980,16 +980,16 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
       </div>
       <div>
         <label class="rv-label">Calories</label>
-        <input class="rv-input" id="flCal" type="number" min="0" placeholder="0"/>
+        <input class="rv-input" id="flCal" type="number" min="0" max="9999" placeholder="0"/>
       </div>
     </div>
     <div>
       <label class="rv-label">Macros (grams)</label>
       <div class="rv-fm-row4">
-        <input class="rv-input" id="flProt"  type="number" min="0" step="0.1" placeholder="Prot"/>
-        <input class="rv-input" id="flFat"   type="number" min="0" step="0.1" placeholder="Fat"/>
-        <input class="rv-input" id="flCarb"  type="number" min="0" step="0.1" placeholder="Carbs"/>
-        <input class="rv-input" id="flFiber" type="number" min="0" step="0.1" placeholder="Fiber"/>
+        <input class="rv-input" id="flProt"  type="number" min="0" max="500" step="0.1" placeholder="Prot"/>
+        <input class="rv-input" id="flFat"   type="number" min="0" max="500" step="0.1" placeholder="Fat"/>
+        <input class="rv-input" id="flCarb"  type="number" min="0" max="500" step="0.1" placeholder="Carbs"/>
+        <input class="rv-input" id="flFiber" type="number" min="0" max="500" step="0.1" placeholder="Fiber"/>
       </div>
     </div>
 

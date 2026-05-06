@@ -192,7 +192,7 @@ const showWeightLost = weightLostKg > 0;
 
       <!-- TEXT mode -->
       <div id="modeText" class="com-mode-panel">
-        <textarea id="postContent" class="com-textarea" placeholder="Share your progress, a recipe, tip or win…"></textarea>
+        <textarea id="postContent" class="com-textarea" placeholder="Share your progress, a recipe, tip or win…" maxlength="2000"></textarea>
       </div>
 
       <!-- PHOTO mode -->
@@ -206,7 +206,7 @@ const showWeightLost = weightLostKg > 0;
           <img id="photoPreviewImg" src="" alt="Preview" class="com-photo-preview" />
           <button id="photoRemoveBtn" class="com-photo-remove">✕ Remove</button>
         </div>
-        <textarea id="photoCaption" class="com-textarea" style="min-height:72px;border-top:1px solid var(--border)" placeholder="Add a caption (optional)…"></textarea>
+        <textarea id="photoCaption" class="com-textarea" style="min-height:72px;border-top:1px solid var(--border)" placeholder="Add a caption (optional)…" maxlength="500"></textarea>
         <p id="photoUploadError" class="com-err" style="padding:.25rem 1.25rem .5rem"></p>
       </div>
 
@@ -224,7 +224,7 @@ const showWeightLost = weightLostKg > 0;
             </div>
           </div>
         </div>
-        <textarea id="progressCaption" class="com-textarea" style="min-height:72px;border-top:1px solid var(--border)" placeholder="Add a message (optional)…"></textarea>
+        <textarea id="progressCaption" class="com-textarea" style="min-height:72px;border-top:1px solid var(--border)" placeholder="Add a message (optional)…" maxlength="500"></textarea>
       </div>
 
       <div class="com-char-row">
@@ -789,7 +789,7 @@ const showWeightLost = weightLostKg > 0;
       html += '<div class="com-comments" id="cmts-' + esc(p.id) + '">';
       html += '<div class="com-comment-input-row">';
       html += '<div class="com-comment-av" style="background:linear-gradient(135deg,' + colorFor(userName) + ',rgba(52,211,153,.55))">' + myInitial + '</div>';
-      html += '<textarea class="com-comment-input" placeholder="Write a comment…" rows="1" id="ci-' + esc(p.id) + '"></textarea>';
+      html += '<textarea class="com-comment-input" placeholder="Write a comment…" rows="1" maxlength="500" id="ci-' + esc(p.id) + '"></textarea>';
       html += '<button class="com-comment-send" id="cs-' + esc(p.id) + '">';
       html += '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
       html += '</button></div>';

@@ -937,7 +937,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
                 <div class="rv-fgrid">
                   <div class="rv-fg">
                     <label>Full Name</label>
-                    <input class="rv-fi" name="full_name" value={profile.full_name || ''} placeholder="Your name"/>
+                    <input class="rv-fi" name="full_name" value={profile.full_name || ''} placeholder="Your name" maxlength="100"/>
                   </div>
                 </div>
                 {units === 'imperial' ? (
