@@ -32,7 +32,7 @@ const contentHtml = marked.parse(post.content || '');
 
 const pageTitle = post.seo_title || post.title;
 const pageDesc  = post.seo_description || post.excerpt || '';
-const ogImage   = post.cover_image_url || `${SITE_URL}/og-image.png`;
+const ogImage   = post.cover_image_url || `${SITE_URL}/api/og?title=${encodeURIComponent(post.title || '')}&type=blog`;
 const publishedDate = post.published_at ? new Date(post.published_at).toISOString() : '';
 ---
 <!DOCTYPE html>

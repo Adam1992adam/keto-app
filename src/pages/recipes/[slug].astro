@@ -34,7 +34,7 @@ const totalTime    = (recipe.prep_time || 0) + (recipe.cook_time || 0);
 
 const pageTitle = recipe.seo_title || recipe.title;
 const pageDesc  = recipe.seo_description || recipe.description || '';
-const ogImage   = recipe.cover_image_url || `${SITE_URL}/og-image.png`;
+const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeURIComponent(recipe.title || '')}&type=recipe`;
 ---
 <!DOCTYPE html>
 <html lang="en">
