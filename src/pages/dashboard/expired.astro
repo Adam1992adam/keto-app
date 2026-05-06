@@ -38,8 +38,8 @@ const allPlans = [
     id: 'basic_30',
     name: 'Basic',
     emoji: '🥑',
-    price: '29.99',
-    period: '30 days',
+    price: '29',
+    period: '30-Day Kickstart',
     color: '#10b981',
     gradient: 'linear-gradient(135deg,#10b981,#34d399)',
     perks: ['30-day meal plan', '30 keto recipes', '4 eBooks', 'Basic tracking'],
@@ -50,11 +50,11 @@ const allPlans = [
     id: 'pro_6',
     name: 'Pro',
     emoji: '⚡',
-    price: '99.99',
-    period: '6 months',
+    price: '69',
+    period: '90-Day Transformation',
     color: '#6366f1',
     gradient: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-    perks: ['6-month meal plan', '87+ recipes', '8 eBooks', 'Advanced analytics', 'Priority support'],
+    perks: ['90-day meal plan', '87+ recipes', '8 eBooks', 'Advanced analytics', 'Priority support'],
     popular: true,
     checkoutUrl: LS_PRO_URL,
   },
@@ -62,11 +62,11 @@ const allPlans = [
     id: 'elite_12',
     name: 'Elite',
     emoji: '👑',
-    price: '199.99',
-    period: '12 months',
+    price: '149',
+    period: '360-Day Lifestyle',
     color: '#f59e0b',
     gradient: 'linear-gradient(135deg,#f59e0b,#fbbf24)',
-    perks: ['12-month meal plan', 'Unlimited recipes', '12 eBooks', 'AI Keto Coach', '24/7 support', 'Community access'],
+    perks: ['360-day meal plan', 'Unlimited recipes', '12 eBooks', 'AI Keto Coach', '24/7 support', 'Community access'],
     popular: false,
     checkoutUrl: LS_ELITE_URL,
   },
@@ -441,7 +441,7 @@ const defaultSelected = suggestedPlans.find(p => p.popular)?.id || suggestedPlan
       if (userFullName) url.searchParams.set('checkout[name]',  userFullName);
       if (userId)       url.searchParams.set('checkout[custom][user_id]', userId);
       // Redirect back to dashboard after payment
-      if (userId && appUrl) url.searchParams.set('checkout[redirect_url]', appUrl + '/dashboard?upgraded=1');
+      if (userId && appUrl) url.searchParams.set('checkout[redirect_url]', appUrl + '/login?upgraded=1');
       return url.toString();
     } catch(e) { return baseUrl; }
   }

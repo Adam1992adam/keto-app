@@ -6,6 +6,7 @@ import CookieConsent from '../components/CookieConsent.astro';
 const error      = Astro.url.searchParams.get('error');
 const message    = Astro.url.searchParams.get('message');
 const retryAfter = Astro.url.searchParams.get('retry');
+const upgraded   = Astro.url.searchParams.get('upgraded') === '1';
 const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').replace(/\/$/, '');
 ---
 
@@ -138,6 +139,14 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
     }
     .alert-error { background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.25); color:#b91c1c; }
     .alert-success { background:rgba(16,185,129,.08); border:1px solid rgba(16,185,129,.25); color:#065f46; }
+    .alert-upgrade {
+      background:linear-gradient(135deg,rgba(255,92,122,.1),rgba(255,145,77,.08));
+      border:1.5px solid rgba(255,92,122,.35); color:#b91c1c;
+      border-radius:14px; padding:1.1rem 1.25rem;
+      margin-bottom:1.5rem; animation:fadeUp .4s ease both;
+    }
+    .alert-upgrade-title { font-size:.95rem; font-weight:800; color:var(--rv-accent); margin-bottom:.25rem; }
+    .alert-upgrade-body  { font-size:.8rem; color:var(--soft); line-height:1.5; }
 
     /* ── FORM FIELDS ── */
     .field { margin-bottom:1.25rem; animation:fadeUp .4s ease both; }
@@ -284,6 +293,13 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
     <p class="form-sub">Continue your transformation journey</p>
   </div>
 
+  {upgraded && (
+    <div class="alert-upgrade">
+      <div class="alert-upgrade-title">🎉 Payment confirmed — welcome to your new plan!</div>
+      <div class="alert-upgrade-body">Your account has been upgraded. Log in below to continue your journey.</div>
+    </div>
+  )}
+
   {error && (
     <div class="alert alert-error">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -304,6 +320,7 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
   )}
 
   <form action="/api/auth/login" method="POST" id="loginForm">
+    {upgraded && <input type="hidden" name="upgraded" value="1"/>}
 
     <div class="field" style="animation-delay:.05s;">
       <label class="field-label" for="email">Email Address</label>
@@ -343,7 +360,7 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
 
   <div class="signup-prompt">
     Don't have an account yet?
-    <a href="/signup">Create one →</a>
+    <a href="/start">Start free trial →</a>
   </div>
 
   <div class="trust-row">

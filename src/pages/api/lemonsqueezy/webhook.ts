@@ -149,6 +149,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const profileUpdate = {
         subscription_tier:       tier,
         subscription_status:     'active',
+        is_trial:                false,
         subscription_start_date: startISO,
         subscription_end_date:   endISO,
         payhip_sale_id:          orderId,   // keep legacy field populated
@@ -259,6 +260,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const profileUpdate = {
         subscription_tier:       tier,
         subscription_status:     'active',
+        is_trial:                false,
         subscription_start_date: startISO,
         subscription_end_date:   endISO,
         ls_subscription_id:      subscriptionId,

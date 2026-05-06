@@ -918,6 +918,12 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
 </div><!-- /result-phase -->
 
 <script is:inline>
+/* Capture referral code from URL → localStorage so submitTrial() can read it */
+(function() {
+  var ref = new URLSearchParams(window.location.search).get('ref');
+  if (ref) localStorage.setItem('keto_ref', ref.trim().toUpperCase().slice(0, 20));
+})();
+
 var answers = {
   goal: null,
   experience: null,

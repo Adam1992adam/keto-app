@@ -11,7 +11,7 @@ function getResend() {
 }
 
 const FROM = import.meta.env.EMAIL_FROM || 'Keto Journey <onboarding@resend.dev>';
-const APP_URL = import.meta.env.PUBLIC_APP_URL || 'https://keto-app-iota.vercel.app';
+const APP_URL = import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun';
 
 function unsubHeaders(path: string) {
   const url = `${APP_URL}${path}`;
@@ -94,7 +94,7 @@ function p(text: string, style = '') {
 // ─────────────────────────────────────────────────────────────────────────────
 export async function sendWelcomeEmail(to: string, name: string, tier: string) {
   const firstName = name.split(' ')[0];
-  const tierLabel = tier === 'elite_12' ? '👑 Elite (360 days)' : tier === 'pro_6' ? '⚡ Pro (90 days)' : '🥑 Basic (30 days)';
+  const tierLabel = tier === 'trial' ? '🆓 Free Trial (7 days)' : tier === 'elite_12' ? '👑 Elite (360 days)' : tier === 'pro_6' ? '⚡ Pro (90 days)' : '🥑 Basic (30 days)';
 
   const content = `
     ${h1(`Welcome, ${firstName}! 🎉`)}
@@ -713,7 +713,7 @@ export async function sendTrialNurture1(to: string, name: string) {
     </div>
     <p style="margin:0 0 20px;font-size:14px;color:#4d7055;line-height:1.7;">Subscribing unlocks everything from where you left off. No re-setup, no starting over. Plans start from just a few dollars per week.</p>
     <div style="text-align:center;">
-      <a href="${APP_URL}/dashboard/upgrade" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Continue My Journey →</a>
+      <a href="${APP_URL}/dashboard/expired" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Continue My Journey →</a>
     </div>`;
   const resend = getResend();
   return resend.emails.send({ from: FROM, to, subject: `${firstName}, your free trial has ended — here's how to continue`, html: layout(content, 'Your 7-day trial is over — unlock your journey'), headers: H_SUB() });
@@ -735,7 +735,7 @@ export async function sendTrialNurture2(to: string, name: string) {
     </div>
     <p style="margin:0 0 20px;font-size:14px;color:#4d7055;line-height:1.7;">You're right at the point where the results accelerate — and the hardest part (adaptation) is already behind you. Don't let that work go to waste.</p>
     <div style="text-align:center;">
-      <a href="${APP_URL}/dashboard/upgrade" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Continue From Day 8 →</a>
+      <a href="${APP_URL}/dashboard/expired" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Continue From Day 8 →</a>
     </div>`;
   const resend = getResend();
   return resend.emails.send({ from: FROM, to, subject: `What typically happens in days 8–30 of keto, ${firstName}`, html: layout(content, "The best results are in days 8–30 — don't stop now"), headers: H_SUB() });
@@ -753,7 +753,7 @@ export async function sendTrialNurture3(to: string, name: string) {
         <p style="margin:0;font-size:13px;color:#4d7055;line-height:1.5;">${a}</p>
       </div>`).join('')}
     <div style="text-align:center;margin-top:22px;">
-      <a href="${APP_URL}/dashboard/upgrade" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">See Plans & Pricing →</a>
+      <a href="${APP_URL}/dashboard/expired" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">See Plans & Pricing →</a>
     </div>`;
   const resend = getResend();
   return resend.emails.send({ from: FROM, to, subject: `Quick question, ${firstName} — what's holding you back?`, html: layout(content, "We want to help — what's in the way?"), headers: H_SUB() });
@@ -771,7 +771,7 @@ export async function sendTrialNurture4(to: string, name: string) {
       <p style="margin:0;font-size:13px;color:#4d7055;">Everything you logged during your trial is waiting for you.</p>
     </div>
     <div style="text-align:center;">
-      <a href="${APP_URL}/dashboard/upgrade" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Resume My Journey →</a>
+      <a href="${APP_URL}/dashboard/expired" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Resume My Journey →</a>
     </div>
     <p style="margin:20px 0 0;font-size:12px;color:#2e4a32;text-align:center;">After this, we'll stop emailing you about your subscription. You'll only hear from us if you re-activate.</p>`;
   const resend = getResend();

@@ -28,7 +28,7 @@ export const GET: APIRoute = async ({ request }) => {
   const { data: profiles } = await db
     .from('profiles')
     .select('id, email, full_name, subscription_status')
-    .eq('subscription_status', 'active');
+    .in('subscription_status', ['active', 'trial']);
 
   if (!profiles?.length) return json({ success: true, sent: 0 });
 

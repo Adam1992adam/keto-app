@@ -103,6 +103,14 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       return json({ error: 'Account created but could not log you in automatically. Please log in manually.' }, 500);
     }
 
+    // Send welcome email (fire-and-forget — don't block signup on email failure)
+    void (async () => {
+      try {
+        const { sendWelcomeEmail } = await import('../../../lib/email');
+        await sendWelcomeEmail(cleanEmail, cleanName, 'trial');
+      } catch (e) { console.error('[signup-trial] welcome email user:', userId, e); }
+    })();
+
     // Mark lead as converted if they came via free-book flow (fire-and-forget)
     void supabase.from('leads').update({ converted: true }).eq('email', cleanEmail);
 

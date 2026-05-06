@@ -11,8 +11,9 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   }
 
   const formData = await request.formData();
-  const email = formData.get('email')?.toString();
+  const email    = formData.get('email')?.toString();
   const password = formData.get('password')?.toString();
+  const upgraded = formData.get('upgraded')?.toString() === '1';
 
   if (!email || !password) {
     return redirect('/login?error=auth');
@@ -56,5 +57,5 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     });
   }
 
-  return redirect('/dashboard');
+  return redirect(upgraded ? '/dashboard?upgraded=1' : '/dashboard');
 };
