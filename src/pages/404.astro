@@ -1,6 +1,7 @@
 ---
-// src/pages/404.astro — Custom Not Found page
+export const prerender = true;
 import CookieConsent from '../components/CookieConsent.astro';
+const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').replace(/\/$/, '');
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -9,228 +10,181 @@ import CookieConsent from '../components/CookieConsent.astro';
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Page Not Found — Keto Journey</title>
   <meta name="robots" content="noindex"/>
+  <link rel="canonical" href={SITE_URL + '/404'}/>
+  <link rel="icon" type="image/png" sizes="32x32" href="/icon-72.png"/>
+  <meta name="theme-color" content="#FF5C7A"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
-
-  <script is:inline>
-    (function(){
-      var t = localStorage.getItem('keto-theme') || 'dark';
-      document.documentElement.setAttribute('data-theme', t);
-    })();
-  </script>
-
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <style>
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-    /* ── TOKENS ── */
-    html:not([data-theme="dark"]) {
-      --bg:     #f5f7fa;
-      --card:   #ffffff;
-      --border: rgba(0,0,0,.07);
-      --text:   #0f172a;
-      --soft:   #64748b;
-      --muted:  #e2e8f0;
-      --green:  #16a34a;
-      --green2: #22c55e;
+    :root {
+      --bg:#FAF6F1; --bg-alt:#F2EDE5; --ink:#16110F; --ink-soft:#4A4340;
+      --muted:#8A8077; --line:#E5DED2; --accent:#FF5C7A; --card:#FFFFFF;
     }
-    [data-theme="dark"] {
-      --bg:     #060d09;
-      --card:   #0d1a0f;
-      --border: rgba(16,185,129,.1);
-      --text:   #dfeedd;
-      --soft:   #4d7055;
-      --muted:  #233328;
-      --green:  #10b981;
-      --green2: #34d399;
-    }
-
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; -webkit-font-smoothing: antialiased; }
     body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-      transition: background .3s, color .3s;
+      font-family: 'Geist', sans-serif; background: var(--bg); color: var(--ink);
+      min-height: 100vh; display: flex; flex-direction: column;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* NAV */
+    .nav {
+      padding: .9rem 1.75rem; display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+    .nav-logo {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 18px; font-weight: 700; letter-spacing: -0.03em; color: var(--ink);
+    }
+    .nav-logo .dot {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: var(--accent); display: grid; place-items: center;
+      font-family: 'Instrument Serif', serif; font-style: italic;
+      font-size: 15px; color: #fff; font-weight: 400; flex-shrink: 0;
+    }
+    .nav-logo em { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; color: var(--accent); }
+
+    /* MAIN */
+    .main {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 3rem 1.5rem;
     }
 
-    /* ── BACKGROUND ORB ── */
-    .orb {
-      position: fixed;
-      width: 600px; height: 600px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(16,185,129,.07) 0%, transparent 70%);
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      z-index: 0;
-      animation: pulse 6s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { transform: translate(-50%,-50%) scale(1); opacity: .7; }
-      50%       { transform: translate(-50%,-50%) scale(1.12); opacity: 1; }
-    }
-
-    /* ── CARD ── */
+    /* CARD */
     .card {
-      position: relative; z-index: 1;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 28px;
-      padding: 3.5rem 3rem 3rem;
-      max-width: 500px; width: 100%;
-      text-align: center;
-      box-shadow: 0 24px 80px rgba(0,0,0,.12);
-      animation: slideUp .5s cubic-bezier(.34,1.56,.64,1);
-    }
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(24px) scale(.97); }
-      to   { opacity: 1; transform: translateY(0) scale(1); }
+      width: 100%; max-width: 480px; text-align: center;
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 28px; padding: 3rem 2.5rem 2.5rem;
+      animation: fadeUp .4s ease both;
     }
 
-    /* ── AVOCADO ICON ── */
+    /* ICON */
     .icon-wrap {
-      width: 90px; height: 90px;
-      border-radius: 24px;
-      background: linear-gradient(135deg, rgba(16,185,129,.12), rgba(52,211,153,.06));
-      border: 1px solid rgba(16,185,129,.2);
+      width: 72px; height: 72px; border-radius: 20px;
+      background: rgba(255,92,122,.08); border: 1px solid rgba(255,92,122,.2);
       display: flex; align-items: center; justify-content: center;
-      font-size: 2.8rem;
       margin: 0 auto 1.75rem;
-      animation: wobble 3s ease-in-out infinite;
     }
-    @keyframes wobble {
-      0%, 100% { transform: rotate(0deg); }
-      20%       { transform: rotate(-8deg); }
-      40%       { transform: rotate(8deg); }
-      60%       { transform: rotate(-4deg); }
-      80%       { transform: rotate(4deg); }
-    }
+    .icon-wrap svg { display: block; }
 
-    /* ── CODE ── */
+    /* CODE */
     .code {
-      font-family: 'Fraunces', serif;
-      font-size: clamp(4rem, 12vw, 6rem);
-      font-weight: 900;
-      line-height: 1;
-      background: linear-gradient(135deg, var(--green), var(--green2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: .75rem;
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: clamp(4.5rem, 14vw, 7rem);
+      font-weight: 800; line-height: 1; letter-spacing: -0.04em;
+      color: var(--ink); margin-bottom: .5rem;
+    }
+    .code em {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic; font-weight: 400; color: var(--accent);
     }
 
-    /* ── TITLE / SUB ── */
+    /* HEADING */
+    .card-eyebrow {
+      font-family: 'Geist', sans-serif; font-size: 10px; letter-spacing: 0.22em;
+      text-transform: uppercase; color: var(--accent); margin-bottom: .75rem;
+      display: inline-flex; align-items: center; gap: 7px;
+    }
+    .card-eyebrow::before {
+      content: ''; width: 5px; height: 5px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 0 0 3px rgba(255,92,122,.2);
+    }
     .title {
-      font-family: 'Fraunces', serif;
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: .6rem;
+      font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: 1.55rem; font-weight: 700; letter-spacing: -0.03em;
+      line-height: 1.15; margin-bottom: .5rem;
     }
+    .title em { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; color: var(--accent); }
     .sub {
-      font-size: .9rem;
-      color: var(--soft);
-      line-height: 1.6;
-      max-width: 340px;
-      margin: 0 auto 2rem;
+      font-size: .875rem; color: var(--ink-soft); line-height: 1.65;
+      max-width: 320px; margin: 0 auto 2rem;
     }
 
-    /* ── ACTIONS ── */
-    .actions {
-      display: flex;
-      flex-direction: column;
-      gap: .75rem;
-    }
+    /* ACTIONS */
+    .actions { display: flex; flex-direction: column; gap: .75rem; }
     .btn-primary {
       display: flex; align-items: center; justify-content: center; gap: .5rem;
-      padding: .875rem 1.5rem;
-      background: linear-gradient(135deg, var(--green), var(--green2));
-      color: #fff;
-      border: none; border-radius: 14px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: .9rem; font-weight: 700;
-      text-decoration: none; cursor: pointer;
-      transition: opacity .15s, transform .15s;
-      box-shadow: 0 4px 20px rgba(16,185,129,.25);
+      padding: 13px 1.5rem; background: var(--ink); color: var(--bg);
+      border-radius: 13px; font-family: 'Bricolage Grotesque', sans-serif;
+      font-size: .875rem; font-weight: 600; letter-spacing: -0.01em;
+      transition: background .15s, transform .1s;
     }
-    .btn-primary:hover { opacity: .9; transform: translateY(-2px); }
+    .btn-primary:hover { background: var(--accent); }
+    .btn-primary:active { transform: scale(.98); }
+
+    .divider {
+      display: flex; align-items: center; gap: .75rem;
+      font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+    }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
 
     .btn-secondary {
       display: flex; align-items: center; justify-content: center; gap: .5rem;
-      padding: .875rem 1.5rem;
-      background: transparent;
-      color: var(--soft);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: .9rem; font-weight: 600;
-      text-decoration: none; cursor: pointer;
+      padding: 13px 1.5rem; background: transparent; color: var(--ink-soft);
+      border: 1px solid var(--line); border-radius: 13px;
+      font-family: 'Geist', sans-serif; font-size: .875rem; font-weight: 500;
       transition: border-color .15s, color .15s;
     }
-    .btn-secondary:hover { border-color: var(--green); color: var(--green); }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
 
-    /* ── DIVIDER ── */
-    .divider {
-      display: flex; align-items: center; gap: .75rem;
-      margin: .25rem 0;
-      color: var(--muted);
-      font-size: .75rem;
-    }
-    .divider::before, .divider::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
-
-    /* ── FOOTER ── */
+    /* FOOTER */
     .footer {
-      position: relative; z-index: 1;
-      margin-top: 2rem;
-      font-size: .75rem;
-      color: var(--soft);
-      text-align: center;
+      padding: 1.5rem; text-align: center;
+      font-family: 'Geist', sans-serif; font-size: .72rem;
+      letter-spacing: 0.04em; color: var(--muted);
     }
-    .footer a { color: var(--green); text-decoration: none; }
-    .footer a:hover { text-decoration: underline; }
+    .footer a { color: var(--ink-soft); margin: 0 .4rem; }
+    .footer a:hover { color: var(--accent); }
+
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body>
 
-<div class="orb" aria-hidden="true"></div>
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <span class="dot">k</span>keto<em>journey</em>
+  </a>
+</nav>
 
-<div class="card">
-  <div class="icon-wrap" aria-hidden="true">🥑</div>
-  <div class="code">404</div>
-  <h1 class="title">This page went off-keto</h1>
-  <p class="sub">The page you're looking for doesn't exist or may have been moved. Let's get you back on track.</p>
+<main class="main">
+  <div class="card">
 
-  <div class="actions">
-    <a href="/dashboard" class="btn-primary">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      Go to Dashboard
-    </a>
+    <div class="icon-wrap" aria-hidden="true">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+      </svg>
+    </div>
 
-    <div class="divider">or</div>
+    <div class="card-eyebrow">Error 404</div>
+    <div class="code">Not <em>found</em></div>
+    <h1 class="title">This page went <em>off-keto</em></h1>
+    <p class="sub">The page you're looking for doesn't exist or may have been moved. Let's get you back on track.</p>
 
-    <a href="/" class="btn-secondary">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-      Back to Home
-    </a>
+    <div class="actions">
+      <a href="/dashboard" class="btn-primary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Go to Dashboard
+      </a>
+      <div class="divider">or</div>
+      <a href="/" class="btn-secondary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to Home
+      </a>
+    </div>
+
   </div>
-</div>
+</main>
 
-<p class="footer">
-  Lost? <a href="mailto:support@ketojourney.fun">Contact support</a> &nbsp;·&nbsp;
-  <a href="/privacy-policy">Privacy</a> &nbsp;·&nbsp;
-  <a href="/terms">Terms</a> &nbsp;·&nbsp;
-  <a href="/disclaimer">Disclaimer</a>
-</p>
+<footer class="footer">
+  Lost? <a href="mailto:support@ketojourney.fun">Contact support</a>
+  &nbsp;·&nbsp;<a href="/privacy-policy">Privacy</a>
+  &nbsp;·&nbsp;<a href="/terms">Terms</a>
+</footer>
 
 <CookieConsent />
 </body>
