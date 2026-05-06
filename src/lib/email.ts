@@ -13,6 +13,16 @@ function getResend() {
 const FROM = import.meta.env.EMAIL_FROM || 'Keto Journey <onboarding@resend.dev>';
 const APP_URL = import.meta.env.PUBLIC_APP_URL || 'https://keto-app-iota.vercel.app';
 
+function unsubHeaders(path: string) {
+  const url = `${APP_URL}${path}`;
+  return {
+    'List-Unsubscribe': `<${url}>`,
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+  };
+}
+const H_SUB  = () => unsubHeaders('/dashboard/notification-preferences');
+const H_LEAD = () => unsubHeaders('/free-book');
+
 // ── Shared layout wrapper ────────────────────────────────────────────────────
 function layout(content: string, preheader = '') {
   return `<!DOCTYPE html>
@@ -116,6 +126,7 @@ export async function sendWelcomeEmail(to: string, name: string, tier: string) {
     to,
     subject: `Welcome to Keto Journey, ${firstName}! Your plan is ready 🥑`,
     html,
+    headers: H_SUB(),
   });
 }
 
@@ -282,7 +293,7 @@ export async function sendWeeklySummaryEmail(to: string, name: string, stats: {
   })();
 
   const resend = getResend();
-  return resend.emails.send({ from: FROM, to, subject, html });
+  return resend.emails.send({ from: FROM, to, subject, html, headers: H_SUB() });
 }
 
 function statCell(icon: string, value: string, label: string, color: string) {
@@ -367,6 +378,7 @@ export async function sendMilestoneEmail(to: string, name: string, day: number, 
     to,
     subject: `${m.icon} Day ${day} milestone unlocked — ${m.title}`,
     html,
+    headers: H_SUB(),
   });
 }
 
@@ -406,6 +418,7 @@ export async function sendStreakWarningEmail(to: string, name: string, streak: n
     to,
     subject: `⚠️ Your ${streak}-day streak expires at midnight — check in now!`,
     html,
+    headers: H_SUB(),
   });
 }
 
@@ -454,6 +467,7 @@ export async function sendWinbackEmail(to: string, name: string, daysMissed: num
     to,
     subject: `${firstName}, your keto journey misses you 👋`,
     html,
+    headers: H_SUB(),
   });
 }
 
@@ -555,6 +569,7 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${prehead
     to,
     subject: '📖 Your free keto recipe book is here!',
     html,
+    headers: H_LEAD(),
   });
 }
 
@@ -605,7 +620,7 @@ export async function sendLeadNurture1(to: string) {
       <p style="margin:10px 0 0;font-size:12px;color:#2e4a32;">No credit card · Full app access for 7 days</p>
     </div>`;
   const resend = getResend();
-  return resend.emails.send({ from: FROM, to, subject: 'Did you try the keto recipes? 🍳', html: nurtureLayout(content, 'Day 2 — a quick keto win for tonight') });
+  return resend.emails.send({ from: FROM, to, subject: 'Did you try the keto recipes? 🍳', html: nurtureLayout(content, 'Day 2 — a quick keto win for tonight'), headers: H_LEAD() });
 }
 
 // Lead Nurture Step 2 — Day 5: "The science behind keto"
@@ -630,7 +645,7 @@ export async function sendLeadNurture2(to: string) {
       <a href="${APP_URL}/start" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Try the 7-Day Free Plan →</a>
     </div>`;
   const resend = getResend();
-  return resend.emails.send({ from: FROM, to, subject: 'The science behind why keto actually works 🔬', html: nurtureLayout(content, 'Why keto works when other diets fail — the real science') });
+  return resend.emails.send({ from: FROM, to, subject: 'The science behind why keto actually works 🔬', html: nurtureLayout(content, 'Why keto works when other diets fail — the real science'), headers: H_LEAD() });
 }
 
 // Lead Nurture Step 3 — Day 8: "The #1 mistake"
@@ -657,7 +672,7 @@ export async function sendLeadNurture3(to: string) {
       <a href="${APP_URL}/start" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Track My Macros Free for 7 Days →</a>
     </div>`;
   const resend = getResend();
-  return resend.emails.send({ from: FROM, to, subject: 'The #1 mistake that kills keto results (and how to avoid it) ⚠️', html: nurtureLayout(content, 'Are hidden carbs killing your results?') });
+  return resend.emails.send({ from: FROM, to, subject: 'The #1 mistake that kills keto results (and how to avoid it) ⚠️', html: nurtureLayout(content, 'Are hidden carbs killing your results?'), headers: H_LEAD() });
 }
 
 // Lead Nurture Step 4 — Day 12: Last nudge
@@ -675,7 +690,7 @@ export async function sendLeadNurture4(to: string) {
       <p style="margin:10px 0 0;font-size:12px;color:#2e4a32;">Takes 5 minutes · No card needed</p>
     </div>`;
   const resend = getResend();
-  return resend.emails.send({ from: FROM, to, subject: "One last thing before we go quiet 👋", html: nurtureLayout(content, 'Your keto transformation is one step away') });
+  return resend.emails.send({ from: FROM, to, subject: "One last thing before we go quiet 👋", html: nurtureLayout(content, 'Your keto transformation is one step away'), headers: H_LEAD() });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -701,7 +716,7 @@ export async function sendTrialNurture1(to: string, name: string) {
       <a href="${APP_URL}/dashboard/upgrade" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Continue My Journey →</a>
     </div>`;
   const resend = getResend();
-  return resend.emails.send({ from: FROM, to, subject: `${firstName}, your free trial has ended — here's how to continue`, html: layout(content, 'Your 7-day trial is over — unlock your journey') });
+  return resend.emails.send({ from: FROM, to, subject: `${firstName}, your free trial has ended — here's how to continue`, html: layout(content, 'Your 7-day trial is over — unlock your journey'), headers: H_SUB() });
 }
 
 // Trial Nurture Step 2 — Day 4 after expiry
@@ -723,7 +738,7 @@ export async function sendTrialNurture2(to: string, name: string) {
       <a href="${APP_URL}/dashboard/upgrade" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Continue From Day 8 →</a>
     </div>`;
   const resend = getResend();
-  return resend.emails.send({ from: FROM, to, subject: `What typically happens in days 8–30 of keto, ${firstName}`, html: layout(content, "The best results are in days 8–30 — don't stop now") });
+  return resend.emails.send({ from: FROM, to, subject: `What typically happens in days 8–30 of keto, ${firstName}`, html: layout(content, "The best results are in days 8–30 — don't stop now"), headers: H_SUB() });
 }
 
 // Trial Nurture Step 3 — Day 8 after expiry
@@ -741,7 +756,7 @@ export async function sendTrialNurture3(to: string, name: string) {
       <a href="${APP_URL}/dashboard/upgrade" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#10b981,#34d399);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">See Plans & Pricing →</a>
     </div>`;
   const resend = getResend();
-  return resend.emails.send({ from: FROM, to, subject: `Quick question, ${firstName} — what's holding you back?`, html: layout(content, "We want to help — what's in the way?") });
+  return resend.emails.send({ from: FROM, to, subject: `Quick question, ${firstName} — what's holding you back?`, html: layout(content, "We want to help — what's in the way?"), headers: H_SUB() });
 }
 
 // Trial Nurture Step 4 — Day 14 after expiry: final
@@ -760,5 +775,5 @@ export async function sendTrialNurture4(to: string, name: string) {
     </div>
     <p style="margin:20px 0 0;font-size:12px;color:#2e4a32;text-align:center;">After this, we'll stop emailing you about your subscription. You'll only hear from us if you re-activate.</p>`;
   const resend = getResend();
-  return resend.emails.send({ from: FROM, to, subject: `${firstName}, this is our last email about your trial`, html: layout(content, "Your keto journey is paused, not over") });
+  return resend.emails.send({ from: FROM, to, subject: `${firstName}, this is our last email about your trial`, html: layout(content, "Your keto journey is paused, not over"), headers: H_SUB() });
 }
