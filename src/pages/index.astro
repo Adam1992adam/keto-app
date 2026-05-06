@@ -1296,6 +1296,260 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
       .footer { padding: 60px 18px 30px; }
       .footer-top { grid-template-columns: 1fr 1fr; gap: 40px; }
     }
+
+    /* ══════════════════════════════════════
+       CSS AVATAR INITIALS
+    ══════════════════════════════════════ */
+    .avatar-init {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid var(--bg);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 13px;
+      color: #fff;
+      flex-shrink: 0;
+      font-family: var(--display);
+      margin-left: -10px;
+    }
+    .avatar-stack .avatar-init:first-child { margin-left: 0; }
+    .story-avatar {
+      width: 92px;
+      height: 110px;
+      border-radius: 18px;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      font-family: var(--display);
+      font-weight: 700;
+      font-size: 44px;
+      color: rgba(255,255,255,.9);
+    }
+    @media (max-width: 980px) {
+      .story-avatar { width: 100%; height: 80px; font-size: 36px; }
+    }
+
+    /* ══════════════════════════════════════
+       ABOUT / PRODUCT DESCRIPTION
+    ══════════════════════════════════════ */
+    .about-sec {
+      padding: 120px 32px;
+      background: var(--bg-alt);
+    }
+    .about-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 80px;
+      align-items: center;
+    }
+    .about-tag-cloud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 32px;
+    }
+    .about-pill {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink-soft);
+    }
+    .about-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .about-stat-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .about-stat-num {
+      font-family: var(--display);
+      font-size: clamp(32px, 3.5vw, 48px);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      color: var(--accent);
+    }
+    .about-stat-lbl {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .about-stat-desc {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--ink-soft);
+      margin-top: 4px;
+    }
+    @media (max-width: 980px) {
+      .about-sec { padding: 80px 18px; }
+      .about-inner { grid-template-columns: 1fr; gap: 48px; }
+    }
+
+    /* ══════════════════════════════════════
+       WHY KETO WORKS — SCIENCE
+    ══════════════════════════════════════ */
+    .science-sec {
+      padding: 120px 32px;
+      background: var(--bg);
+    }
+    .science-inner { max-width: 1440px; margin: 0 auto; }
+    .science-top {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: start;
+      margin-bottom: 72px;
+    }
+    .science-top p {
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--ink-soft);
+      margin-top: 14px;
+    }
+    .science-pillars {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .pillar {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: transform .3s, border-color .3s;
+    }
+    .pillar:hover {
+      transform: translateY(-4px);
+      border-color: rgba(255,92,122,.35);
+    }
+    .pillar-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: rgba(255,92,122,.1);
+      display: grid;
+      place-items: center;
+      color: var(--accent);
+    }
+    .pillar-title {
+      font-family: var(--display);
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.015em;
+      line-height: 1.1;
+      color: var(--ink);
+    }
+    .pillar-desc {
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--ink-soft);
+    }
+    @media (max-width: 980px) {
+      .science-sec { padding: 80px 18px; }
+      .science-top { grid-template-columns: 1fr; gap: 24px; }
+      .science-pillars { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      .science-pillars { grid-template-columns: 1fr; }
+    }
+
+    /* ══════════════════════════════════════
+       COMPLETE TOOLKIT
+    ══════════════════════════════════════ */
+    .toolkit-sec {
+      padding: 120px 32px;
+      background: var(--bg-alt);
+    }
+    .toolkit-inner { max-width: 1440px; margin: 0 auto; }
+    .toolkit-head {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 60px;
+      align-items: end;
+      margin-bottom: 56px;
+    }
+    .toolkit-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .tool-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform .25s, border-color .25s;
+    }
+    .tool-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255,92,122,.3);
+    }
+    .tool-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: rgba(255,92,122,.08);
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+    }
+    .tool-name {
+      font-family: var(--display);
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+      line-height: 1.2;
+    }
+    .tool-desc {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--muted);
+      flex: 1;
+    }
+    .tool-tier {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255,92,122,.08);
+      color: var(--accent);
+      align-self: flex-start;
+    }
+    .tool-tier.pro { color: var(--accent-3); background: rgba(255,145,77,.1); }
+    .tool-tier.elite { background: rgba(90,122,0,.1); color: #5a7a00; }
+    @media (max-width: 980px) {
+      .toolkit-sec { padding: 80px 18px; }
+      .toolkit-head { grid-template-columns: 1fr; gap: 24px; }
+      .toolkit-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .toolkit-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -1341,7 +1595,7 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
     <div class="hero-text">
       <div class="hero-eyebrow">
         <span class="hero-eyebrow-dot"></span>
-        <span>NEW · AI-GUIDED KETO FOR BEGINNERS</span>
+        <span>7-DAY FREE TRIAL · PERSONALIZED KETO PROGRAM</span>
       </div>
 
       <h1 class="hero-h1">
@@ -1351,7 +1605,7 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
       </h1>
 
       <p class="hero-sub">
-        A daily plan, real recipes, and a coach in your pocket — built for women who want to feel strong, lean, and energized. No counting. No cravings. Just show up.
+        The only AI-powered keto coaching app that builds a complete personalized program around <em>your</em> body and goals — daily meal plans, a 24/7 AI coach, fasting timer, barcode scanner, and real-time progress tracking. Proven by 2,400+ women to deliver an average of 8.4 kg in 30 days.
       </p>
 
       <div class="hero-cta-row">
@@ -1367,10 +1621,10 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
 
       <div class="hero-trust">
         <div class="avatar-stack">
-          <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&q=85" alt="" loading="eager"/>
-          <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&q=85" alt="" loading="eager"/>
-          <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=85" alt="" loading="eager"/>
-          <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&q=85" alt="" loading="eager"/>
+          <div class="avatar-init" style="background:#FF5C7A">S</div>
+          <div class="avatar-init" style="background:#FF914D">L</div>
+          <div class="avatar-init" style="background:#8b5cf6">E</div>
+          <div class="avatar-init" style="background:#0ea5e9">A</div>
         </div>
         <div>
           <div style="display:flex;gap:2px;color:var(--accent);font-size:12px">★★★★★</div>
@@ -1511,20 +1765,74 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
 
 
 <!-- ══════════════════════════════════════
+     ABOUT / PRODUCT DESCRIPTION
+══════════════════════════════════════ -->
+<section class="about-sec" id="about">
+  <div class="about-inner">
+    <div class="about-text">
+      <div class="section-kicker">ABOUT THE APP</div>
+      <h2 class="section-h2">
+        The only keto app that<br/>
+        <em>coaches</em> you every day.
+      </h2>
+      <p class="section-lede" style="margin-top:22px;max-width:600px">
+        KetoJourney isn't a recipe collection or a macro calculator — it's a structured coaching program. You get a personalized 30, 90, or 360-day roadmap with daily check-ins, smart meal plans, a barcode scanner, fasting timer, and an AI coach that answers your questions at midnight. Everything is designed so you never have to guess what to eat or what to do next.
+      </p>
+      <p style="margin-top:16px;max-width:600px;font-size:16px;line-height:1.65;color:var(--ink-soft)">
+        Over 2,400 women have used KetoJourney to break plateaus, reverse metabolic fatigue, and reach weights they hadn't seen in years — without counting calories or giving up the foods they love.
+      </p>
+      <div class="about-tag-cloud">
+        <span class="about-pill">Personalized meal plans</span>
+        <span class="about-pill">AI Keto Coach</span>
+        <span class="about-pill">500+ recipes</span>
+        <span class="about-pill">Intermittent fasting</span>
+        <span class="about-pill">Barcode scanner</span>
+        <span class="about-pill">Progress analytics</span>
+        <span class="about-pill">Daily accountability</span>
+        <span class="about-pill">Community access</span>
+      </div>
+    </div>
+    <div class="about-stats">
+      <div class="about-stat-card">
+        <div class="about-stat-num">500+</div>
+        <div class="about-stat-lbl">Keto Recipes</div>
+        <div class="about-stat-desc">Breakfast to dessert, smoothies to bakes — all pre-calculated, all delicious.</div>
+      </div>
+      <div class="about-stat-card">
+        <div class="about-stat-num">87%</div>
+        <div class="about-stat-lbl">Completion Rate</div>
+        <div class="about-stat-desc">Members who follow the plan for 30+ days hit their first weight goal.</div>
+      </div>
+      <div class="about-stat-card">
+        <div class="about-stat-num">8.4kg</div>
+        <div class="about-stat-lbl">Average Lost</div>
+        <div class="about-stat-desc">Average weight loss in the first 30 days across all plans.</div>
+      </div>
+      <div class="about-stat-card">
+        <div class="about-stat-num">4.9★</div>
+        <div class="about-stat-lbl">Member Rating</div>
+        <div class="about-stat-desc">From 2,400+ real users — not a curated sample.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════
      FEATURES
 ══════════════════════════════════════ -->
 <section class="features" id="features">
   <div class="features-inner">
     <div class="section-head">
       <div>
-        <div class="section-kicker">FEATURES · 06</div>
+        <div class="section-kicker">FEATURES · 18+ TOOLS</div>
         <h2 class="section-h2">
           Built for women<br/>
           who want it <em>done.</em>
         </h2>
       </div>
       <p class="section-lede">
-        Everything that moves the needle on keto — wrapped in one app, designed to feel like a coach, not a chore.
+        18+ precision tools covering every angle of your keto journey — from AI coaching and meal planning to fasting, body tracking, and community accountability. No subscriptions, no bloat.
       </p>
     </div>
 
@@ -1654,6 +1962,72 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
 
 
 <!-- ══════════════════════════════════════
+     WHY KETO WORKS — SCIENCE
+══════════════════════════════════════ -->
+<section class="science-sec" id="science">
+  <div class="science-inner">
+    <div class="science-top">
+      <div>
+        <div class="section-kicker">THE SCIENCE</div>
+        <h2 class="section-h2">
+          Why keto works<br/>
+          when diets <em>fail.</em>
+        </h2>
+      </div>
+      <div>
+        <p>Most diets fail because they fight your biology. Keto works <em>with</em> it. By reducing carbohydrates below 20–50g per day, your liver begins producing ketone bodies from fat — a far more efficient and stable fuel source than glucose. Blood sugar stabilizes, hunger hormones normalize, and cravings quietly disappear.</p>
+        <p>Studies consistently show ketogenic eating outperforms low-fat diets for short-term weight loss and produces marked improvements in insulin sensitivity, triglycerides, and HDL cholesterol. When paired with structured accountability — exactly what KetoJourney provides — the results compound week over week.</p>
+      </div>
+    </div>
+    <div class="science-pillars">
+      <div class="pillar">
+        <div class="pillar-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <div class="pillar-title">Hunger Suppression</div>
+        <p class="pillar-desc">Ketosis lowers ghrelin (the hunger hormone) and stabilizes leptin signaling, so you feel full on fewer calories without willpower battles.</p>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+        <div class="pillar-title">Fat as Primary Fuel</div>
+        <p class="pillar-desc">Your body becomes a fat-burning machine 24/7 — even at rest. Stored body fat becomes your primary energy source, accelerating visible results.</p>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <div class="pillar-title">Stable Energy &amp; Focus</div>
+        <p class="pillar-desc">Ketones provide 28% more energy per unit of oxygen than glucose. No sugar crashes, no 3pm slumps — just clean, consistent energy all day.</p>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="pillar-title">Structured Accountability</div>
+        <p class="pillar-desc">Daily check-ins, XP streaks, and progress milestones keep your brain rewarded and your momentum high — the behavioral layer that turns science into results.</p>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </div>
+        <div class="pillar-title">Precision Macros</div>
+        <p class="pillar-desc">Every meal is calibrated to YOUR TDEE and goal — not a generic template. Your body gets exactly the fat, protein, and net carbs it needs each day.</p>
+      </div>
+      <div class="pillar">
+        <div class="pillar-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="pillar-title">Fasting Synergy</div>
+        <p class="pillar-desc">Keto and intermittent fasting are biochemically complementary. Together they extend the fat-burning window, boost autophagy, and deepen ketosis naturally.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════
      HOW IT WORKS
 ══════════════════════════════════════ -->
 <section class="how" id="how">
@@ -1710,13 +2084,108 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
 
 
 <!-- ══════════════════════════════════════
+     COMPLETE TOOLKIT
+══════════════════════════════════════ -->
+<section class="toolkit-sec" id="toolkit">
+  <div class="toolkit-inner">
+    <div class="toolkit-head">
+      <div>
+        <div class="section-kicker">COMPLETE TOOLKIT · 18+ TOOLS</div>
+        <h2 class="section-h2">
+          Every tool you need.<br/>
+          Nothing you <em>don't.</em>
+        </h2>
+      </div>
+      <p class="section-lede">
+        From your first keto meal to your goal-weight celebration — every feature is purpose-built to keep you in ketosis and on track.
+      </p>
+    </div>
+    <div class="toolkit-grid">
+      <div class="tool-card">
+        <div class="tool-icon">🍽</div>
+        <div class="tool-name">Personalized Meal Plan</div>
+        <p class="tool-desc">Daily meals built around your goals, restrictions, and fasting window — auto-rotates every 30 days.</p>
+        <span class="tool-tier">All plans</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-icon">🤖</div>
+        <div class="tool-name">AI Keto Coach</div>
+        <p class="tool-desc">Ask anything at any hour. Powered by Gemini 1.5 — trained on 1,000+ keto studies for precise, safe answers.</p>
+        <span class="tool-tier elite">Elite only</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-icon">📋</div>
+        <div class="tool-name">Food Log &amp; Tracker</div>
+        <p class="tool-desc">Log meals by search or barcode. Real-time macro totals, daily history, and smart meal-swap suggestions.</p>
+        <span class="tool-tier">All plans</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-icon">⏱</div>
+        <div class="tool-name">Fasting Timer</div>
+        <p class="tool-desc">16:8, 18:6, or 20:4 — visual countdown, XP on completion, and ketone trend overlay.</p>
+        <span class="tool-tier pro">Pro &amp; Elite</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-icon">📷</div>
+        <div class="tool-name">Food Photo Analyzer</div>
+        <p class="tool-desc">Snap any meal and our AI instantly estimates calories, macros, and keto-compatibility.</p>
+        <span class="tool-tier">All plans</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-icon">🔍</div>
+        <div class="tool-name">Barcode Scanner</div>
+        <p class="tool-desc">Instant keto-safe verdict for 1M+ packaged foods via Open Food Facts database.</p>
+        <span class="tool-tier">All plans</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-icon">📈</div>
+        <div class="tool-name">Progress Charts</div>
+        <p class="tool-desc">Weight trend (30/60/90d), ketone levels, body measurements, and projected goal date.</p>
+        <span class="tool-tier">All plans</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-icon">🔄</div>
+        <div class="tool-name">Smart Meal Swaps</div>
+        <p class="tool-desc">Dislike a meal? One tap finds a nutritionally equivalent alternative that respects your dietary rules.</p>
+        <span class="tool-tier pro">Pro &amp; Elite</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-icon">✅</div>
+        <div class="tool-name">Daily Habits &amp; XP</div>
+        <p class="tool-desc">Bite-sized tasks, streak rewards, and a leveling system that turns healthy habits into a game you want to win.</p>
+        <span class="tool-tier">All plans</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-icon">📚</div>
+        <div class="tool-name">Recipe Collections</div>
+        <p class="tool-desc">Save recipes into named collections, build a personal cookbook, and plan your week with the meal planner.</p>
+        <span class="tool-tier pro">Pro &amp; Elite</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-icon">📊</div>
+        <div class="tool-name">Weekly Reports</div>
+        <p class="tool-desc">Every Sunday: a full review of macros, mood, energy, fasting hours, and wins — with next-week coaching tips.</p>
+        <span class="tool-tier">All plans</span>
+      </div>
+      <div class="tool-card">
+        <div class="tool-icon">🛒</div>
+        <div class="tool-name">Smart Shopping Lists</div>
+        <p class="tool-desc">Auto-generated weekly grocery list organized by aisle. Buy only what you need — nothing more, nothing less.</p>
+        <span class="tool-tier">All plans</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════
      RECIPES
 ══════════════════════════════════════ -->
 <section class="recipes-sec" id="recipes">
   <div class="recipes-inner">
     <div class="recipes-head">
       <div>
-        <div class="section-kicker">87+ RECIPES</div>
+        <div class="section-kicker">500+ RECIPES</div>
         <h2 class="section-h2">
           Food that <em>tastes</em><br/>
           like a treat.
@@ -1841,7 +2310,7 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
 
     <div class="stories-grid">
       <article class="story">
-        <img class="story-img" src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&q=85" alt="Sarah M." loading="lazy"/>
+        <div class="story-avatar" style="background:linear-gradient(135deg,#FF5C7A,#FF914D)">S</div>
         <div>
           <div class="story-stars">★★★★★</div>
           <p class="story-quote">"Lost 18 lbs in my first month without ever feeling starved. The structured plan took out all the guesswork."</p>
@@ -1856,7 +2325,7 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
       </article>
 
       <article class="story">
-        <img class="story-img" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&q=85" alt="Layla K." loading="lazy"/>
+        <div class="story-avatar" style="background:linear-gradient(135deg,#8b5cf6,#FF5C7A)">L</div>
         <div>
           <div class="story-stars">★★★★★</div>
           <p class="story-quote">"The fasting timer and daily check-ins keep me accountable in a way no other app ever has. My doctor is shocked."</p>
@@ -1871,7 +2340,7 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
       </article>
 
       <article class="story">
-        <img class="story-img" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&q=85" alt="Emma L." loading="lazy"/>
+        <div class="story-avatar" style="background:linear-gradient(135deg,#0ea5e9,#B6FF3C)">E</div>
         <div>
           <div class="story-stars">★★★★★</div>
           <p class="story-quote">"The AI coach answered every question I had at 11pm when I was craving something. Like a nutritionist in my pocket."</p>
@@ -1886,7 +2355,7 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
       </article>
 
       <article class="story">
-        <img class="story-img" src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=85" alt="Amina B." loading="lazy"/>
+        <div class="story-avatar" style="background:linear-gradient(135deg,#FF914D,#f59e0b)">A</div>
         <div>
           <div class="story-stars">★★★★★</div>
           <p class="story-quote">"Reached my goal weight in week 11. The progress charts showing ketones alongside weight loss were everything."</p>
@@ -1994,7 +2463,7 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
 <section class="faq-sec" id="faq">
   <div class="faq-inner">
     <div>
-      <div class="section-kicker">FAQ · 06 ANSWERS</div>
+      <div class="section-kicker">FAQ · 09 ANSWERS</div>
       <h2 class="section-h2">
         Common<br/>
         <em>questions.</em>
@@ -2059,6 +2528,36 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
         </button>
         <div class="faq-a-wrap" id="fa5">
           <p class="faq-a">30-day money-back guarantee. If you follow the plan and don't see results, email support and we refund — no friction, no quiz.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" id="fi6">
+        <button class="faq-q" onclick="toggleFaq(6)">
+          <span>Can I follow KetoJourney as a vegetarian?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a-wrap" id="fa6">
+          <p class="faq-a">Yes. During onboarding you select your dietary restrictions — vegetarian, dairy-free, nut-free, and more. The meal planner filters every recipe accordingly and the smart swap system always finds an alternative that matches your rules. Vegetarian keto is fully supported across all plans.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" id="fi7">
+        <button class="faq-q" onclick="toggleFaq(7)">
+          <span>How quickly will I see results?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a-wrap" id="fa7">
+          <p class="faq-a">Most members notice reduced cravings and more stable energy within 3–5 days as their body enters ketosis. Visible fat loss typically begins in week 2. Our members average 8.4 kg lost in the first 30 days — though results vary based on starting weight, adherence, and hormonal factors. The daily check-in and progress chart help you see exactly where you stand every step of the way.</p>
+        </div>
+      </div>
+
+      <div class="faq-item" id="fi8">
+        <button class="faq-q" onclick="toggleFaq(8)">
+          <span>How does the AI Coach actually work?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-a-wrap" id="fa8">
+          <p class="faq-a">The AI Coach (Elite plan) is powered by Google Gemini 1.5 Flash, one of the most capable AI models available, fine-tuned with your personal journey data — your current day, weight logs, recent meals, and fasting history. This means it gives advice specific to YOU, not generic keto tips. Ask it anything from "Is this food okay?" to "Why did I plateau?" and get a precise, context-aware answer instantly.</p>
         </div>
       </div>
     </div>
