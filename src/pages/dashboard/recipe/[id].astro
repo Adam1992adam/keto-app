@@ -344,6 +344,69 @@ const clientData = {
     .rv-toast { position: fixed; bottom: 5.5rem; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--bg, #FAF6F1); font-family: var(--mono); font-size: 12px; letter-spacing: .1em; padding: 10px 20px; border-radius: 999px; z-index: 9999; opacity: 0; transition: all .3s; pointer-events: none; white-space: nowrap; }
     .rv-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+    /* ── Jump-to nav strip ───────────────────────────────────── */
+    .jump-strip { position: sticky; top: 0; z-index: 80; background: var(--bg, #FAF6F1); border-bottom: 1px solid var(--line); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    .jump-inner { max-width: 1240px; margin: 0 auto; padding: 0 32px; display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+    .jump-inner::-webkit-scrollbar { display: none; }
+    .jump-link { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted-r); padding: 12px 14px; white-space: nowrap; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s; cursor: pointer; background: none; border-top: none; border-left: none; border-right: none; }
+    .jump-link:hover { color: var(--ink); }
+    .jump-link.active { color: var(--accent-r); border-bottom-color: var(--accent-r); }
+    .jump-print { margin-left: auto; font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted-r); padding: 12px 14px; white-space: nowrap; display: flex; align-items: center; gap: 6px; cursor: pointer; background: none; border: none; transition: color .15s; }
+    .jump-print:hover { color: var(--ink); }
+
+    /* ── Print styles ────────────────────────────────────────── */
+    @media print {
+      .rv-recipe-shell > :first-child,  /* sidebar */
+      .jump-strip,
+      .rh-crumbs, .rh-eyebrow, .rh-tags, .rh-cta-row,
+      .rh-glow, .rh-img::after,
+      .right-col,
+      .step-actions,
+      .notes-card,
+      section:has(.review),
+      section:has(.related-grid),
+      .rv-modal, .rv-toast {
+        display: none !important;
+      }
+      body { background: #fff; color: #000; font-size: 11pt; }
+      .rv-recipe-shell { display: block; }
+      .rv-recipe-main { padding: 0; }
+      .rh { background: #fff; color: #000; min-height: auto; page-break-inside: avoid; }
+      .rh-img { display: none; }
+      .rh-inner { display: block; padding: 0 0 16pt; min-height: auto; }
+      .rh-title { font-size: 28pt; line-height: 1.1; color: #000; }
+      .rh-title em { color: #444; font-size: 14pt; }
+      .rh-byline { color: #666; font-size: 10pt; }
+      .rh-meta { border-top: 1pt solid #ddd; padding-top: 10pt; gap: 24pt; }
+      .rh-meta-cell .l { color: #888; }
+      .rh-meta-cell .v { font-size: 16pt; color: #000; }
+      .rh-meta-cell .v em { color: #888; }
+      .recipe-wrap { padding: 0; max-width: 100%; }
+      .two-col { grid-template-columns: 1fr; gap: 0; margin-top: 16pt; }
+      .left-col { gap: 24pt; }
+      .section-head { border-bottom: 1pt solid #ddd; padding-bottom: 6pt; margin-bottom: 12pt; }
+      .section-num { color: #FF5C7A; }
+      .section-title { font-size: 18pt; color: #000; }
+      .ing-row { border-top-color: #eee; padding: 6pt 0; page-break-inside: avoid; }
+      .ing-check { display: none; }
+      .ing-row { grid-template-columns: 140pt 1fr; }
+      .ing-qty { font-size: 11pt; color: #000; }
+      .ing-name { font-size: 11pt; color: #333; }
+      .step-row { border-top-color: #eee; padding: 12pt 0; page-break-inside: avoid; }
+      .step-num { font-size: 48pt; color: #FF5C7A; }
+      .step-title { font-size: 14pt; color: #000; }
+      .step-body { font-size: 11pt; color: #333; }
+      .nut-card { border: 1pt solid #ddd; box-shadow: none; }
+      .macro-track { background: #eee; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .macro-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .tips-grid { grid-template-columns: 1fr 1fr; }
+      .tip { border: 1pt solid #ddd; }
+      .tip:nth-child(1) { background: #f5f5f5; color: #000; border-color: #ddd; }
+      .tip:nth-child(1) .tip-title, .tip:nth-child(1) .tip-body { color: #333; }
+      a[href]::after { content: none; }
+      @page { margin: 1.5cm; }
+    }
+
     /* ── Responsive ──────────────────────────────────────────── */
     @media (max-width: 1100px) {
       .rh-inner { grid-template-columns: 1fr; padding: 40px 18px 36px; gap: 28px; min-height: auto; }
@@ -450,6 +513,20 @@ const clientData = {
   </div>
 </section>
 
+<!-- ════ JUMP-TO NAV STRIP ═══════════════════════════════════════ -->
+<nav class="jump-strip" id="jumpStrip" aria-label="Recipe sections">
+  <div class="jump-inner">
+    <button class="jump-link active" data-target="ing-section">Ingredients</button>
+    {steps.length > 0 && <button class="jump-link" data-target="method-section">Method</button>}
+    <button class="jump-link" data-target="nut-section">Nutrition</button>
+    {tips.length > 0 && <button class="jump-link" data-target="tips-section">Tips</button>}
+    <button class="jump-print" onclick="window.print()" title="Print recipe">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Print
+    </button>
+  </div>
+</nav>
+
 <!-- ════ BODY ════════════════════════════════════════════════════ -->
 <div class="recipe-wrap">
   <div class="two-col">
@@ -458,7 +535,7 @@ const clientData = {
     <div class="left-col">
 
       <!-- 01 INGREDIENTS -->
-      <section id="ing-section">
+      <section id="ing-section" data-section="ing-section">
         <div class="section-head">
           <div style="display:flex;align-items:baseline">
             <span class="section-num">01</span>
@@ -481,7 +558,7 @@ const clientData = {
 
       <!-- 02 METHOD -->
       {steps.length > 0 && (
-        <section>
+        <section id="method-section" data-section="method-section">
           <div class="section-head">
             <div style="display:flex;align-items:baseline">
               <span class="section-num">02</span>
@@ -514,7 +591,7 @@ const clientData = {
       )}
 
       <!-- 03 NUTRITION -->
-      <section>
+      <section id="nut-section" data-section="nut-section">
         <div class="section-head">
           <div style="display:flex;align-items:baseline">
             <span class="section-num">03</span>
@@ -577,7 +654,7 @@ const clientData = {
 
       <!-- 04 COACH TIPS -->
       {tips.length > 0 && (
-        <section>
+        <section id="tips-section" data-section="tips-section">
           <div class="section-head">
             <div style="display:flex;align-items:baseline">
               <span class="section-num">04</span>
@@ -905,6 +982,7 @@ const clientData = {
   /* ── Servings adjuster ───────────────────────────────── */
   var _servings = cd.baseServings;
   var _baseMacros = cd.macros;
+  function fmt(v) { return Math.round(v * 10) / 10; }
   window.adjServings = function(delta) {
     _servings = Math.max(1, Math.min(12, _servings + delta));
     var sv = document.getElementById('srvVal');
@@ -914,11 +992,24 @@ const clientData = {
     var qF = document.getElementById('qFat');
     var qP = document.getElementById('qPro');
     var qN = document.getElementById('qNet');
-    function fmt(v) { return Math.round(v * 10) / 10; }
     if (qK) qK.innerHTML = fmt(_baseMacros.kcal * ratio);
     if (qF) qF.innerHTML = fmt(_baseMacros.fat * ratio) + '<span style="font-size:10px;color:var(--muted-r)">g</span>';
     if (qP) qP.innerHTML = fmt(_baseMacros.protein * ratio) + '<span style="font-size:10px;color:var(--muted-r)">g</span>';
     if (qN) qN.innerHTML = fmt(_baseMacros.netCarbs * ratio) + '<span style="font-size:10px;color:var(--muted-r)">g</span>';
+    // Scale ingredient quantities
+    var ings = cd.ingredientsFlat || [];
+    ings.forEach(function(ing) {
+      var el = document.getElementById('iqty-' + ing.key);
+      if (!el) return;
+      var scaled = fmt(ing.qty * ratio);
+      var unitStr = ing.unit ? ' ' + ing.unit : '';
+      // If base qty was 0 (string ingredient with no numeric qty), leave as-is
+      el.textContent = ing.qty > 0 ? (scaled + unitStr) : el.textContent;
+    });
+    // Update section meta
+    var counter = document.getElementById('ing-counter');
+    var checked = Object.values(_ingChecked).filter(Boolean).length;
+    if (counter) counter.textContent = checked + '/' + (cd.ingredientsFlat || []).length + ' ready · ' + _servings + ' srv';
   };
 
   /* ── Notes (localStorage) ───────────────────────────── */
@@ -1054,6 +1145,34 @@ const clientData = {
       window.showToast('📚 Saved to "' + colName + '"');
     });
   };
+
+  /* ── Jump-to nav ─────────────────────────────────────── */
+  document.querySelectorAll('.jump-link[data-target]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var target = document.getElementById(this.getAttribute('data-target'));
+      if (!target) return;
+      var offset = document.getElementById('jumpStrip')?.offsetHeight || 48;
+      var top = target.getBoundingClientRect().top + window.scrollY - offset - 16;
+      window.scrollTo({ top: top, behavior: 'smooth' });
+    });
+  });
+  // Highlight active section as user scrolls
+  var _jumpLinks = document.querySelectorAll('.jump-link[data-target]');
+  var _sections = Array.from(_jumpLinks).map(function(btn) {
+    return document.getElementById(btn.getAttribute('data-target'));
+  }).filter(Boolean);
+  function _updateJump() {
+    var stripH = (document.getElementById('jumpStrip')?.offsetHeight || 48) + 32;
+    var active = _sections[0];
+    _sections.forEach(function(sec) {
+      if (sec.getBoundingClientRect().top <= stripH) active = sec;
+    });
+    _jumpLinks.forEach(function(btn) {
+      btn.classList.toggle('active', btn.getAttribute('data-target') === (active && active.id));
+    });
+  }
+  window.addEventListener('scroll', _updateJump, { passive: true });
+  _updateJump();
 
 })();
 </script>
