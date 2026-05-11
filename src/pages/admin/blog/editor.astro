@@ -70,13 +70,25 @@ const CATEGORIES = ['General','Nutrition','Recipes','Success Stories','Tips & Tr
     .tab-btn.active{background:var(--green);color:#fff;border-color:var(--green);}
     .content-area{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.85rem;font-size:.9rem;color:var(--text);outline:none;resize:vertical;min-height:420px;font-family:'Courier New',monospace;line-height:1.65;}
     .content-area:focus{border-color:var(--green);}
-    .preview-area{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:1.2rem;min-height:420px;font-size:.9rem;line-height:1.7;overflow-y:auto;}
-    .preview-area h1,.preview-area h2,.preview-area h3{color:var(--text);margin:.8rem 0 .4rem;}
-    .preview-area p{color:var(--soft);margin:.4rem 0;}
-    .preview-area ul,.preview-area ol{color:var(--soft);padding-left:1.4rem;margin:.4rem 0;}
-    .preview-area strong{color:var(--text);}
-    .preview-area code{background:var(--muted);padding:.1rem .3rem;border-radius:4px;font-size:.85em;}
-    .preview-area blockquote{border-left:3px solid var(--green);padding-left:.8rem;color:var(--soft);margin:.6rem 0;}
+    /* Preview — styled to match the public blog light theme */
+    .preview-area{background:#FAF6F1;border:1px solid #E5DED2;border-radius:12px;padding:1.8rem 2rem;min-height:420px;font-size:1rem;line-height:1.82;overflow-y:auto;color:#4A4340;font-family:'Georgia',serif;}
+    .preview-area h1{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:1.8rem;font-weight:800;color:#16110F;margin:1.5rem 0 .7rem;line-height:1.2;}
+    .preview-area h2{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:1.4rem;font-weight:800;color:#16110F;margin:2rem 0 .6rem;padding-bottom:.35rem;border-bottom:2px solid #E5DED2;line-height:1.25;}
+    .preview-area h3{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:1.1rem;font-weight:700;color:#16110F;margin:1.6rem 0 .45rem;line-height:1.25;}
+    .preview-area p{margin:0 0 1.25em;color:#4A4340;}
+    .preview-area p:first-of-type{font-size:1.08rem;color:#16110F;}
+    .preview-area ul,.preview-area ol{padding-left:1.5rem;margin:0 0 1.2em;color:#4A4340;}
+    .preview-area li{margin-bottom:.35em;}
+    .preview-area li::marker{color:#FF5C7A;}
+    .preview-area strong{color:#16110F;font-weight:700;}
+    .preview-area em{font-style:italic;color:#16110F;}
+    .preview-area code{background:#F2EDE5;padding:.15rem .4rem;border-radius:5px;font-size:.88em;color:#16110F;font-family:monospace;}
+    .preview-area blockquote{border-left:4px solid #FF5C7A;padding:14px 20px;margin:1.8rem 0;background:rgba(255,92,122,.05);border-radius:0 12px 12px 0;}
+    .preview-area blockquote p{margin:0;color:#16110F;font-style:italic;font-size:1.05em;}
+    .preview-area a{color:#FF5C7A;text-decoration:underline;}
+    .preview-area hr{border:none;border-top:1px solid #E5DED2;margin:2rem 0;}
+    .preview-area img{border-radius:12px;max-width:100%;margin:1.2rem auto;display:block;}
+    .preview-label{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);padding:.35rem .8rem;background:var(--card2);border-radius:6px 6px 0 0;border:1px solid var(--border);border-bottom:none;display:inline-block;margin-bottom:-1px;}
 
     /* Toolbar */
     .toolbar{display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.4rem;}
@@ -175,6 +187,7 @@ const CATEGORIES = ['General','Nutrition','Recipes','Success Stories','Tips & Tr
         <button class="tool-btn" data-action="blockquote" title="Blockquote">" Quote</button>
         <button class="tool-btn" data-action="code" title="Code">`Code`</button>
         <button class="tool-btn" data-action="link" title="Link">🔗 Link</button>
+        <button class="tool-btn" data-action="image" title="Image">🖼 Image</button>
         <button class="tool-btn" data-action="hr" title="Divider">— HR</button>
       </div>
       <div class="editor-tabs">
@@ -182,7 +195,10 @@ const CATEGORIES = ['General','Nutrition','Recipes','Success Stories','Tips & Tr
         <button class="tab-btn" id="tabPreview" onclick="switchTab('preview')">👁 Preview</button>
       </div>
       <textarea id="contentArea" class="content-area" placeholder="Write your article in Markdown…&#10;&#10;## Section heading&#10;&#10;Your content here…">{isEdit ? post.content : ''}</textarea>
-      <div id="previewArea" class="preview-area" style="display:none"></div>
+      <div style="display:none" id="previewWrap">
+        <div class="preview-label">Preview — matches published article layout</div>
+        <div id="previewArea" class="preview-area"></div>
+      </div>
     </div>
 
   </div>
@@ -351,6 +367,18 @@ document.getElementById('toolbar').addEventListener('click', function(e) {
   var start = contentArea.selectionStart;
   var end   = contentArea.selectionEnd;
   var sel   = contentArea.value.substring(start, end);
+  /* Image action handled separately with prompt */
+  if (action === 'image') {
+    var imgUrl = prompt('Image URL:', 'https://');
+    if (!imgUrl || imgUrl === 'https://') { contentArea.focus(); return; }
+    var altText = sel || prompt('Alt text (optional):', '') || 'image';
+    var imgMd = '![' + altText + '](' + imgUrl + ')';
+    contentArea.value = contentArea.value.substring(0, start) + imgMd + contentArea.value.substring(end);
+    var cur = start + imgMd.length;
+    contentArea.setSelectionRange(cur, cur);
+    contentArea.focus();
+    return;
+  }
   var map = {
     bold:       ['**', '**', sel || 'bold text'],
     italic:     ['_', '_', sel || 'italic text'],
@@ -374,18 +402,19 @@ document.getElementById('toolbar').addEventListener('click', function(e) {
 
 /* ── Write / Preview tabs ── */
 function switchTab(tab) {
-  var writeTab   = document.getElementById('tabWrite');
-  var previewTab = document.getElementById('tabPreview');
-  var area       = document.getElementById('contentArea');
-  var preview    = document.getElementById('previewArea');
+  var writeTab    = document.getElementById('tabWrite');
+  var previewTab  = document.getElementById('tabPreview');
+  var area        = document.getElementById('contentArea');
+  var previewWrap = document.getElementById('previewWrap');
+  var preview     = document.getElementById('previewArea');
   if (tab === 'write') {
     writeTab.classList.add('active'); previewTab.classList.remove('active');
-    area.style.display = 'block'; preview.style.display = 'none';
+    area.style.display = 'block'; previewWrap.style.display = 'none';
   } else {
     previewTab.classList.add('active'); writeTab.classList.remove('active');
-    area.style.display = 'none'; preview.style.display = 'block';
+    area.style.display = 'none'; previewWrap.style.display = 'block';
     preview.innerHTML = typeof marked !== 'undefined'
-      ? marked.parse(area.value || '*Nothing to preview*')
+      ? marked.parse(area.value || '*Nothing to preview yet.*')
       : '<pre>' + area.value + '</pre>';
   }
 }
