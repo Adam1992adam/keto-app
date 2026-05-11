@@ -27,6 +27,26 @@ const { data: relatedRaw } = await db
   .limit(3);
 const related = relatedRaw || [];
 
+// Ratings aggregate
+const { data: ratingsRaw } = await db
+  .from('blog_recipe_ratings')
+  .select('rating')
+  .eq('recipe_id', recipe.id);
+const ratingCount = ratingsRaw?.length || 0;
+const ratingAvg   = ratingCount
+  ? Math.round(ratingsRaw!.reduce((s, r) => s + r.rating, 0) / ratingCount * 10) / 10
+  : 0;
+
+// Comments (approved, newest first, limit 20)
+const { data: commentsRaw } = await db
+  .from('blog_recipe_comments')
+  .select('id, name, body, created_at')
+  .eq('recipe_id', recipe.id)
+  .eq('approved', true)
+  .order('created_at', { ascending: false })
+  .limit(20);
+const comments = commentsRaw || [];
+
 // Parse ingredients and instructions (one per line)
 const ingredients  = (recipe.ingredients || '').split('\n').map((l: string) => l.trim()).filter(Boolean);
 const instructions = (recipe.instructions || '').split('\n').map((l: string) => l.trim()).filter(Boolean);
@@ -233,6 +253,63 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
     .footer-links a { font-size:.8rem; color:var(--muted); transition:color .15s; }
     .footer-links a:hover { color:var(--ink); }
 
+    /* RATING DISPLAY (hero) */
+    .rating-row { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+    .rating-stars-disp { display:flex; gap:2px; }
+    .star-disp { font-size:1rem; }
+    .rating-meta { font-size:.82rem; color:var(--muted); }
+
+    /* RATING WIDGET */
+    .rate-section { background:var(--bg-alt); border:1px solid var(--line); border-radius:20px; padding:28px; margin:44px 0 8px; }
+    .rate-title { font-family:var(--display); font-size:1.1rem; font-weight:800; color:var(--ink); margin-bottom:16px; }
+    .stars-wrap { display:flex; gap:4px; margin-bottom:20px; cursor:pointer; width:fit-content; }
+    .star-btn { font-size:2rem; color:var(--line); transition:color .1s, transform .1s; line-height:1; background:none; border:none; cursor:pointer; padding:0; }
+    .star-btn.active, .star-btn.hover { color:#f59e0b; transform:scale(1.12); }
+    .rate-email-row { display:flex; gap:10px; max-width:420px; }
+    .rate-input { flex:1; padding:11px 14px; background:var(--card); border:1.5px solid var(--line); border-radius:10px; color:var(--ink); font-size:.9rem; font-family:var(--body); outline:none; transition:border-color .2s; }
+    .rate-input:focus { border-color:var(--accent); }
+    .rate-input::placeholder { color:var(--muted); }
+    .rate-submit { padding:11px 20px; background:var(--accent); border:none; border-radius:10px; color:#fff; font-size:.88rem; font-weight:700; font-family:var(--display); cursor:pointer; white-space:nowrap; transition:opacity .2s; }
+    .rate-submit:hover { opacity:.88; }
+    .rate-submit:disabled { opacity:.6; cursor:not-allowed; }
+    .rate-msg { margin-top:12px; font-size:.84rem; font-weight:600; }
+    .rate-msg.ok  { color:#16a34a; }
+    .rate-msg.err { color:#dc2626; }
+
+    /* COMMENTS */
+    .comments-section { margin:44px 0; }
+    .comments-title { font-family:var(--display); font-size:1.25rem; font-weight:800; color:var(--ink); margin-bottom:24px; display:flex; align-items:center; gap:10px; }
+    .comments-count-badge { font-size:.76rem; font-weight:700; background:var(--bg-alt); border:1px solid var(--line); border-radius:999px; padding:3px 10px; color:var(--muted); }
+    .comment-list { display:flex; flex-direction:column; gap:16px; margin-bottom:36px; }
+    .comment-card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px 20px; }
+    .comment-header { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+    .comment-avatar { width:38px; height:38px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; font-family:var(--display); font-weight:800; font-size:.92rem; color:#fff; flex-shrink:0; }
+    .comment-meta { display:flex; flex-direction:column; gap:1px; }
+    .comment-name { font-family:var(--display); font-size:.92rem; font-weight:700; color:var(--ink); }
+    .comment-date { font-size:.74rem; color:var(--muted); }
+    .comment-body { font-size:.91rem; color:var(--ink-soft); line-height:1.7; }
+    .comment-empty { font-size:.9rem; color:var(--muted); font-style:italic; margin-bottom:32px; }
+
+    /* COMMENT FORM */
+    .comment-form { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:24px; }
+    .comment-form-title { font-family:var(--display); font-size:1rem; font-weight:700; color:var(--ink); margin-bottom:16px; }
+    .cf-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+    @media(max-width:500px){ .cf-row{grid-template-columns:1fr;} }
+    .cf-field { display:flex; flex-direction:column; gap:5px; }
+    .cf-label { font-size:.78rem; font-weight:600; color:var(--ink-soft); }
+    .cf-input { padding:11px 13px; background:var(--bg-alt); border:1.5px solid var(--line); border-radius:10px; color:var(--ink); font-size:.9rem; font-family:var(--body); outline:none; transition:border-color .2s; }
+    .cf-input:focus { border-color:var(--accent); background:var(--card); }
+    .cf-input::placeholder { color:var(--muted); }
+    .cf-textarea { width:100%; padding:12px 13px; background:var(--bg-alt); border:1.5px solid var(--line); border-radius:10px; color:var(--ink); font-size:.9rem; font-family:var(--body); outline:none; transition:border-color .2s; resize:vertical; min-height:110px; margin-bottom:12px; }
+    .cf-textarea:focus { border-color:var(--accent); background:var(--card); }
+    .cf-textarea::placeholder { color:var(--muted); }
+    .cf-submit { padding:12px 24px; background:var(--accent); border:none; border-radius:10px; color:#fff; font-size:.9rem; font-weight:700; font-family:var(--display); cursor:pointer; transition:opacity .2s, transform .15s; }
+    .cf-submit:hover { opacity:.88; transform:translateY(-1px); }
+    .cf-submit:disabled { opacity:.6; cursor:not-allowed; transform:none; }
+    .cf-msg { margin-top:12px; font-size:.84rem; font-weight:600; padding:10px 14px; border-radius:8px; display:none; }
+    .cf-msg.ok  { display:block; background:rgba(22,163,74,.08); border:1px solid rgba(22,163,74,.2); color:#15803d; }
+    .cf-msg.err { display:block; background:rgba(239,68,68,.07); border:1px solid rgba(239,68,68,.18); color:#dc2626; }
+
     /* EXIT-INTENT POPUP */
     .exit-overlay { position:fixed; inset:0; z-index:9999; background:rgba(22,17,15,.52); backdrop-filter:blur(5px); display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity .3s ease; }
     .exit-overlay.open { opacity:1; pointer-events:all; }
@@ -284,6 +361,17 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
         {recipe.difficulty}
       </span>
       <h1 class="recipe-title">{recipe.title}</h1>
+
+      {ratingCount > 0 && (
+        <div class="rating-row">
+          <div class="rating-stars-disp">
+            {[1,2,3,4,5].map(n => (
+              <span class="star-disp">{n <= Math.round(ratingAvg) ? '★' : '☆'}</span>
+            ))}
+          </div>
+          <span class="rating-meta">{ratingAvg} ({ratingCount} {ratingCount === 1 ? 'rating' : 'ratings'})</span>
+        </div>
+      )}
       {recipe.description && <p class="recipe-desc-text">{recipe.description}</p>}
 
       {recipe.cover_image_url && (
@@ -386,6 +474,65 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
       </div>
     )}
 
+    <!-- ── RATE THIS RECIPE ── -->
+    <div class="rate-section">
+      <div class="rate-title">Rate this recipe</div>
+      <div class="stars-wrap" id="starsWrap" role="group" aria-label="Star rating">
+        {[1,2,3,4,5].map(n => (
+          <button class="star-btn" data-val={n} aria-label={`${n} star`}>★</button>
+        ))}
+      </div>
+      <div class="rate-email-row" id="rateEmailRow" style="display:none;">
+        <input class="rate-input" type="email" id="rateEmail" placeholder="Your email (to save your rating)" autocomplete="email"/>
+        <button class="rate-submit" id="rateSubmit">Submit →</button>
+      </div>
+      <div class="rate-msg" id="rateMsg"></div>
+    </div>
+
+    <!-- ── COMMENTS ── -->
+    <div class="comments-section" id="comments">
+      <div class="comments-title">
+        Comments
+        <span class="comments-count-badge" id="commentsCount">{comments.length}</span>
+      </div>
+
+      <div class="comment-list" id="commentList">
+        {comments.length === 0 && (
+          <p class="comment-empty">No comments yet — be the first to share your experience!</p>
+        )}
+        {comments.map(c => (
+          <div class="comment-card">
+            <div class="comment-header">
+              <div class="comment-avatar">{c.name.charAt(0).toUpperCase()}</div>
+              <div class="comment-meta">
+                <span class="comment-name">{c.name}</span>
+                <span class="comment-date">{new Date(c.created_at).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' })}</span>
+              </div>
+            </div>
+            <p class="comment-body">{c.body}</p>
+          </div>
+        ))}
+      </div>
+
+      <!-- Comment form -->
+      <div class="comment-form">
+        <div class="comment-form-title">Leave a comment</div>
+        <div class="cf-row">
+          <div class="cf-field">
+            <label class="cf-label" for="cfName">Your Name *</label>
+            <input class="cf-input" type="text" id="cfName" placeholder="Jane Smith" autocomplete="given-name"/>
+          </div>
+          <div class="cf-field">
+            <label class="cf-label" for="cfEmail">Email Address *</label>
+            <input class="cf-input" type="email" id="cfEmail" placeholder="you@example.com" autocomplete="email"/>
+          </div>
+        </div>
+        <textarea class="cf-textarea" id="cfBody" placeholder="Share your experience with this recipe — tips, swaps, how it turned out…"></textarea>
+        <button class="cf-submit" id="cfSubmit" type="button">Post Comment →</button>
+        <div class="cf-msg" id="cfMsg"></div>
+      </div>
+    </div>
+
     <!-- Inline lead capture (mobile only) -->
     <div class="inline-lead">
       <p style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#FF5C7A;margin-bottom:6px;">📖 Free Recipe Book</p>
@@ -481,6 +628,186 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
     <a href="/recipes">Recipes</a>
   </div>
 </footer>
+
+<!-- RATING + COMMENTS SCRIPT -->
+<script is:inline define:vars={{ recipeId: recipe.id, initAvg: ratingAvg, initCount: ratingCount }}>
+(function () {
+  /* ── STAR RATING ── */
+  var selected = 0;
+  var starsWrap  = document.getElementById('starsWrap');
+  var rateRow    = document.getElementById('rateEmailRow');
+  var rateEmail  = document.getElementById('rateEmail');
+  var rateSubmit = document.getElementById('rateSubmit');
+  var rateMsg    = document.getElementById('rateMsg');
+  var starBtns   = starsWrap ? Array.from(starsWrap.querySelectorAll('.star-btn')) : [];
+
+  function setHover(val) {
+    starBtns.forEach(function (b) {
+      var n = parseInt(b.dataset.val, 10);
+      b.classList.toggle('hover', n <= val);
+    });
+  }
+  function setSelected(val) {
+    selected = val;
+    starBtns.forEach(function (b) {
+      var n = parseInt(b.dataset.val, 10);
+      b.classList.toggle('active', n <= val);
+      b.classList.remove('hover');
+    });
+    if (rateRow) rateRow.style.display = 'flex';
+  }
+
+  starBtns.forEach(function (b) {
+    b.addEventListener('mouseenter', function () { setHover(parseInt(b.dataset.val, 10)); });
+    b.addEventListener('mouseleave', function () { setHover(selected); });
+    b.addEventListener('click',      function () { setSelected(parseInt(b.dataset.val, 10)); });
+  });
+
+  if (rateSubmit) rateSubmit.addEventListener('click', function () {
+    var email = rateEmail ? rateEmail.value.trim() : '';
+    if (!selected) { showRateMsg('Please select a star rating first.', false); return; }
+    if (!email || !email.includes('@')) { showRateMsg('Please enter a valid email.', false); return; }
+
+    rateSubmit.disabled    = true;
+    rateSubmit.textContent = 'Saving…';
+
+    fetch('/api/blog/rate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipe_id: recipeId, email: email, rating: selected })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.success) {
+        showRateMsg('✓ Thanks for rating!', true);
+        rateSubmit.textContent = 'Saved ✓';
+        updateHeroRating(d.avg, d.count);
+      } else {
+        showRateMsg(d.error || 'Something went wrong.', false);
+        rateSubmit.disabled    = false;
+        rateSubmit.textContent = 'Submit →';
+      }
+    })
+    .catch(function () {
+      showRateMsg('Network error. Please try again.', false);
+      rateSubmit.disabled    = false;
+      rateSubmit.textContent = 'Submit →';
+    });
+  });
+
+  function showRateMsg(text, ok) {
+    if (!rateMsg) return;
+    rateMsg.textContent = text;
+    rateMsg.className   = 'rate-msg ' + (ok ? 'ok' : 'err');
+  }
+
+  function updateHeroRating(avg, count) {
+    var row = document.querySelector('.rating-row');
+    if (!row) {
+      /* create it if didn't exist yet */
+      var title = document.querySelector('.recipe-title');
+      if (!title) return;
+      row = document.createElement('div');
+      row.className = 'rating-row';
+      title.after(row);
+    }
+    var filled = Math.round(avg);
+    var starsHtml = [1,2,3,4,5].map(function (n) {
+      return '<span class="star-disp">' + (n <= filled ? '★' : '☆') + '</span>';
+    }).join('');
+    row.innerHTML = '<div class="rating-stars-disp">' + starsHtml + '</div>'
+      + '<span class="rating-meta">' + avg + ' (' + count + ' ' + (count === 1 ? 'rating' : 'ratings') + ')</span>';
+  }
+
+  /* ── COMMENTS ── */
+  var cfName   = document.getElementById('cfName');
+  var cfEmail  = document.getElementById('cfEmail');
+  var cfBody   = document.getElementById('cfBody');
+  var cfSubmit = document.getElementById('cfSubmit');
+  var cfMsg    = document.getElementById('cfMsg');
+  var cfList   = document.getElementById('commentList');
+  var cfCount  = document.getElementById('commentsCount');
+
+  if (cfSubmit) cfSubmit.addEventListener('click', function () {
+    var name  = cfName  ? cfName.value.trim()  : '';
+    var email = cfEmail ? cfEmail.value.trim() : '';
+    var body  = cfBody  ? cfBody.value.trim()  : '';
+
+    if (!name)  { showCfMsg('Please enter your name.', false); return; }
+    if (!email || !email.includes('@')) { showCfMsg('Please enter a valid email.', false); return; }
+    if (body.length < 10) { showCfMsg('Comment must be at least 10 characters.', false); return; }
+
+    cfSubmit.disabled    = true;
+    cfSubmit.textContent = 'Posting…';
+    cfMsg.className      = 'cf-msg';
+
+    fetch('/api/blog/comment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipe_id: recipeId, name: name, email: email, body: body })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.success) {
+        showCfMsg('✓ Comment posted — thank you!', true);
+        if (cfName)  cfName.value  = '';
+        if (cfEmail) cfEmail.value = '';
+        if (cfBody)  cfBody.value  = '';
+        cfSubmit.textContent = 'Post Comment →';
+        cfSubmit.disabled    = false;
+        prependComment(d.comment);
+      } else {
+        showCfMsg(d.error || 'Something went wrong.', false);
+        cfSubmit.disabled    = false;
+        cfSubmit.textContent = 'Post Comment →';
+      }
+    })
+    .catch(function () {
+      showCfMsg('Network error. Please try again.', false);
+      cfSubmit.disabled    = false;
+      cfSubmit.textContent = 'Post Comment →';
+    });
+  });
+
+  function showCfMsg(text, ok) {
+    if (!cfMsg) return;
+    cfMsg.textContent = text;
+    cfMsg.className   = 'cf-msg ' + (ok ? 'ok' : 'err');
+  }
+
+  function prependComment(c) {
+    if (!cfList) return;
+    /* remove empty-state message if present */
+    var empty = cfList.querySelector('.comment-empty');
+    if (empty) empty.remove();
+
+    var initial = c.name ? c.name.charAt(0).toUpperCase() : '?';
+    var date    = new Date(c.created_at).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+    var card    = document.createElement('div');
+    card.className = 'comment-card';
+    card.innerHTML =
+      '<div class="comment-header">'
+      +  '<div class="comment-avatar">' + initial + '</div>'
+      +  '<div class="comment-meta">'
+      +    '<span class="comment-name">' + escHtml(c.name) + '</span>'
+      +    '<span class="comment-date">' + date + '</span>'
+      +  '</div>'
+      + '</div>'
+      + '<p class="comment-body">' + escHtml(c.body) + '</p>';
+    cfList.insertBefore(card, cfList.firstChild);
+
+    /* update count badge */
+    if (cfCount) {
+      var n = parseInt(cfCount.textContent, 10) || 0;
+      cfCount.textContent = String(n + 1);
+    }
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+}());
+</script>
 
 <!-- EXIT-INTENT POPUP -->
 <div id="exitPopup" class="exit-overlay" role="dialog" aria-modal="true" aria-label="Free Recipe Book offer">
