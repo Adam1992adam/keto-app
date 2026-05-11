@@ -27,12 +27,15 @@ const nav = [
 const activeMap: Record<string, string> = {
   'food-photo': 'food-log', 'food-log': 'food-log',
   'recipe': 'recipes', 'recipes': 'recipes', 'favorites': 'recipes', 'collections': 'recipes',
-  'meal-planner': 'recipes', 'scanner': 'recipes',
-  'checkin': 'progress', 'photos': 'progress', 'ketones': 'progress', 'steps': 'progress',
-  'reflections': 'progress', 'share': 'progress',
+  'meal-planner': 'recipes', 'scanner': 'scanner',
+  'checkin': 'progress', 'photos': 'photos', 'ketones': 'ketones', 'steps': 'steps',
+  'reflections': 'progress', 'share': 'share',
   'weekly': 'shopping', 'meal-prep': 'shopping',
   'billing': 'billing', 'notification-preferences': 'notification-preferences',
   'notifications': 'notifications',
+  'community': 'community', 'guide': 'guide', 'learn': 'learn',
+  'keto-calculator': 'keto-calculator', 'food-photo': 'food-photo',
+  'referrals': 'referrals', 'export': 'export',
 };
 const activeId = activeMap[activePage] || activePage;
 ---
@@ -341,6 +344,37 @@ const activeId = activeMap[activePage] || activePage;
   }
   .rv-mn:hover, .rv-mn.active { color: var(--rv-accent, #FF5C7A); }
   .rv-mn-ic { width: 20px; height: 20px; }
+  .rv-mn-more { background: none; border: none; cursor: pointer; }
+
+  /* Mobile sheet */
+  .rv-mob-sheet { position: fixed; inset: 0; z-index: 500; }
+  .rv-mob-sheet-bg { position: absolute; inset: 0; background: rgba(22,17,15,.4); backdrop-filter: blur(4px); }
+  .rv-mob-sheet-panel {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: var(--rv-card, #fff); border-radius: 20px 20px 0 0;
+    padding: 12px 16px max(20px, env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 32px rgba(0,0,0,.12);
+    animation: sheetUp .22s ease-out;
+  }
+  @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .rv-mob-sheet-handle {
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--rv-line, #E5DED2); margin: 0 auto 16px;
+  }
+  .rv-mob-sheet-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  }
+  .rv-mob-tile {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 12px 6px; border-radius: 12px; text-decoration: none;
+    background: var(--rv-bg-alt, #F2EDE5);
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-size: .65rem; font-weight: 600; color: var(--rv-ink-soft, #4A4340);
+    transition: background .15s, color .15s;
+  }
+  .rv-mob-tile:hover, .rv-mob-tile:active { background: var(--rv-line, #E5DED2); color: var(--rv-ink, #16110F); }
+  .rv-mob-tile svg { width: 22px; height: 22px; stroke: var(--rv-ink-soft, #4A4340); }
+  .rv-mob-tile:hover svg, .rv-mob-tile:active svg { stroke: var(--rv-accent, #FF5C7A); }
 
   @media (max-width: 900px) {
     .rv-sb { display: none; }
@@ -371,6 +405,54 @@ const activeId = activeMap[activePage] || activePage;
     <a href="/dashboard/profile" class={`rv-ni${activePage === 'profile' ? ' rv-ni--active' : ''}`}>
       <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       <span>Profile</span>
+    </a>
+  </nav>
+
+  <div class="rv-sb-section">Discover</div>
+  <nav class="rv-sb-nav">
+    <a href="/dashboard/community" class={`rv-ni${activeId === 'community' ? ' rv-ni--active' : ''}`}>
+      <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      <span>Community</span>
+    </a>
+    <a href="/dashboard/guide" class={`rv-ni${activeId === 'guide' ? ' rv-ni--active' : ''}`}>
+      <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span>Keto Guide</span>
+    </a>
+    <a href="/dashboard/referrals" class={`rv-ni${activeId === 'referrals' ? ' rv-ni--active' : ''}`}>
+      <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>
+      <span>Refer a Friend</span>
+    </a>
+  </nav>
+
+  <div class="rv-sb-section">Tools</div>
+  <nav class="rv-sb-nav">
+    <a href="/dashboard/keto-calculator" class={`rv-ni${activeId === 'keto-calculator' ? ' rv-ni--active' : ''}`}>
+      <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
+      <span>Calculator</span>
+    </a>
+    <a href="/dashboard/food-photo" class={`rv-ni${activeId === 'food-photo' ? ' rv-ni--active' : ''}`}>
+      <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <span>Food Photo AI</span>
+    </a>
+    <a href="/dashboard/scanner" class={`rv-ni${activeId === 'scanner' ? ' rv-ni--active' : ''}`}>
+      <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5v14"/><path d="M8 5v14"/><path d="M12 5v14"/><path d="M17 5v14"/><path d="M21 5v14"/></svg>
+      <span>Barcode Scan</span>
+    </a>
+  </nav>
+
+  <div class="rv-sb-section">Track More</div>
+  <nav class="rv-sb-nav">
+    <a href="/dashboard/steps" class={`rv-ni${activeId === 'steps' ? ' rv-ni--active' : ''}`}>
+      <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+      <span>Steps</span>
+    </a>
+    <a href="/dashboard/ketones" class={`rv-ni${activeId === 'ketones' ? ' rv-ni--active' : ''}`}>
+      <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v11m0 0h10m-10 0a2 2 0 002 2h8a2 2 0 002-2m0 0V9"/></svg>
+      <span>Ketones</span>
+    </a>
+    <a href="/dashboard/photos" class={`rv-ni${activeId === 'photos' ? ' rv-ni--active' : ''}`}>
+      <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      <span>Before & After</span>
     </a>
   </nav>
 
@@ -555,6 +637,18 @@ const activeId = activeMap[activePage] || activePage;
     }).catch(function(){});
 })();
 
+// Mobile "More" sheet
+(function() {
+  var btn   = document.getElementById('rvMobMoreBtn');
+  var sheet = document.getElementById('rvMobSheet');
+  var bg    = document.getElementById('rvMobSheetBg');
+  function open()  { if (sheet) sheet.style.display = 'block'; }
+  function close() { if (sheet) sheet.style.display = 'none';  }
+  if (btn) btn.addEventListener('click', open);
+  if (bg)  bg.addEventListener('click', close);
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close(); });
+})();
+
 // Back-button / bfcache auth guard:
 // When the browser restores a page from bfcache (e.g. after logout + back),
 // verify the session is still valid. Redirect to login if not.
@@ -586,9 +680,67 @@ window.addEventListener('pageshow', function(e) {
       <svg class="rv-mn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
       <span>Recipes</span>
     </a>
-    <a href="/dashboard/profile" class={`rv-mn${activePage === 'profile' ? ' active' : ''}`}>
-      <svg class="rv-mn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      <span>Profile</span>
-    </a>
+    <button class="rv-mn rv-mn-more" id="rvMobMoreBtn" type="button">
+      <svg class="rv-mn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+      <span>More</span>
+    </button>
   </div>
 </nav>
+
+<!-- Mobile "More" sheet -->
+<div class="rv-mob-sheet" id="rvMobSheet" style="display:none;">
+  <div class="rv-mob-sheet-bg" id="rvMobSheetBg"></div>
+  <div class="rv-mob-sheet-panel">
+    <div class="rv-mob-sheet-handle"></div>
+    <div class="rv-mob-sheet-grid">
+      <a href="/dashboard/habits" class="rv-mob-tile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        <span>Habits</span>
+      </a>
+      <a href="/dashboard/community" class="rv-mob-tile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        <span>Community</span>
+      </a>
+      <a href="/dashboard/fasting" class="rv-mob-tile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>Fasting</span>
+      </a>
+      <a href="/dashboard/shopping" class="rv-mob-tile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+        <span>Shopping</span>
+      </a>
+      <a href="/dashboard/keto-calculator" class="rv-mob-tile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
+        <span>Calculator</span>
+      </a>
+      <a href="/dashboard/food-photo" class="rv-mob-tile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <span>Food Photo</span>
+      </a>
+      <a href="/dashboard/scanner" class="rv-mob-tile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5v14"/><path d="M8 5v14"/><path d="M12 5v14"/><path d="M17 5v14"/><path d="M21 5v14"/></svg>
+        <span>Scanner</span>
+      </a>
+      <a href="/dashboard/steps" class="rv-mob-tile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+        <span>Steps</span>
+      </a>
+      <a href="/dashboard/ketones" class="rv-mob-tile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v11m0 0h10m-10 0a2 2 0 002 2h8a2 2 0 002-2m0 0V9"/></svg>
+        <span>Ketones</span>
+      </a>
+      <a href="/dashboard/photos" class="rv-mob-tile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span>Photos</span>
+      </a>
+      <a href="/dashboard/guide" class="rv-mob-tile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Keto Guide</span>
+      </a>
+      <a href="/dashboard/profile" class="rv-mob-tile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Profile</span>
+      </a>
+    </div>
+  </div>
+</div>
