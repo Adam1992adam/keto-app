@@ -141,20 +141,23 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
     .nutr.highlight .nutr-val, .nutr.highlight .nutr-unit, .nutr.highlight .nutr-label { color:#fff; }
 
     /* SECTIONS */
-    .section-title { font-family:var(--display); font-size:1.25rem; font-weight:800; color:var(--ink); margin-bottom:16px; display:flex; align-items:center; gap:8px; }
-    .ingredients-list { list-style:none; display:flex; flex-direction:column; gap:10px; margin-bottom:36px; }
-    .ingredient-item { display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:var(--card); border:1px solid var(--line); border-radius:12px; font-size:.92rem; color:var(--ink-soft); }
-    .ingredient-check { width:20px; height:20px; border-radius:6px; border:2px solid var(--line); flex-shrink:0; cursor:pointer; transition:all .15s; display:flex; align-items:center; justify-content:center; margin-top:1px; }
-    .ingredient-check.done { background:var(--accent); border-color:var(--accent); }
-    .ingredient-check.done::after { content:'✓'; color:#fff; font-size:.7rem; font-weight:800; }
-    .ingredient-item.done { opacity:.5; text-decoration:line-through; }
+    .section-head { margin-bottom:22px; }
+    .section-label { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.16em; color:var(--accent); display:block; margin-bottom:6px; }
+    .section-title { font-family:var(--display); font-size:1.45rem; font-weight:800; color:var(--ink); line-height:1.2; }
+    .section-divider { height:1px; background:var(--line); margin-top:14px; }
 
-    .steps-list { display:flex; flex-direction:column; gap:16px; margin-bottom:36px; }
-    .step { display:flex; gap:16px; align-items:flex-start; }
-    .step-num { width:36px; height:36px; border-radius:50%; background:var(--ink); color:var(--bg); display:flex; align-items:center; justify-content:center; font-family:var(--display); font-size:.88rem; font-weight:800; flex-shrink:0; cursor:pointer; transition:background .15s; }
-    .step.done .step-num { background:var(--accent); }
-    .step-text { font-size:.95rem; color:var(--ink-soft); line-height:1.65; padding-top:6px; }
-    .step.done .step-text { opacity:.55; text-decoration:line-through; }
+    /* INGREDIENTS — editorial list */
+    .ing-list { list-style:none; margin-bottom:44px; }
+    .ing-item { display:flex; align-items:baseline; gap:14px; padding:13px 0; border-bottom:1px solid var(--line); font-size:.97rem; color:var(--ink-soft); line-height:1.55; }
+    .ing-list .ing-item:first-child { border-top:1px solid var(--line); }
+    .ing-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); flex-shrink:0; position:relative; top:-1px; margin-top:8px; }
+
+    /* INSTRUCTIONS — magazine style */
+    .step-list { list-style:none; margin-bottom:44px; display:flex; flex-direction:column; gap:0; }
+    .step-item { display:grid; grid-template-columns:64px 1fr; gap:0; align-items:start; padding:28px 0; border-bottom:1px solid var(--line); }
+    .step-item:first-child { border-top:1px solid var(--line); }
+    .step-n { font-family:var(--display); font-size:2.6rem; font-weight:800; color:rgba(255,92,122,.15); line-height:1; padding-top:2px; letter-spacing:-.04em; }
+    .step-p { font-size:1rem; color:var(--ink-soft); line-height:1.82; padding-top:6px; }
 
     /* TAGS */
     .tags { display:flex; gap:8px; flex-wrap:wrap; margin-top:20px; }
@@ -173,38 +176,25 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
     .cta-btn-primary:hover { opacity:.88; }
     .cta-btn-outline { background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2); }
     .cta-btn-outline:hover { background:rgba(255,255,255,.18); }
-    /* LEAD CAPTURE */
+    /* LEAD CAPTURE — download CTA */
     .lead-card { background:linear-gradient(135deg,#0d1a0f,#0a1a12); border:1.5px solid rgba(255,92,122,.3); border-radius:20px; padding:22px; }
     .lead-card-eyebrow { font-size:.68rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#B6FF3C; margin-bottom:8px; }
     .lead-card-title { font-size:1rem; font-weight:800; color:#dfeedd; font-family:var(--display); line-height:1.3; margin-bottom:8px; }
-    .lead-card-sub { font-size:.8rem; color:rgba(255,255,255,.5); line-height:1.5; margin-bottom:12px; }
-    .lead-input { width:100%; padding:9px 13px; background:rgba(255,92,122,.07); border:1px solid rgba(255,92,122,.25); border-radius:9px; color:#dfeedd; font-size:.83rem; font-family:var(--body); outline:none; box-sizing:border-box; transition:border-color .2s; margin-bottom:8px; }
-    .lead-input:focus { border-color:#FF5C7A; }
-    .lead-input::placeholder { color:rgba(255,255,255,.3); }
-    .lead-submit { width:100%; padding:9px 0; background:linear-gradient(135deg,#FF5C7A,#B6FF3C); border:none; border-radius:9px; color:#fff; font-size:.85rem; font-weight:800; font-family:var(--display); cursor:pointer; transition:opacity .2s; }
-    .lead-submit:hover { opacity:.88; }
-    .lead-submit:disabled { opacity:.6; cursor:not-allowed; }
-    .lead-note { font-size:.7rem; color:rgba(255,255,255,.3); text-align:center; margin-top:7px; }
-    .lead-msg { margin-top:8px; padding:8px 11px; border-radius:8px; font-size:.78rem; font-weight:600; display:none; }
-    .lead-msg.ok { display:block; background:rgba(255,92,122,.12); border:1px solid rgba(255,92,122,.25); color:#B6FF3C; }
-    .lead-msg.err { display:block; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.2); color:#f87171; }
+    .lead-card-sub { font-size:.8rem; color:rgba(255,255,255,.5); line-height:1.55; margin-bottom:16px; }
+    .lead-perks { list-style:none; margin-bottom:16px; display:flex; flex-direction:column; gap:5px; }
+    .lead-perks li { font-size:.78rem; color:rgba(255,255,255,.55); display:flex; align-items:center; gap:6px; }
+    .lead-perks li::before { content:'✓'; color:#B6FF3C; font-weight:800; font-size:.75rem; }
+    .lead-dl-btn { display:block; text-align:center; padding:11px 20px; border-radius:999px; background:linear-gradient(135deg,#FF5C7A,#ff8fa3); color:#fff; font-size:.88rem; font-weight:800; font-family:var(--display); transition:opacity .2s; text-decoration:none; }
+    .lead-dl-btn:hover { opacity:.88; }
+    .lead-note { font-size:.7rem; color:rgba(255,255,255,.28); text-align:center; margin-top:8px; }
     /* Inline lead (mobile) */
     .inline-lead { background:linear-gradient(135deg,#f7fdf9,#eefaf3); border:1.5px solid rgba(255,92,122,.2); border-radius:20px; padding:26px 22px; margin:36px 0; }
     .inline-lead-title { font-family:var(--display); font-size:1.15rem; font-weight:800; color:#0a1a10; margin-bottom:6px; }
-    .inline-lead-sub { font-size:.86rem; color:#3d6b4a; line-height:1.6; margin-bottom:14px; }
-    .inline-lead-row { display:flex; gap:10px; }
-    .inline-lead-input { flex:1; padding:10px 13px; background:#fff; border:1px solid rgba(255,92,122,.3); border-radius:9px; color:#0a1a10; font-size:.86rem; font-family:var(--body); outline:none; transition:border-color .2s; }
-    .inline-lead-input:focus { border-color:#FF5C7A; }
-    .inline-lead-input::placeholder { color:#8aab90; }
-    .inline-lead-btn { padding:10px 18px; background:#FF5C7A; border:none; border-radius:9px; color:#fff; font-size:.86rem; font-weight:800; font-family:var(--display); cursor:pointer; white-space:nowrap; transition:opacity .2s; }
-    .inline-lead-btn:hover { opacity:.88; }
-    .inline-lead-btn:disabled { opacity:.6; cursor:not-allowed; }
-    .inline-lead-note { font-size:.7rem; color:#8aab90; margin-top:7px; }
-    .inline-lead-msg { margin-top:9px; padding:9px 12px; border-radius:8px; font-size:.81rem; font-weight:600; display:none; }
-    .inline-lead-msg.ok { display:block; background:rgba(255,92,122,.1); border:1px solid rgba(255,92,122,.25); color:#E0394F; }
-    .inline-lead-msg.err { display:block; background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.18); color:#dc2626; }
+    .inline-lead-sub { font-size:.86rem; color:#3d6b4a; line-height:1.6; margin-bottom:16px; }
+    .inline-lead-dl { display:inline-flex; align-items:center; gap:8px; padding:12px 24px; background:#FF5C7A; border-radius:999px; color:#fff; font-size:.9rem; font-weight:800; font-family:var(--display); transition:opacity .2s; text-decoration:none; }
+    .inline-lead-dl:hover { opacity:.88; }
+    .inline-lead-note { font-size:.72rem; color:#8aab90; margin-top:10px; }
     @media(min-width:901px){ .inline-lead{ display:none; } }
-    @media(max-width:560px){ .inline-lead-row{flex-direction:column;} }
 
     .nutr-full { display:flex; flex-direction:column; gap:8px; }
     .nutr-row { display:flex; align-items:center; justify-content:space-between; font-size:.84rem; }
@@ -334,11 +324,15 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
     <!-- Ingredients -->
     {ingredients.length > 0 && (
       <>
-        <h2 class="section-title">🥄 Ingredients</h2>
-        <ul class="ingredients-list" id="ingredientsList">
-          {ingredients.map((ing: string, i: number) => (
-            <li class="ingredient-item" id={`ing-${i}`} onclick={`toggleIngredient(${i})`} style="cursor:pointer">
-              <div class="ingredient-check" id={`chk-${i}`}></div>
+        <div class="section-head">
+          <span class="section-label">What you'll need</span>
+          <div class="section-title">Ingredients <span style="font-size:.85rem;font-weight:500;color:var(--muted)">· {recipe.servings} serving{recipe.servings !== 1 ? 's' : ''}</span></div>
+          <div class="section-divider"></div>
+        </div>
+        <ul class="ing-list">
+          {ingredients.map((ing: string) => (
+            <li class="ing-item">
+              <span class="ing-dot"></span>
               <span>{ing}</span>
             </li>
           ))}
@@ -349,12 +343,16 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
     <!-- Instructions -->
     {instructions.length > 0 && (
       <>
-        <h2 class="section-title">📋 Instructions</h2>
-        <ol class="steps-list" id="stepsList">
+        <div class="section-head">
+          <span class="section-label">How to make it</span>
+          <div class="section-title">Instructions</div>
+          <div class="section-divider"></div>
+        </div>
+        <ol class="step-list">
           {instructions.map((step: string, i: number) => (
-            <li class="step" id={`step-${i}`}>
-              <div class="step-num" onclick={`toggleStep(${i})`}>{i + 1}</div>
-              <div class="step-text">{step}</div>
+            <li class="step-item">
+              <div class="step-n">{String(i + 1).padStart(2, '0')}</div>
+              <p class="step-p">{step}</p>
             </li>
           ))}
         </ol>
@@ -371,14 +369,10 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
     <!-- Inline lead capture (mobile only) -->
     <div class="inline-lead">
       <p style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#FF5C7A;margin-bottom:6px;">📖 Free Recipe Book</p>
-      <div class="inline-lead-title">Get 7 more keto recipes free</div>
-      <p class="inline-lead-sub">Full macros · Under 5g net carbs each · Delivered instantly to your inbox</p>
-      <div class="inline-lead-row">
-        <input type="email" class="inline-lead-input" id="inlineEmail" placeholder="Your email address" autocomplete="email"/>
-        <button class="inline-lead-btn" id="inlineBtn">Send Free →</button>
-      </div>
-      <p class="inline-lead-note">🔒 No spam · Unsubscribe anytime</p>
-      <div class="inline-lead-msg" id="inlineMsg"></div>
+      <div class="inline-lead-title">7 more keto recipes, completely free</div>
+      <p class="inline-lead-sub">Full macros included · Under 5g net carbs · Ready in 30 min or less</p>
+      <a href="/free-book" class="inline-lead-dl">Download Free Book →</a>
+      <p class="inline-lead-note">Instant download · No account needed</p>
     </div>
 
     <!-- Bottom CTA -->
@@ -418,15 +412,18 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
   <!-- ── Sidebar ── -->
   <aside class="sidebar">
 
-    <!-- Free book lead capture card -->
+    <!-- Free book download card -->
     <div class="lead-card">
       <p class="lead-card-eyebrow">📖 Free Recipe Book</p>
-      <div class="lead-card-title">Get 7 keto recipes free — delivered instantly</div>
-      <p class="lead-card-sub">Full macros · Under 5g net carbs · 30 min or less</p>
-      <input type="email" class="lead-input" id="sidebarEmail" placeholder="Your email address" autocomplete="email"/>
-      <button class="lead-submit" id="sidebarBtn">Send My Free Book →</button>
-      <p class="lead-note">🔒 No spam · Unsubscribe anytime</p>
-      <div class="lead-msg" id="sidebarMsg"></div>
+      <div class="lead-card-title">Keto Quick-Start Recipe Book — free</div>
+      <p class="lead-card-sub">7 beginner-friendly recipes with full macros, shopping lists, and step-by-step guides.</p>
+      <ul class="lead-perks">
+        <li>Under 5g net carbs per recipe</li>
+        <li>Ready in 30 minutes or less</li>
+        <li>Full nutrition breakdown included</li>
+      </ul>
+      <a href="/free-book" class="lead-dl-btn">Download Free →</a>
+      <p class="lead-note">Instant download · No account needed</p>
     </div>
 
     <!-- CTA -->
@@ -465,73 +462,5 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
   </div>
 </footer>
 
-<script is:inline>
-/* Interactive ingredient checklist */
-function toggleIngredient(i) {
-  var item = document.getElementById('ing-' + i);
-  var chk  = document.getElementById('chk-' + i);
-  if (!item || !chk) return;
-  var done = item.classList.toggle('done');
-  chk.classList.toggle('done', done);
-}
-
-/* Interactive step completion */
-function toggleStep(i) {
-  var step = document.getElementById('step-' + i);
-  if (step) step.classList.toggle('done');
-}
-
-/* Lead capture forms */
-(function() {
-  function submitLead(email, btnEl, msgEl, okClass, errClass) {
-    if (!email || !email.includes('@')) {
-      msgEl.textContent = 'Please enter a valid email.';
-      msgEl.className = errClass;
-      return;
-    }
-    btnEl.disabled = true;
-    var orig = btnEl.textContent;
-    btnEl.textContent = 'Sending…';
-    msgEl.className = okClass.replace('ok','').replace('err','').trim();
-    fetch('/api/leads/collect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email })
-    }).then(function(r){ return r.json(); }).then(function(d) {
-      if (d.success) {
-        msgEl.textContent = '✅ Check your inbox — recipes on their way!';
-        msgEl.className = okClass;
-        btnEl.textContent = 'Sent ✓';
-      } else {
-        msgEl.textContent = d.error || 'Something went wrong.';
-        msgEl.className = errClass;
-        btnEl.disabled = false;
-        btnEl.textContent = orig;
-      }
-    }).catch(function() {
-      msgEl.textContent = 'Network error. Please try again.';
-      msgEl.className = errClass;
-      btnEl.disabled = false;
-      btnEl.textContent = orig;
-    });
-  }
-
-  var sBtn = document.getElementById('sidebarBtn');
-  var sInp = document.getElementById('sidebarEmail');
-  var sMsg = document.getElementById('sidebarMsg');
-  if (sBtn && sInp && sMsg) {
-    sBtn.addEventListener('click', function(){ submitLead(sInp.value.trim(), sBtn, sMsg, 'lead-msg ok', 'lead-msg err'); });
-    sInp.addEventListener('keydown', function(e){ if(e.key==='Enter') sBtn.click(); });
-  }
-
-  var iBtn = document.getElementById('inlineBtn');
-  var iInp = document.getElementById('inlineEmail');
-  var iMsg = document.getElementById('inlineMsg');
-  if (iBtn && iInp && iMsg) {
-    iBtn.addEventListener('click', function(){ submitLead(iInp.value.trim(), iBtn, iMsg, 'inline-lead-msg ok', 'inline-lead-msg err'); });
-    iInp.addEventListener('keydown', function(e){ if(e.key==='Enter') iBtn.click(); });
-  }
-})();
-</script>
 </body>
 </html>
