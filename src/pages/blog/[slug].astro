@@ -113,29 +113,47 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
     .read-progress { position:fixed; top:0; left:0; width:0%; height:3px; background:linear-gradient(90deg,var(--accent),#ff8fa3); z-index:200; transition:width .1s linear; }
 
     /* PROSE */
-    .prose { font-size:1.05rem; line-height:1.82; color:var(--ink-soft); max-width:720px; }
-    .prose h1,.prose h2,.prose h3,.prose h4 { font-family:var(--display); color:var(--ink); line-height:1.25; }
-    .prose h2 { font-size:1.6rem; font-weight:800; margin:2.2em 0 .65em; padding-bottom:.4em; border-bottom:2px solid var(--line); }
-    .prose h3 { font-size:1.15rem; font-weight:700; margin:1.8em 0 .5em; color:var(--ink); letter-spacing:-.01em; }
-    .prose h4 { font-size:1rem; font-weight:700; margin:1.5em 0 .4em; color:var(--ink-soft); }
-    .prose > p:first-of-type { font-size:1.15rem; line-height:1.75; color:var(--ink); font-weight:400; }
-    .prose p { margin:0 0 1.25em; }
-    .prose ul,.prose ol { padding-left:1.5em; margin:0 0 1.2em; }
-    .prose li { margin-bottom:.4em; }
-    .prose li::marker { color:var(--accent); }
+    .prose { font-size:1.05rem; line-height:1.85; color:var(--ink-soft); max-width:720px; }
+    .prose h1,.prose h2,.prose h3,.prose h4 { font-family:var(--display); color:var(--ink); line-height:1.2; }
+    .prose h2 {
+      font-size:1.65rem; font-weight:800; margin:2.8em 0 .7em;
+      padding-left:16px; border-left:4px solid var(--accent);
+      color:var(--ink);
+    }
+    .prose h3 {
+      font-size:1.15rem; font-weight:700; margin:2em 0 .55em;
+      color:var(--accent); letter-spacing:-.01em;
+    }
+    .prose h4 { font-size:1rem; font-weight:700; margin:1.5em 0 .4em; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em; font-size:.85rem; }
+    .prose > p:first-of-type { font-size:1.15rem; line-height:1.8; color:var(--ink); font-weight:400; }
+    .prose p { margin:0 0 1.3em; }
+    .prose ul,.prose ol { padding-left:1.6em; margin:0 0 1.4em; }
+    .prose li { margin-bottom:.55em; }
+    .prose li::marker { color:var(--accent); font-weight:700; }
     .prose strong { color:var(--ink); font-weight:700; }
     .prose em { font-family:var(--serif); font-style:italic; color:var(--ink); }
-    .prose a { color:var(--accent); text-decoration:underline; text-underline-offset:3px; }
-    .prose blockquote { border-left:4px solid var(--accent); padding:16px 22px; margin:2em 0; background:rgba(255,92,122,.05); border-radius:0 12px 12px 0; }
-    .prose blockquote p { margin:0; color:var(--ink); font-family:var(--serif); font-style:italic; font-size:1.12em; line-height:1.6; }
-    .prose code { background:var(--bg-alt); padding:2px 6px; border-radius:5px; font-size:.88em; color:var(--ink); }
-    .prose pre { background:var(--ink); color:var(--bg); padding:20px; border-radius:12px; overflow-x:auto; margin:1.5em 0; }
-    .prose pre code { background:none; padding:0; color:inherit; }
-    .prose hr { border:none; border-top:1px solid var(--line); margin:2.5em 0; }
-    .prose img { border-radius:12px; margin:1.5em auto; }
-    .prose table { width:100%; border-collapse:collapse; margin:1.5em 0; font-size:.9em; }
-    .prose th { background:var(--bg-alt); padding:10px 14px; text-align:left; font-weight:700; color:var(--ink); border:1px solid var(--line); }
-    .prose td { padding:10px 14px; border:1px solid var(--line); }
+    .prose a { color:var(--accent); text-decoration:underline; text-underline-offset:3px; transition:opacity .15s; }
+    .prose a:hover { opacity:.75; }
+    .prose blockquote {
+      border-left:4px solid var(--accent); padding:20px 24px;
+      margin:2.2em 0; background:rgba(255,92,122,.05);
+      border-radius:0 16px 16px 0;
+    }
+    .prose blockquote p { margin:0; color:var(--ink); font-family:var(--serif); font-style:italic; font-size:1.15em; line-height:1.65; }
+    .prose code { background:var(--bg-alt); padding:2px 7px; border-radius:5px; font-size:.87em; color:var(--ink); border:1px solid var(--line); }
+    .prose pre { background:var(--ink); color:var(--bg); padding:22px; border-radius:14px; overflow-x:auto; margin:1.8em 0; }
+    .prose pre code { background:none; padding:0; color:inherit; border:none; }
+    .prose hr { border:none; border-top:1px solid var(--line); margin:3em 0; }
+    .prose img { border-radius:14px; margin:2em auto; box-shadow:0 8px 32px rgba(22,17,15,.1); }
+
+    /* TABLE — magazine style */
+    .prose table { width:100%; border-collapse:collapse; margin:2em 0; font-size:.92em; border-radius:14px; overflow:hidden; box-shadow:0 1px 0 var(--line); }
+    .prose thead tr { background:var(--ink); }
+    .prose th { padding:13px 16px; text-align:left; font-weight:700; color:#fff; font-size:.82rem; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }
+    .prose td { padding:12px 16px; border-bottom:1px solid var(--line); color:var(--ink-soft); }
+    .prose tbody tr:nth-child(even) td { background:var(--bg-alt); }
+    .prose tbody tr:hover td { background:rgba(255,92,122,.04); }
+    .prose tbody tr:last-child td { border-bottom:none; }
 
     /* COVER PLACEHOLDER */
     .article-cover-ph { width:100%; border-radius:20px; aspect-ratio:16/9; margin-bottom:36px; background:linear-gradient(135deg,#f0ebe3 0%,#e5ddd3 50%,#f5f0ea 100%); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; }
@@ -169,39 +187,26 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
     .toc-item a { font-size:.84rem; color:var(--ink-soft); transition:color .15s; display:block; padding:2px 0; border-left:2px solid transparent; padding-left:10px; }
     .toc-item a:hover { color:var(--accent); border-left-color:var(--accent); }
 
-    /* LEAD CAPTURE */
+    /* LEAD CARD — dark download CTA (sidebar) */
     .lead-card { background:linear-gradient(135deg,#0d1a0f,#0a1a12); border:1.5px solid rgba(255,92,122,.3); border-radius:20px; padding:24px; }
     .lead-card-eyebrow { font-size:.68rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#B6FF3C; margin-bottom:8px; }
     .lead-card-title { font-size:1.05rem; font-weight:800; color:#dfeedd; font-family:var(--display); line-height:1.3; margin-bottom:8px; }
     .lead-card-sub { font-size:.82rem; color:rgba(255,255,255,.5); line-height:1.55; margin-bottom:14px; }
-    .lead-input { width:100%; padding:10px 14px; background:rgba(255,92,122,.07); border:1px solid rgba(255,92,122,.25); border-radius:10px; color:#dfeedd; font-size:.85rem; font-family:var(--body); outline:none; box-sizing:border-box; transition:border-color .2s; margin-bottom:10px; }
-    .lead-input:focus { border-color:#FF5C7A; }
-    .lead-input::placeholder { color:rgba(255,255,255,.3); }
-    .lead-submit { width:100%; padding:10px 0; background:linear-gradient(135deg,#FF5C7A,#B6FF3C); border:none; border-radius:10px; color:#fff; font-size:.88rem; font-weight:800; font-family:var(--display); cursor:pointer; transition:opacity .2s; }
-    .lead-submit:hover { opacity:.88; }
-    .lead-submit:disabled { opacity:.6; cursor:not-allowed; }
-    .lead-note { font-size:.72rem; color:rgba(255,255,255,.3); text-align:center; margin-top:8px; }
-    .lead-msg { margin-top:10px; padding:9px 12px; border-radius:8px; font-size:.8rem; font-weight:600; display:none; }
-    .lead-msg.ok { display:block; background:rgba(255,92,122,.12); border:1px solid rgba(255,92,122,.25); color:#B6FF3C; }
-    .lead-msg.err { display:block; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.2); color:#f87171; }
+    .lead-perks { list-style:none; margin-bottom:16px; display:flex; flex-direction:column; gap:5px; }
+    .lead-perks li { font-size:.78rem; color:rgba(255,255,255,.55); display:flex; align-items:center; gap:6px; }
+    .lead-perks li::before { content:'✓'; color:#B6FF3C; font-weight:800; font-size:.75rem; }
+    .lead-dl-btn { display:block; text-align:center; padding:11px 20px; border-radius:999px; background:linear-gradient(135deg,#FF5C7A,#ff8fa3); color:#fff; font-size:.88rem; font-weight:800; font-family:var(--display); transition:opacity .2s; }
+    .lead-dl-btn:hover { opacity:.88; }
+    .lead-note { font-size:.7rem; color:rgba(255,255,255,.28); text-align:center; margin-top:8px; }
 
-    /* INLINE LEAD (mobile — shown below article, above related) */
+    /* INLINE LEAD — mobile, below article */
     .inline-lead { background:linear-gradient(135deg,#f7fdf9,#eefaf3); border:1.5px solid rgba(255,92,122,.2); border-radius:20px; padding:28px 24px; margin:40px 0; }
     .inline-lead-title { font-family:var(--display); font-size:1.2rem; font-weight:800; color:#0a1a10; margin-bottom:6px; }
     .inline-lead-sub { font-size:.88rem; color:#3d6b4a; line-height:1.6; margin-bottom:16px; }
-    .inline-lead-row { display:flex; gap:10px; }
-    .inline-lead-input { flex:1; padding:11px 14px; background:#fff; border:1px solid rgba(255,92,122,.3); border-radius:10px; color:#0a1a10; font-size:.88rem; font-family:var(--body); outline:none; transition:border-color .2s; }
-    .inline-lead-input:focus { border-color:#FF5C7A; }
-    .inline-lead-input::placeholder { color:#8aab90; }
-    .inline-lead-btn { padding:11px 20px; background:#FF5C7A; border:none; border-radius:10px; color:#fff; font-size:.88rem; font-weight:800; font-family:var(--display); cursor:pointer; white-space:nowrap; transition:opacity .2s; }
-    .inline-lead-btn:hover { opacity:.88; }
-    .inline-lead-btn:disabled { opacity:.6; cursor:not-allowed; }
-    .inline-lead-note { font-size:.72rem; color:#8aab90; margin-top:8px; }
-    .inline-lead-msg { margin-top:10px; padding:9px 12px; border-radius:8px; font-size:.82rem; font-weight:600; display:none; }
-    .inline-lead-msg.ok { display:block; background:rgba(255,92,122,.1); border:1px solid rgba(255,92,122,.25); color:#E0394F; }
-    .inline-lead-msg.err { display:block; background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.18); color:#dc2626; }
+    .inline-lead-dl { display:inline-flex; align-items:center; gap:8px; padding:12px 24px; background:#FF5C7A; border-radius:999px; color:#fff; font-size:.9rem; font-weight:800; font-family:var(--display); transition:opacity .2s; }
+    .inline-lead-dl:hover { opacity:.88; }
+    .inline-lead-note { font-size:.72rem; color:#8aab90; margin-top:10px; }
     @media(min-width:901px){ .inline-lead{ display:none; } }
-    @media(max-width:560px){ .inline-lead-row{flex-direction:column;} }
 
     /* RELATED */
     .related { margin-top:56px; }
@@ -316,14 +321,10 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
     <!-- Inline lead capture (mobile only — sidebar hidden below 900px) -->
     <div class="inline-lead">
       <p style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#FF5C7A;margin-bottom:6px;">📖 Free Recipe Book</p>
-      <div class="inline-lead-title">Get 7 free keto recipes delivered to your inbox</div>
-      <p class="inline-lead-sub">Full macros included · Under 5g net carbs each · Ready in 30 min or less</p>
-      <div class="inline-lead-row">
-        <input type="email" class="inline-lead-input" id="inlineEmail" placeholder="Your email address" autocomplete="email"/>
-        <button class="inline-lead-btn" id="inlineBtn">Send Free →</button>
-      </div>
-      <p class="inline-lead-note">🔒 No spam · Unsubscribe anytime</p>
-      <div class="inline-lead-msg" id="inlineMsg"></div>
+      <div class="inline-lead-title">80+ free keto recipes — download instantly</div>
+      <p class="inline-lead-sub">Full macros included · Under 5g net carbs each · Shopping lists included</p>
+      <a href="/free-book" class="inline-lead-dl">Download Free Book →</a>
+      <p class="inline-lead-note">No account needed · Instant download</p>
     </div>
 
     <!-- Bottom CTA -->
@@ -364,15 +365,18 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
   <!-- ── Sidebar ── -->
   <aside class="sidebar">
 
-    <!-- Free book lead capture card -->
+    <!-- Free book download card -->
     <div class="lead-card">
       <p class="lead-card-eyebrow">📖 Free Recipe Book</p>
-      <div class="lead-card-title">Get 7 keto recipes free — delivered instantly</div>
-      <p class="lead-card-sub">Full macros · Under 5g net carbs · 30 min or less</p>
-      <input type="email" class="lead-input" id="sidebarEmail" placeholder="Your email address" autocomplete="email"/>
-      <button class="lead-submit" id="sidebarBtn">Send My Free Book →</button>
-      <p class="lead-note">🔒 No spam · Unsubscribe anytime</p>
-      <div class="lead-msg" id="sidebarMsg"></div>
+      <div class="lead-card-title">80+ Keto Recipes — Completely Free</div>
+      <p class="lead-card-sub">Breakfast through dessert · Full macros · Under 5g net carbs · Shopping lists included</p>
+      <ul class="lead-perks">
+        <li>80+ beginner-friendly recipes</li>
+        <li>Full nutrition breakdown</li>
+        <li>Shopping lists included</li>
+      </ul>
+      <a href="/free-book" class="lead-dl-btn">Download Free →</a>
+      <p class="lead-note">Instant download · No account needed</p>
     </div>
 
     <!-- CTA card -->
@@ -485,92 +489,6 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
   });
 })();
 
-/* Lead capture forms */
-(function() {
-  function submitLead(email, btnEl, msgEl) {
-    if (!email || !email.includes('@')) {
-      msgEl.textContent = 'Please enter a valid email.';
-      msgEl.className = 'lead-msg err';
-      return;
-    }
-    btnEl.disabled = true;
-    var origText = btnEl.textContent;
-    btnEl.textContent = 'Sending…';
-    msgEl.className = 'lead-msg';
-    fetch('/api/leads/collect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email })
-    }).then(function(r) { return r.json(); }).then(function(d) {
-      if (d.success) {
-        msgEl.textContent = '✅ Check your inbox — recipes on their way!';
-        msgEl.className = 'lead-msg ok';
-        btnEl.textContent = 'Sent ✓';
-      } else {
-        msgEl.textContent = d.error || 'Something went wrong.';
-        msgEl.className = 'lead-msg err';
-        btnEl.disabled = false;
-        btnEl.textContent = origText;
-      }
-    }).catch(function() {
-      msgEl.textContent = 'Network error. Please try again.';
-      msgEl.className = 'lead-msg err';
-      btnEl.disabled = false;
-      btnEl.textContent = origText;
-    });
-  }
-
-  /* Sidebar form */
-  var sBtn = document.getElementById('sidebarBtn');
-  var sInp = document.getElementById('sidebarEmail');
-  var sMsg = document.getElementById('sidebarMsg');
-  if (sBtn && sInp && sMsg) {
-    sBtn.addEventListener('click', function() { submitLead(sInp.value.trim(), sBtn, sMsg); });
-    sInp.addEventListener('keydown', function(e) { if (e.key === 'Enter') sBtn.click(); });
-  }
-
-  /* Inline (mobile) form */
-  var iBtn = document.getElementById('inlineBtn');
-  var iInp = document.getElementById('inlineEmail');
-  var iMsg = document.getElementById('inlineMsg');
-  if (iBtn && iInp && iMsg) {
-    /* Reuse same classes but inline variant has different class names */
-    iBtn.addEventListener('click', function() {
-      var email = iInp.value.trim();
-      if (!email || !email.includes('@')) {
-        iMsg.textContent = 'Please enter a valid email.';
-        iMsg.className = 'inline-lead-msg err';
-        return;
-      }
-      iBtn.disabled = true;
-      var orig = iBtn.textContent;
-      iBtn.textContent = 'Sending…';
-      iMsg.className = 'inline-lead-msg';
-      fetch('/api/leads/collect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email })
-      }).then(function(r) { return r.json(); }).then(function(d) {
-        if (d.success) {
-          iMsg.textContent = '✅ Check your inbox — recipes on their way!';
-          iMsg.className = 'inline-lead-msg ok';
-          iBtn.textContent = 'Sent ✓';
-        } else {
-          iMsg.textContent = d.error || 'Something went wrong.';
-          iMsg.className = 'inline-lead-msg err';
-          iBtn.disabled = false;
-          iBtn.textContent = orig;
-        }
-      }).catch(function() {
-        iMsg.textContent = 'Network error. Please try again.';
-        iMsg.className = 'inline-lead-msg err';
-        iBtn.disabled = false;
-        iBtn.textContent = orig;
-      });
-    });
-    iInp.addEventListener('keydown', function(e) { if (e.key === 'Enter') iBtn.click(); });
-  }
-})();
 </script>
 </body>
 </html>
