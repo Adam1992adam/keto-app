@@ -1,4 +1,6 @@
 ---
+import '../styles/global.css';
+
 interface Props {
   title: string;
 }
@@ -39,23 +41,11 @@ const { title } = Astro.props;
         scroll-behavior: smooth;
       }
       
-      /* Custom scrollbar */
-      ::-webkit-scrollbar {
-        width: 10px;
-      }
-      
-      ::-webkit-scrollbar-track {
-        background: #f1f1f1;
-      }
-      
-      ::-webkit-scrollbar-thumb {
-        background: #10b981;
-        border-radius: 5px;
-      }
-      
-      ::-webkit-scrollbar-thumb:hover {
-        background: #059669;
-      }
+      /* Custom scrollbar — uses Rose Vital vars from global.css */
+      ::-webkit-scrollbar       { width: 8px; }
+      ::-webkit-scrollbar-track { background: var(--rv-bg-alt, #F2EDE5); }
+      ::-webkit-scrollbar-thumb { background: var(--rv-line, #E5DED2); border-radius: 4px; }
+      ::-webkit-scrollbar-thumb:hover { background: var(--rv-muted, #8A8077); }
     </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   </head>
