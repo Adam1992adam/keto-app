@@ -135,6 +135,9 @@ export async function requireAuth(Astro: any): Promise<AuthResult> {
   // Advance journey day + update streak on every protected page load
   await updateCurrentDay(user!.id, db);
 
+  // Prevent browsers from caching protected pages (fixes back-button auth bypass)
+  Astro.response.headers.set('Cache-Control', 'no-store, private');
+
   // Sync preferred language cookie so DashNav can read it without prop drilling
   const lang = profile.preferred_language || 'en';
   Astro.cookies.set('keto-lang', lang, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' });
@@ -169,6 +172,9 @@ export async function requireLogin(Astro: any): Promise<AuthResult> {
   const db = getUserClient(accessToken);
   const profile = await getProfile(user!.id, db);
   if (!profile) return { redirect: '/login' };
+
+  // Prevent browsers from caching these pages (fixes back-button auth bypass)
+  Astro.response.headers.set('Cache-Control', 'no-store, private');
 
   // Initialize journey with user-scoped client so RLS passes
   await updateCurrentDay(user!.id, db);

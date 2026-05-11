@@ -554,6 +554,17 @@ const activeId = activeMap[activePage] || activePage;
       try { sessionStorage.setItem('rv_notif_count', JSON.stringify({ count: d.unreadCount || 0, ts: Date.now() })); } catch(e) {}
     }).catch(function(){});
 })();
+
+// Back-button / bfcache auth guard:
+// When the browser restores a page from bfcache (e.g. after logout + back),
+// verify the session is still valid. Redirect to login if not.
+window.addEventListener('pageshow', function(e) {
+  if (e.persisted) {
+    fetch('/api/auth/check', { credentials: 'same-origin', cache: 'no-store' })
+      .then(function(r) { if (r.status === 401) window.location.replace('/login'); })
+      .catch(function() {});
+  }
+});
 </script>
 
 <!-- Mobile bottom nav -->
