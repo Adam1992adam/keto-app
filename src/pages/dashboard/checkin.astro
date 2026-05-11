@@ -1,6 +1,6 @@
 ---
 // src/pages/dashboard/checkin.astro
-import { getUserJourney, updateCurrentDay, getMaxJourneyDays } from '../../lib/supabase';
+import { getUserJourney, updateCurrentDay, getMaxJourneyDays, kgToLbs } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
 import Sidebar from '../../components/Sidebar.astro';
@@ -35,11 +35,17 @@ const streakDays  = journey?.streak_days   || 1;
 const userName    = profile.full_name?.split(' ')[0] || 'there';
 const alreadyDone = !!existingCheckin;
 
+const units            = profile.preferred_units || 'metric';
+const isImperial       = units === 'imperial';
 const startWeight      = Number(onboarding?.current_weight) || 75;
 const prefillWeight    = Number(latestWeightData?.weight) || startWeight;
 const weightLostNum    = startWeight - prefillWeight;
-const weightLostStr    = Math.abs(weightLostNum).toFixed(1);
 const weightLostPositive = weightLostNum > 0.05;
+// Display values — converted to preferred unit
+const prefillWeightDisplay = isImperial ? parseFloat(kgToLbs(prefillWeight).toFixed(1)) : prefillWeight;
+const weightLostDisplay    = isImperial ? parseFloat(kgToLbs(Math.abs(weightLostNum)).toFixed(1)) : parseFloat(Math.abs(weightLostNum).toFixed(1));
+const weightUnit  = isImperial ? 'lbs' : 'kg';
+const weightStep  = isImperial ? 0.5 : 0.1;
 
 // Mood: map saved mood_level (1-5) back to string id
 const moodLvl     = existingCheckin?.mood_level || 3;
@@ -326,12 +332,12 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
         <div class="ci-label">WEIGHT</div>
         <div class="ci-q">Step on the scale?</div>
         <div class="ci-sub">If it feels right today.</div>
-        <div class="ci-bigval" id="weightVal">{prefillWeight.toFixed(1)}<em>kg</em></div>
+        <div class="ci-bigval" id="weightVal">{prefillWeightDisplay.toFixed(1)}<em>{weightUnit}</em></div>
         <div class="weight-stepper">
-          <button onclick="ciStepWeight(-0.1)">−</button>
-          <button onclick="ciStepWeight(0.1)">+</button>
+          <button onclick={`ciStepWeight(${-weightStep})`}>−</button>
+          <button onclick={`ciStepWeight(${weightStep})`}>+</button>
         </div>
-        {weightLostPositive && <div class="weight-delta">↓ {weightLostStr}kg total lost</div>}
+        {weightLostPositive && <div class="weight-delta">↓ {weightLostDisplay.toFixed(1)}{weightUnit} total lost</div>}
       </div>
 
       <!-- Energy: span4 -->
@@ -552,12 +558,12 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
 
 <div class="ci-toast" id="ciToast"></div>
 
-<script is:inline define:vars={{ currentDay, alreadyDone, prefillMood, prefillWeight, prefillEnergy, prefillHunger, prefillSleepHours, prefillSleepQuality, prefillWater, prefillNotes }}>
+<script is:inline define:vars={{ currentDay, alreadyDone, prefillMood, prefillWeight, prefillWeightDisplay, isImperial, weightUnit, weightStep, prefillEnergy, prefillHunger, prefillSleepHours, prefillSleepQuality, prefillWater, prefillNotes }}>
 
 /* ── STATE ── */
 var state = {
   mood:         prefillMood || 'good',
-  weight:       prefillWeight,
+  weight:       prefillWeightDisplay,  // always in display unit (kg or lbs)
   energy:       prefillEnergy,
   sleepHours:   prefillSleepHours,
   sleepQuality: prefillSleepQuality,
@@ -609,9 +615,10 @@ function ciSlider(field, el, min, max, color) {
 
 /* ── WEIGHT ── */
 function ciStepWeight(delta) {
-  state.weight = Math.max(20, +(state.weight + delta).toFixed(1));
+  var minVal = isImperial ? 44 : 20;  // 44 lbs ≈ 20 kg
+  state.weight = Math.max(minVal, +(state.weight + delta).toFixed(1));
   var el = document.getElementById('weightVal');
-  if (el) el.innerHTML = state.weight.toFixed(1) + '<em>kg</em>';
+  if (el) el.innerHTML = state.weight.toFixed(1) + '<em>' + weightUnit + '</em>';
 }
 
 /* ── KETONES ── */
@@ -738,12 +745,13 @@ function ciSave() {
     if (!res.ok) throw new Error('failed');
     return res.json();
   }).then(function(data) {
-    // Save weight separately if it changed
-    if (Math.abs(state.weight - prefillWeight) > 0.05) {
+    // Save weight separately if it changed (always send kg to the API)
+    var weightKg = isImperial ? +(state.weight / 2.20462).toFixed(2) : state.weight;
+    if (Math.abs(weightKg - prefillWeight) > 0.05) {
       fetch('/api/profile/add-weight', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ weight: state.weight, logged_date: new Date().toLocaleDateString('en-CA') }),
+        body: JSON.stringify({ weight: weightKg, logged_date: new Date().toLocaleDateString('en-CA') }),
       }).catch(function() {});
     }
 

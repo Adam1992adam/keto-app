@@ -1,6 +1,6 @@
 ---
 // src/pages/dashboard/weekly.astro
-import { getUserJourney, getMaxJourneyDays, updateCurrentDay } from '../../lib/supabase';
+import { getUserJourney, getMaxJourneyDays, updateCurrentDay, kgToLbs } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import Sidebar from '../../components/Sidebar.astro';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
@@ -89,6 +89,16 @@ const weekXP          = weekCheckins?.reduce((s, c) => s + (c.xp_earned || 0), 0
 // Starting weight = earliest log
 const startWeight = weightLogs?.[weightLogs.length - 1]?.weight || onboarding?.current_weight || 0;
 const latestWeight = weightLogs?.[0]?.weight || startWeight;
+
+// Unit conversion
+const units      = profile.preferred_units || 'metric';
+const isImperial = units === 'imperial';
+const weightUnit = isImperial ? 'lbs' : 'kg';
+const startWeightDisplay  = isImperial ? parseFloat(kgToLbs(startWeight).toFixed(1))  : startWeight;
+const latestWeightDisplay = isImperial ? parseFloat(kgToLbs(latestWeight).toFixed(1)) : latestWeight;
+const targetWeightDisplay = onboarding?.target_weight
+  ? (isImperial ? parseFloat(kgToLbs(onboarding.target_weight).toFixed(1)) : onboarding.target_weight)
+  : null;
 
 const tier        = profile.subscription_tier || 'basic_30';
 const totalXP     = journey?.total_xp || 0;
@@ -408,9 +418,9 @@ const weekStars = Math.round((complianceRate / 100) * 5);
     <div class="grid4" style="margin-bottom:1.25rem;animation:fadeUp .4s ease both;">
       <div class="stat-box" style="animation:fadeUp .4s ease both;">
         <div class="sb-icon">📈</div>
-        <div class="sb-val" style="color:var(--green);">{startWeight && latestWeight ? (startWeight - latestWeight).toFixed(1) + 'kg' : '—'}</div>
+        <div class="sb-val" style="color:var(--green);">{startWeightDisplay && latestWeightDisplay ? (startWeightDisplay - latestWeightDisplay).toFixed(1) + weightUnit : '—'}</div>
         <div class="sb-lbl">Weight Lost</div>
-        <div class={`sb-change change-${startWeight > latestWeight ? 'good' : 'warn'}`}>{startWeight > latestWeight ? `▼ ${(startWeight - latestWeight).toFixed(1)}kg` : 'No change'}</div>
+        <div class={`sb-change change-${startWeight > latestWeight ? 'good' : 'warn'}`}>{startWeight > latestWeight ? `▼ ${(startWeightDisplay - latestWeightDisplay).toFixed(1)}${weightUnit}` : 'No change'}</div>
       </div>
       <div class="stat-box" style="animation:fadeUp .4s ease both;">
         <div class="sb-icon">⚡</div>
@@ -501,10 +511,10 @@ const weekStars = Math.round((complianceRate / 100) * 5);
           {weightLogs && weightLogs.length >= 2 ? (
             <>
               <div style="display:flex;align-items:baseline;gap:.75rem;margin-bottom:1rem;">
-                <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:2.2rem;font-weight:900;color:var(--green);">{latestWeight}kg</div>
+                <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:2.2rem;font-weight:900;color:var(--green);">{latestWeightDisplay}{weightUnit}</div>
                 <div>
-                  <div style="font-size:.72rem;font-weight:800;color:var(--green);">↓ {(startWeight - latestWeight).toFixed(1)}kg lost</div>
-                  <div style="font-size:.68rem;color:var(--soft);">from {startWeight}kg start</div>
+                  <div style="font-size:.72rem;font-weight:800;color:var(--green);">↓ {(startWeightDisplay - latestWeightDisplay).toFixed(1)}{weightUnit} lost</div>
+                  <div style="font-size:.68rem;color:var(--soft);">from {startWeightDisplay}{weightUnit} start</div>
                 </div>
               </div>
               <!-- Simple SVG sparkline -->
@@ -533,11 +543,11 @@ const weekStars = Math.round((complianceRate / 100) * 5);
                   );
                 })()}
               </svg>
-              {onboarding?.target_weight && (
+              {onboarding?.target_weight && targetWeightDisplay && (
                 <div style="margin-top:.75rem;">
                   <div class="prog-head">
                     <span style="font-size:.72rem;font-weight:700;color:var(--soft);">To Goal</span>
-                    <span style="font-size:.72rem;font-weight:800;color:var(--green);">{latestWeight}kg → {onboarding.target_weight}kg</span>
+                    <span style="font-size:.72rem;font-weight:800;color:var(--green);">{latestWeightDisplay}{weightUnit} → {targetWeightDisplay}{weightUnit}</span>
                   </div>
                   <div class="prog-track">
                     <div class="prog-fill" style={`width:${Math.min(100, Math.round(((startWeight - latestWeight) / Math.max(startWeight - onboarding.target_weight, 1)) * 100))}%;background:linear-gradient(90deg,var(--green),var(--green2));`}></div>
@@ -646,8 +656,8 @@ const weekStars = Math.round((complianceRate / 100) * 5);
         <div class="card-body">
           <div class="grid2">
             <div class="field">
-              <label class="field-label">Current Weight (kg)</label>
-              <input type="number" class="field-input" id="weightNow" placeholder={String(latestWeight || 75)} step="0.1" min="30" max="300"/>
+              <label class="field-label">Current Weight ({weightUnit})</label>
+              <input type="number" class="field-input" id="weightNow" placeholder={String(latestWeightDisplay || (isImperial ? 165 : 75))} step={isImperial ? '0.5' : '0.1'} min={isImperial ? '66' : '30'} max={isImperial ? '660' : '300'}/>
             </div>
             <div class="field">
               <label class="field-label">How you feel about it</label>
@@ -759,7 +769,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
               {prevReports.map(r => (
                 <tr>
                   <td><strong>Week {r.week_number}</strong><div style="font-size:.68rem;color:var(--soft);">{r.week_start_date}</div></td>
-                  <td style="color:var(--green);font-weight:800;">{r.weight_lost ? '-' + r.weight_lost + 'kg' : '—'}</td>
+                  <td style="color:var(--green);font-weight:800;">{r.weight_lost ? '-' + (isImperial ? parseFloat(kgToLbs(r.weight_lost).toFixed(1)) : r.weight_lost) + weightUnit : '—'}</td>
                   <td>
                     <div style="display:flex;align-items:center;gap:.5rem;">
                       <div style="flex:1;height:6px;background:var(--muted);border-radius:99px;overflow:hidden;max-width:60px;">
@@ -791,8 +801,10 @@ const weekStars = Math.round((complianceRate / 100) * 5);
   currentWeek, currentDay, maxWeeks, checkinCount, complianceRate,
   avgEnergy, avgMood, avgWater, mealsFollowed, weekXP,
   startWeight, latestWeight,
+  startWeightDisplay, latestWeightDisplay, isImperial, weightUnit,
   onboardingGoal: onboarding?.goal || 'lose_weight',
   targetWeight: onboarding?.target_weight || 0,
+  targetWeightDisplay,
   fastingProtocol: onboarding?.fasting_protocol || 'none',
   macroGoals,
   weekCheckins: weekCheckins || [],
@@ -838,6 +850,9 @@ function buildInsightsTab() {
   const water  = parseFloat(avgWater)  || 0;
   const comp   = complianceRate;
   const wLost  = startWeight && latestWeight ? (startWeight - latestWeight) : 0;
+  // display version for user-facing text
+  const wLostDisp  = isImperial ? +(wLost * 2.20462).toFixed(1) : +wLost.toFixed(1);
+  const wUnit = weightUnit;
   const checkIns = checkinCount;
 
   /* ── PERFORMANCE SCORE ── */
@@ -871,13 +886,13 @@ function buildInsightsTab() {
 
   // Weight progress — nuanced by compliance
   if (wLost >= 1.5) {
-    insights.push({ type:'🔥 Progress', color:'#FF5C7A', bg:'rgba(255,92,122,.08)', border:'rgba(255,92,122,.22)', text:`You lost <strong>${wLost.toFixed(1)}kg this week</strong> — excellent progress! You're in active fat-burning mode. Maintain your current plan exactly.`, action:null });
+    insights.push({ type:'🔥 Progress', color:'#FF5C7A', bg:'rgba(255,92,122,.08)', border:'rgba(255,92,122,.22)', text:`You lost <strong>${wLostDisp}${wUnit} this week</strong> — excellent progress! You're in active fat-burning mode. Maintain your current plan exactly.`, action:null });
   } else if (wLost >= 0.5 && wLost < 1.5) {
-    insights.push({ type:'📈 Progress', color:'#FF5C7A', bg:'rgba(255,92,122,.08)', border:'rgba(255,92,122,.22)', text:`<strong>${wLost.toFixed(1)}kg lost</strong> — steady, healthy progress. Sustainable fat loss is 0.5–1kg/week. You're right on track.`, action:null });
+    insights.push({ type:'📈 Progress', color:'#FF5C7A', bg:'rgba(255,92,122,.08)', border:'rgba(255,92,122,.22)', text:`<strong>${wLostDisp}${wUnit} lost</strong> — steady, healthy progress. Sustainable fat loss is ${isImperial ? '1–2 lbs' : '0.5–1kg'}/week. You're right on track.`, action:null });
   } else if (wLost > 0 && wLost < 0.5 && comp >= 75) {
-    insights.push({ type:'📉 Plateau', color:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:`Only <strong>${wLost.toFixed(1)}kg</strong> despite good compliance. You may have hit a plateau — try reducing calories by 100 kcal or adding a 24h water fast once this week.`, action:'Break the plateau' });
+    insights.push({ type:'📉 Plateau', color:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:`Only <strong>${wLostDisp}${wUnit}</strong> despite good compliance. You may have hit a plateau — try reducing calories by 100 kcal or adding a 24h water fast once this week.`, action:'Break the plateau' });
   } else if (wLost > 0 && wLost < 0.5 && comp < 75) {
-    insights.push({ type:'📉 Slow Progress', color:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:`Only <strong>${wLost.toFixed(1)}kg lost</strong>, likely because of ${comp}% compliance. Fix the nutrition first before adjusting anything else — hidden carbs in sauces and condiments add up fast.`, action:'Audit hidden carbs' });
+    insights.push({ type:'📉 Slow Progress', color:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:`Only <strong>${wLostDisp}${wUnit} lost</strong>, likely because of ${comp}% compliance. Fix the nutrition first before adjusting anything else — hidden carbs in sauces and condiments add up fast.`, action:'Audit hidden carbs' });
   } else if (wLost <= 0) {
     insights.push({ type:'⚡ No Loss', color:'#ef4444', bg:'rgba(239,68,68,.07)', border:'rgba(239,68,68,.2)', text:`No weight change this week. This could be water retention (normal, especially in women), or your calories aren't in a deficit. Weigh yourself at the same time each morning for accuracy.`, action:'Check scale timing' });
   }
@@ -965,7 +980,7 @@ function buildInsightsTab() {
       <div style="flex:1;min-width:200px;">
         <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.3rem;font-weight:900;margin-bottom:.4rem;">Week ${currentWeek} Performance Score</div>
         <p style="font-size:.82rem;color:var(--soft);line-height:1.6;">
-          ${score >= 75 ? `Exceptional week. You're building unstoppable momentum. At this rate, you'll hit your target ${targetWeight ? `of ${targetWeight}kg ` : ''}ahead of schedule.`
+          ${score >= 75 ? `Exceptional week. You're building unstoppable momentum. At this rate, you'll hit your target ${targetWeightDisplay ? `of ${targetWeightDisplay}${weightUnit} ` : ''}ahead of schedule.`
             : score >= 55 ? `Solid week with room to grow. The adjustments below will help you break through to the next level.`
             : `Tough week — but showing up and tracking it already puts you ahead of 90% of people. Use the adjustments below to restart momentum.`}
         </p>
@@ -1022,7 +1037,10 @@ async function saveWeeklyReport() {
     return;
   }
 
-  const weightNow = parseFloat(document.getElementById('weightNow')?.value || '0');
+  const weightNowDisplay = parseFloat(document.getElementById('weightNow')?.value || '0');
+  const weightNow = weightNowDisplay
+    ? (isImperial ? +(weightNowDisplay / 2.20462).toFixed(2) : weightNowDisplay)
+    : 0;
   const weekWin   = document.getElementById('weekWin')?.value   || '';
   const improve   = document.getElementById('weekImprove')?.value || '';
 
