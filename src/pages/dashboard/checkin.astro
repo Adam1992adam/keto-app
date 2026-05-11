@@ -1,6 +1,6 @@
 ---
 // src/pages/dashboard/checkin.astro
-import { getUserJourney, getDailyTasks, updateCurrentDay } from '../../lib/supabase';
+import { getUserJourney, updateCurrentDay, getMaxJourneyDays } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
 import Sidebar from '../../components/Sidebar.astro';
@@ -12,66 +12,69 @@ const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const maxDays   = getMaxJourneyDays(planType);
 
 await updateCurrentDay(user.id).catch(() => null);
 
-// All 5 queries fire in parallel — none depend on each other
 const today = new Date().toISOString().split('T')[0];
-const [journeyRes, existingCheckinRes, macroGoalsRes, onboardingRes, recentCheckinsRes] =
+const [journeyRes, existingCheckinRes, onboardingRes, latestWeightRes] =
   await Promise.allSettled([
     getUserJourney(user.id, db),
     db.from('daily_checkins').select('*').eq('user_id', user.id).eq('checkin_date', today).maybeSingle(),
-    db.from('macro_goals').select('*').eq('user_id', user.id).maybeSingle(),
-    db.from('onboarding_data').select('fasting_protocol, goal, feature_electrolytes').eq('user_id', user.id).maybeSingle(),
-    db.from('daily_checkins').select('checkin_date, energy_level, mood_level, followed_meals')
-      .eq('user_id', user.id).order('checkin_date', { ascending: false }).limit(7),
+    db.from('onboarding_data').select('fasting_protocol, goal, current_weight').eq('user_id', user.id).maybeSingle(),
+    db.from('weight_logs').select('weight').eq('user_id', user.id).order('logged_date', { ascending: false }).limit(1).maybeSingle(),
   ]);
 
-const journey       = journeyRes.status        === 'fulfilled' ? journeyRes.value              : null;
-const existingCheckin = existingCheckinRes.status === 'fulfilled' ? existingCheckinRes.value?.data : null;
-const macroGoals    = macroGoalsRes.status     === 'fulfilled' ? macroGoalsRes.value?.data     : null;
-const onboarding    = onboardingRes.status     === 'fulfilled' ? onboardingRes.value?.data     : null;
-const recentCheckins = recentCheckinsRes.status === 'fulfilled' ? recentCheckinsRes.value?.data : null;
+const journey          = journeyRes.status          === 'fulfilled' ? journeyRes.value              : null;
+const existingCheckin  = existingCheckinRes.status  === 'fulfilled' ? existingCheckinRes.value?.data : null;
+const onboarding       = onboardingRes.status       === 'fulfilled' ? onboardingRes.value?.data      : null;
+const latestWeightData = latestWeightRes.status     === 'fulfilled' ? latestWeightRes.value?.data    : null;
 
-const currentDay = journey?.current_day || 1;
-const isFirstWeek = currentDay <= 7;
-
-const userName = profile.full_name?.split(' ')[0] || 'there';
-const fastingProtocol = onboarding?.fasting_protocol || 'none';
-const hasFasting = fastingProtocol !== 'none';
+const currentDay  = journey?.current_day   || 1;
+const streakDays  = journey?.streak_days   || 1;
+const userName    = profile.full_name?.split(' ')[0] || 'there';
 const alreadyDone = !!existingCheckin;
 
-// Pre-fill values from existing check-in (for edit mode)
-const prefill = {
-  energy:   existingCheckin?.energy_level   || 3,
-  mood:     existingCheckin?.mood_level     || 3,
-  hunger:   existingCheckin?.hunger_level   || 3,
-  water:    existingCheckin?.water_glasses  || 0,
-  brain_fog:    existingCheckin?.brain_fog    || false,
-  had_headache: existingCheckin?.had_headache || false,
-  had_fatigue:  existingCheckin?.had_fatigue  || false,
-  had_cravings: existingCheckin?.had_cravings || false,
-  followed_meals: existingCheckin?.followed_meals ?? true,
-  fasted_today:   existingCheckin?.fasted_today  || false,
-  sleep_hours:    existingCheckin?.sleep_hours   || null,
-  sleep_quality:  existingCheckin?.sleep_quality || null,
-  note:     existingCheckin?.note || '',
-};
+const startWeight      = Number(onboarding?.current_weight) || 75;
+const prefillWeight    = Number(latestWeightData?.weight) || startWeight;
+const weightLostNum    = startWeight - prefillWeight;
+const weightLostStr    = Math.abs(weightLostNum).toFixed(1);
+const weightLostPositive = weightLostNum > 0.05;
 
-// Build greeting based on time
-const hour = new Date().getHours();
-const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+// Mood: map saved mood_level (1-5) back to string id
+const moodLvl     = existingCheckin?.mood_level || 3;
+const moodByLevel = ['rough', 'rough', 'low', 'ok', 'good', 'amazing'];
+const prefillMood = moodByLevel[moodLvl] || 'ok';
 
-// Streak count
-const streak = recentCheckins?.length || 0;
+// Scale saved 1-5 → 0-10 for design sliders
+const prefillEnergy       = existingCheckin?.energy_level   ? existingCheckin.energy_level * 2   : 6;
+const prefillHunger       = existingCheckin?.hunger_level   ? existingCheckin.hunger_level * 2   : 3;
+const prefillSleepHours   = existingCheckin?.sleep_hours    || 7;
+const prefillSleepQuality = existingCheckin?.sleep_quality  ? existingCheckin.sleep_quality * 2  : 6;
+const prefillWater        = existingCheckin?.water_glasses  || 0;
+const prefillNotes        = existingCheckin?.note            || '';
 
-// Average energy from last 3 days
-const avgEnergy = recentCheckins?.slice(0,3).reduce((s,c) => s + (c.energy_level||3), 0) / Math.min(3, recentCheckins?.length||1) || 3;
+const hour      = new Date().getHours();
+const greeting  = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+const timeOfDay = hour < 12 ? 'MORNING' : hour < 17 ? 'AFTERNOON' : 'EVENING';
 
-// Emoji arrays for sliders (pre-computed, no TS types)
-const energyEmojis = ['😴', '😔', '😐', '😊', '🚀'];
-const moodEmojis   = ['😞', '😕', '😐', '🙂', '😄'];
-const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
+const todayDate = new Date();
+const dateStr   = todayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+const moods = [
+  { id: 'amazing', label: 'Amazing', emoji: '◉' },
+  { id: 'good',    label: 'Good',    emoji: '◐' },
+  { id: 'ok',      label: 'OK',      emoji: '◑' },
+  { id: 'low',     label: 'Low',     emoji: '◔' },
+  { id: 'rough',   label: 'Rough',   emoji: '◯' },
+];
+
+const digestionOptions = ['great', 'fine', 'bloated', 'sluggish', 'off'];
+
+const energyPct      = Math.round(prefillEnergy / 10 * 100);
+const hungerPct      = Math.round(prefillHunger / 10 * 100);
+const sleepHoursPct  = Math.round(prefillSleepHours / 12 * 100);
+const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
 ---
 
 <!DOCTYPE html>
@@ -82,1387 +85,743 @@ const hungerEmojis = ['✅', '🙂', '😐', '🍽️', '🍽️'];
   <title>{t('checkin.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
-  <script is:inline>
-    (function(){ const t=localStorage.getItem('keto-theme')||'light'; document.documentElement.setAttribute('data-theme',t); })();
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
-    :root{
-      --rv-bg:#FAF6F1;--rv-card:#FFFFFF;--rv-bg-alt:#F2EDE5;--rv-line:#E5DED2;
-      --rv-ink:#16110F;--rv-ink-soft:#4A4340;--rv-muted:#8A8077;
-      --rv-accent:#FF5C7A;--rv-accent-2:#B6FF3C;--rv-warm:#FF914D;
-      --bg:var(--rv-bg);--card:var(--rv-card);--card2:var(--rv-bg-alt);--surface:var(--rv-bg-alt);
-      --border:var(--rv-line);--border2:rgba(255,92,122,.3);--border3:rgba(255,92,122,.5);
-      --text:var(--rv-ink);--soft:var(--rv-ink-soft);--muted:#C8BFBA;
-      --green:#10b981;--green2:#34d399;--gold:#f59e0b;--red:#ef4444;--red2:#fca5a5;
-      --blue:#3b82f6;--purple:#8b5cf6;--cyan:#06b6d4;
+    :root {
+      --bg:#FAF6F1; --bg-alt:#F2EDE5; --ink:#16110F; --ink-soft:#4A4340;
+      --muted:#8A8077; --line:#E5DED2;
+      --accent:#FF5C7A; --accent-2:#B6FF3C; --accent-3:#FF914D; --card:#FFFFFF;
+      --display:'Bricolage Grotesque',system-ui,sans-serif;
+      --serif:'Instrument Serif',serif;
+      --body:'Geist',system-ui,sans-serif;
+      --mono:'Geist Mono',monospace;
     }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html,body{background:var(--bg);color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased;}
+    a{color:inherit;text-decoration:none;}
+    button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+    img{display:block;max-width:100%;}
+    input,textarea{font-family:inherit;}
+    ::selection{background:var(--accent);color:#fff;}
 
-    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-    html{scroll-behavior:smooth;}
-    body{
-      font-family:'Bricolage Grotesque',system-ui,sans-serif;
-      background:var(--bg);color:var(--text);
-      min-height:100vh;overflow-x:hidden;
-    }
-    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
-    .rv-pg-main{min-width:0;overflow-x:hidden;}
-    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}.rv-pg-main{padding-bottom:5.5rem;}}
+    /* ── LAYOUT ── */
+    .app-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+    .ci-main{display:flex;flex-direction:column;min-width:0;}
+    .ci-body{max-width:1100px;margin:0 auto;width:100%;padding:0 32px 100px;}
+    @media(max-width:1100px){.app-shell{grid-template-columns:1fr;}.ci-body{padding:0 18px 60px;}}
+    @media(max-width:900px){.ci-main{padding-bottom:5.5rem;}}
 
-    /* ── PAGE ── */
-    .page{max-width:700px;margin:0 auto;padding:2rem 1.75rem 4rem;}
+    /* ── MOOD HERO ── */
+    .mh{position:relative;background:var(--ink);color:var(--bg);overflow:hidden;}
+    .mh-glow{position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,color-mix(in oklab,var(--accent) 40%,transparent),transparent 65%);filter:blur(70px);bottom:-300px;right:-200px;z-index:0;pointer-events:none;transition:background .35s;}
+    .mh-glow.amazing{background:radial-gradient(circle,color-mix(in oklab,var(--accent-2) 50%,transparent),transparent 65%);}
+    .mh-glow.good{background:radial-gradient(circle,color-mix(in oklab,var(--accent-3) 50%,transparent),transparent 65%);}
+    .mh-glow.ok{background:radial-gradient(circle,color-mix(in oklab,#E8C547 50%,transparent),transparent 65%);}
+    .mh-glow.low{background:radial-gradient(circle,color-mix(in oklab,#9CA3AF 50%,transparent),transparent 65%);}
+    .mh-glow.rough{background:radial-gradient(circle,color-mix(in oklab,#D14B5A 50%,transparent),transparent 65%);}
+    .mh-inner{position:relative;z-index:2;max-width:1100px;margin:0 auto;padding:70px 32px 60px;}
+    .mh-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:var(--accent-2);display:inline-flex;align-items:center;gap:10px;margin-bottom:20px;}
+    .mh-eyebrow::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--accent-2);box-shadow:0 0 0 4px color-mix(in oklab,var(--accent-2) 25%,transparent);}
+    .mh-greet{font-family:var(--display);font-size:clamp(40px,6vw,88px);line-height:0.92;letter-spacing:-0.045em;font-weight:700;text-wrap:balance;max-width:18ch;}
+    .mh-greet em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--accent);}
+    .mh-date{margin-top:18px;font-family:var(--serif);font-style:italic;font-size:18px;color:color-mix(in oklab,var(--bg) 70%,transparent);}
+    .mh-mood{margin-top:44px;padding-top:32px;border-top:1px solid color-mix(in oklab,var(--bg) 18%,transparent);}
+    .mh-mood-label{font-family:var(--mono);font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:color-mix(in oklab,var(--bg) 60%,transparent);margin-bottom:16px;}
+    .mh-mood-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+    .mood-btn{background:color-mix(in oklab,var(--bg) 8%,transparent);border:1px solid color-mix(in oklab,var(--bg) 14%,transparent);border-radius:18px;padding:22px 14px 18px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+    .mood-btn:hover{background:color-mix(in oklab,var(--bg) 14%,transparent);transform:translateY(-2px);}
+    .mood-btn.on{background:var(--bg);color:var(--ink);border-color:var(--bg);box-shadow:0 20px 40px -20px rgba(0,0,0,0.5);}
+    .mood-emoji{font-size:36px;line-height:1;margin-bottom:10px;transition:transform .2s;}
+    .mood-btn.on .mood-emoji{transform:scale(1.1);}
+    .mood-label{font-family:var(--display);font-size:14px;font-weight:600;letter-spacing:-0.01em;}
+    @media(max-width:700px){.mh-mood-row{gap:6px;}.mood-btn{padding:14px 6px 10px;}.mood-emoji{font-size:26px;}.mood-label{font-size:11px;}.mh-inner{padding:40px 18px 40px;}}
 
-    /* ── ALREADY DONE ── */
-    .done-card{
-      background:var(--card);border:1px solid var(--border2);
-      border-radius:24px;padding:3rem;text-align:center;
-      animation:fadeUp .5s ease both;
-    }
-    .done-icon{font-size:4rem;margin-bottom:1.25rem;}
-    .done-title{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:2rem;font-weight:900;margin-bottom:.6rem;}
-    .done-title em{font-style:italic;background:linear-gradient(135deg,var(--rv-accent),var(--rv-warm));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-    .done-sub{font-size:.9rem;color:var(--soft);line-height:1.6;max-width:380px;margin:0 auto 2rem;}
+    /* ── ALREADY DONE BANNER ── */
+    .done-banner{background:color-mix(in oklab,var(--accent-2) 18%,transparent);border:1px solid color-mix(in oklab,var(--accent-2) 40%,transparent);border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:12px;margin-bottom:28px;font-size:14px;}
+    .done-banner strong{color:var(--ink);}
+    .done-banner span{color:var(--muted);font-family:var(--serif);font-style:italic;}
 
-    /* ── HERO ── */
-    .hero-row{
-      display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;
-      margin-bottom:2rem;animation:fadeUp .5s ease both;
-    }
-    .hero-greet{
-      font-family:'Bricolage Grotesque',system-ui,sans-serif;
-      font-size:clamp(1.5rem,3vw,2rem);font-weight:900;line-height:1.15;
-    }
-    .hero-greet em{font-style:italic;background:linear-gradient(135deg,var(--rv-accent),var(--rv-warm));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-    .hero-sub{font-size:.82rem;color:var(--soft);margin-top:.3rem;}
-    .hero-stats{display:flex;gap:.6rem;flex-shrink:0;}
-    .hstat{
-      text-align:center;padding:.6rem .875rem;
-      background:var(--card);border:1px solid var(--border);border-radius:12px;
-      min-width:64px;transition:all .2s;
-    }
-    .hstat:hover{border-color:var(--border2);}
-    .hstat-val{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.35rem;font-weight:900;line-height:1;}
-    .hstat-lbl{font-size:.6rem;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;margin-top:.15rem;}
+    /* ── CARDS ── */
+    .cards-head{display:flex;align-items:baseline;justify-content:space-between;margin:60px 0 24px;padding-bottom:14px;border-bottom:1px solid var(--line);}
+    .cards-head h2{font-family:var(--display);font-size:32px;font-weight:700;letter-spacing:-0.03em;line-height:1;}
+    .cards-head h2 em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--accent);}
+    .cards-head .ch-meta{font-family:var(--mono);font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);}
+    .cards-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;}
+    .ci-card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;}
+    .ci-card.dark{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+    .ci-card.alt{background:var(--bg-alt);}
+    .ci-card.span4{grid-column:span 4;}
+    .ci-card.span6{grid-column:span 6;}
+    .ci-card.span12{grid-column:span 12;}
+    .ci-label{font-family:var(--mono);font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+    .ci-card.dark .ci-label{color:color-mix(in oklab,var(--bg) 60%,transparent);}
+    .ci-q{font-family:var(--display);font-size:20px;font-weight:600;letter-spacing:-0.02em;line-height:1.15;margin-bottom:4px;}
+    .ci-q em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--accent);}
+    .ci-sub{font-size:13px;color:var(--muted);font-family:var(--serif);font-style:italic;margin-bottom:18px;}
+    .ci-card.dark .ci-sub{color:color-mix(in oklab,var(--bg) 60%,transparent);}
+    .ci-bigval{font-family:var(--display);font-size:56px;font-weight:700;letter-spacing:-0.04em;line-height:0.9;}
+    .ci-bigval em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--accent);font-size:22px;margin-left:2px;}
+    .weight-stepper{display:flex;align-items:center;gap:14px;margin-top:14px;}
+    .weight-stepper button{width:38px;height:38px;border-radius:50%;background:var(--bg-alt);border:1px solid var(--line);font-size:18px;font-weight:700;transition:background .15s,color .15s;}
+    .weight-stepper button:hover{background:var(--ink);color:var(--bg);}
+    .ci-card.dark .weight-stepper button{background:color-mix(in oklab,var(--bg) 12%,transparent);border-color:color-mix(in oklab,var(--bg) 18%,transparent);color:var(--bg);}
+    .ci-card.dark .weight-stepper button:hover{background:var(--accent-2);color:var(--ink);}
+    .weight-delta{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--accent-2);margin-top:12px;}
 
-    /* ── KETO FLU ALERT ── */
-    .flu-alert{
-      background:linear-gradient(135deg,rgba(239,68,68,.08),rgba(245,158,11,.05));
-      border:1.5px solid rgba(239,68,68,.25);border-radius:18px;
-      padding:1.5rem;margin-bottom:1.5rem;
-      animation:fadeUp .4s ease both;position:relative;overflow:hidden;
-    }
-    .flu-alert::before{
-      content:'';position:absolute;top:0;left:0;right:0;height:3px;
-      background:linear-gradient(90deg,var(--red),var(--gold));
-    }
-    .flu-head{display:flex;align-items:center;gap:.875rem;margin-bottom:1rem;}
-    .flu-icon{
-      width:44px;height:44px;border-radius:12px;flex-shrink:0;
-      background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);
-      display:flex;align-items:center;justify-content:center;font-size:1.2rem;
-    }
-    .flu-title{font-weight:900;font-size:.95rem;color:var(--red2);}
-    .flu-desc{font-size:.78rem;color:var(--soft);margin-top:.1rem;line-height:1.5;}
-    .flu-tips{display:flex;flex-direction:column;gap:.5rem;}
-    .flu-tip{
-      display:flex;align-items:flex-start;gap:.65rem;
-      background:rgba(255,255,255,.04);border-radius:10px;padding:.65rem .875rem;
-      font-size:.8rem;line-height:1.5;
-    }
-    .flu-tip-icon{font-size:1rem;flex-shrink:0;margin-top:.05rem;}
-    .flu-tip strong{color:var(--text);}
+    /* ── SLIDER ── */
+    .ci-slider input[type="range"]{width:100%;-webkit-appearance:none;appearance:none;background:transparent;height:32px;cursor:pointer;}
+    .ci-slider input[type="range"]::-webkit-slider-runnable-track{height:6px;background:linear-gradient(90deg,var(--c,var(--accent)) 0%,var(--c,var(--accent)) var(--pct,50%),var(--bg-alt) var(--pct,50%),var(--bg-alt) 100%);border-radius:3px;}
+    .ci-slider input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--ink);margin-top:-8px;border:3px solid var(--bg);box-shadow:0 2px 6px rgba(0,0,0,0.25);}
+    .ci-slider input[type="range"]::-moz-range-track{height:6px;background:linear-gradient(90deg,var(--c,var(--accent)) 0%,var(--c,var(--accent)) var(--pct,50%),var(--bg-alt) var(--pct,50%),var(--bg-alt) 100%);border-radius:3px;}
+    .ci-slider input[type="range"]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--ink);border:3px solid var(--bg);box-shadow:0 2px 6px rgba(0,0,0,0.25);}
+    .ci-slider-labels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-top:4px;}
+    .slider-val{font-family:var(--display);font-size:36px;font-weight:700;letter-spacing:-0.03em;line-height:1;margin:4px 0 12px;}
+    .slider-val .max{font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500;margin-left:4px;}
 
-    /* ── SECTION ── */
-    .section{
-      background:var(--card);border:1px solid var(--border);
-      border-radius:20px;overflow:hidden;margin-bottom:1.25rem;
-      animation:fadeUp .4s ease both;transition:border-color .25s;
-    }
-    .section:hover{border-color:var(--border2);}
-    .section-head{
-      display:flex;align-items:center;gap:.875rem;
-      padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);
-    }
-    .sh-icon{
-      width:38px;height:38px;border-radius:11px;flex-shrink:0;
-      display:flex;align-items:center;justify-content:center;font-size:1rem;
-    }
-    .sh-title{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:.95rem;font-weight:700;flex:1;}
-    .sh-chip{
-      font-size:.65rem;font-weight:800;padding:.2rem .6rem;
-      border-radius:99px;background:rgba(255,92,122,.08);
-      border:1px solid rgba(255,92,122,.2);color:var(--rv-accent);
-    }
-    .section-body{padding:1.25rem 1.5rem;}
+    /* ── SLEEP ── */
+    .sleep-row{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:14px;}
+    .sl-l{font-family:var(--mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+    .sl-v{font-family:var(--display);font-size:32px;font-weight:700;letter-spacing:-0.03em;line-height:1;margin-bottom:12px;}
+    .sl-unit{font-family:var(--mono);font-size:13px;color:var(--muted);font-weight:500;margin-left:2px;}
 
-    /* ── RATING ROW ── */
-    .rating-row{
-      display:flex;align-items:center;justify-content:space-between;gap:.875rem;
-      padding:.875rem 1rem;border-radius:12px;
-      background:var(--card2);border:1px solid var(--border);
-      margin-bottom:.65rem;transition:all .2s;
-    }
-    .rating-row:hover{border-color:var(--border2);}
-    .rr-left{display:flex;align-items:center;gap:.75rem;}
-    .rr-emoji{font-size:1.2rem;}
-    .rr-label{font-weight:700;font-size:.85rem;}
-    .rr-sub{font-size:.7rem;color:var(--soft);}
-    .star-row{display:flex;gap:.35rem;}
-    .star{
-      width:34px;height:34px;border-radius:9px;
-      background:var(--card);border:1.5px solid var(--border);
-      display:flex;align-items:center;justify-content:center;
-      font-size:.9rem;cursor:pointer;transition:all .22s;
-    }
-    .star:hover{border-color:var(--gold);transform:scale(1.1);}
-    .star.active{background:rgba(251,191,36,.15);border-color:var(--gold);}
-    .star.active-green{background:rgba(16,185,129,.15);border-color:var(--green);}
-    .star.active-red{background:rgba(239,68,68,.15);border-color:var(--red);}
+    /* ── KETONE BAND ── */
+    .ketone-band{display:flex;height:14px;margin:18px 0 8px;border-radius:7px;overflow:hidden;}
+    .ketone-marker{position:relative;height:0;}
+    .ketone-pin{position:absolute;top:-25px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:4px 8px;border-radius:6px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:0.08em;pointer-events:none;}
+    .ketone-zones{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);}
 
-    /* ── SYMPTOM GRID ── */
-    .symptom-grid{display:grid;grid-template-columns:1fr 1fr;gap:.65rem;}
-    .symptom-card{
-      background:var(--card2);border:1.5px solid var(--border);
-      border-radius:14px;padding:.875rem 1rem;
-      display:flex;align-items:center;gap:.75rem;
-      cursor:pointer;transition:all .22s;user-select:none;
-    }
-    .symptom-card:hover{border-color:rgba(239,68,68,.3);}
-    .symptom-card.active{
-      background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.35);
-    }
-    .symptom-card.active .sym-label{color:var(--red2);}
-    .sym-icon{font-size:1.25rem;flex-shrink:0;}
-    .sym-label{font-weight:700;font-size:.82rem;}
-    .sym-sub{font-size:.68rem;color:var(--soft);margin-top:.1rem;}
-    .sym-check{
-      width:20px;height:20px;border-radius:50%;
-      background:rgba(239,68,68,.2);border:1.5px solid rgba(239,68,68,.4);
-      display:flex;align-items:center;justify-content:center;
-      font-size:.65rem;color:var(--red2);margin-left:auto;flex-shrink:0;
-      opacity:0;transition:opacity .2s;
-    }
-    .symptom-card.active .sym-check{opacity:1;}
+    /* ── WATER ── */
+    .water-row{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap;}
+    .water-glass{width:28px;height:36px;border:2px solid var(--line);border-radius:4px 4px 8px 8px;cursor:pointer;overflow:hidden;transition:border-color .15s;}
+    .water-glass:hover{border-color:var(--accent);}
+    .water-glass.full{background:linear-gradient(180deg,transparent 0%,var(--accent) 30%,var(--accent-3) 100%);border-color:var(--accent);}
+    .water-counter{font-family:var(--display);font-size:32px;font-weight:700;letter-spacing:-0.03em;margin-top:8px;}
+    .water-counter em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--accent);font-size:16px;}
 
-    /* ── COMPLIANCE GRID ── */
-    .compliance-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
-    .comp-card{
-      background:var(--card2);border:1.5px solid var(--border);
-      border-radius:14px;padding:1rem;text-align:center;
-      cursor:pointer;transition:all .22s;user-select:none;
-    }
-    .comp-card:hover{border-color:rgba(16,185,129,.3);}
-    .comp-card.yes{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.35);}
-    .comp-card.no{background:rgba(239,68,68,.07);border-color:rgba(239,68,68,.25);}
-    .cc-icon{font-size:1.5rem;margin-bottom:.4rem;}
-    .cc-label{font-weight:800;font-size:.82rem;margin-bottom:.1rem;}
-    .cc-sub{font-size:.68rem;color:var(--soft);}
+    /* ── WORKOUT ── */
+    .workout-toggle{display:flex;gap:8px;margin-top:14px;}
+    .workout-btn{flex:1;padding:14px 10px;border-radius:14px;background:var(--bg-alt);border:1px solid var(--line);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center;}
+    .workout-btn:hover{border-color:var(--accent);}
+    .workout-btn.on{background:var(--accent-2);border-color:var(--accent-2);color:var(--ink);}
+    .workout-ic{font-size:22px;display:block;margin-bottom:4px;}
 
-    /* ── WATER COUNTER ── */
-    .water-counter{display:flex;align-items:center;justify-content:space-between;gap:1rem;}
-    .water-glasses{display:flex;gap:.35rem;flex-wrap:wrap;}
-    .wglass{
-      width:32px;height:32px;border-radius:8px;
-      background:var(--card2);border:1.5px solid var(--border);
-      display:flex;align-items:center;justify-content:center;
-      font-size:.85rem;cursor:pointer;transition:all .2s;
-    }
-    .wglass:hover{border-color:var(--cyan);transform:scale(1.1);}
-    .wglass.full{background:rgba(6,182,212,.15);border-color:rgba(6,182,212,.4);}
-    .water-count{
-      font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:2rem;font-weight:900;
-      color:var(--cyan);min-width:40px;text-align:center;
-    }
-    .water-lbl{font-size:.68rem;color:var(--soft);text-align:center;}
+    /* ── PILLS ── */
+    .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+    .pill{padding:9px 16px;border-radius:999px;background:var(--bg-alt);border:1px solid var(--line);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;}
+    .pill:hover{border-color:var(--accent);}
+    .pill.on{background:var(--ink);color:var(--bg);border-color:var(--ink);}
 
-    /* ── NOTE AREA ── */
-    .note-area{
-      width:100%;background:var(--card2);border:1.5px solid var(--border);
-      border-radius:12px;padding:.875rem 1rem;
-      color:var(--text);font-family:'Bricolage Grotesque',system-ui,sans-serif;
-      font-size:.85rem;resize:none;outline:none;
-      transition:all .22s;min-height:90px;
-      line-height:1.6;
-    }
-    .note-area::placeholder{color:var(--muted);}
-    .note-area:focus{border-color:var(--rv-accent);box-shadow:0 0 0 3px rgba(255,92,122,.1);}
+    /* ── PHOTO CARD ── */
+    .photo-card{cursor:pointer;background-image:linear-gradient(135deg,var(--bg-alt) 0%,var(--card) 100%);border:2px dashed var(--line);text-align:center;padding:28px 18px;transition:all .15s;border-radius:22px;}
+    .photo-card:hover{border-color:var(--accent);}
+    .photo-icon{font-family:var(--display);font-size:56px;font-weight:700;line-height:1;color:var(--ink);opacity:0.3;margin-bottom:12px;transition:opacity .2s;}
+    .photo-card.taken{border-style:solid;border-color:var(--accent-2);background-image:linear-gradient(135deg,var(--accent-2) 0%,var(--accent-3) 100%);color:var(--ink);}
+    .photo-card.taken .photo-icon{opacity:1;}
+    .photo-title{font-family:var(--display);font-size:18px;font-weight:600;letter-spacing:-0.01em;margin-bottom:4px;}
+    .photo-sub{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--muted);}
+    .photo-card.taken .photo-sub{color:var(--ink);}
 
-    /* ── FASTING SECTION ── */
-    .fasting-card{
-      background:linear-gradient(135deg,rgba(245,158,11,.07),rgba(239,68,68,.04));
-      border:1.5px solid rgba(245,158,11,.2);border-radius:16px;
-      padding:1.1rem 1.25rem;
-      display:flex;align-items:center;justify-content:space-between;gap:1rem;
-    }
-    .fc-left{display:flex;align-items:center;gap:.875rem;}
-    .fc-icon{
-      width:40px;height:40px;border-radius:11px;flex-shrink:0;
-      background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);
-      display:flex;align-items:center;justify-content:center;font-size:1.1rem;
-    }
-    .fc-label{font-weight:800;font-size:.875rem;margin-bottom:.1rem;}
-    .fc-sub{font-size:.72rem;color:var(--soft);}
-    .tog{
-      position:relative;width:46px;height:25px;flex-shrink:0;
-      background:var(--muted);border-radius:99px;cursor:pointer;
-      transition:background .3s;border:none;outline:none;
-    }
-    .tog.on{background:linear-gradient(135deg,var(--green),var(--green2));}
-    .tog-thumb{
-      position:absolute;top:2.5px;left:2.5px;
-      width:20px;height:20px;border-radius:50%;background:#fff;
-      pointer-events:none;transition:transform .28s cubic-bezier(.4,0,.2,1);
-      box-shadow:0 2px 6px rgba(0,0,0,.22);
-    }
-    .tog.on .tog-thumb{transform:translateX(21px);}
+    @media(max-width:1100px){.ci-card.span4,.ci-card.span6{grid-column:span 12;}}
 
-    /* ── ELECTROLYTES TRACKER ── */
-    .elec-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.65rem;}
-    .elec-card{
-      background:var(--card2);border:1.5px solid var(--border);
-      border-radius:13px;padding:.875rem;text-align:center;
-      cursor:pointer;transition:all .22s;user-select:none;
-    }
-    .elec-card:hover{border-color:var(--border2);transform:translateY(-2px);}
-    .elec-card.done{background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.35);}
-    .elec-card.done .elec-label{color:var(--green);}
-    .elec-icon{font-size:1.4rem;margin-bottom:.4rem;}
-    .elec-label{font-weight:800;font-size:.8rem;}
-    .elec-sub{font-size:.65rem;color:var(--soft);margin-top:.15rem;line-height:1.4;}
-    .elec-amount{font-size:.7rem;color:var(--green);font-weight:700;margin-top:.25rem;opacity:0;transition:opacity .2s;}
-    .elec-card.done .elec-amount{opacity:1;}
+    /* ── REFLECTION ── */
+    .reflect-section{margin-top:60px;}
+    .reflect-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:24px;padding-bottom:14px;border-bottom:1px solid var(--line);}
+    .reflect-head h2{font-family:var(--display);font-size:32px;font-weight:700;letter-spacing:-0.03em;line-height:1;}
+    .reflect-head h2 em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--accent);}
+    .reflect-head .rh-meta{font-family:var(--mono);font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);}
+    .reflect-card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px;}
+    .prompt-pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+    .prompt-pill{padding:8px 14px;border-radius:999px;background:var(--bg-alt);border:1px solid var(--line);font-family:var(--serif);font-style:italic;font-size:14px;cursor:pointer;transition:all .15s;}
+    .prompt-pill:hover{border-color:var(--accent);}
+    .prompt-pill.on{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+    .reflect-prompt{font-family:var(--display);font-size:24px;font-weight:600;letter-spacing:-0.02em;line-height:1.2;margin-bottom:14px;}
+    .journal-area{width:100%;min-height:140px;background:transparent;border:none;outline:none;resize:vertical;font-family:var(--serif);font-style:italic;font-size:20px;line-height:1.5;color:var(--ink);}
+    .journal-area::placeholder{color:var(--muted);}
+    .journal-foot{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);}
 
-    /* ── SAVE BUTTON ── */
-    .save-wrap{
-      position:sticky;bottom:1.5rem;z-index:50;
-      background:rgba(250,246,241,.96);border:1px solid var(--border2);
-      border-radius:16px;padding:1rem 1.5rem;
-      display:flex;align-items:center;justify-content:space-between;gap:1rem;
-      backdrop-filter:blur(20px);box-shadow:0 16px 48px rgba(0,0,0,.12);
-      animation:fadeUp .4s .3s ease both;
-    }
-    .save-info{flex:1;}
-    .save-title{font-weight:800;font-size:.875rem;margin-bottom:.12rem;}
-    .save-sub{font-size:.72rem;color:var(--soft);}
-    .xp-pill{
-      display:flex;align-items:center;gap:.35rem;
-      background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);
-      border-radius:99px;padding:.3rem .75rem;
-      font-size:.75rem;font-weight:800;color:var(--gold);flex-shrink:0;
-    }
-    .btn-save{
-      display:flex;align-items:center;justify-content:center;gap:.5rem;
-      padding:.75rem 1.6rem;border-radius:12px;
-      background:linear-gradient(135deg,var(--rv-accent),#FF7A95);
-      border:none;color:#fff;font-family:'Bricolage Grotesque',system-ui,sans-serif;
-      font-weight:800;font-size:.875rem;cursor:pointer;transition:all .25s;
-      box-shadow:0 4px 16px rgba(255,92,122,.3);min-width:120px;
-      position:relative;overflow:hidden;
-    }
-    .btn-save::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);transform:translateX(-100%);transition:transform .5s;}
-    .btn-save:hover::before{transform:translateX(100%);}
-    .btn-save:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(255,92,122,.4);}
-    .btn-save:disabled{opacity:.5;cursor:not-allowed;transform:none;}
-    .btn-spin{display:none;width:16px;height:16px;border-radius:50%;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .7s linear infinite;}
-    @keyframes spin{to{transform:rotate(360deg);}}
-
-    /* ── SUCCESS OVERLAY ── */
-    .success-overlay{
-      display:none;position:fixed;inset:0;z-index:9999;
-      background:rgba(250,246,241,.97);backdrop-filter:blur(20px);
-      flex-direction:column;align-items:center;justify-content:center;
-      text-align:center;padding:2rem;
-    }
-    .success-overlay.show{display:flex;animation:fadeIn .4s ease both;}
-    @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
-    .so-icon{font-size:5rem;margin-bottom:1.5rem;animation:bounceIn .5s ease both;}
-    @keyframes bounceIn{0%{transform:scale(0);}70%{transform:scale(1.15);}100%{transform:scale(1);}}
-    .so-title{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:2.2rem;font-weight:900;margin-bottom:.75rem;}
-    .so-title em{font-style:italic;background:linear-gradient(135deg,var(--rv-accent),var(--rv-warm));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-    .so-xp{
-      display:inline-flex;align-items:center;gap:.5rem;
-      background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);
-      border-radius:99px;padding:.5rem 1.25rem;
-      font-size:1.1rem;font-weight:900;color:var(--gold);
-      margin-bottom:1rem;
-    }
-    .so-sub{font-size:.9rem;color:var(--soft);max-width:360px;line-height:1.6;margin-bottom:2rem;}
-    .so-insights{
-      background:var(--card);border:1px solid var(--border);
-      border-radius:18px;padding:1.5rem;max-width:480px;width:100%;
-      text-align:left;margin-bottom:1.5rem;
-    }
-    .so-insight-title{font-weight:800;font-size:.85rem;color:var(--soft);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.875rem;}
-    .so-insight-item{display:flex;gap:.75rem;margin-bottom:.65rem;font-size:.82rem;line-height:1.5;}
-    .soi-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:.35rem;}
+    /* ── SUBMIT ── */
+    .submit-wrap{margin-top:60px;padding-bottom:40px;}
+    .submit-row{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;align-items:stretch;}
+    .insight-card{background:var(--ink);color:var(--bg);border-radius:24px;padding:28px;position:relative;overflow:hidden;}
+    .insight-glow{position:absolute;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,color-mix(in oklab,var(--accent) 50%,transparent),transparent 65%);filter:blur(50px);bottom:-180px;right:-120px;pointer-events:none;}
+    .insight-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent-2);display:inline-flex;align-items:center;gap:8px;margin-bottom:18px;position:relative;z-index:1;}
+    .insight-eyebrow::before{content:'✦';color:var(--accent-2);font-size:14px;}
+    .insight-body{font-family:var(--serif);font-style:italic;font-size:26px;line-height:1.35;color:var(--bg);max-width:38ch;text-wrap:balance;position:relative;z-index:1;}
+    .insight-body em{color:var(--accent);font-style:italic;}
+    .insight-foot{margin-top:20px;padding-top:20px;border-top:1px solid color-mix(in oklab,var(--bg) 18%,transparent);display:flex;gap:24px;font-family:var(--mono);font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in oklab,var(--bg) 65%,transparent);position:relative;z-index:1;flex-wrap:wrap;}
+    .insight-foot b{color:var(--accent-2);font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:-0.02em;display:block;}
+    .submit-card{background:var(--accent);color:#fff;border-radius:24px;padding:28px;display:flex;flex-direction:column;justify-content:space-between;}
+    .sc-l{font-family:var(--mono);font-size:11px;letter-spacing:0.2em;text-transform:uppercase;opacity:0.85;}
+    .sc-v{font-family:var(--display);font-size:56px;font-weight:700;letter-spacing:-0.04em;line-height:0.9;margin-top:8px;}
+    .sc-v em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--accent-2);font-size:22px;margin-left:4px;}
+    .sc-desc{font-family:var(--serif);font-style:italic;font-size:17px;line-height:1.4;margin:14px 0 22px;opacity:0.95;max-width:22ch;}
+    .submit-btn{background:var(--bg);color:var(--ink);padding:16px;border-radius:999px;font-size:15px;font-weight:700;letter-spacing:-0.01em;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;border:none;width:100%;}
+    .submit-btn:hover{background:var(--ink);color:var(--accent-2);}
+    .submit-btn.done{background:var(--accent-2);color:var(--ink);}
+    .submit-btn:disabled{opacity:.6;cursor:not-allowed;}
+    @media(max-width:1100px){.submit-row{grid-template-columns:1fr;}}
 
     /* ── TOAST ── */
-    .toast{
-      position:fixed;top:5rem;right:1.5rem;z-index:9999;
-      padding:.75rem 1.25rem;border-radius:11px;
-      font-weight:800;font-size:.8rem;
-      box-shadow:0 10px 30px rgba(0,0,0,.3);
-      transform:translateX(120px);opacity:0;pointer-events:none;
-      transition:all .3s cubic-bezier(.4,0,.2,1);
-      display:flex;align-items:center;gap:.5rem;
-    }
-    .toast.show{transform:translateX(0);opacity:1;}
-    .toast-success{background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;}
-    .toast-error{background:linear-gradient(135deg,var(--red),#dc2626);color:#fff;}
+    .ci-toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:18px 24px;border-radius:999px;font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:-0.01em;z-index:9999;box-shadow:0 20px 50px rgba(0,0,0,0.3);display:flex;align-items:center;gap:14px;opacity:0;pointer-events:none;transition:all .35s cubic-bezier(.4,0,.2,1);}
+    .ci-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+    .ci-toast em{color:var(--accent-2);font-family:var(--serif);font-style:italic;font-weight:400;}
 
-    @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
-
-    /* ── CHECKIN HERO CARD ── */
-    .ci-hero {
-      background: linear-gradient(135deg, rgba(255,92,122,.06) 0%, rgba(255,145,77,.04) 60%, rgba(182,255,60,.03) 100%);
-      border: 1.5px solid rgba(255,92,122,.2);
-      border-radius: 24px;
-      padding: 1.75rem 1.75rem 1.5rem;
-      margin-bottom: 1.5rem;
-      position: relative;
-      overflow: hidden;
-      animation: fadeUp .4s ease both;
-    }
-    .ci-hero::before {
-      content: '';
-      position: absolute; top: 0; left: 0; right: 0; height: 3px;
-      background: linear-gradient(90deg, var(--rv-accent), var(--rv-warm), var(--rv-accent-2));
-    }
-    .ci-hero-top {
-      display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
-      margin-bottom: 1.5rem; flex-wrap: wrap;
-    }
-    .ci-hero-title {
-      font-family: 'Fraunces', serif;
-      font-size: clamp(1.6rem, 3.5vw, 2.2rem);
-      font-weight: 900; line-height: 1.1; margin-bottom: .4rem;
-    }
-    .ci-hero-title em {
-      font-style: italic;
-      background: linear-gradient(135deg, var(--rv-accent), var(--rv-warm));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    }
-    .ci-hero-sub { font-size: .82rem; color: var(--soft); line-height: 1.5; }
-    .ci-badges { display: flex; gap: .5rem; flex-wrap: wrap; }
-    .ci-badge-day {
-      display: inline-flex; align-items: center; gap: .35rem;
-      background: rgba(59,130,246,.12); border: 1px solid rgba(59,130,246,.3);
-      border-radius: 99px; padding: .3rem .85rem;
-      font-size: .75rem; font-weight: 800; color: var(--blue);
-    }
-    .ci-badge-xp {
-      display: inline-flex; align-items: center; gap: .35rem;
-      background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.3);
-      border-radius: 99px; padding: .3rem .85rem;
-      font-size: .75rem; font-weight: 800; color: var(--gold);
-    }
-
-    /* ── STEP INDICATOR ── */
-    .ci-steps {
-      display: flex; align-items: center; gap: 0;
-    }
-    .ci-step {
-      display: flex; flex-direction: column; align-items: center; gap: .35rem;
-      flex: 1; position: relative;
-    }
-    .ci-step:not(:last-child)::after {
-      content: '';
-      position: absolute; top: 14px; left: 50%; right: 0;
-      height: 2px; background: var(--muted);
-      width: calc(100% - 4px); z-index: 0;
-    }
-    .ci-step.done:not(:last-child)::after { background: var(--rv-accent); }
-    .ci-step-dot {
-      width: 28px; height: 28px; border-radius: 50%;
-      border: 2px solid var(--muted); background: var(--card2);
-      display: flex; align-items: center; justify-content: center;
-      font-size: .7rem; font-weight: 900; z-index: 1; position: relative;
-      transition: all .3s;
-    }
-    .ci-step.done .ci-step-dot {
-      background: var(--rv-accent); border-color: var(--rv-accent);
-      color: #fff; box-shadow: 0 0 10px rgba(255,92,122,.35);
-    }
-    .ci-step.active .ci-step-dot {
-      background: var(--card); border-color: var(--rv-accent);
-      color: var(--rv-accent); box-shadow: 0 0 0 3px rgba(255,92,122,.15);
-    }
-    .ci-step-lbl {
-      font-size: .58rem; font-weight: 700; color: var(--soft);
-      text-align: center; white-space: nowrap; text-transform: uppercase; letter-spacing: .04em;
-    }
-    .ci-step.active .ci-step-lbl { color: var(--rv-accent); }
-
-    /* ── SLIDER SECTION ── */
-    .slider-section {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 20px; overflow: hidden; margin-bottom: 1.25rem;
-      animation: fadeUp .4s ease both; transition: border-color .25s;
-    }
-    .slider-section:hover { border-color: var(--border2); }
-    .slider-card {
-      padding: 1.25rem 1.5rem;
-      background: var(--card2); border-bottom: 1px solid var(--border);
-    }
-    .slider-card:last-child { border-bottom: none; }
-    .slider-top {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 1rem;
-    }
-    .slider-left { display: flex; align-items: center; gap: .85rem; }
-    .slider-big-emoji {
-      font-size: 2rem; line-height: 1;
-      transition: transform .2s;
-      display: block; min-width: 2rem; text-align: center;
-    }
-    .slider-label { font-weight: 800; font-size: .9rem; }
-    .slider-sub { font-size: .72rem; color: var(--soft); margin-top: .1rem; }
-    .slider-val-badge {
-      font-family: 'Fraunces', serif;
-      font-size: 1.5rem; font-weight: 900; min-width: 2rem; text-align: right;
-    }
-    .slider-track-wrap { position: relative; padding: .25rem 0; }
-    input[type=range].ci-range {
-      -webkit-appearance: none; appearance: none;
-      width: 100%; height: 6px; border-radius: 99px;
-      background: var(--muted); outline: none; cursor: pointer;
-      transition: opacity .2s;
-    }
-    input[type=range].ci-range::-webkit-slider-thumb {
-      -webkit-appearance: none; appearance: none;
-      width: 22px; height: 22px; border-radius: 50%;
-      background: linear-gradient(135deg, var(--rv-accent), #FF7A95);
-      border: 2px solid #fff;
-      box-shadow: 0 2px 8px rgba(255,92,122,.4);
-      cursor: pointer; transition: transform .15s;
-    }
-    input[type=range].ci-range::-moz-range-thumb {
-      width: 22px; height: 22px; border-radius: 50%;
-      background: linear-gradient(135deg, var(--rv-accent), #FF7A95);
-      border: 2px solid #fff;
-      box-shadow: 0 2px 8px rgba(255,92,122,.4);
-      cursor: pointer;
-    }
-    input[type=range].ci-range:hover::-webkit-slider-thumb { transform: scale(1.2); }
-    .slider-labels {
-      display: flex; justify-content: space-between;
-      margin-top: .4rem; font-size: .65rem; color: var(--muted); font-weight: 600;
-    }
-
-    /* ── PILL TOGGLES ── */
-    .pill-toggle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; }
-    .pill-toggle {
-      display: flex; align-items: center; gap: .75rem;
-      padding: .875rem 1rem; border-radius: 14px;
-      background: var(--card2); border: 1.5px solid var(--border);
-      cursor: pointer; transition: all .22s; user-select: none;
-    }
-    .pill-toggle:hover { border-color: var(--border2); }
-    .pill-toggle.on-red {
-      background: rgba(239,68,68,.09); border-color: rgba(239,68,68,.38);
-    }
-    .pill-toggle.on-green {
-      background: rgba(16,185,129,.09); border-color: rgba(16,185,129,.38);
-    }
-    .pt-icon { font-size: 1.3rem; flex-shrink: 0; }
-    .pt-label { font-weight: 800; font-size: .83rem; flex: 1; }
-    .pt-check {
-      width: 22px; height: 22px; border-radius: 50%;
-      border: 1.5px solid var(--border);
-      display: flex; align-items: center; justify-content: center;
-      font-size: .65rem; flex-shrink: 0; transition: all .2s;
-    }
-    .pill-toggle.on-red .pt-check {
-      background: rgba(239,68,68,.2); border-color: rgba(239,68,68,.5); color: #ef4444;
-    }
-    .pill-toggle.on-green .pt-check {
-      background: rgba(16,185,129,.2); border-color: rgba(16,185,129,.5); color: var(--green);
-    }
-    .pill-toggle.on-red .pt-label { color: #fca5a5; }
-    .pill-toggle.on-green .pt-label { color: var(--green2); }
-
-    /* ── WATER VISUAL ── */
-    .water-visual-row {
-      display: flex; align-items: center; gap: 1rem;
-    }
-    .water-glasses-row {
-      display: flex; gap: .4rem; flex-wrap: wrap; flex: 1;
-    }
-    .wglass-btn {
-      width: 36px; height: 44px;
-      background: var(--card2); border: 1.5px solid var(--border);
-      border-radius: 8px; cursor: pointer; transition: all .2s;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.2rem; padding: 0;
-    }
-    .wglass-btn:hover { border-color: var(--cyan); transform: scale(1.1); }
-    .wglass-btn.wfull {
-      background: rgba(6,182,212,.18); border-color: rgba(6,182,212,.5);
-    }
-    .water-stat {
-      text-align: center; flex-shrink: 0;
-    }
-    .water-big {
-      font-family: 'Fraunces', serif; font-size: 2.5rem; font-weight: 900;
-      color: var(--cyan); line-height: 1;
-    }
-    .water-lbl-sm { font-size: .7rem; color: var(--soft); }
-
-    /* ── SAVE BUTTON UPGRADE ── */
-    .btn-save-big {
-      width: 100%;
-      padding: 1rem 2rem;
-      border-radius: 14px;
-      background: linear-gradient(135deg, var(--rv-accent), #FF7A95);
-      border: none; color: #fff;
-      font-family: 'Bricolage Grotesque', system-ui, sans-serif;
-      font-weight: 900; font-size: 1rem;
-      cursor: pointer; transition: all .25s;
-      box-shadow: 0 6px 20px rgba(255,92,122,.3);
-      display: flex; align-items: center; justify-content: center; gap: .6rem;
-      position: relative; overflow: hidden;
-    }
-    .btn-save-big::before {
-      content: ''; position: absolute; inset: 0;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
-      transform: translateX(-100%); transition: transform .55s;
-    }
-    .btn-save-big:hover::before { transform: translateX(100%); }
-    .btn-save-big:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(255,92,122,.4); }
-    .btn-save-big:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-
-    @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
-
-    @media(max-width:580px){
-      .symptom-grid,.compliance-grid{grid-template-columns:1fr;}
-      .elec-grid{grid-template-columns:1fr 1fr 1fr;}
-      .hero-stats{display:none;}
-      .pill-toggle-grid{grid-template-columns:1fr;}
-    }
-    @media(max-width:480px){
-      .page{padding-left:1rem;padding-right:1rem;padding-bottom:5.5rem;}
-      .symptom-grid{grid-template-columns:1fr 1fr;}
-      .elec-grid{grid-template-columns:1fr 1fr;}
-      textarea,input[type="text"],input[type="number"],input[type="date"]{font-size:16px!important;}
-      .submit-btn,.ci-submit{min-height:52px;font-size:1rem;}
-      .flu-grid{grid-template-columns:1fr 1fr;}
-    }
+    /* ── SUCCESS OVERLAY ── */
+    .success-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(250,246,241,.97);backdrop-filter:blur(20px);flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;}
+    .success-overlay.show{display:flex;animation:fadeIn .4s ease both;}
+    @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+    @keyframes bounceIn{0%{transform:scale(0);}70%{transform:scale(1.15);}100%{transform:scale(1);}}
+    .so-icon{font-size:5rem;margin-bottom:1.5rem;animation:bounceIn .5s ease both;}
+    .so-title{font-family:var(--display);font-size:2.2rem;font-weight:900;margin-bottom:.75rem;}
+    .so-title em{font-family:var(--serif);font-style:italic;color:var(--accent);}
+    .so-xp{display:inline-flex;align-items:center;gap:.5rem;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);border-radius:99px;padding:.5rem 1.25rem;font-size:1.1rem;font-weight:900;color:#f59e0b;margin-bottom:1rem;}
+    .so-sub{font-size:.9rem;color:var(--muted);max-width:360px;line-height:1.6;margin-bottom:2rem;}
+    .so-back{display:inline-flex;align-items:center;gap:.5rem;padding:.875rem 2rem;border-radius:999px;background:var(--accent);color:#fff;font-family:var(--display);font-weight:700;font-size:.9rem;text-decoration:none;}
   </style>
 </head>
 <body>
-<div class="rv-pg-shell">
+<div class="app-shell">
 <Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="checkin" />
-<div class="rv-pg-main">
-<div class="page">
+<main class="ci-main">
 
-  {/* ── ALREADY DONE BANNER (update mode) ── */}
-  {alreadyDone && (
-    <div style="background:linear-gradient(135deg,rgba(16,185,129,.1),rgba(52,211,153,.05));border:1px solid rgba(16,185,129,.25);border-radius:16px;padding:1rem 1.25rem;display:flex;align-items:center;gap:.875rem;margin-bottom:1rem;">
-      <span style="font-size:1.4rem;">✅</span>
-      <div>
-        <div style="font-weight:700;color:#10b981;font-size:.9rem;">{t('checkin.already_done')}</div>
-        <div style="font-size:.8rem;color:var(--soft);">You can update your check-in anytime — changes save instantly.</div>
-      </div>
-    </div>
-  )}
-
-  {/* ── HERO CARD ── */}
-  <div class="ci-hero">
-    <div class="ci-hero-top">
-      <div>
-        <h1 class="ci-hero-title">{alreadyDone ? '✏️' : '📋'} <em>Check-in</em></h1>
-        <p class="ci-hero-sub">{alreadyDone ? `Update today's check-in, ${userName}` : `${greeting}, ${userName} — share how you feel today and earn XP`}</p>
-      </div>
-      <div class="ci-badges">
-        <span class="ci-badge-day">📅 Day {currentDay}</span>
-        {!alreadyDone && <span class="ci-badge-xp">⚡ Earn +50 XP</span>}
-        {alreadyDone  && <span class="ci-badge-xp" style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.3);color:#10b981;">✅ Updating</span>}
-      </div>
-    </div>
-    {/* 5-step progress indicator */}
-    <div class="ci-steps" id="ciSteps">
-      <div class="ci-step active" data-step="0">
-        <div class="ci-step-dot" id="dot-0">1</div>
-        <span class="ci-step-lbl">{t('checkin.energy')}</span>
-      </div>
-      <div class="ci-step" data-step="1">
-        <div class="ci-step-dot" id="dot-1">2</div>
-        <span class="ci-step-lbl">{t('checkin.mood')}</span>
-      </div>
-      <div class="ci-step" data-step="2">
-        <div class="ci-step-dot" id="dot-2">3</div>
-        <span class="ci-step-lbl">Body</span>
-      </div>
-      <div class="ci-step" data-step="3">
-        <div class="ci-step-dot" id="dot-3">4</div>
-        <span class="ci-step-lbl">Meals</span>
-      </div>
-      <div class="ci-step" data-step="4">
-        <div class="ci-step-dot" id="dot-4">5</div>
-        <span class="ci-step-lbl">{t('checkin.submit')}</span>
-      </div>
-    </div>
-  </div>
-
-  {/* ── KETO FLU ALERT (days 1-7) ── */}
-  {isFirstWeek && (
-    <div class="flu-alert" id="fluAlert">
-      <div class="flu-head">
-        <div class="flu-icon">⚠️</div>
-        <div>
-          <div class="flu-title">Week 1 — Watch for Keto Flu</div>
-          <div class="flu-desc">Days 2-5 are the hardest. Your body is switching from sugar to fat as fuel. These symptoms are normal and temporary.</div>
+  <!-- ── MOOD HERO ── -->
+  <section class="mh">
+    <div class="mh-glow" id="mhGlow"></div>
+    <div class="mh-inner">
+      {alreadyDone && (
+        <div class="done-banner">
+          <span>✅</span>
+          <div><strong>Already checked in today</strong> <span>— tap Save to update your answers</span></div>
         </div>
-      </div>
-      <div class="flu-tips">
-        <div class="flu-tip">
-          <div class="flu-tip-icon">💧</div>
-          <div><strong>Drink 100+ oz water/day.</strong> Keto flushes water and electrolytes rapidly in week 1.</div>
-        </div>
-        <div class="flu-tip">
-          <div class="flu-tip-icon">🧂</div>
-          <div><strong>Add salt to everything.</strong> Sodium deficiency causes most keto flu symptoms. Add ½ tsp salt to water.</div>
-        </div>
-        <div class="flu-tip">
-          <div class="flu-tip-icon">🥑</div>
-          <div><strong>Eat enough fat.</strong> Don't restrict calories in week 1. Fat = fuel. Avocado, olive oil, nuts are your friends.</div>
-        </div>
-        <div class="flu-tip">
-          <div class="flu-tip-icon">😴</div>
-          <div><strong>Sleep 7-9 hours.</strong> Your body adapts faster when you rest. Avoid intense workouts in days 2-4.</div>
+      )}
+      <div class="mh-eyebrow">DAY {currentDay} · {timeOfDay} CHECK-IN</div>
+      <h1 class="mh-greet">{greeting},<br/><em>{userName}.</em> How are you<br/>feeling?</h1>
+      <p class="mh-date">{dateStr}</p>
+      <div class="mh-mood">
+        <div class="mh-mood-label">Pick one — there's no wrong answer</div>
+        <div class="mh-mood-row">
+          {moods.map(m => (
+            <button class="mood-btn" data-id={m.id} onclick="ciSetMood(this.dataset.id)">
+              <div class="mood-emoji">{m.emoji}</div>
+              <div class="mood-label">{m.label}</div>
+            </button>
+          ))}
         </div>
       </div>
     </div>
-  )}
+  </section>
 
-  {/* ── HOW DO YOU FEEL — SLIDERS ── */}
-  <div class="slider-section" style="animation-delay:.05s;">
-    <div class="section-head">
-      <div class="sh-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.25);">📊</div>
-      <div class="sh-title">How do you feel today?</div>
-      <div class="sh-chip">Slide to rate</div>
+  <!-- ── BODY ── -->
+  <div class="ci-body">
+
+    <!-- Body check -->
+    <div class="cards-head">
+      <h2>Body <em>check</em></h2>
+      <span class="ch-meta">All optional · skip what doesn't apply</span>
     </div>
+    <div class="cards-grid">
 
-    {/* ENERGY SLIDER */}
-    <div class="slider-card">
-      <div class="slider-top">
-        <div class="slider-left">
-          <span class="slider-big-emoji" id="energyEmoji">😐</span>
+      <!-- Weight: dark span4 -->
+      <div class="ci-card dark span4">
+        <div class="ci-label">WEIGHT</div>
+        <div class="ci-q">Step on the scale?</div>
+        <div class="ci-sub">If it feels right today.</div>
+        <div class="ci-bigval" id="weightVal">{prefillWeight.toFixed(1)}<em>kg</em></div>
+        <div class="weight-stepper">
+          <button onclick="ciStepWeight(-0.1)">−</button>
+          <button onclick="ciStepWeight(0.1)">+</button>
+        </div>
+        {weightLostPositive && <div class="weight-delta">↓ {weightLostStr}kg total lost</div>}
+      </div>
+
+      <!-- Energy: span4 -->
+      <div class="ci-card span4">
+        <div class="ci-label">ENERGY</div>
+        <div class="ci-q">How's your <em>spark</em>?</div>
+        <div class="ci-sub">Mental + physical, all in.</div>
+        <div class="slider-val" id="energyVal">{prefillEnergy}<span class="max">/10</span></div>
+        <div class="ci-slider">
+          <input type="range" id="energySlider" min="0" max="10" step="1" value={prefillEnergy}
+            style={`--pct:${energyPct}%;--c:var(--accent-3)`}
+            oninput="ciSlider('energy',this,0,10,'var(--accent-3)')" />
+          <div class="ci-slider-labels"><span>Wiped</span><span>Electric</span></div>
+        </div>
+      </div>
+
+      <!-- Sleep: alt span4 -->
+      <div class="ci-card alt span4">
+        <div class="ci-label">SLEEP</div>
+        <div class="ci-q">Last night?</div>
+        <div class="ci-sub">Hours and how it felt.</div>
+        <div class="sleep-row">
           <div>
-            <div class="slider-label">{t('checkin.energy')}</div>
-            <div class="slider-sub">How energetic do you feel?</div>
-          </div>
-        </div>
-        <div class="slider-val-badge" id="energyValBadge" style="color:var(--green);">{prefill.energy}</div>
-      </div>
-      <div class="slider-track-wrap">
-        <input type="range" class="ci-range" id="energySlider"
-          min="1" max="5" step="1" value={prefill.energy}
-          aria-label="Energy level" aria-valuemin="1" aria-valuemax="5" aria-valuenow={prefill.energy}
-          oninput="window.onSlider('energy', this.value)" />
-      </div>
-      <div class="slider-labels">
-        <span>1 = Very Low</span>
-        <span>3 = Average</span>
-        <span>5 = Excellent</span>
-      </div>
-    </div>
-
-    {/* MOOD SLIDER */}
-    <div class="slider-card">
-      <div class="slider-top">
-        <div class="slider-left">
-          <span class="slider-big-emoji" id="moodEmoji">😐</span>
-          <div>
-            <div class="slider-label">{t('checkin.mood')}</div>
-            <div class="slider-sub">Mental and emotional state</div>
-          </div>
-        </div>
-        <div class="slider-val-badge" id="moodValBadge" style="color:var(--green);">{prefill.mood}</div>
-      </div>
-      <div class="slider-track-wrap">
-        <input type="range" class="ci-range" id="moodSlider"
-          min="1" max="5" step="1" value={prefill.mood}
-          aria-label="Mood level" aria-valuemin="1" aria-valuemax="5" aria-valuenow={prefill.mood}
-          oninput="window.onSlider('mood', this.value)" />
-      </div>
-      <div class="slider-labels">
-        <span>1 = Low</span>
-        <span>3 = Neutral</span>
-        <span>5 = Great</span>
-      </div>
-    </div>
-
-    {/* HUNGER SLIDER */}
-    <div class="slider-card">
-      <div class="slider-top">
-        <div class="slider-left">
-          <span class="slider-big-emoji" id="hungerEmoji">😐</span>
-          <div>
-            <div class="slider-label">{t('checkin.hunger')}</div>
-            <div class="slider-sub">How hungry are you? (5 = very hungry)</div>
-          </div>
-        </div>
-        <div class="slider-val-badge" id="hungerValBadge" style="color:var(--red);">{prefill.hunger}</div>
-      </div>
-      <div class="slider-track-wrap">
-        <input type="range" class="ci-range" id="hungerSlider"
-          min="1" max="5" step="1" value={prefill.hunger}
-          aria-label="Hunger level" aria-valuemin="1" aria-valuemax="5" aria-valuenow={prefill.hunger}
-          style="accent-color:var(--red);"
-          oninput="window.onSlider('hunger', this.value)" />
-      </div>
-      <div class="slider-labels">
-        <span>1 = Not at all</span>
-        <span>3 = Moderate</span>
-        <span>5 = Very hungry</span>
-      </div>
-    </div>
-
-    {/* BRAIN SLIDER */}
-    <div class="slider-card">
-      <div class="slider-top">
-        <div class="slider-left">
-          <span class="slider-big-emoji" id="brainEmoji">😐</span>
-          <div>
-            <div class="slider-label">Mental Clarity</div>
-            <div class="slider-sub">Focus and brain clarity today</div>
-          </div>
-        </div>
-        <div class="slider-val-badge" id="brainValBadge" style="color:var(--purple);">3</div>
-      </div>
-      <div class="slider-track-wrap">
-        <input type="range" class="ci-range" id="brainSlider"
-          min="1" max="5" step="1" value="3"
-          aria-label="Brain fog level" aria-valuemin="1" aria-valuemax="5" aria-valuenow="3"
-          style="accent-color:var(--purple);"
-          oninput="window.onSlider('brain', this.value)" />
-      </div>
-      <div class="slider-labels">
-        <span>1 = Very foggy</span>
-        <span>3 = Average</span>
-        <span>5 = Crystal clear</span>
-      </div>
-    </div>
-
-  </div>
-
-  {/* ── KETO FLU SYMPTOMS ── */}
-  {isFirstWeek && (
-    <div class="section" style="animation-delay:.1s;">
-      <div class="section-head">
-        <div class="sh-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 10px rgba(239,68,68,.25);">📊</div>
-        <div class="sh-title">Any keto flu symptoms?</div>
-        <div class="sh-chip" style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.2);color:var(--red2);">Week 1</div>
-      </div>
-      <div class="section-body">
-        <p style="font-size:.78rem;color:var(--soft);margin-bottom:1rem;line-height:1.5;">
-          Tap any symptoms you're experiencing today. We'll give you targeted advice to overcome them.
-        </p>
-        <div class="pill-toggle-grid">
-          {[
-            { val:'headache',   icon:'🤕', label:'Headache',      color:'red' },
-            { val:'fatigue',    icon:'😴', label:'Fatigue',        color:'red' },
-            { val:'brain_fog',  icon:'🌫️', label:'Brain Fog',     color:'red' },
-            { val:'nausea',     icon:'🤢', label:'Nausea',         color:'red' },
-            { val:'dizziness',  icon:'💫', label:'Dizziness',      color:'red' },
-            { val:'irritable',  icon:'😤', label:'Irritability',   color:'red' },
-            { val:'cramps',     icon:'⚡', label:'Muscle Cramps',  color:'red' },
-            { val:'none',       icon:'✅', label:'Feeling Great!', color:'green' },
-          ].map(s => (
-            <div class="pill-toggle" data-val={s.val} data-color={s.color} onclick="toggleSymptom(this)">
-              <span class="pt-icon">{s.icon}</span>
-              <span class="pt-label">{s.label}</span>
-              <span class="pt-check">✓</span>
+            <div class="sl-l">Hours</div>
+            <div class="sl-v" id="sleepHoursVal">{prefillSleepHours}<span class="sl-unit">h</span></div>
+            <div class="ci-slider">
+              <input type="range" id="sleepSlider" min="0" max="12" step="0.5" value={prefillSleepHours}
+                style={`--pct:${sleepHoursPct}%;--c:var(--accent)`}
+                oninput="ciSlider('sleepHours',this,0,12,'var(--accent)')" />
             </div>
+          </div>
+          <div>
+            <div class="sl-l">Quality</div>
+            <div class="sl-v" id="sleepQualityVal">{prefillSleepQuality}<span class="sl-unit">/10</span></div>
+            <div class="ci-slider">
+              <input type="range" id="sleepQualitySlider" min="0" max="10" step="1" value={prefillSleepQuality}
+                style={`--pct:${sleepQualPct}%;--c:var(--accent-2)`}
+                oninput="ciSlider('sleepQuality',this,0,10,'var(--accent-2)')" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hunger: span4 -->
+      <div class="ci-card span4">
+        <div class="ci-label">HUNGER NOW</div>
+        <div class="ci-q">Belly check.</div>
+        <div class="slider-val" id="hungerVal">{prefillHunger}<span class="max">/10</span></div>
+        <div class="ci-slider">
+          <input type="range" id="hungerSlider" min="0" max="10" step="1" value={prefillHunger}
+            style={`--pct:${hungerPct}%;--c:var(--accent)`}
+            oninput="ciSlider('hunger',this,0,10,'var(--accent)')" />
+          <div class="ci-slider-labels"><span>Stuffed</span><span>Starving</span></div>
+        </div>
+      </div>
+
+      <!-- Cravings: span4 -->
+      <div class="ci-card span4">
+        <div class="ci-label">CRAVINGS</div>
+        <div class="ci-q">Any pull?</div>
+        <div class="slider-val" id="cravingsVal">2<span class="max">/10</span></div>
+        <div class="ci-slider">
+          <input type="range" id="cravingsSlider" min="0" max="10" step="1" value="2"
+            style="--pct:20%;--c:var(--accent-3)"
+            oninput="ciSlider('cravings',this,0,10,'var(--accent-3)')" />
+          <div class="ci-slider-labels"><span>None</span><span>Intense</span></div>
+        </div>
+      </div>
+
+      <!-- Stress: span4 -->
+      <div class="ci-card span4">
+        <div class="ci-label">STRESS</div>
+        <div class="ci-q">Mind weather.</div>
+        <div class="slider-val" id="stressVal">4<span class="max">/10</span></div>
+        <div class="ci-slider">
+          <input type="range" id="stressSlider" min="0" max="10" step="1" value="4"
+            style="--pct:40%;--c:#9CA3AF"
+            oninput="ciSlider('stress',this,0,10,'#9CA3AF')" />
+          <div class="ci-slider-labels"><span>Calm</span><span>Stormy</span></div>
+        </div>
+      </div>
+
+      <!-- Ketones: alt span6 -->
+      <div class="ci-card alt span6">
+        <div class="ci-label">KETONES</div>
+        <div class="ci-q">Reading <em>this morning</em></div>
+        <div class="ci-sub">Blood, breath, or skip if not testing.</div>
+        <div class="ci-bigval" id="ketonesVal" style="margin-top:18px;">1.4<em>mmol/L</em></div>
+        <div class="ketone-marker">
+          <div class="ketone-pin" id="ketonePin" style="left:35%;">YOU</div>
+        </div>
+        <div class="ketone-band">
+          <div style="background:#D8DDD0;"></div>
+          <div style="background:var(--accent-2);flex:1.5;"></div>
+          <div style="background:var(--accent-3);flex:1.5;"></div>
+          <div style="background:var(--accent);"></div>
+        </div>
+        <div class="ketone-zones">
+          <span>0–0.5</span><span>0.5–1.5</span><span>1.5–3</span><span>3+</span>
+        </div>
+        <div class="weight-stepper" style="margin-top:16px;">
+          <button onclick="ciStepKetones(-0.1)">−</button>
+          <button onclick="ciStepKetones(0.1)">+</button>
+        </div>
+      </div>
+
+      <!-- Water: span6 -->
+      <div class="ci-card span6">
+        <div class="ci-label">WATER · SO FAR TODAY</div>
+        <div class="ci-q">Glasses down?</div>
+        <div class="ci-sub">Tap to add or remove.</div>
+        <div class="water-row" id="waterRow">
+          {[0,1,2,3,4,5,6,7,8,9].map(i => (
+            <div class="water-glass" data-i={i} onclick="ciSetWater(parseInt(this.dataset.i))"></div>
           ))}
         </div>
-
-        {/* Dynamic advice panel */}
-        <div id="fluAdvice" style="display:none;margin-top:1rem;"></div>
+        <div class="water-counter" id="waterCounter">{prefillWater}<em> / 10 glasses</em></div>
       </div>
-    </div>
-  )}
 
-  {/* ── COMPLIANCE ── */}
-  <div class="section" style="animation-delay:.15s;">
-    <div class="section-head">
-      <div class="sh-icon" style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 10px rgba(16,185,129,.25);">✅</div>
-      <div class="sh-title">Today's Compliance</div>
-    </div>
-    <div class="section-body">
-      <div class="compliance-grid">
-        <div class="comp-card" id="comp-meals" onclick="toggleComp(this,'meals')">
-          <div class="cc-icon">🍽️</div>
-          <div class="cc-label">{t('checkin.meals')}</div>
-          <div class="cc-sub">Ate according to plan</div>
-        </div>
-        <div class="comp-card" id="comp-carbs" onclick="toggleComp(this,'carbs')">
-          <div class="cc-icon">🥦</div>
-          <div class="cc-label">Stayed Under Carbs</div>
-          <div class="cc-sub">Kept net carbs low</div>
-        </div>
-        {hasFasting && (
-          <div class="comp-card" id="comp-fast" onclick="toggleComp(this,'fast')">
-            <div class="cc-icon">⏰</div>
-            <div class="cc-label">{t('checkin.fasted')}</div>
-            <div class="cc-sub">{fastingProtocol.replace('_',':')} protocol</div>
-          </div>
-        )}
-        <div class="comp-card" id="comp-sleep" onclick="toggleComp(this,'sleep')">
-          <div class="cc-icon">😴</div>
-          <div class="cc-label">Good Sleep</div>
-          <div class="cc-sub">7+ hours last night</div>
+      <!-- Movement: span6 -->
+      <div class="ci-card span6">
+        <div class="ci-label">MOVEMENT</div>
+        <div class="ci-q">Move your body?</div>
+        <div class="ci-sub">Walk, lift, yoga, anything.</div>
+        <div class="workout-toggle">
+          <button class="workout-btn on" id="workoutYes" onclick="ciSetWorkout(true)">
+            <span class="workout-ic">✓</span>Yes, moved
+          </button>
+          <button class="workout-btn" id="workoutNo" onclick="ciSetWorkout(false)">
+            <span class="workout-ic">○</span>Rest day
+          </button>
         </div>
       </div>
-    </div>
-  </div>
 
-  {/* ── WATER ── */}
-  <div class="section" style="animation-delay:.2s;">
-    <div class="section-head">
-      <div class="sh-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2);box-shadow:0 4px 10px rgba(6,182,212,.25);">💧</div>
-      <div class="sh-title">{t('checkin.water')}</div>
-      <div class="sh-chip" style="background:rgba(6,182,212,.1);border-color:rgba(6,182,212,.2);color:var(--cyan);" id="waterChip">0 / 8 glasses</div>
-    </div>
-    <div class="section-body">
-      <div class="water-visual-row">
-        <div class="water-glasses-row" id="waterGlasses">
-          {[1,2,3,4,5,6,7,8].map((n) => (
-            <button class="wglass-btn" data-n={n} onclick="window.setWater(this)" title={`${n} glass${n > 1 ? 'es' : ''}`}>💧</button>
+      <!-- Digestion: span6 -->
+      <div class="ci-card span6">
+        <div class="ci-label">DIGESTION</div>
+        <div class="ci-q">Belly happy?</div>
+        <div class="pill-row" id="digestionPills">
+          {digestionOptions.map(d => (
+            <button class="pill" data-val={d} onclick="ciSetDigestion(this.dataset.val)">
+              {d[0].toUpperCase() + d.slice(1)}
+            </button>
           ))}
         </div>
-        <div class="water-stat">
-          <div class="water-big" id="waterCount">0</div>
-          <div class="water-lbl-sm">glasses</div>
-          <div style="font-size:.62rem;color:var(--soft);margin-top:.2rem;" id="waterLiters">0 oz</div>
+      </div>
+
+      <!-- Photo: span12 -->
+      <div class="ci-card photo-card span12" id="photoCard" onclick="ciTogglePhoto()">
+        <div class="photo-icon" id="photoIcon">+</div>
+        <div class="photo-title" id="photoTitle">Weekly progress photo</div>
+        <div class="photo-sub" id="photoSub">Optional. Same lighting, same time, same outfit.</div>
+      </div>
+
+    </div><!-- /cards-grid -->
+
+    <!-- ── REFLECTION ── -->
+    <section class="reflect-section">
+      <div class="reflect-head">
+        <h2>A few <em>words</em></h2>
+        <span class="rh-meta">Auto-saves as you type</span>
+      </div>
+      <div class="reflect-card">
+        <div class="prompt-pills" id="promptPills">
+          <button class="prompt-pill on" data-i="0" onclick="ciSetPrompt(0)">What's one thing you're proud of today?</button>
+          <button class="prompt-pill" data-i="1" onclick="ciSetPrompt(1)">What surprised you about yesterday?</button>
+          <button class="prompt-pill" data-i="2" onclick="ciSetPrompt(2)">What's tugging at your attention?</button>
+          <button class="prompt-pill" data-i="3" onclick="ciSetPrompt(3)">If today went perfectly, what happens?</button>
+        </div>
+        <div class="reflect-prompt" id="reflectPrompt">What's one thing you're proud of today?</div>
+        <textarea class="journal-area" id="journalArea" placeholder="Whatever lands. No wrong answers."></textarea>
+        <div class="journal-foot">
+          <span id="journalSaved">Ready to save</span>
+          <span id="journalCount">0 chars · ~0 words</span>
         </div>
       </div>
-      <div style="margin-top:.875rem;font-size:.75rem;color:var(--soft);line-height:1.5;">
-        🎯 Goal: <strong style="color:var(--cyan);">{isFirstWeek ? '10–12 glasses' : '8–10 glasses'}</strong> — {isFirstWeek ? 'Extra water in week 1 flushes out adaptation toxins' : 'Consistent hydration maintains ketosis efficiency'}
-      </div>
-    </div>
-  </div>
+    </section>
 
-  {/* ── ELECTROLYTES (always shown — essential for keto) ── */}
-  <div class="section" style="animation-delay:.25s;">
-    <div class="section-head">
-      <div class="sh-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 4px 10px rgba(139,92,246,.25);">⚡</div>
-      <div class="sh-title">Electrolytes Today</div>
-      <div class="sh-chip" style="background:rgba(139,92,246,.1);border-color:rgba(139,92,246,.2);color:var(--purple);">Essential</div>
-    </div>
-    <div class="section-body">
-      <p style="font-size:.75rem;color:var(--soft);margin-bottom:1rem;line-height:1.5;">
-        Tap each one after you've taken it. These prevent keto flu and keep your energy high.
-      </p>
-      <div class="elec-grid">
-        {[
-          { val:'sodium',    icon:'🧂', label:'Sodium',     sub:'Salt in food/water',  amount:'2000-4000mg' },
-          { val:'potassium', icon:'🍌', label:'Potassium',  sub:'Avocado, meat, nuts', amount:'3500-4700mg' },
-          { val:'magnesium', icon:'🥦', label:'Magnesium',  sub:'Supplement at night',  amount:'300-500mg' },
-        ].map(e => (
-          <div class="elec-card" data-val={e.val} onclick="toggleElec(this)">
-            <div class="elec-icon">{e.icon}</div>
-            <div class="elec-label">{e.label}</div>
-            <div class="elec-sub">{e.sub}</div>
-            <div class="elec-amount">{e.amount}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-
-  {/* ── NOTE ── */}
-  <div class="section" style="animation-delay:.3s;">
-    <div class="section-head">
-      <div class="sh-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(59,130,246,.25);">✏️</div>
-      <div class="sh-title">{t('checkin.notes')}</div>
-      <div class="sh-chip" style="background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.2);color:var(--blue);">Optional</div>
-    </div>
-    <div class="section-body">
-      <textarea
-        class="note-area" id="noteArea"
-        placeholder="How was your day? Any challenges? What did you eat? Write anything you want to remember..."
-        maxlength="500"
-      ></textarea>
-      <div style="text-align:right;font-size:.68rem;color:var(--muted);margin-top:.35rem;" id="noteCount">0/500</div>
-    </div>
-  </div>
-
-  {/* ── SLEEP TRACKING ── */}
-  <div class="section" style="animation-delay:.32s;">
-    <div class="section-head">
-      <div class="sh-icon" style="background:linear-gradient(135deg,#6366f1,#4f46e5);box-shadow:0 4px 10px rgba(99,102,241,.25);">🌙</div>
-      <div class="sh-title">Last Night's Sleep</div>
-      <div class="sh-chip" style="background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.2);color:#a5b4fc;">Optional</div>
-    </div>
-    <div class="section-body">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-        <div>
-          <div style="font-size:.75rem;font-weight:700;color:var(--soft);margin-bottom:.5rem;">Hours Slept</div>
-          <div style="display:flex;align-items:center;gap:.75rem;">
-            <input type="range" id="sleepSlider" min="0" max="12" step="0.5" value="7"
-              style="flex:1;accent-color:#6366f1;"
-              oninput="window.updateSleepHours(this.value)" />
-            <span id="sleepHoursDisplay" style="font-size:1rem;font-weight:800;color:#a5b4fc;min-width:2.5rem;text-align:right;">7h</span>
+    <!-- ── SUBMIT ── -->
+    <div class="submit-wrap">
+      <div class="submit-row">
+        <div class="insight-card">
+          <div class="insight-glow"></div>
+          <div class="insight-eyebrow">YOUR COACH NOTICED</div>
+          <p class="insight-body" id="insightBody">
+            Your <em>energy</em> looks strong today. Keep the ketones climbing and your <em>sleep</em> is doing the real work. <em>Don't stop now.</em>
+          </p>
+          <div class="insight-foot">
+            <span><b>Day {currentDay}</b>of {maxDays}</span>
+            <span><b id="insightStreak">{streakDays}</b>day streak</span>
           </div>
         </div>
-        <div>
-          <div style="font-size:.75rem;font-weight:700;color:var(--soft);margin-bottom:.5rem;">Sleep Quality</div>
-          <div style="display:flex;gap:.4rem;" id="sleepStars">
-            {[1,2,3,4,5].map(n => (
-              <button onclick={`window.setSleepQuality(${n})`}
-                style="width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:var(--card2);font-size:1rem;cursor:pointer;transition:all .2s;"
-                class="sleep-star" data-n={n}>⭐</button>
-            ))}
+        <div class="submit-card">
+          <div>
+            <div class="sc-l">Today's reward</div>
+            <div class="sc-v">+50<em>XP</em></div>
+            <p class="sc-desc">Showing up beats showing off. Day {currentDay} — keep it going.</p>
           </div>
+          <button class="submit-btn" id="submitBtn" onclick="ciSave()">
+            Save check-in →
+          </button>
         </div>
       </div>
-      <div id="sleepMsg" style="margin-top:.75rem;font-size:.75rem;color:var(--soft);padding:.5rem .75rem;background:var(--card2);border-radius:10px;border-left:3px solid #6366f1;">
-        7 hours — Ideal for keto adaptation 👍
-      </div>
     </div>
-  </div>
 
-  {/* ── SAVE BAR ── */}
-  <div class="save-wrap">
-    <div class="save-info">
-      <div class="save-title">Ready to submit?</div>
-      <div class="save-sub">Takes 2 minutes · builds your streak</div>
-    </div>
-    <button class="btn-save-big" id="saveBtn" onclick="saveCheckin()" style="flex-shrink:0;max-width:260px;">
-      <div class="btn-spin" id="saveSpin"></div>
-      <span id="saveTxt">{alreadyDone ? t('checkin.submit') : t('checkin.submit') + ' · +50 XP'}</span>
-    </button>
-  </div>
+  </div><!-- /ci-body -->
+</main>
+</div><!-- /app-shell -->
 
-
-</div><!-- /page -->
-
-<!-- SUCCESS OVERLAY -->
+<!-- ── SUCCESS OVERLAY ── -->
 <div class="success-overlay" id="successOverlay">
   <div class="so-icon">✅</div>
-  <h2 class="so-title">{t('checkin.done')} <em id="soDay">{currentDay}</em></h2>
-  <div class="so-xp">⭐ +<span id="soXP">30</span> XP earned</div>
-  <p class="so-sub" id="soSub">Great work staying consistent. Every check-in is one step closer to your goal.</p>
-  <div class="so-insights">
-    <div class="so-insight-title">📊 Tonight's Analysis</div>
-    <div id="soInsightsList"></div>
-  </div>
-  <a href="/dashboard" style="display:inline-flex;align-items:center;gap:.5rem;padding:.875rem 2rem;border-radius:13px;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;font-weight:800;font-size:.9rem;text-decoration:none;box-shadow:0 4px 16px rgba(16,185,129,.3);">
-    🏠 {t('common.back')}
-  </a>
+  <h2 class="so-title">Day <em id="soDay">{currentDay}</em> logged!</h2>
+  <div class="so-xp">⭐ +<span id="soXP">50</span> XP earned</div>
+  <p class="so-sub" id="soSub">Great work staying consistent. Every check-in brings you closer to your goal.</p>
+  <a href="/dashboard" class="so-back">Back to dashboard →</a>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="ci-toast" id="ciToast"></div>
 
-<script is:inline define:vars={{ currentDay, isFirstWeek, hasFasting, fastingProtocol, macroGoals, energyEmojis, moodEmojis, hungerEmojis, prefill, alreadyDone }}>
+<script is:inline define:vars={{ currentDay, alreadyDone, prefillMood, prefillWeight, prefillEnergy, prefillHunger, prefillSleepHours, prefillSleepQuality, prefillWater, prefillNotes }}>
 
-/* ── STATE (pre-filled if editing today's check-in) ── */
+/* ── STATE ── */
 var state = {
-  energy: prefill.energy, mood: prefill.mood, hunger: prefill.hunger, brain: 3,
-  symptoms: [],
-  followed_meals: prefill.followed_meals, stayed_carbs: false,
-  completed_fast: prefill.fasted_today, good_sleep: false,
-  water: prefill.water,
-  sodium: prefill.took_sodium || false,
-  potassium: prefill.took_potassium || false,
-  magnesium: prefill.took_magnesium || false,
-  sleep_hours: prefill.sleep_hours || 7,
-  sleep_quality: prefill.sleep_quality || 0,
-  note: prefill.note || '',
+  mood:         prefillMood || 'good',
+  weight:       prefillWeight,
+  energy:       prefillEnergy,
+  sleepHours:   prefillSleepHours,
+  sleepQuality: prefillSleepQuality,
+  hunger:       prefillHunger,
+  cravings:     2,
+  stress:       4,
+  ketones:      1.4,
+  water:        prefillWater,
+  workout:      true,
+  digestion:    'great',
+  notes:        prefillNotes,
+  photoTaken:   false,
 };
 
-/* ── SLIDER HANDLER ── */
-var brainEmojis = ['🌫️','😕','😐','🧠','💡'];
+var moodColors = { amazing:'var(--accent-2)', good:'var(--accent-3)', ok:'#E8C547', low:'#9CA3AF', rough:'#D14B5A' };
 
-function updateSliderTrack(el, pct, color) {
-  el.style.background = 'linear-gradient(to right,' + color + ' 0%,' + color + ' ' + pct + '%,var(--muted) ' + pct + '%)';
+/* ── MOOD ── */
+function ciSetMood(id) {
+  state.mood = id;
+  document.querySelectorAll('.mood-btn').forEach(function(btn) {
+    var isOn = btn.dataset.id === id;
+    btn.classList.toggle('on', isOn);
+    var emoji = btn.querySelector('.mood-emoji');
+    if (emoji) emoji.style.color = isOn ? (moodColors[id] || 'inherit') : 'inherit';
+  });
+  var glow = document.getElementById('mhGlow');
+  if (glow) glow.className = 'mh-glow ' + id;
+  updateInsight();
 }
 
-window.onSlider = function(field, rawVal) {
-  var val = parseInt(rawVal);
+/* ── SLIDER ── */
+function ciSlider(field, el, min, max, color) {
+  var val = parseFloat(el.value);
   state[field] = val;
-  var idx = val - 1;
-  var pct = (val - 1) / 4 * 100;
-
-  if (field === 'energy') {
-    var el = document.getElementById('energySlider');
-    updateSliderTrack(el, pct, '#10b981');
-    document.getElementById('energyEmoji').textContent = energyEmojis[idx] || '😐';
-    document.getElementById('energyValBadge').textContent = val;
-  } else if (field === 'mood') {
-    var el2 = document.getElementById('moodSlider');
-    updateSliderTrack(el2, pct, '#10b981');
-    document.getElementById('moodEmoji').textContent = moodEmojis[idx] || '😐';
-    document.getElementById('moodValBadge').textContent = val;
-  } else if (field === 'hunger') {
-    var el3 = document.getElementById('hungerSlider');
-    updateSliderTrack(el3, pct, '#ef4444');
-    document.getElementById('hungerEmoji').textContent = hungerEmojis[idx] || '😐';
-    document.getElementById('hungerValBadge').textContent = val;
-  } else if (field === 'brain') {
-    var el4 = document.getElementById('brainSlider');
-    updateSliderTrack(el4, pct, '#8b5cf6');
-    document.getElementById('brainEmoji').textContent = brainEmojis[idx] || '😐';
-    document.getElementById('brainValBadge').textContent = val;
-  }
-
-  // Update step indicator
-  updateSteps();
-};
-
-/* ── STEP INDICATOR ── */
-function updateSteps() {
-  var steps = document.querySelectorAll('.ci-step');
-  var hasEnergy = state.energy > 0 && document.getElementById('energySlider') && true;
-  var hasMood   = state.mood   > 0;
-  var hasBody   = state.water > 0 || state.symptoms.length > 0;
-  var hasMeals  = state.followed_meals || state.stayed_carbs;
-  var doneArr   = [hasEnergy, hasMood, hasBody, hasMeals, false];
-  var firstPending = doneArr.indexOf(false);
-
-  steps.forEach(function(step, i) {
-    step.classList.remove('done','active');
-    var dot = step.querySelector('.ci-step-dot');
-    if (doneArr[i]) {
-      step.classList.add('done');
-      if (dot) dot.textContent = '✓';
-    } else if (i === firstPending) {
-      step.classList.add('active');
-      if (dot) dot.textContent = i + 1;
-    } else {
-      if (dot) dot.textContent = i + 1;
-    }
-  });
-}
-
-// Init slider tracks on load (use actual state values for correct fill)
-(function() {
-  var fieldMap = {
-    energy: { id: 'energySlider', color: '#10b981', emojis: energyEmojis, badgeId: 'energyValBadge', emojiId: 'energyEmoji' },
-    mood:   { id: 'moodSlider',   color: '#10b981', emojis: moodEmojis,   badgeId: 'moodValBadge',   emojiId: 'moodEmoji' },
-    hunger: { id: 'hungerSlider', color: '#ef4444', emojis: hungerEmojis, badgeId: 'hungerValBadge', emojiId: 'hungerEmoji' },
-    brain:  { id: 'brainSlider',  color: '#8b5cf6', emojis: null,         badgeId: null,             emojiId: null },
-  };
-  Object.keys(fieldMap).forEach(function(f) {
-    var cfg = fieldMap[f];
-    var el = document.getElementById(cfg.id);
-    if (!el) return;
-    var val = state[f] || 3;
-    var pct = ((val - 1) / 4) * 100;
-    updateSliderTrack(el, pct, cfg.color);
-    if (cfg.badgeId) document.getElementById(cfg.badgeId).textContent = val;
-    if (cfg.emojiId && cfg.emojis) document.getElementById(cfg.emojiId).textContent = cfg.emojis[val - 1] || '😐';
-  });
-
-  // Pre-fill water glasses UI
-  if (state.water > 0) {
-    document.querySelectorAll('.wglass-btn').forEach(function(g) {
-      if (parseInt(g.dataset.n) <= state.water) g.classList.add('wfull');
-    });
-    var wcEl = document.getElementById('waterCount');
-    if (wcEl) wcEl.textContent = state.water;
-    var wlEl = document.getElementById('waterLiters');
-    if (wlEl) wlEl.textContent = (state.water * 8) + ' oz';
-    var chip = document.getElementById('waterChip');
-    if (chip) chip.textContent = state.water + ' / 8 glasses';
-  }
-
-  // Pre-fill note
-  if (state.note) {
-    var noteEl = document.getElementById('noteArea');
-    if (noteEl) {
-      noteEl.value = state.note;
-      var cntEl = document.getElementById('noteCount');
-      if (cntEl) cntEl.textContent = state.note.length + '/500';
-    }
-  }
-
-  updateSteps();
-})();
-
-/* ── STAR RATING (kept for compatibility) ── */
-function rateStar(el) {
-  var field = el.dataset.field;
-  var val   = parseInt(el.dataset.val);
-  var type  = el.dataset.type;
-  state[field] = val;
-  var stars = document.querySelectorAll('[data-field="' + field + '"]');
-  stars.forEach(function(s) {
-    s.classList.remove('active','active-green','active-red');
-    if (parseInt(s.dataset.val) <= val) {
-      s.classList.add(type === 'red' ? 'active-red' : 'active-green');
-    }
-  });
-}
-
-/* ── SYMPTOMS ── */
-var symptomsSelected = new Set();
-var fluAdviceMap = {
-  headache: { icon:'🧂', text:'<strong>Take salt immediately.</strong> Add ½ tsp salt to 500ml water. Sodium deficiency is the #1 cause of keto headaches.' },
-  fatigue:  { icon:'🥑', text:'<strong>Eat more fat.</strong> Your body is adapting to fat fuel. Have avocado, nuts, or MCT oil to boost energy fast.' },
-  brain_fog:{ icon:'☕', text:'<strong>Try bulletproof coffee.</strong> MCT oil or coconut oil in black coffee gives your brain instant ketone fuel.' },
-  nausea:   { icon:'🫚', text:'<strong>Reduce fat intake slightly</strong> for 1-2 days. Start with smaller portions. Ginger tea can help settle your stomach.' },
-  dizziness:{ icon:'💧', text:'<strong>Drink water + electrolytes NOW.</strong> Lie down if needed. Add salt + potassium (banana substitute: avocado).' },
-  irritable:{ icon:'😴', text:'<strong>Low blood sugar adjustment.</strong> Ensure you\'re eating enough calories. Rest more. This passes by day 5.' },
-  cramps:   { icon:'🦵', text:'<strong>Magnesium deficiency.</strong> Take 300mg magnesium glycinate before sleep tonight. Also increase potassium.' },
-};
-
-function toggleSymptom(el) {
-  var val = el.dataset.val;
-  var color = el.dataset.color || 'red';
-  if (val === 'none') {
-    symptomsSelected.clear();
-    document.querySelectorAll('.pill-toggle').forEach(function(c) {
-      c.classList.remove('on-red','on-green');
-    });
-    el.classList.add('on-green');
-    symptomsSelected.add('none');
-    state.symptoms = ['none'];
-    updateFluAdvice();
-    updateSteps();
-    return;
-  }
-  var noneCard = document.querySelector('.pill-toggle[data-val="none"]');
-  if (noneCard) noneCard.classList.remove('on-green');
-  symptomsSelected.delete('none');
-  var onClass = color === 'green' ? 'on-green' : 'on-red';
-  var wasOn = el.classList.contains(onClass);
-  el.classList.remove('on-red','on-green');
-  if (!wasOn) {
-    el.classList.add(onClass);
-    symptomsSelected.add(val);
+  var pct = ((val - min) / (max - min)) * 100;
+  el.style.setProperty('--pct', pct.toFixed(1) + '%');
+  el.style.setProperty('--c', color);
+  var display = document.getElementById(field + 'Val');
+  if (!display) return;
+  if (field === 'sleepHours') {
+    display.innerHTML = val + '<span class="sl-unit">h</span>';
+  } else if (field === 'sleepQuality') {
+    display.innerHTML = val + '<span class="sl-unit">/10</span>';
   } else {
-    symptomsSelected.delete(val);
+    display.innerHTML = Math.round(val) + '<span class="max">/10</span>';
   }
-  state.symptoms = Array.from(symptomsSelected);
-  updateFluAdvice();
-  updateSteps();
+  updateInsight();
 }
 
-function updateFluAdvice() {
-  var box = document.getElementById('fluAdvice');
-  if (!box) return;
-  var active = Array.from(symptomsSelected).filter(function(s) { return s !== 'none' && fluAdviceMap[s]; });
-  if (active.length === 0) { box.style.display = 'none'; return; }
-  box.style.display = 'block';
-  var rows = active.map(function(s) {
-    return '<div style="display:flex;gap:.65rem;align-items:flex-start;margin-bottom:.6rem;font-size:.8rem;line-height:1.5;"><span style="font-size:1.1rem;flex-shrink:0;">' + fluAdviceMap[s].icon + '</span><span>' + fluAdviceMap[s].text + '</span></div>';
-  }).join('');
-  box.innerHTML = '<div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:14px;padding:1.1rem 1.25rem;"><div style="font-weight:900;font-size:.82rem;color:var(--gold);margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.07em;">⚡ Your Relief Protocol</div>' + rows + '</div>';
+/* ── WEIGHT ── */
+function ciStepWeight(delta) {
+  state.weight = Math.max(20, +(state.weight + delta).toFixed(1));
+  var el = document.getElementById('weightVal');
+  if (el) el.innerHTML = state.weight.toFixed(1) + '<em>kg</em>';
 }
 
-/* ── COMPLIANCE ── */
-function toggleComp(el, key) {
-  var isOn = el.classList.contains('yes');
-  el.classList.remove('yes','no');
-  var stateKey = key === 'meals' ? 'followed_meals' : key === 'carbs' ? 'stayed_carbs' : key === 'fast' ? 'completed_fast' : 'good_sleep';
-  if (!isOn) { el.classList.add('yes');  state[stateKey] = true; }
-  else        { el.classList.add('no');   state[stateKey] = false; }
-  updateSteps();
+/* ── KETONES ── */
+function ciStepKetones(delta) {
+  state.ketones = Math.max(0, +(state.ketones + delta).toFixed(1));
+  var el = document.getElementById('ketonesVal');
+  if (el) el.innerHTML = state.ketones.toFixed(1) + '<em>mmol/L</em>';
+  var pin = document.getElementById('ketonePin');
+  if (pin) pin.style.left = Math.min(100, (state.ketones / 4) * 100).toFixed(1) + '%';
+  updateInsight();
 }
 
 /* ── WATER ── */
-window.setWater = function(el) {
-  var n = parseInt(el.dataset.n);
-  state.water = n;
-  document.querySelectorAll('.wglass-btn').forEach(function(g) {
-    if (parseInt(g.dataset.n) <= n) g.classList.add('wfull');
-    else g.classList.remove('wfull');
+function ciSetWater(i) {
+  var newVal = i < state.water ? i : i + 1;
+  state.water = newVal;
+  document.querySelectorAll('.water-glass').forEach(function(g) {
+    g.classList.toggle('full', parseInt(g.dataset.i) < newVal);
   });
-  document.getElementById('waterCount').textContent = n;
-  document.getElementById('waterLiters').textContent = (n * 0.25).toFixed(2) + 'L';
-  var chip = document.getElementById('waterChip');
-  if (chip) chip.textContent = n + ' / 8 glasses';
-  updateSteps();
-};
-
-/* ── ELECTROLYTES ── */
-function toggleElec(el) {
-  var val = el.dataset.val;
-  el.classList.toggle('done');
-  state[val] = el.classList.contains('done');
+  var el = document.getElementById('waterCounter');
+  if (el) el.innerHTML = newVal + '<em> / 10 glasses</em>';
 }
 
-/* ── NOTE ── */
-var noteAreaEl = document.getElementById('noteArea');
-if (noteAreaEl) noteAreaEl.addEventListener('input', function() {
-  state.note = this.value;
-  document.getElementById('noteCount').textContent = this.value.length + '/500';
-});
-
-/* ── CALCULATE XP ── */
-function calcXP() {
-  var xp = 30;
-  if (state.followed_meals) xp += 20;
-  if (state.stayed_carbs)   xp += 15;
-  if (state.completed_fast && hasFasting) xp += 25;
-  if (state.water >= 8)     xp += 10;
-  if (state.sodium && state.potassium && state.magnesium) xp += 10;
-  if (state.note.length > 20) xp += 5;
-  return xp;
+/* ── WORKOUT ── */
+function ciSetWorkout(yes) {
+  state.workout = yes;
+  var y = document.getElementById('workoutYes');
+  var n = document.getElementById('workoutNo');
+  if (y) y.classList.toggle('on', yes);
+  if (n) n.classList.toggle('on', !yes);
 }
 
-/* ── GENERATE INSIGHTS ── */
-function buildInsights() {
-  var items = [];
+/* ── DIGESTION ── */
+function ciSetDigestion(val) {
+  state.digestion = val;
+  document.querySelectorAll('#digestionPills .pill').forEach(function(p) {
+    p.classList.toggle('on', p.dataset.val === val);
+  });
+}
 
-  if (state.energy >= 4) items.push({ c:'#10b981', t:'Your energy is high — your body is adapting well to fat fuel. Great sign!' });
-  else if (state.energy <= 2) items.push({ c:'#f59e0b', t:'Low energy is normal in the first days. Increase fat intake and stay hydrated.' });
+/* ── PHOTO ── */
+function ciTogglePhoto() {
+  state.photoTaken = !state.photoTaken;
+  var card  = document.getElementById('photoCard');
+  var icon  = document.getElementById('photoIcon');
+  var title = document.getElementById('photoTitle');
+  var sub   = document.getElementById('photoSub');
+  if (card)  card.classList.toggle('taken', state.photoTaken);
+  if (icon)  icon.textContent = state.photoTaken ? '✓' : '+';
+  if (title) title.textContent = state.photoTaken ? 'Photo added — looking strong' : 'Weekly progress photo';
+  if (sub)   sub.textContent   = state.photoTaken ? 'Tap to remove' : 'Optional. Same lighting, same time, same outfit.';
+}
 
-  if (state.symptoms.includes('headache') || state.symptoms.includes('dizziness')) {
-    items.push({ c:'#ef4444', t: 'Electrolyte deficiency detected. Add salt to water and eat potassium-rich foods today.' });
-  }
+/* ── REFLECTION ── */
+var prompts = [
+  "What's one thing you're proud of today?",
+  "What surprised you about yesterday?",
+  "What's tugging at your attention?",
+  "If today went perfectly, what happens?",
+];
+function ciSetPrompt(i) {
+  document.querySelectorAll('.prompt-pill').forEach(function(p) {
+    p.classList.toggle('on', parseInt(p.dataset.i) === i);
+  });
+  var rp = document.getElementById('reflectPrompt');
+  if (rp) rp.textContent = prompts[i];
+}
 
-  if (state.followed_meals && state.stayed_carbs) {
-    items.push({ c:'#10b981', t:'Perfect compliance today! Consistent days like this build ketosis momentum.' });
-  } else if (!state.followed_meals) {
-    items.push({ c:'#f97316', t:"Missed meals break ketosis. Tomorrow, prep your breakfast the night before so there's no excuse." });
-  }
+var journalArea = document.getElementById('journalArea');
+if (journalArea) {
+  if (state.notes) journalArea.value = state.notes;
+  journalArea.addEventListener('input', function() {
+    state.notes = this.value;
+    var words = this.value.trim().split(/\s+/).filter(Boolean).length;
+    var cnt = document.getElementById('journalCount');
+    if (cnt) cnt.textContent = this.value.length + ' chars · ~' + (this.value.length ? words : 0) + ' words';
+    var sav = document.getElementById('journalSaved');
+    if (sav) sav.textContent = 'Saved just now';
+  });
+}
 
-  if (state.water < 6) items.push({ c:'#06b6d4', t:'Only ' + state.water + ' glasses today. Aim for 8+ tomorrow — dehydration amplifies every keto symptom.' });
-  else if (state.water >= 10) items.push({ c:'#06b6d4', t:'Excellent hydration! Proper water intake accelerates fat burning.' });
-
-  if (items.length === 0) items.push({ c:'#10b981', t:"Great check-in! You're building the habits that will transform your body." });
-
-  return items.slice(0,4);
+/* ── INSIGHT ── */
+function updateInsight() {
+  var el = document.getElementById('insightBody');
+  if (!el) return;
+  var energyWord  = state.energy >= 8 ? 'high' : state.energy >= 5 ? 'solid' : 'low';
+  var sleepWord   = state.sleepHours >= 7 ? 'paying off' : state.sleepHours >= 6 ? 'decent' : 'worth improving';
+  var ketoLabel   = state.ketones >= 1.5 ? 'deep ketosis' : state.ketones >= 0.5 ? 'light ketosis' : 'below threshold';
+  el.innerHTML = 'Your <em>energy</em> is ' + energyWord + ' today — ketones at ' + state.ketones.toFixed(1) + ' (' + ketoLabel + '). The ' + state.sleepHours + 'h of sleep is <em>' + sleepWord + '.</em> Keep the momentum going.';
 }
 
 /* ── SAVE ── */
-function saveCheckin() {
-  var btn = document.getElementById('saveBtn');
-  var spin = document.getElementById('saveSpin');
-  var txt = document.getElementById('saveTxt');
-  btn.disabled = true;
-  spin.style.display = 'block';
-  txt.textContent = 'Saving…';
+function ciSave() {
+  var btn = document.getElementById('submitBtn');
+  if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
 
-  var xp = calcXP();
+  var moodMap = { amazing:5, good:4, ok:3, low:2, rough:1 };
+  var mood_level    = moodMap[state.mood] || 3;
+  var energy_level  = Math.min(5, Math.max(1, Math.round(state.energy / 2)));
+  var hunger_level  = Math.min(5, Math.max(1, Math.round(state.hunger / 2)));
+  var sleep_quality = state.sleepQuality > 0 ? Math.min(5, Math.max(1, Math.round(state.sleepQuality / 2))) : null;
+
+  var xp = 50;
+  if (state.water >= 8) xp += 10;
+  if (state.notes.length > 20) xp += 5;
 
   var payload = {
-    energy_level:   state.energy   || 3,
-    mood_level:     state.mood     || 3,
-    hunger_level:   state.hunger   || 3,
-    brain_fog:      state.symptoms.includes('brain_fog'),
-    had_headache:   state.symptoms.includes('headache'),
-    had_fatigue:    state.symptoms.includes('fatigue'),
-    had_cravings:   state.symptoms.includes('irritable'),
-    followed_meals: state.followed_meals,
-    water_glasses:  state.water || 0,
-    fasted_today:   state.completed_fast,
-    note:           state.note,
-    xp_earned:      xp,
-    symptoms:       Array.from(symptomsSelected),
-    sleep_hours:    state.sleep_hours || null,
-    sleep_quality:  state.sleep_quality || null,
-    took_sodium:    state.sodium,
-    took_potassium: state.potassium,
-    took_magnesium: state.magnesium,
-    electrolytes: {
-      sodium:    state.sodium,
-      potassium: state.potassium,
-      magnesium: state.magnesium,
-    },
-    client_date: new Date().toLocaleDateString('en-CA'),
+    energy_level:  energy_level,
+    mood_level:    mood_level,
+    hunger_level:  hunger_level,
+    water_glasses: state.water,
+    sleep_hours:   state.sleepHours || null,
+    sleep_quality: sleep_quality,
+    note:          state.notes,
+    xp_earned:     xp,
+    client_date:   new Date().toLocaleDateString('en-CA'),
   };
 
   fetch('/api/checkin/save', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   }).then(function(res) {
-    if (!res.ok) throw new Error('Failed');
-
-    document.getElementById('soDay').textContent = currentDay;
-    document.getElementById('soXP').textContent = xp;
-
-    var insights = buildInsights();
-    document.getElementById('soInsightsList').innerHTML = insights.map(function(ins) {
-      return '<div class="so-insight-item"><div class="soi-dot" style="background:' + ins.c + ';box-shadow:0 0 6px ' + ins.c + '88;"></div><div>' + ins.t + '</div></div>';
-    }).join('');
-
-    if (state.symptoms.includes('none') || state.symptoms.length === 0) {
-      document.getElementById('soSub').textContent = "You're feeling great! Keep this momentum going. Your body is adapting beautifully.";
-    } else if (state.followed_meals && state.water >= 8) {
-      document.getElementById('soSub').textContent = "Strong compliance today despite some symptoms. Your consistency is what makes the difference.";
+    if (!res.ok) throw new Error('failed');
+    return res.json();
+  }).then(function(data) {
+    // Save weight separately if it changed
+    if (Math.abs(state.weight - prefillWeight) > 0.05) {
+      fetch('/api/profile/add-weight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weight: state.weight, logged_date: new Date().toLocaleDateString('en-CA') }),
+      }).catch(function() {});
     }
 
-    document.getElementById('successOverlay').classList.add('show');
+    var earned = (data && data.xp_earned) ? data.xp_earned : xp;
+    var soXP = document.getElementById('soXP');
+    if (soXP) soXP.textContent = earned;
+    var soDay = document.getElementById('soDay');
+    if (soDay) soDay.textContent = currentDay;
 
+    var overlay = document.getElementById('successOverlay');
+    if (overlay) overlay.classList.add('show');
+
+    if (btn) { btn.classList.add('done'); btn.textContent = '✓ Check-in saved'; btn.disabled = false; }
+
+    // Check achievements
     fetch('/api/achievements/check', { method: 'POST' })
       .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.newAchievements && data.newAchievements.length > 0) {
-          data.newAchievements.forEach(function(a) { showAchievementToast(a.icon, a.name, a.desc); });
+      .then(function(d) {
+        if (d.newAchievements && d.newAchievements.length) {
+          d.newAchievements.forEach(function(a) { showAchievementToast(a.icon, a.name, a.desc); });
         }
       }).catch(function() {});
   }).catch(function() {
-    btn.disabled = false; spin.style.display='none'; txt.textContent = alreadyDone ? 'Update Check-in ✏️' : 'Complete Check-in · +50 XP ⚡';
-    showToast('❌ Failed to save. Try again.','error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Save check-in →'; }
+    ciShowToast('❌ Failed to save. Please try again.');
   });
+}
+
+/* ── TOAST ── */
+function ciShowToast(msg) {
+  var t = document.getElementById('ciToast');
+  if (!t) return;
+  t.innerHTML = '<span>' + msg + '</span>';
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 3500);
 }
 
 /* ── ACHIEVEMENT TOAST ── */
 function showAchievementToast(icon, name, desc) {
   var el = document.createElement('div');
-  el.style.cssText = 'position:fixed;bottom:5rem;right:1.25rem;z-index:9999;background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(139,92,246,.12));border:1.5px solid rgba(245,158,11,.45);border-radius:16px;padding:.875rem 1.1rem;max-width:280px;box-shadow:0 12px 40px rgba(0,0,0,.4);animation:achIn .4s cubic-bezier(.4,0,.2,1);backdrop-filter:blur(16px);';
-  el.innerHTML = '<div style="display:flex;align-items:center;gap:.6rem;"><span style="font-size:1.6rem;">' + icon + '</span><div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:rgba(245,158,11,.9);margin-bottom:.1rem;">Achievement Unlocked!</div><div style="font-size:.85rem;font-weight:800;color:#fde68a;">' + name + '</div><div style="font-size:.72rem;color:rgba(255,255,255,.6);margin-top:.1rem;">' + desc + '</div></div></div>';
-  if (!document.getElementById('achKf')) {
-    var s = document.createElement('style'); s.id='achKf';
-    s.textContent = '@keyframes achIn{from{opacity:0;transform:translateY(20px) scale(.95);}to{opacity:1;transform:translateY(0) scale(1);}}';
-    document.head.appendChild(s);
-  }
+  el.style.cssText = 'position:fixed;bottom:5rem;right:1.25rem;z-index:9999;background:linear-gradient(135deg,rgba(182,255,60,.18),rgba(255,145,77,.12));border:1.5px solid rgba(182,255,60,.45);border-radius:16px;padding:.875rem 1.1rem;max-width:280px;box-shadow:0 12px 40px rgba(0,0,0,.25);backdrop-filter:blur(16px);';
+  el.innerHTML = '<div style="display:flex;align-items:center;gap:.6rem;"><span style="font-size:1.6rem;">' + icon + '</span><div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:rgba(182,255,60,.9);margin-bottom:.1rem;">Achievement Unlocked!</div><div style="font-size:.85rem;font-weight:800;color:var(--ink);">' + name + '</div><div style="font-size:.72rem;color:var(--muted);margin-top:.1rem;">' + desc + '</div></div></div>';
   document.body.appendChild(el);
   setTimeout(function() {
-    el.style.transition='all .4s ease'; el.style.opacity='0'; el.style.transform='translateY(10px)';
+    el.style.transition = 'all .4s ease';
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(10px)';
     setTimeout(function() { el.remove(); }, 400);
   }, 4000);
 }
 
-/* ── TOAST ── */
-function showToast(msg, type) {
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast toast-' + (type || 'success') + ' show';
-  setTimeout(function() { t.classList.remove('show'); }, 3200);
-}
+/* ── INIT ── */
+(function() {
+  ciSetMood(state.mood);
 
-/* ── SLEEP ── */
-var sleepMessages = {
-  0:'No sleep logged',2:'Very little sleep — rest more tonight',4:'Below average — aim for 7–8h',
-  5:'Below average — aim for 7–8h',6:'Good — keto adaptation benefits from 7+ hours',
-  7:'Ideal for keto adaptation 👍',8:'Great sleep! Optimal for fat burning',
-  9:'Excellent! Deep sleep boosts ketone production',10:'Plenty of rest',
-  11:'A lot of sleep — normal if recovering',12:'Full 12h sleep logged',
-};
-window.updateSleepHours = function(val) {
-  state.sleep_hours = parseFloat(val);
-  var el = document.getElementById('sleepHoursDisplay');
-  if (el) el.textContent = val + 'h';
-  var msg = document.getElementById('sleepMsg');
-  if (msg) {
-    var key = Math.round(parseFloat(val));
-    var txt = sleepMessages[key] || (val + ' hours logged');
-    msg.textContent = val + ' hours — ' + txt.replace(/^\d+[^—]*— ?/, '');
-  }
-};
-window.setSleepQuality = function(n) {
-  state.sleep_quality = n;
-  document.querySelectorAll('.sleep-star').forEach(function(btn) {
-    var bn = parseInt(btn.getAttribute('data-n'));
-    btn.style.background = bn <= n ? 'rgba(99,102,241,.2)' : 'var(--card2)';
-    btn.style.borderColor = bn <= n ? 'rgba(99,102,241,.5)' : 'var(--border)';
-    btn.style.transform = bn === n ? 'scale(1.15)' : 'scale(1)';
+  // Init water glasses
+  document.querySelectorAll('.water-glass').forEach(function(g) {
+    g.classList.toggle('full', parseInt(g.dataset.i) < state.water);
   });
-};
 
-window.rateStar     = rateStar;
-window.toggleSymptom= toggleSymptom;
-window.toggleComp   = toggleComp;
-window.toggleElec   = toggleElec;
-window.saveCheckin  = saveCheckin;
+  // Init digestion
+  ciSetDigestion('great');
+
+  // Init ketone pin position
+  var pin = document.getElementById('ketonePin');
+  if (pin) pin.style.left = Math.min(100, (state.ketones / 4) * 100).toFixed(1) + '%';
+
+  // Init journal prefill
+  if (state.notes && journalArea) {
+    journalArea.value = state.notes;
+    var cnt = document.getElementById('journalCount');
+    var words = state.notes.trim().split(/\s+/).filter(Boolean).length;
+    if (cnt) cnt.textContent = state.notes.length + ' chars · ~' + words + ' words';
+  }
+
+  updateInsight();
+})();
 </script>
-</div></div></div>
+
 </body>
 </html>
