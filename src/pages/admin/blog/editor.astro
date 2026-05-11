@@ -73,8 +73,9 @@ const CATEGORIES = ['General','Nutrition','Recipes','Success Stories','Tips & Tr
     /* Preview — styled to match the public blog light theme */
     .preview-area{background:#FAF6F1;border:1px solid #E5DED2;border-radius:12px;padding:1.8rem 2rem;min-height:420px;font-size:1rem;line-height:1.82;overflow-y:auto;color:#4A4340;font-family:'Georgia',serif;}
     .preview-area h1{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:1.8rem;font-weight:800;color:#16110F;margin:1.5rem 0 .7rem;line-height:1.2;}
-    .preview-area h2{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:1.4rem;font-weight:800;color:#16110F;margin:2rem 0 .6rem;padding-bottom:.35rem;border-bottom:2px solid #E5DED2;line-height:1.25;}
-    .preview-area h3{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:1.1rem;font-weight:700;color:#16110F;margin:1.6rem 0 .45rem;line-height:1.25;}
+    .preview-area h2{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:1.4rem;font-weight:800;color:#16110F;margin:2rem 0 .6rem;border-left:4px solid #FF5C7A;padding-left:16px;line-height:1.25;}
+    .preview-area h3{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:1.1rem;font-weight:700;color:#FF5C7A;margin:1.6rem 0 .45rem;line-height:1.25;}
+    .preview-area h4{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:.95rem;font-weight:700;color:#16110F;margin:1.2rem 0 .35rem;text-transform:uppercase;letter-spacing:.06em;}
     .preview-area p{margin:0 0 1.25em;color:#4A4340;}
     .preview-area p:first-of-type{font-size:1.08rem;color:#16110F;}
     .preview-area ul,.preview-area ol{padding-left:1.5rem;margin:0 0 1.2em;color:#4A4340;}
@@ -88,6 +89,16 @@ const CATEGORIES = ['General','Nutrition','Recipes','Success Stories','Tips & Tr
     .preview-area a{color:#FF5C7A;text-decoration:underline;}
     .preview-area hr{border:none;border-top:1px solid #E5DED2;margin:2rem 0;}
     .preview-area img{border-radius:12px;max-width:100%;margin:1.2rem auto;display:block;}
+    .preview-area table{width:100%;border-collapse:separate;border-spacing:0;border-radius:14px;overflow:hidden;margin:1.5rem 0;font-size:.9rem;}
+    .preview-area table thead tr{background:#16110F;}
+    .preview-area table thead th{padding:.55rem 1rem;font-weight:700;color:#fff;text-align:left;border:none;}
+    .preview-area table tbody tr:nth-child(even){background:rgba(22,17,15,.05);}
+    .preview-area table tbody td{padding:.5rem 1rem;color:#4A4340;border-top:1px solid #E5DED2;}
+    .preview-area .callout{padding:14px 20px;margin:1.8rem 0;border-radius:12px;border-left:4px solid;font-style:normal;}
+    .preview-area .callout.note{background:rgba(59,130,246,.07);border-color:#3b82f6;}
+    .preview-area .callout.tip{background:rgba(132,204,22,.08);border-color:#84cc16;}
+    .preview-area .callout.warning{background:rgba(245,158,11,.08);border-color:#f59e0b;}
+    .preview-area .callout p{margin:0;font-style:normal;color:#16110F;}
     .preview-label{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);padding:.35rem .8rem;background:var(--card2);border-radius:6px 6px 0 0;border:1px solid var(--border);border-bottom:none;display:inline-block;margin-bottom:-1px;}
 
     /* Toolbar */
@@ -133,6 +144,48 @@ const CATEGORIES = ['General','Nutrition','Recipes','Success Stories','Tips & Tr
     .save-status.err{color:#ef9494;}
 
     .char-count{font-size:.7rem;color:var(--muted);text-align:right;margin-top:.2rem;}
+
+    /* Full-page article preview overlay */
+    .fp-overlay{position:fixed;inset:0;background:#FAF6F1;z-index:1000;display:none;overflow-y:auto;}
+    .fp-overlay.open{display:block;}
+    .fp-bar{position:sticky;top:0;background:#FAF6F1;border-bottom:1px solid #E5DED2;padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;z-index:10;}
+    .fp-bar-title{font-size:.82rem;font-weight:700;color:#8B7B74;text-transform:uppercase;letter-spacing:.06em;}
+    .fp-close-btn{padding:.42rem .9rem;background:#16110F;color:#fff;border:none;border-radius:8px;font-size:.8rem;font-weight:700;cursor:pointer;}
+    .fp-inner{max-width:760px;margin:0 auto;padding:2.5rem 1.5rem 6rem;}
+    .fp-cover-img{width:100%;height:340px;object-fit:cover;border-radius:20px;margin-bottom:2rem;}
+    .fp-meta-row{display:flex;align-items:center;gap:.75rem;margin-bottom:.9rem;flex-wrap:wrap;}
+    .fp-cat{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#FF5C7A;background:rgba(255,92,122,.1);padding:.25rem .65rem;border-radius:6px;}
+    .fp-rt{font-size:.8rem;color:#8B7B74;}
+    .fp-title{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:2.5rem;font-weight:800;color:#16110F;line-height:1.12;margin-bottom:.65rem;}
+    .fp-excerpt{font-size:1.05rem;color:#8B7B74;line-height:1.65;padding-bottom:1.5rem;border-bottom:1px solid #E5DED2;margin-bottom:2rem;}
+    .fp-prose{font-size:1rem;line-height:1.82;color:#4A4340;font-family:'Georgia',serif;}
+    .fp-prose h1{font-family:-apple-system,sans-serif;font-size:1.8rem;font-weight:800;color:#16110F;margin:1.5rem 0 .7rem;}
+    .fp-prose h2{font-family:-apple-system,sans-serif;font-size:1.4rem;font-weight:800;color:#16110F;margin:2rem 0 .6rem;border-left:4px solid #FF5C7A;padding-left:16px;}
+    .fp-prose h3{font-family:-apple-system,sans-serif;font-size:1.1rem;font-weight:700;color:#FF5C7A;margin:1.6rem 0 .45rem;}
+    .fp-prose h4{font-family:-apple-system,sans-serif;font-size:.95rem;font-weight:700;color:#16110F;margin:1.2rem 0 .35rem;text-transform:uppercase;letter-spacing:.06em;}
+    .fp-prose p{margin:0 0 1.25em;color:#4A4340;}
+    .fp-prose p:first-of-type{font-size:1.08rem;color:#16110F;}
+    .fp-prose ul,.fp-prose ol{padding-left:1.5rem;margin:0 0 1.2em;color:#4A4340;}
+    .fp-prose li{margin-bottom:.35em;}
+    .fp-prose li::marker{color:#FF5C7A;}
+    .fp-prose strong{color:#16110F;font-weight:700;}
+    .fp-prose em{font-style:italic;color:#16110F;}
+    .fp-prose code{background:#F2EDE5;padding:.15rem .4rem;border-radius:5px;font-size:.88em;color:#16110F;font-family:monospace;}
+    .fp-prose blockquote{border-left:4px solid #FF5C7A;padding:14px 20px;margin:1.8rem 0;background:rgba(255,92,122,.05);border-radius:0 12px 12px 0;}
+    .fp-prose blockquote p{margin:0;color:#16110F;font-style:italic;font-size:1.05em;}
+    .fp-prose a{color:#FF5C7A;text-decoration:underline;}
+    .fp-prose hr{border:none;border-top:1px solid #E5DED2;margin:2rem 0;}
+    .fp-prose img{border-radius:12px;max-width:100%;margin:1.2rem auto;display:block;}
+    .fp-prose table{width:100%;border-collapse:separate;border-spacing:0;border-radius:14px;overflow:hidden;margin:1.5rem 0;font-size:.9rem;}
+    .fp-prose table thead tr{background:#16110F;}
+    .fp-prose table thead th{padding:.55rem 1rem;font-weight:700;color:#fff;text-align:left;border:none;}
+    .fp-prose table tbody tr:nth-child(even){background:rgba(22,17,15,.05);}
+    .fp-prose table tbody td{padding:.5rem 1rem;color:#4A4340;border-top:1px solid #E5DED2;}
+    .fp-prose .callout{padding:14px 20px;margin:1.8rem 0;border-radius:12px;border-left:4px solid;}
+    .fp-prose .callout.note{background:rgba(59,130,246,.07);border-color:#3b82f6;}
+    .fp-prose .callout.tip{background:rgba(132,204,22,.08);border-color:#84cc16;}
+    .fp-prose .callout.warning{background:rgba(245,158,11,.08);border-color:#f59e0b;}
+    .fp-prose .callout p{margin:0;font-style:normal;color:#16110F;}
   </style>
 </head>
 <body>
@@ -178,13 +231,18 @@ const CATEGORIES = ['General','Nutrition','Recipes','Success Stories','Tips & Tr
     <div class="card">
       <div class="card-label">Content</div>
       <div class="toolbar" id="toolbar">
-        <button class="tool-btn" data-action="bold" title="Bold">B</button>
+        <button class="tool-btn" data-action="bold" title="Bold"><strong>B</strong></button>
         <button class="tool-btn" data-action="italic" title="Italic"><em>I</em></button>
         <button class="tool-btn" data-action="h2" title="Heading 2">H2</button>
         <button class="tool-btn" data-action="h3" title="Heading 3">H3</button>
+        <button class="tool-btn" data-action="h4" title="Heading 4">H4</button>
         <button class="tool-btn" data-action="ul" title="Bullet list">• List</button>
         <button class="tool-btn" data-action="ol" title="Numbered list">1. List</button>
         <button class="tool-btn" data-action="blockquote" title="Blockquote">" Quote</button>
+        <button class="tool-btn" data-action="callout-note" title="Note callout">📌 Note</button>
+        <button class="tool-btn" data-action="callout-tip" title="Tip callout">💡 Tip</button>
+        <button class="tool-btn" data-action="callout-warn" title="Warning callout">⚠️ Warn</button>
+        <button class="tool-btn" data-action="table" title="Insert table">⊞ Table</button>
         <button class="tool-btn" data-action="code" title="Code">`Code`</button>
         <button class="tool-btn" data-action="link" title="Link">🔗 Link</button>
         <button class="tool-btn" data-action="image" title="Image">🖼 Image</button>
@@ -224,6 +282,9 @@ const CATEGORIES = ['General','Nutrition','Recipes','Success Stories','Tips & Tr
       </button>
       <button class="btn btn-draft" onclick="savePost(false)">
         💾 Save Draft
+      </button>
+      <button class="btn btn-draft" onclick="openFullPreview()" style="margin-top:.2rem">
+        🔍 Full Preview
       </button>
       <div class="save-status" id="saveStatus"></div>
       {isEdit && (
@@ -286,6 +347,24 @@ const CATEGORIES = ['General','Nutrition','Recipes','Success Stories','Tips & Tr
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- Full-page preview modal -->
+<div class="fp-overlay" id="fpOverlay">
+  <div class="fp-bar">
+    <span class="fp-bar-title">Article Preview</span>
+    <button class="fp-close-btn" onclick="document.getElementById('fpOverlay').classList.remove('open')">✕ Close Preview</button>
+  </div>
+  <div class="fp-inner">
+    <img id="fpCoverImg" class="fp-cover-img" src="" alt="" style="display:none" onerror="this.style.display='none'" />
+    <div class="fp-meta-row">
+      <span class="fp-cat" id="fpCategory"></span>
+      <span class="fp-rt" id="fpReadTime"></span>
+    </div>
+    <h1 class="fp-title" id="fpTitle"></h1>
+    <p class="fp-excerpt" id="fpExcerpt"></p>
+    <div class="fp-prose" id="fpProse"></div>
   </div>
 </div>
 
@@ -380,16 +459,21 @@ document.getElementById('toolbar').addEventListener('click', function(e) {
     return;
   }
   var map = {
-    bold:       ['**', '**', sel || 'bold text'],
-    italic:     ['_', '_', sel || 'italic text'],
-    h2:         ['## ', '', sel || 'Heading'],
-    h3:         ['### ', '', sel || 'Heading'],
-    ul:         ['- ', '', sel || 'List item'],
-    ol:         ['1. ', '', sel || 'List item'],
-    blockquote: ['> ', '', sel || 'Quote text'],
-    code:       ['`', '`', sel || 'code'],
-    hr:         ['\n---\n', '', ''],
-    link:       ['[', '](url)', sel || 'link text'],
+    bold:         ['**', '**', sel || 'bold text'],
+    italic:       ['_', '_', sel || 'italic text'],
+    h2:           ['## ', '', sel || 'Heading'],
+    h3:           ['### ', '', sel || 'Heading'],
+    h4:           ['#### ', '', sel || 'Heading'],
+    ul:           ['- ', '', sel || 'List item'],
+    ol:           ['1. ', '', sel || 'List item'],
+    blockquote:   ['> ', '', sel || 'Quote text'],
+    'callout-note': ['> 📌 **Note:** ', '', sel || 'Your note here'],
+    'callout-tip':  ['> 💡 **Tip:** ', '', sel || 'Your tip here'],
+    'callout-warn': ['> ⚠️ **Warning:** ', '', sel || 'Your warning here'],
+    table:        ['\n| Header | Header | Header |\n|--------|--------|--------|\n| Cell   | Cell   | Cell   |\n| Cell   | Cell   | Cell   |\n', '', ''],
+    code:         ['`', '`', sel || 'code'],
+    hr:           ['\n---\n', '', ''],
+    link:         ['[', '](url)', sel || 'link text'],
   };
   var parts = map[action];
   if (!parts) return;
@@ -399,6 +483,17 @@ document.getElementById('toolbar').addEventListener('click', function(e) {
   contentArea.setSelectionRange(cursor, cursor);
   contentArea.focus();
 });
+
+/* ── Markdown → HTML with callout support ── */
+function renderMarkdown(content) {
+  if (typeof marked === 'undefined') return '<pre>' + (content || '') + '</pre>';
+  var html = marked.parse(content || '*Nothing to preview yet.*');
+  // Promote emoji-prefixed blockquotes to styled callouts
+  html = html.replace(/<blockquote>\n?<p>(📌[\s\S]*?)<\/p>\n?<\/blockquote>/g, '<div class="callout note"><p>$1</p></div>');
+  html = html.replace(/<blockquote>\n?<p>(💡[\s\S]*?)<\/p>\n?<\/blockquote>/g, '<div class="callout tip"><p>$1</p></div>');
+  html = html.replace(/<blockquote>\n?<p>(⚠️[\s\S]*?)<\/p>\n?<\/blockquote>/g, '<div class="callout warning"><p>$1</p></div>');
+  return html;
+}
 
 /* ── Write / Preview tabs ── */
 function switchTab(tab) {
@@ -413,9 +508,7 @@ function switchTab(tab) {
   } else {
     previewTab.classList.add('active'); writeTab.classList.remove('active');
     area.style.display = 'none'; previewWrap.style.display = 'block';
-    preview.innerHTML = typeof marked !== 'undefined'
-      ? marked.parse(area.value || '*Nothing to preview yet.*')
-      : '<pre>' + area.value + '</pre>';
+    preview.innerHTML = renderMarkdown(area.value);
   }
 }
 
@@ -495,6 +588,37 @@ window.confirmDelete = function confirmDelete(id) {
     else alert('Delete failed: ' + d.error);
   });
 }
+
+/* ── Full-page preview ── */
+window.openFullPreview = function openFullPreview() {
+  var overlay   = document.getElementById('fpOverlay');
+  var coverUrl  = document.getElementById('coverInput').value.trim();
+  var title     = document.getElementById('titleInput').value.trim() || 'Untitled Article';
+  var excerpt   = document.getElementById('excerptInput').value.trim();
+  var category  = document.getElementById('categoryInput').value;
+  var readTime  = document.getElementById('readTimeInput').value;
+  var content   = document.getElementById('contentArea').value;
+
+  var coverImg = document.getElementById('fpCoverImg');
+  if (coverUrl) { coverImg.src = coverUrl; coverImg.style.display = 'block'; }
+  else { coverImg.style.display = 'none'; }
+
+  document.getElementById('fpTitle').textContent = title;
+  document.getElementById('fpExcerpt').textContent = excerpt || '';
+  document.getElementById('fpCategory').textContent = category;
+  document.getElementById('fpReadTime').textContent = (readTime || 5) + ' min read';
+  document.getElementById('fpProse').innerHTML = renderMarkdown(content);
+
+  overlay.classList.add('open');
+  overlay.scrollTop = 0;
+};
+
+/* Close full preview on Escape */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.getElementById('fpOverlay').classList.remove('open');
+  }
+});
 
 /* ── Keyboard shortcut: Ctrl+S = Save Draft ── */
 document.addEventListener('keydown', function(e) {
