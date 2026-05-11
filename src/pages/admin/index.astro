@@ -18,10 +18,12 @@ const [
   { data: allUsers },
   { data: allJourneys },
   { data: pendingRaw },
+  { count: totalLeads },
 ] = await Promise.all([
   adminDb.from('profiles').select('*').order('created_at', { ascending: false }),
   adminDb.from('user_journey').select('*'),
   adminDb.from('pending_activations').select('*').order('created_at', { ascending: false }),
+  adminDb.from('leads').select('*', { count: 'exact', head: true }),
 ]);
 
 const journeyMap = new Map((allJourneys || []).map(j => [j.user_id, j]));
@@ -229,6 +231,7 @@ const activeRevenuePct = totalUsers > 0 ? Math.round((activeSubscribers / totalU
   </div>
   <div class="nav-links">
     <a href="/admin" class="nav-link">Dashboard</a>
+    <a href="/admin/leads" class="nav-link">Leads &amp; Email</a>
     <a href="/admin/analytics" class="nav-link">Analytics</a>
     <a href="/admin/moderation" class="nav-link">Moderation</a>
     <a href="/admin/blog" class="nav-link">Articles</a>
@@ -296,6 +299,12 @@ const activeRevenuePct = totalUsers > 0 ? Math.round((activeSubscribers / totalU
       <div class="stat-label">Pending</div>
       <div class="stat-value">{pending.length}</div>
       <div class="stat-sub">Awaiting activation</div>
+    </div>
+    <div class="stat-card" style="cursor:pointer;" onclick="window.location.href='/admin/leads'">
+      <div class="stat-icon">📬</div>
+      <div class="stat-label">Leads</div>
+      <div class="stat-value">{totalLeads ?? 0}</div>
+      <div class="stat-sub">Free-book subscribers</div>
     </div>
   </div>
 

@@ -1,0 +1,556 @@
+---
+import { createClient } from '@supabase/supabase-js';
+
+const adminSession = Astro.cookies.get('admin-session')?.value;
+if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
+
+const env = (Astro.locals as any)?.runtime?.env || {};
+const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL || env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+const db = createClient(SUPABASE_URL, SERVICE_KEY);
+
+const { data: leadsRaw } = await db
+  .from('leads')
+  .select('*')
+  .order('created_at', { ascending: false });
+
+const leads = leadsRaw || [];
+const total = leads.length;
+const converted = leads.filter((l: any) => l.converted).length;
+const unconverted = total - converted;
+const oneWeekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+const thisWeek = leads.filter((l: any) => l.created_at >= oneWeekAgo).length;
+const convRate = total > 0 ? Math.round((converted / total) * 100) : 0;
+
+const nurtureDist = [0, 1, 2, 3, 4].map(step => ({
+  step,
+  count: leads.filter((l: any) => (l.nurture_step ?? 0) === step).length,
+  label: step === 0 ? 'Step 0 — Book sent' : step === 1 ? 'Step 1 — Day 2' : step === 2 ? 'Step 2 — Day 5' : step === 3 ? 'Step 3 — Day 8' : 'Done',
+}));
+
+const TEMPLATES = [
+  { id: 'free_book',     name: 'Free Book',        subject: '📖 Your free keto recipe book is here!',                      fn: 'sendFreeBookEmail',     desc: 'Delivered when someone signs up at /free-book' },
+  { id: 'nurture1',      name: 'Nurture 1',         subject: 'Did you try the keto recipes? 🍳',                            fn: 'sendLeadNurture1',      desc: 'Day 2 — recipe follow-up' },
+  { id: 'nurture2',      name: 'Nurture 2',         subject: 'The science behind why keto actually works 🔬',               fn: 'sendLeadNurture2',      desc: 'Day 5 — why keto works' },
+  { id: 'nurture3',      name: 'Nurture 3',         subject: 'The #1 mistake that kills keto results ⚠️',                  fn: 'sendLeadNurture3',      desc: 'Day 8 — hidden carbs warning' },
+  { id: 'nurture4',      name: 'Nurture 4',         subject: 'One last thing before we go quiet 👋',                        fn: 'sendLeadNurture4',      desc: 'Day 12 — final nudge' },
+  { id: 'welcome',       name: 'Welcome',           subject: 'Welcome to Keto Journey! Your plan is ready 🥑',              fn: 'sendWelcomeEmail',      desc: 'Sent right after subscription' },
+  { id: 'streak_warn',   name: 'Streak Warning',    subject: '⚠️ Your streak expires at midnight — check in now!',          fn: 'sendStreakWarningEmail', desc: 'Evening — streak at risk' },
+  { id: 'winback',       name: 'Win-back',          subject: 'We miss you! 👋',                                             fn: 'sendWinbackEmail',      desc: 'Sent after 3 days no check-in' },
+  { id: 'milestone',     name: 'Milestone',         subject: '🎉 Day milestone unlocked!',                                  fn: 'sendMilestoneEmail',    desc: 'Day 7 / 14 / 21 / 30 reached' },
+  { id: 'weekly',        name: 'Weekly Summary',    subject: '📊 Your weekly keto summary',                                 fn: 'sendWeeklySummaryEmail', desc: 'Sent every Monday' },
+];
+
+const leadsJson = JSON.stringify(leads.map((l: any) => ({
+  id: l.id,
+  email: l.email,
+  name: l.name || '',
+  nurture_step: l.nurture_step ?? 0,
+  converted: !!l.converted,
+  last_email_sent_at: l.last_email_sent_at || '',
+  created_at: l.created_at,
+})));
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Leads &amp; Email · Admin</title>
+  <meta name="robots" content="noindex,nofollow"/>
+  <style>
+    :root{--bg:#060d09;--bg2:#0a1510;--card:#0d1a0f;--card2:#111f13;--border:rgba(255,92,122,.12);--border2:rgba(255,92,122,.25);--text:#dfeedd;--soft:#4d7055;--muted:#233328;--green:#FF5C7A;--green2:#B6FF3C;--gold:#f59e0b;--red:#ef4444;--blue:#3b82f6;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);}
+    a{color:var(--green);text-decoration:none;}a:hover{text-decoration:underline;}
+
+    .admin-nav{background:var(--card);border-bottom:1px solid var(--border);padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+    .nav-brand{display:flex;align-items:center;gap:.6rem;}
+    .nav-brand-icon{width:36px;height:36px;background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+    .nav-brand-text{font-size:1rem;font-weight:800;color:var(--text);letter-spacing:-.02em;}
+    .nav-brand-sub{font-size:.7rem;color:var(--soft);font-weight:600;}
+    .nav-links{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;}
+    .nav-link{font-size:.82rem;font-weight:600;color:var(--soft);padding:.4rem .8rem;border-radius:8px;transition:all .2s;}
+    .nav-link:hover,.nav-link.active{color:var(--text);background:var(--muted);text-decoration:none;}
+
+    .page{max-width:1400px;margin:0 auto;padding:2rem 1.5rem 5rem;}
+    .page-header{margin-bottom:2rem;}
+    .page-title{font-size:1.8rem;font-weight:900;color:var(--text);}
+    .page-sub{font-size:.85rem;color:var(--soft);margin-top:.3rem;}
+
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:2rem;}
+    .stat-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.3rem 1.5rem;}
+    .stat-icon{font-size:1.4rem;margin-bottom:.5rem;}
+    .stat-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin-bottom:.25rem;}
+    .stat-value{font-size:1.9rem;font-weight:900;color:var(--green2);line-height:1;}
+    .stat-value.gold{color:var(--gold);}
+    .stat-value.red{color:#ef9494;}
+    .stat-sub{font-size:.72rem;color:var(--soft);margin-top:.25rem;}
+
+    .funnel-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:1.5rem;margin-bottom:1.5rem;}
+    .funnel-title{font-size:.95rem;font-weight:800;color:var(--text);margin-bottom:1rem;}
+    .funnel-steps{display:flex;gap:.75rem;flex-wrap:wrap;}
+    .funnel-step{flex:1;min-width:100px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.85rem 1rem;text-align:center;}
+    .funnel-step-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-bottom:.3rem;}
+    .funnel-step-count{font-size:1.5rem;font-weight:900;color:var(--green);}
+
+    .card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:1.5rem;margin-bottom:1.5rem;}
+    .card-title{font-size:1rem;font-weight:800;color:var(--text);margin-bottom:1.2rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;}
+
+    .table-toolbar{display:flex;align-items:center;gap:.75rem;margin-bottom:1.2rem;flex-wrap:wrap;}
+    .search-input{flex:1;min-width:200px;padding:.6rem 1rem;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:.875rem;}
+    .search-input:focus{outline:none;border-color:var(--green);}
+    .filter-select{padding:.6rem .9rem;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:.82rem;cursor:pointer;}
+    .filter-select:focus{outline:none;border-color:var(--green);}
+
+    .table-wrap{overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;}
+    th{padding:.75rem 1rem;text-align:left;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);border-bottom:1px solid var(--border);white-space:nowrap;}
+    td{padding:.8rem 1rem;border-bottom:1px solid rgba(255,92,122,.06);font-size:.875rem;vertical-align:middle;}
+    tr:last-child td{border-bottom:none;}
+    tr:hover td{background:rgba(255,92,122,.02);}
+
+    .badge{display:inline-flex;align-items:center;padding:.22rem .65rem;border-radius:999px;font-size:.7rem;font-weight:700;white-space:nowrap;}
+    .badge-converted{background:rgba(182,255,60,.12);color:var(--green2);border:1px solid rgba(182,255,60,.25);}
+    .badge-pending{background:rgba(245,158,11,.1);color:var(--gold);border:1px solid rgba(245,158,11,.2);}
+    .badge-step{background:rgba(59,130,246,.1);color:#93c5fd;border:1px solid rgba(59,130,246,.2);}
+    .badge-done{background:rgba(107,114,128,.1);color:var(--soft);border:1px solid var(--border);}
+
+    .btn{display:inline-flex;align-items:center;gap:.35rem;padding:.38rem .8rem;border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s;border:none;white-space:nowrap;}
+    .btn-primary{background:var(--green);color:#fff;}
+    .btn-primary:hover{opacity:.9;}
+    .btn-edit{background:rgba(59,130,246,.12);color:#93c5fd;border:1px solid rgba(59,130,246,.2);}
+    .btn-edit:hover{background:rgba(59,130,246,.2);}
+    .btn-success{background:rgba(182,255,60,.1);color:var(--green2);border:1px solid rgba(182,255,60,.2);}
+    .btn-success:hover{background:rgba(182,255,60,.18);}
+    .btn-danger{background:rgba(239,68,68,.1);color:#ef9494;border:1px solid rgba(239,68,68,.2);}
+    .btn-danger:hover{background:rgba(239,68,68,.18);}
+    .btn-ghost{background:transparent;color:var(--soft);border:1px solid var(--border);}
+    .btn-ghost:hover{background:var(--muted);color:var(--text);}
+
+    .empty-row td{text-align:center;color:var(--soft);padding:2rem;font-size:.875rem;}
+
+    /* Compose / Bulk modals */
+    .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center;}
+    .modal-backdrop.open{display:flex;}
+    .modal{background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:2rem;width:100%;max-width:540px;margin:1rem;max-height:90vh;overflow-y:auto;}
+    .modal-title{font-size:1.1rem;font-weight:800;color:var(--text);margin-bottom:.25rem;}
+    .modal-sub{font-size:.8rem;color:var(--soft);margin-bottom:1.5rem;}
+    .form-group{margin-bottom:1rem;}
+    .form-label{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);margin-bottom:.4rem;}
+    .form-control{width:100%;padding:.6rem .9rem;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:.875rem;font-family:inherit;}
+    .form-control:focus{outline:none;border-color:var(--green);}
+    textarea.form-control{resize:vertical;min-height:160px;font-family:'Courier New',monospace;font-size:.82rem;}
+    .modal-actions{display:flex;gap:.75rem;margin-top:1.5rem;}
+    .modal-actions .btn{flex:1;justify-content:center;padding:.65rem;}
+
+    /* Templates list */
+    .tpl-grid{display:flex;flex-direction:column;gap:.6rem;}
+    .tpl-row{display:flex;align-items:center;gap:1rem;padding:.85rem 1rem;background:var(--card2);border:1px solid var(--border);border-radius:12px;}
+    .tpl-info{flex:1;}
+    .tpl-name{font-size:.85rem;font-weight:700;color:var(--text);}
+    .tpl-subject{font-size:.75rem;color:var(--soft);margin-top:.15rem;font-family:monospace;}
+    .tpl-desc{font-size:.72rem;color:var(--muted);margin-top:.1rem;}
+
+    .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:.9rem 1.4rem;font-size:.875rem;font-weight:600;color:var(--text);z-index:300;transform:translateY(100px);opacity:0;transition:all .3s;}
+    .toast.show{transform:translateY(0);opacity:1;}
+    .toast.success{border-color:rgba(182,255,60,.4);}
+    .toast.error{border-color:rgba(239,68,68,.4);color:#ef9494;}
+  </style>
+</head>
+<body>
+
+<nav class="admin-nav">
+  <div class="nav-brand">
+    <div class="nav-brand-icon">🔐</div>
+    <div>
+      <div class="nav-brand-text">Admin Panel</div>
+      <div class="nav-brand-sub">KetoJourney</div>
+    </div>
+  </div>
+  <div class="nav-links">
+    <a href="/admin" class="nav-link">Dashboard</a>
+    <a href="/admin/leads" class="nav-link active">Leads &amp; Email</a>
+    <a href="/admin/analytics" class="nav-link">Analytics</a>
+    <a href="/admin/moderation" class="nav-link">Moderation</a>
+    <a href="/admin/blog" class="nav-link">Articles</a>
+    <a href="/admin/blog-recipes" class="nav-link">Recipes</a>
+    <a href="/" class="nav-link">← Site</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div class="page-header">
+    <div class="page-title">📬 Leads &amp; Email</div>
+    <div class="page-sub">Manage free-book subscribers, send campaigns, and view template library</div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">📧</div>
+      <div class="stat-label">Total Leads</div>
+      <div class="stat-value">{total}</div>
+      <div class="stat-sub">All free-book subscribers</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">✅</div>
+      <div class="stat-label">Converted</div>
+      <div class="stat-value gold">{converted}</div>
+      <div class="stat-sub">{convRate}% conversion rate</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">⏳</div>
+      <div class="stat-label">Unconverted</div>
+      <div class="stat-value red">{unconverted}</div>
+      <div class="stat-sub">In nurture sequence</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📅</div>
+      <div class="stat-label">This Week</div>
+      <div class="stat-value">{thisWeek}</div>
+      <div class="stat-sub">New in last 7 days</div>
+    </div>
+  </div>
+
+  <!-- Nurture funnel -->
+  <div class="funnel-card">
+    <div class="funnel-title">📊 Nurture Sequence Funnel</div>
+    <div class="funnel-steps">
+      {nurtureDist.map(s => (
+        <div class="funnel-step">
+          <div class="funnel-step-label">{s.label}</div>
+          <div class="funnel-step-count">{s.count}</div>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <!-- Leads table -->
+  <div class="card">
+    <div class="card-title">
+      <span>👥 All Leads ({total})</span>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+        <button class="btn btn-success" onclick="exportCsv()">⬇ Export CSV</button>
+        <button class="btn btn-primary" onclick="openBulkModal()">✉ Bulk Email</button>
+      </div>
+    </div>
+
+    <div class="table-toolbar">
+      <input id="searchLeads" class="search-input" type="text" placeholder="Search by email or name…" />
+      <select id="filterStatus" class="filter-select">
+        <option value="">All</option>
+        <option value="converted">Converted</option>
+        <option value="unconverted">Unconverted</option>
+      </select>
+      <select id="filterStep" class="filter-select">
+        <option value="">All Steps</option>
+        <option value="0">Step 0</option>
+        <option value="1">Step 1</option>
+        <option value="2">Step 2</option>
+        <option value="3">Step 3</option>
+        <option value="4">Done</option>
+      </select>
+    </div>
+
+    <div class="table-wrap">
+      <table id="leadsTable">
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Nurture Step</th>
+            <th>Last Email</th>
+            <th>Joined</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {leads.length === 0 && (
+            <tr class="empty-row"><td colspan="7">No leads yet</td></tr>
+          )}
+          {leads.map((l: any) => {
+            const nStep = l.nurture_step ?? 0;
+            const isConverted = !!l.converted;
+            const lastSent = l.last_email_sent_at
+              ? new Date(l.last_email_sent_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+              : '—';
+            const joined = new Date(l.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+            return (
+              <tr
+                data-email={(l.email || '').toLowerCase()}
+                data-name={(l.name || '').toLowerCase()}
+                data-converted={isConverted ? 'converted' : 'unconverted'}
+                data-step={String(nStep)}
+                id={`lead-${l.id}`}
+              >
+                <td style="font-weight:600;">{l.email}</td>
+                <td style="color:var(--soft);">{l.name || '—'}</td>
+                <td>
+                  {isConverted
+                    ? <span class="badge badge-converted">✓ Converted</span>
+                    : <span class="badge badge-pending">In Sequence</span>
+                  }
+                </td>
+                <td>
+                  {nStep < 4
+                    ? <span class="badge badge-step">Step {nStep}</span>
+                    : <span class="badge badge-done">Done</span>
+                  }
+                </td>
+                <td style="font-size:.8rem;color:var(--soft);">{lastSent}</td>
+                <td style="font-size:.8rem;color:var(--soft);">{joined}</td>
+                <td>
+                  <div style="display:flex;gap:.4rem;">
+                    <button class="btn btn-edit" onclick={`openComposeModal('${l.email}','${(l.name || '').replace(/'/g,"\\'")}') `}>✉ Email</button>
+                    <button class="btn btn-danger" onclick={`deleteLead('${l.id}')`}>🗑</button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Template library -->
+  <div class="card">
+    <div class="card-title">📋 Email Template Library</div>
+    <div class="tpl-grid">
+      {TEMPLATES.map(t => (
+        <div class="tpl-row">
+          <div class="tpl-info">
+            <div class="tpl-name">{t.name}</div>
+            <div class="tpl-subject">{t.subject}</div>
+            <div class="tpl-desc">{t.desc}</div>
+          </div>
+          <button class="btn btn-edit" onclick={`openComposeModal('','','${t.subject}')`}>✉ Test Send</button>
+        </div>
+      ))}
+    </div>
+    <p style="font-size:.75rem;color:var(--muted);margin-top:1rem;">
+      Templates are defined in <code style="font-size:.72rem;background:var(--card2);padding:.1rem .4rem;border-radius:4px;">src/lib/email.ts</code>.
+      The nurture sequence runs automatically via <code style="font-size:.72rem;background:var(--card2);padding:.1rem .4rem;border-radius:4px;">/api/cron/lead-nurture</code>.
+    </p>
+  </div>
+
+</div>
+
+<!-- Compose modal (single email) -->
+<div class="modal-backdrop" id="composeModal">
+  <div class="modal">
+    <div class="modal-title">✉ Compose Email</div>
+    <div class="modal-sub" id="composeSub">Send a custom email to a lead</div>
+    <div class="form-group">
+      <label class="form-label" for="composeTo">To</label>
+      <input id="composeTo" class="form-control" type="email" placeholder="email@example.com" />
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="composeSubject">Subject</label>
+      <input id="composeSubject" class="form-control" type="text" placeholder="Subject line…" />
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="composeBody">Body (HTML supported)</label>
+      <textarea id="composeBody" class="form-control" placeholder="<p>Your message here…</p>&#10;&#10;Use basic HTML for formatting."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeComposeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="sendCompose()">✉ Send Email</button>
+    </div>
+    <div id="composeSendStatus" style="font-size:.75rem;text-align:center;margin-top:.75rem;min-height:16px;color:var(--soft);"></div>
+  </div>
+</div>
+
+<!-- Bulk email modal -->
+<div class="modal-backdrop" id="bulkModal">
+  <div class="modal">
+    <div class="modal-title">📢 Bulk Email Campaign</div>
+    <div class="modal-sub">Send to a group of leads or subscribers</div>
+    <div class="form-group">
+      <label class="form-label" for="bulkAudience">Audience</label>
+      <select id="bulkAudience" class="form-control">
+        <option value="unconverted_leads">Unconverted Leads ({unconverted})</option>
+        <option value="all_leads">All Leads ({total})</option>
+        <option value="active_subscribers">Active Subscribers</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="bulkSubject">Subject</label>
+      <input id="bulkSubject" class="form-control" type="text" placeholder="Subject line…" />
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="bulkBody">Body (HTML supported)</label>
+      <textarea id="bulkBody" class="form-control" placeholder="<p>Your message here…</p>&#10;&#10;Use basic HTML for formatting."></textarea>
+    </div>
+    <div style="padding:.7rem;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:10px;font-size:.75rem;color:var(--gold);margin-bottom:.5rem;">
+      ⚠️ This sends a real email to every recipient in the selected audience. Double-check before sending.
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeBulkModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="sendBulk()">🚀 Send Campaign</button>
+    </div>
+    <div id="bulkSendStatus" style="font-size:.75rem;text-align:center;margin-top:.75rem;min-height:16px;color:var(--soft);"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script is:inline define:vars={{ leadsJson }}>
+var allLeads = JSON.parse(leadsJson);
+
+/* ── Search + Filter ── */
+function filterLeads() {
+  var q      = (document.getElementById('searchLeads').value || '').toLowerCase();
+  var status = document.getElementById('filterStatus').value;
+  var step   = document.getElementById('filterStep').value;
+  document.querySelectorAll('#leadsTable tbody tr[data-email]').forEach(function(row) {
+    var match =
+      (!q || (row.getAttribute('data-email') || '').includes(q) || (row.getAttribute('data-name') || '').includes(q))
+      && (!status || row.getAttribute('data-converted') === status)
+      && (!step   || row.getAttribute('data-step')      === step);
+    row.style.display = match ? '' : 'none';
+  });
+}
+document.getElementById('searchLeads').addEventListener('input', filterLeads);
+document.getElementById('filterStatus').addEventListener('change', filterLeads);
+document.getElementById('filterStep').addEventListener('change', filterLeads);
+
+/* ── Export CSV ── */
+window.exportCsv = function exportCsv() {
+  var rows = [['Email','Name','Status','Nurture Step','Last Email Sent','Joined']];
+  allLeads.forEach(function(l) {
+    rows.push([
+      l.email,
+      l.name || '',
+      l.converted ? 'Converted' : 'Unconverted',
+      String(l.nurture_step),
+      l.last_email_sent_at ? l.last_email_sent_at.slice(0,10) : '',
+      l.created_at ? l.created_at.slice(0,10) : '',
+    ]);
+  });
+  var csv = rows.map(function(r) {
+    return r.map(function(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
+  }).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'leads-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click(); URL.revokeObjectURL(url);
+};
+
+/* ── Compose modal (single) ── */
+window.openComposeModal = function openComposeModal(email, name, preSubject) {
+  document.getElementById('composeTo').value = email || '';
+  document.getElementById('composeSubject').value = preSubject || '';
+  document.getElementById('composeBody').value = '';
+  document.getElementById('composeSendStatus').textContent = '';
+  document.getElementById('composeSub').textContent = name ? 'To: ' + name + ' <' + email + '>' : 'Send a custom email to a lead';
+  document.getElementById('composeModal').classList.add('open');
+};
+window.closeComposeModal = function closeComposeModal() {
+  document.getElementById('composeModal').classList.remove('open');
+};
+document.getElementById('composeModal').addEventListener('click', function(e) { if (e.target === this) closeComposeModal(); });
+
+window.sendCompose = function sendCompose() {
+  var to      = document.getElementById('composeTo').value.trim();
+  var subject = document.getElementById('composeSubject').value.trim();
+  var htmlBody = document.getElementById('composeBody').value.trim();
+  var status  = document.getElementById('composeSendStatus');
+  if (!to || !to.includes('@')) { status.textContent = 'Enter a valid email address'; status.style.color = '#ef9494'; return; }
+  if (!subject) { status.textContent = 'Subject is required'; status.style.color = '#ef9494'; return; }
+  if (!htmlBody) { status.textContent = 'Body is required'; status.style.color = '#ef9494'; return; }
+
+  status.textContent = 'Sending…'; status.style.color = 'var(--soft)';
+  fetch('/api/admin/send-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to: to, subject: subject, htmlBody: htmlBody }),
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.success) {
+      status.textContent = '✓ Email sent!'; status.style.color = '#B6FF3C';
+      showToast('Email sent to ' + to, 'success');
+      setTimeout(closeComposeModal, 1500);
+    } else {
+      status.textContent = 'Error: ' + (d.error || 'Unknown'); status.style.color = '#ef9494';
+    }
+  }).catch(function() { status.textContent = 'Network error'; status.style.color = '#ef9494'; });
+};
+
+/* ── Bulk modal ── */
+window.openBulkModal = function openBulkModal() {
+  document.getElementById('bulkSubject').value = '';
+  document.getElementById('bulkBody').value = '';
+  document.getElementById('bulkSendStatus').textContent = '';
+  document.getElementById('bulkModal').classList.add('open');
+};
+window.closeBulkModal = function closeBulkModal() {
+  document.getElementById('bulkModal').classList.remove('open');
+};
+document.getElementById('bulkModal').addEventListener('click', function(e) { if (e.target === this) closeBulkModal(); });
+
+window.sendBulk = function sendBulk() {
+  var audience = document.getElementById('bulkAudience').value;
+  var subject  = document.getElementById('bulkSubject').value.trim();
+  var htmlBody = document.getElementById('bulkBody').value.trim();
+  var status   = document.getElementById('bulkSendStatus');
+  if (!subject) { status.textContent = 'Subject is required'; status.style.color = '#ef9494'; return; }
+  if (!htmlBody) { status.textContent = 'Body is required'; status.style.color = '#ef9494'; return; }
+  if (!confirm('Send "' + subject + '" to ' + audience.replace('_', ' ') + '? This cannot be undone.')) return;
+
+  status.textContent = 'Sending… this may take a moment'; status.style.color = 'var(--soft)';
+  fetch('/api/admin/send-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ audience: audience, subject: subject, htmlBody: htmlBody }),
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.success) {
+      status.textContent = '✓ Sent to ' + d.sent + ' recipients (' + d.errors + ' errors)'; status.style.color = '#B6FF3C';
+      showToast('Campaign sent: ' + d.sent + ' emails', 'success');
+      setTimeout(closeBulkModal, 2000);
+    } else {
+      status.textContent = 'Error: ' + (d.error || 'Unknown'); status.style.color = '#ef9494';
+    }
+  }).catch(function() { status.textContent = 'Network error'; status.style.color = '#ef9494'; });
+};
+
+/* ── Delete lead ── */
+window.deleteLead = function deleteLead(id) {
+  if (!confirm('Delete this lead permanently?')) return;
+  fetch('/api/admin/delete-lead', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: id }),
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.success) {
+      var row = document.getElementById('lead-' + id);
+      if (row) row.remove();
+      showToast('Lead deleted', 'success');
+    } else {
+      showToast('Error: ' + d.error, 'error');
+    }
+  });
+};
+
+/* ── Toast ── */
+function showToast(msg, type) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + (type || '');
+  el.classList.add('show');
+  setTimeout(function() { el.classList.remove('show'); }, 3000);
+}
+
+/* ── Keyboard ── */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeComposeModal();
+    closeBulkModal();
+  }
+});
+</script>
+</body>
+</html>
