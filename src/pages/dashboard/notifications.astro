@@ -57,7 +57,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
       --bg:#FAF6F1; --surface:#F2EDE5; --card:#FFFFFF; --card2:#F2EDE5;
       --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
       --text:#1A110D; --muted:#C8B5AD; --soft:#7A5C52;
-      --green:#10b981; --green2:#34d399; --blue:#3b82f6; --blue2:#60a5fa;
+      --green:#FF5C7A; --green2:#B6FF3C; --blue:#3b82f6; --blue2:#60a5fa;
       --purple:#8b5cf6; --gold:#f59e0b; --red:#ef4444; --cyan:#06b6d4;
       --orange:#f97316; --indigo:#6366f1; --rv-accent:#FF5C7A;
       --radius:20px;
@@ -95,7 +95,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
       content:'';
       position:absolute; top:-100px; right:-100px;
       width:340px; height:340px; border-radius:50%;
-      background:radial-gradient(circle,rgba(16,185,129,.1),transparent 65%);
+      background:radial-gradient(circle,rgba(255,92,122,.1),transparent 65%);
       animation:pulse3 7s ease-in-out infinite;
       pointer-events:none;
     }
@@ -104,7 +104,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
     .hero-badge {
       display:inline-flex; align-items:center; gap:.4rem;
       padding:.32rem .85rem; border-radius:99px;
-      background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.28);
+      background:rgba(255,92,122,.12); border:1px solid rgba(255,92,122,.28);
       font-size:.72rem; font-weight:800; color:var(--green);
       text-transform:uppercase; letter-spacing:.08em; margin-bottom:.8rem;
     }
@@ -138,7 +138,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
       animation:fadeUp .4s .06s ease both;
       transition:border-color .3s;
     }
-    .perm-banner.granted { border-color:rgba(16,185,129,.3); }
+    .perm-banner.granted { border-color:rgba(255,92,122,.3); }
     .perm-banner.blocked { border-color:rgba(239,68,68,.3); }
     .pb-left { display:flex; align-items:center; gap:.875rem; }
     .pb-icon {
@@ -194,8 +194,8 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
       background:var(--surface); position:relative; z-index:1;
       transition:all .25s;
     }
-    .tc-item.active .tc-bubble { border-color:var(--green); box-shadow:0 0 0 4px rgba(16,185,129,.15); }
-    .tc-item.past .tc-bubble { background:rgba(16,185,129,.1); border-color:rgba(16,185,129,.3); }
+    .tc-item.active .tc-bubble { border-color:var(--green); box-shadow:0 0 0 4px rgba(255,92,122,.15); }
+    .tc-item.past .tc-bubble { background:rgba(255,92,122,.1); border-color:rgba(255,92,122,.3); }
     .tc-item.off .tc-bubble { opacity:.3; }
     .tc-time { font-size:.7rem; font-weight:800; }
     .tc-name { font-size:.68rem; color:var(--soft); white-space:nowrap; }
@@ -224,8 +224,8 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
     .sh-title { font-size:1rem; font-weight:700; flex:1; }
     .sh-chip {
       font-size:.68rem; font-weight:800; padding:.22rem .65rem;
-      border-radius:99px; background:rgba(16,185,129,.1);
-      border:1px solid rgba(16,185,129,.2); color:var(--green);
+      border-radius:99px; background:rgba(255,92,122,.1);
+      border:1px solid rgba(255,92,122,.2); color:var(--green);
     }
 
     /* ─── SECTION CARD ─── */
@@ -250,7 +250,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
       width:3px; border-radius:3px 0 0 3px;
       opacity:0; transition:opacity .25s;
     }
-    .r-row:hover { border-color:rgba(16,185,129,.18); }
+    .r-row:hover { border-color:rgba(255,92,122,.18); }
     .r-row:hover::before { opacity:1; }
     .r-row.off { opacity:.45; }
     .r-icon {
@@ -460,7 +460,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
     <!-- ── MEALS ── -->
     <div class="section-card" style="animation-delay:.05s;">
       <div class="section-head">
-        <div class="sh-icon" style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 10px rgba(16,185,129,.28);display:flex;align-items:center;justify-content:center;">🍽️</div>
+        <div class="sh-icon" style="background:linear-gradient(135deg,#FF5C7A,#E0394F);box-shadow:0 4px 10px rgba(255,92,122,.28);display:flex;align-items:center;justify-content:center;">🍽️</div>
         <div class="sh-title">Meal Reminders</div>
         <span class="sh-chip">4 reminders</span>
       </div>
@@ -468,7 +468,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
 
         {[
           { key:'breakfast', label:'Breakfast',  icon:'🍳', desc:'Morning fuel · Daily',  g:'linear-gradient(135deg,#f59e0b,#d97706)', glow:'rgba(245,158,11,.28)', enabled: p.breakfast_enabled, time: p.breakfast_time, accent:'#f59e0b' },
-          { key:'lunch',     label:'Lunch',       icon:'🥗', desc:'Midday meal · Daily',   g:'linear-gradient(135deg,#10b981,#059669)', glow:'rgba(16,185,129,.28)',  enabled: p.lunch_enabled,     time: p.lunch_time,     accent:'#10b981' },
+          { key:'lunch',     label:'Lunch',       icon:'🥗', desc:'Midday meal · Daily',   g:'linear-gradient(135deg,#FF5C7A,#E0394F)', glow:'rgba(255,92,122,.28)',  enabled: p.lunch_enabled,     time: p.lunch_time,     accent:'#FF5C7A' },
           { key:'dinner',    label:'Dinner',      icon:'🍽️', desc:'Evening meal · Daily', g:'linear-gradient(135deg,#3b82f6,#2563eb)', glow:'rgba(59,130,246,.28)',  enabled: p.dinner_enabled,    time: p.dinner_time,    accent:'#3b82f6' },
           { key:'snack',     label:'Snack',       icon:'🍎', desc:'Healthy bite · Daily', g:'linear-gradient(135deg,#8b5cf6,#7c3aed)', glow:'rgba(139,92,246,.28)', enabled: p.snack_enabled,     time: p.snack_time,     accent:'#8b5cf6' },
         ].map(row => (
@@ -691,7 +691,7 @@ function updateHeroActive() {
 const tlDefs = [
   { key:'breakfast', label:'Breakfast', icon:'🍳', color:'#f59e0b' },
   { key:'snack',     label:'Snack',     icon:'🍎', color:'#8b5cf6' },
-  { key:'lunch',     label:'Lunch',     icon:'🥗', color:'#10b981' },
+  { key:'lunch',     label:'Lunch',     icon:'🥗', color:'#FF5C7A' },
   { key:'dinner',    label:'Dinner',    icon:'🍽️', color:'#3b82f6' },
   { key:'streak',    label:'Streak',    icon:'🔥', color:'#ef4444' },
   { key:'water',     label:'Water',     icon:'💧', color:'#06b6d4' },
@@ -770,12 +770,12 @@ function refreshPermUI() {
   permBanner?.classList.remove('granted','blocked');
   if (perm === 'granted') {
     permBanner?.classList.add('granted');
-    if (permIcon)  { permIcon.style.background = 'linear-gradient(135deg,#10b981,#059669)'; permIcon.textContent = '✅'; }
+    if (permIcon)  { permIcon.style.background = 'linear-gradient(135deg,#FF5C7A,#E0394F)'; permIcon.textContent = '✅'; }
     if (permTitle) permTitle.textContent = 'Notifications Enabled';
     if (permSub)   permSub.textContent   = 'Your reminders will arrive on time';
     if (permBtnIcon)  permBtnIcon.textContent = '✓';
     if (permBtnLabel) permBtnLabel.textContent = 'Enabled';
-    if (permBtn) { permBtn.style.cssText = 'background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--green);cursor:default;'; }
+    if (permBtn) { permBtn.style.cssText = 'background:rgba(255,92,122,.1);border-color:rgba(255,92,122,.3);color:var(--green);cursor:default;'; }
   } else if (perm === 'denied') {
     permBanner?.classList.add('blocked');
     if (permIcon)  { permIcon.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'; permIcon.textContent = '🚫'; }

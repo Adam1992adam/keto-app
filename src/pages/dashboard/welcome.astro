@@ -26,7 +26,7 @@ if (!onboarding) return Astro.redirect('/dashboard/onboarding');
 const planType  = profile.subscription_tier || 'basic_30';
 const maxDays   = getMaxJourneyDays(planType);
 const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
-const tierColor = planType === 'elite_12' ? '#f59e0b' : planType === 'pro_6' ? '#6366f1' : '#10b981';
+const tierColor = planType === 'elite_12' ? '#f59e0b' : planType === 'pro_6' ? '#6366f1' : '#FF5C7A';
 const firstName = profile.full_name?.split(' ')[0] || 'there';
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
@@ -115,7 +115,7 @@ const dietRestrictions = (onboarding?.dietary_restrictions || [])
       --bg:#FAF6F1; --card:#FFFFFF; --card2:#F2EDE5;
       --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
       --text:#1A110D; --soft:#7A5C52; --muted:#C8B5AD;
-      --green:#10b981; --green2:#34d399; --gold:#f59e0b;
+      --green:#FF5C7A; --green2:#B6FF3C; --gold:#f59e0b;
       --purple:#8b5cf6; --blue:#3b82f6; --rv-accent:#FF5C7A;
     }
     *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
@@ -133,7 +133,7 @@ const dietRestrictions = (onboarding?.dietary_restrictions || [])
     .hdr { text-align:center; margin-bottom:2.5rem; }
     .hdr-badge {
       display:inline-flex; align-items:center; gap:.5rem;
-      background:rgba(16,185,129,.1); border:1px solid var(--border2);
+      background:rgba(255,92,122,.1); border:1px solid var(--border2);
       border-radius:99px; padding:.35rem 1rem;
       font-size:.72rem; font-weight:800; color:var(--green);
       text-transform:uppercase; letter-spacing:.09em;
@@ -144,7 +144,7 @@ const dietRestrictions = (onboarding?.dietary_restrictions || [])
       background:linear-gradient(135deg,var(--green),var(--green2));
       display:flex; align-items:center; justify-content:center;
       margin:0 auto 1.5rem;
-      box-shadow:0 0 0 16px rgba(16,185,129,.08), 0 0 0 32px rgba(16,185,129,.04);
+      box-shadow:0 0 0 16px rgba(255,92,122,.08), 0 0 0 32px rgba(255,92,122,.04);
       animation:popIn .6s cubic-bezier(.34,1.56,.64,1) .2s both;
     }
     .hdr-check svg { width:36px; height:36px; stroke:#fff; stroke-width:2.5; fill:none; }
@@ -242,7 +242,7 @@ const dietRestrictions = (onboarding?.dietary_restrictions || [])
       transform:translateX(-100%); transition:transform .5s;
     }
     .btn-main:hover::before { transform:translateX(100%); }
-    .btn-main:hover { transform:translateY(-2px); box-shadow:0 12px 32px rgba(16,185,129,.4); }
+    .btn-main:hover { transform:translateY(-2px); box-shadow:0 12px 32px rgba(255,92,122,.4); }
     .btn-main svg { width:20px; height:20px; stroke:#fff; stroke-width:2.5; fill:none; }
 
     @keyframes fadeUp { from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);} }
@@ -306,8 +306,8 @@ const dietRestrictions = (onboarding?.dietary_restrictions || [])
     <div class="macro-grid">
       <div class="macro-item">
         <svg class="macro-ring" viewBox="0 0 56 56">
-          <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(16,185,129,.1)" stroke-width="5"/>
-          <circle cx="28" cy="28" r="22" fill="none" stroke="#10b981" stroke-width="5"
+          <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,92,122,.1)" stroke-width="5"/>
+          <circle cx="28" cy="28" r="22" fill="none" stroke="#FF5C7A" stroke-width="5"
             stroke-dasharray="138.2" stroke-dashoffset="0" stroke-linecap="round"
             transform="rotate(-90 28 28)"/>
         </svg>
@@ -374,7 +374,7 @@ const dietRestrictions = (onboarding?.dietary_restrictions || [])
         </div>
       </div>
       <!-- Milestone track -->
-      <div style="position:relative;height:6px;background:rgba(16,185,129,.1);border-radius:99px;margin:1rem 0 2rem;">
+      <div style="position:relative;height:6px;background:rgba(255,92,122,.1);border-radius:99px;margin:1rem 0 2rem;">
         <div style="position:absolute;left:0;top:0;height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--green2));border-radius:99px;"></div>
         <!-- 25% marker -->
         {ms1Wk && (
@@ -408,11 +408,11 @@ const dietRestrictions = (onboarding?.dietary_restrictions || [])
         )}
         <!-- Goal marker -->
         <div style="position:absolute;top:50%;left:100%;transform:translate(-50%,-50%);">
-          <div style="width:12px;height:12px;border-radius:50%;background:var(--green);border:2px solid var(--green2);box-shadow:0 0 6px rgba(16,185,129,.5);"></div>
+          <div style="width:12px;height:12px;border-radius:50%;background:var(--green);border:2px solid var(--green2);box-shadow:0 0 6px rgba(255,92,122,.5);"></div>
         </div>
       </div>
       {goalDateStr && (
-        <div style="background:rgba(16,185,129,.07);border:1px solid var(--border2);border-radius:10px;padding:.6rem .9rem;display:flex;align-items:center;gap:.65rem;margin-top:.5rem;">
+        <div style="background:rgba(255,92,122,.07);border:1px solid var(--border2);border-radius:10px;padding:.6rem .9rem;display:flex;align-items:center;gap:.65rem;margin-top:.5rem;">
           <span style="font-size:1.1rem;">🗓️</span>
           <div>
             <div style="font-size:.78rem;font-weight:800;color:var(--green);">Estimated goal: {goalDateStr}</div>

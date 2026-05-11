@@ -160,35 +160,35 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
     .toc-item a:hover { color:var(--accent); border-left-color:var(--accent); }
 
     /* LEAD CAPTURE */
-    .lead-card { background:linear-gradient(135deg,#0d1a0f,#0a1a12); border:1.5px solid rgba(16,185,129,.3); border-radius:20px; padding:24px; }
-    .lead-card-eyebrow { font-size:.68rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#34d399; margin-bottom:8px; }
+    .lead-card { background:linear-gradient(135deg,#0d1a0f,#0a1a12); border:1.5px solid rgba(255,92,122,.3); border-radius:20px; padding:24px; }
+    .lead-card-eyebrow { font-size:.68rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#B6FF3C; margin-bottom:8px; }
     .lead-card-title { font-size:1.05rem; font-weight:800; color:#dfeedd; font-family:var(--display); line-height:1.3; margin-bottom:8px; }
     .lead-card-sub { font-size:.82rem; color:rgba(255,255,255,.5); line-height:1.55; margin-bottom:14px; }
-    .lead-input { width:100%; padding:10px 14px; background:rgba(16,185,129,.07); border:1px solid rgba(16,185,129,.25); border-radius:10px; color:#dfeedd; font-size:.85rem; font-family:var(--body); outline:none; box-sizing:border-box; transition:border-color .2s; margin-bottom:10px; }
-    .lead-input:focus { border-color:#10b981; }
+    .lead-input { width:100%; padding:10px 14px; background:rgba(255,92,122,.07); border:1px solid rgba(255,92,122,.25); border-radius:10px; color:#dfeedd; font-size:.85rem; font-family:var(--body); outline:none; box-sizing:border-box; transition:border-color .2s; margin-bottom:10px; }
+    .lead-input:focus { border-color:#FF5C7A; }
     .lead-input::placeholder { color:rgba(255,255,255,.3); }
-    .lead-submit { width:100%; padding:10px 0; background:linear-gradient(135deg,#10b981,#34d399); border:none; border-radius:10px; color:#fff; font-size:.88rem; font-weight:800; font-family:var(--display); cursor:pointer; transition:opacity .2s; }
+    .lead-submit { width:100%; padding:10px 0; background:linear-gradient(135deg,#FF5C7A,#B6FF3C); border:none; border-radius:10px; color:#fff; font-size:.88rem; font-weight:800; font-family:var(--display); cursor:pointer; transition:opacity .2s; }
     .lead-submit:hover { opacity:.88; }
     .lead-submit:disabled { opacity:.6; cursor:not-allowed; }
     .lead-note { font-size:.72rem; color:rgba(255,255,255,.3); text-align:center; margin-top:8px; }
     .lead-msg { margin-top:10px; padding:9px 12px; border-radius:8px; font-size:.8rem; font-weight:600; display:none; }
-    .lead-msg.ok { display:block; background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.25); color:#34d399; }
+    .lead-msg.ok { display:block; background:rgba(255,92,122,.12); border:1px solid rgba(255,92,122,.25); color:#B6FF3C; }
     .lead-msg.err { display:block; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.2); color:#f87171; }
 
     /* INLINE LEAD (mobile — shown below article, above related) */
-    .inline-lead { background:linear-gradient(135deg,#f7fdf9,#eefaf3); border:1.5px solid rgba(16,185,129,.2); border-radius:20px; padding:28px 24px; margin:40px 0; }
+    .inline-lead { background:linear-gradient(135deg,#f7fdf9,#eefaf3); border:1.5px solid rgba(255,92,122,.2); border-radius:20px; padding:28px 24px; margin:40px 0; }
     .inline-lead-title { font-family:var(--display); font-size:1.2rem; font-weight:800; color:#0a1a10; margin-bottom:6px; }
     .inline-lead-sub { font-size:.88rem; color:#3d6b4a; line-height:1.6; margin-bottom:16px; }
     .inline-lead-row { display:flex; gap:10px; }
-    .inline-lead-input { flex:1; padding:11px 14px; background:#fff; border:1px solid rgba(16,185,129,.3); border-radius:10px; color:#0a1a10; font-size:.88rem; font-family:var(--body); outline:none; transition:border-color .2s; }
-    .inline-lead-input:focus { border-color:#10b981; }
+    .inline-lead-input { flex:1; padding:11px 14px; background:#fff; border:1px solid rgba(255,92,122,.3); border-radius:10px; color:#0a1a10; font-size:.88rem; font-family:var(--body); outline:none; transition:border-color .2s; }
+    .inline-lead-input:focus { border-color:#FF5C7A; }
     .inline-lead-input::placeholder { color:#8aab90; }
-    .inline-lead-btn { padding:11px 20px; background:#10b981; border:none; border-radius:10px; color:#fff; font-size:.88rem; font-weight:800; font-family:var(--display); cursor:pointer; white-space:nowrap; transition:opacity .2s; }
+    .inline-lead-btn { padding:11px 20px; background:#FF5C7A; border:none; border-radius:10px; color:#fff; font-size:.88rem; font-weight:800; font-family:var(--display); cursor:pointer; white-space:nowrap; transition:opacity .2s; }
     .inline-lead-btn:hover { opacity:.88; }
     .inline-lead-btn:disabled { opacity:.6; cursor:not-allowed; }
     .inline-lead-note { font-size:.72rem; color:#8aab90; margin-top:8px; }
     .inline-lead-msg { margin-top:10px; padding:9px 12px; border-radius:8px; font-size:.82rem; font-weight:600; display:none; }
-    .inline-lead-msg.ok { display:block; background:rgba(16,185,129,.1); border:1px solid rgba(16,185,129,.25); color:#059669; }
+    .inline-lead-msg.ok { display:block; background:rgba(255,92,122,.1); border:1px solid rgba(255,92,122,.25); color:#E0394F; }
     .inline-lead-msg.err { display:block; background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.18); color:#dc2626; }
     @media(min-width:901px){ .inline-lead{ display:none; } }
     @media(max-width:560px){ .inline-lead-row{flex-direction:column;} }
@@ -296,7 +296,7 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
 
     <!-- Inline lead capture (mobile only — sidebar hidden below 900px) -->
     <div class="inline-lead">
-      <p style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#10b981;margin-bottom:6px;">📖 Free Recipe Book</p>
+      <p style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#FF5C7A;margin-bottom:6px;">📖 Free Recipe Book</p>
       <div class="inline-lead-title">Get 7 free keto recipes delivered to your inbox</div>
       <p class="inline-lead-sub">Full macros included · Under 5g net carbs each · Ready in 30 min or less</p>
       <div class="inline-lead-row">

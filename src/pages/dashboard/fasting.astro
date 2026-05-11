@@ -53,7 +53,7 @@ const historyRows = (pastSessions || []).map(s => {
   const pct       = Math.min(Math.round((hrs / target) * 100), 100);
   const protoName = s.protocol ? s.protocol.replace('_', ':') : '—';
   const done      = s.completed;
-  const barColor  = pct >= 100 ? '#10b981' : pct >= 60 ? '#f59e0b' : '#ef4444';
+  const barColor  = pct >= 100 ? '#FF5C7A' : pct >= 60 ? '#f59e0b' : '#ef4444';
   const checkClass= done ? 'done' : 'partial';
   const checkIcon = done ? '✓' : '~';
   return { dateStr, timeStr, hrs, target, pct, protoName, done, barColor, checkClass, checkIcon };
@@ -96,8 +96,8 @@ const hasHistory = historyRows.length > 0;
       --text:    var(--rv-ink);
       --soft:    var(--rv-muted);
       --muted:   var(--rv-bg-alt);
-      --green:   #10b981;
-      --green2:  #34d399;
+      --green:   #FF5C7A;
+      --green2:  #B6FF3C;
       --gold:    #f59e0b;
       --amber:   #fbbf24;
       --gold2:   #fde68a;
@@ -441,7 +441,7 @@ const hasHistory = historyRows.length > 0;
       letter-spacing: .04em;
       border: 1px solid currentColor;
     }
-    .proto-diff-badge.easy   { color: #10b981; background: rgba(16,185,129,.08); }
+    .proto-diff-badge.easy   { color: #FF5C7A; background: rgba(255,92,122,.08); }
     .proto-diff-badge.medium { color: #f59e0b; background: rgba(245,158,11,.08); }
     .proto-diff-badge.hard   { color: var(--rv-accent); background: rgba(255,92,122,.08); }
     .proto-diff-badge.extreme{ color: #8b5cf6; background: rgba(139,92,246,.08); }
@@ -591,7 +591,7 @@ const hasHistory = historyRows.length > 0;
       display: flex; align-items: center; justify-content: center;
       font-size: .88rem; font-weight: 800; flex-shrink: 0;
     }
-    .hist-check.done    { background: rgba(16,185,129,.1); color: #10b981; border: 1.5px solid rgba(16,185,129,.2); }
+    .hist-check.done    { background: rgba(255,92,122,.1); color: #FF5C7A; border: 1.5px solid rgba(255,92,122,.2); }
     .hist-check.partial { background: rgba(245,158,11,.1); color: #f59e0b; border: 1.5px solid rgba(245,158,11,.2); }
 
     /* ── Science panels ──────────────────────────────────── */
@@ -823,7 +823,7 @@ const hasHistory = historyRows.length > 0;
         </div>
         {[
           { h:0,  color:'#6b7280', icon:'🍽️', name:'Fed State',          desc:'Insulin is elevated. Your body is digesting nutrients from your last meal. Fat burning is minimal.',                                              key:'fed'       },
-          { h:4,  color:'#10b981', icon:'📉', name:'Insulin Drops',       desc:'Blood sugar normalizes. Insulin falls. Your body begins transitioning from glucose to fat as its primary fuel source.',                           key:'insulin'   },
+          { h:4,  color:'#FF5C7A', icon:'📉', name:'Insulin Drops',       desc:'Blood sugar normalizes. Insulin falls. Your body begins transitioning from glucose to fat as its primary fuel source.',                           key:'insulin'   },
           { h:8,  color:'#3b82f6', icon:'⚡', name:'Glycogen Depletion',  desc:'Liver glycogen (stored carbs) starts running out. Your body is forced to find alternative fuel — enter: fat burning.',                           key:'glycogen'  },
           { h:12, color:'#f59e0b', icon:'🔥', name:'Fat Burning Begins',  desc:'Ketone production begins. Free fatty acids are released from fat cells. You enter a mild ketogenic state.',                                     key:'burning'   },
           { h:16, color:'#f97316', icon:'🔆', name:'Ketosis Deepens',     desc:'Full metabolic shift to fat. Brain switches to ketones for fuel. Mental clarity improves. This is the keto sweet spot.',                        key:'ketosis'   },
@@ -856,7 +856,7 @@ const hasHistory = historyRows.length > 0;
         </div>
         <div class="stat-card">
           <div class="sc-icon">✅</div>
-          <div class="sc-val" style="color:#10b981;">{completedFasts}</div>
+          <div class="sc-val" style="color:#FF5C7A;">{completedFasts}</div>
           <div class="sc-lbl">Completed</div>
         </div>
         <div class="stat-card">
@@ -955,7 +955,7 @@ const hasHistory = historyRows.length > 0;
 <script is:inline define:vars={{ defaultProtocol, activeSessionData, userName }}>
 var STAGES = [
   { key:'fed',       h:0,  color:'#6b7280', name:'Fed State',          emoji:'🍽️' },
-  { key:'insulin',   h:4,  color:'#10b981', name:'Insulin Drops',      emoji:'📉' },
+  { key:'insulin',   h:4,  color:'#FF5C7A', name:'Insulin Drops',      emoji:'📉' },
   { key:'glycogen',  h:8,  color:'#3b82f6', name:'Glycogen Depletion', emoji:'⚡' },
   { key:'burning',   h:12, color:'#f59e0b', name:'Fat Burning',        emoji:'🔥' },
   { key:'ketosis',   h:16, color:'#f97316', name:'Deep Ketosis',       emoji:'🔆' },

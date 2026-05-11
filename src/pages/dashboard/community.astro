@@ -279,7 +279,7 @@ const showWeightLost = weightLostKg > 0;
       --bg:#FAF6F1; --card:#FFFFFF; --card2:#F2EDE5;
       --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
       --text:#1A110D; --soft:#7A5C52; --muted:#C8B5AD;
-      --green:#10b981; --green2:#34d399;
+      --green:#FF5C7A; --green2:#B6FF3C;
       --gold:#f59e0b; --purple:#8b5cf6; --blue:#3b82f6; --red:#ef4444;
       --rv-accent:#FF5C7A;
     }
@@ -291,16 +291,16 @@ const showWeightLost = weightLostKg > 0;
     /* ── COVER BANNER ─────────────────────────────────────────────── */
     #comCover {
       position: relative;
-      background: linear-gradient(135deg, rgba(255,90,122,.06) 0%, rgba(16,185,129,.08) 50%, rgba(255,90,122,.04) 100%);
+      background: linear-gradient(135deg, rgba(255,90,122,.06) 0%, rgba(255,92,122,.08) 50%, rgba(255,90,122,.04) 100%);
       border-bottom: 1px solid var(--border2); overflow: hidden;
     }
     #comCoverBg {
       position: absolute; inset: 0; opacity: .45;
       background:
-        radial-gradient(ellipse at 25% 50%, rgba(16,185,129,.18) 0%, transparent 55%),
+        radial-gradient(ellipse at 25% 50%, rgba(255,92,122,.18) 0%, transparent 55%),
         radial-gradient(ellipse at 80% 20%, rgba(52,211,153,.1) 0%, transparent 50%),
-        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(16,185,129,.03) 40px),
-        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(16,185,129,.03) 40px);
+        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,92,122,.03) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,92,122,.03) 40px);
     }
     #comCoverContent {
       position: relative; max-width: 1100px; margin: 0 auto;
@@ -309,10 +309,10 @@ const showWeightLost = weightLostKg > 0;
     }
     #comGroupIcon {
       width: 76px; height: 76px; border-radius: 18px; flex-shrink: 0;
-      background: linear-gradient(135deg, rgba(16,185,129,.3), rgba(52,211,153,.12));
-      border: 2px solid rgba(16,185,129,.45);
+      background: linear-gradient(135deg, rgba(255,92,122,.3), rgba(52,211,153,.12));
+      border: 2px solid rgba(255,92,122,.45);
       display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 0 28px rgba(16,185,129,.15);
+      box-shadow: 0 0 28px rgba(255,92,122,.15);
     }
     #comGroupInfo { flex: 1; min-width: 200px; }
     #comGroupName {
@@ -324,14 +324,14 @@ const showWeightLost = weightLostKg > 0;
     #comGroupMeta { display: flex; gap: .5rem; flex-wrap: wrap; }
     .com-badge {
       font-size: .7rem; font-weight: 700; padding: .22rem .65rem; border-radius: 99px;
-      background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.2); color: var(--green2);
+      background: rgba(255,92,122,.1); border: 1px solid rgba(255,92,122,.2); color: var(--green2);
     }
     .com-post-btn {
       display: flex; align-items: center; gap: .5rem; flex-shrink: 0;
       padding: .7rem 1.5rem; border-radius: 12px;
       background: var(--green); color: #fff; border: none;
       font-weight: 700; font-size: .88rem; cursor: pointer;
-      transition: opacity .2s, transform .15s; box-shadow: 0 4px 16px rgba(16,185,129,.3);
+      transition: opacity .2s, transform .15s; box-shadow: 0 4px 16px rgba(255,92,122,.3);
     }
     .com-post-btn:hover { opacity: .88; transform: translateY(-2px); }
 
@@ -359,19 +359,19 @@ const showWeightLost = weightLostKg > 0;
     .com-stat-hi strong { color: var(--green2); }
     .com-share-progress-btn {
       width: 100%; margin-top: .6rem; padding: .5rem;
-      background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.2);
+      background: rgba(255,92,122,.08); border: 1px solid rgba(255,92,122,.2);
       color: var(--green2); border-radius: 10px; font-size: .8rem; font-weight: 700;
       cursor: pointer; font-family: inherit; transition: all .15s;
     }
-    .com-share-progress-btn:hover { background: rgba(16,185,129,.14); border-color: var(--green); }
+    .com-share-progress-btn:hover { background: rgba(255,92,122,.14); border-color: var(--green); }
     .com-cat-pill {
       display: block; width: 100%; text-align: left;
       padding: .45rem .65rem; border-radius: 9px; border: none;
       background: transparent; color: var(--soft); font-size: .82rem; font-weight: 600;
       cursor: pointer; transition: all .15s; margin-bottom: .2rem; font-family: inherit;
     }
-    .com-cat-pill:hover  { background: rgba(16,185,129,.07); color: var(--text); }
-    .com-cat-pill.active { background: rgba(16,185,129,.12); color: var(--green2); font-weight: 700; }
+    .com-cat-pill:hover  { background: rgba(255,92,122,.07); color: var(--text); }
+    .com-cat-pill.active { background: rgba(255,92,122,.12); color: var(--green2); font-weight: 700; }
     .com-rules-list { padding-left: 1.1rem; display: flex; flex-direction: column; gap: .4rem; }
     .com-rules-list li { font-size: .79rem; color: var(--soft); line-height: 1.45; }
 
@@ -404,7 +404,7 @@ const showWeightLost = weightLostKg > 0;
       background: transparent; color: var(--soft); font-size: .78rem; font-weight: 700;
       cursor: pointer; white-space: nowrap; transition: all .15s; font-family: inherit;
     }
-    .com-write-action:hover { border-color: var(--green); color: var(--green2); background: rgba(16,185,129,.07); }
+    .com-write-action:hover { border-color: var(--green); color: var(--green2); background: rgba(255,92,122,.07); }
     @media (max-width: 480px) { #comWriteActions { display: none; } }
 
     /* Mobile category tabs */
@@ -419,7 +419,7 @@ const showWeightLost = weightLostKg > 0;
       cursor: pointer; white-space: nowrap; transition: all .15s; flex-shrink: 0; font-family: inherit;
     }
     .com-tab:hover  { border-color: var(--border2); color: var(--text); }
-    .com-tab.active { background: rgba(16,185,129,.12); color: var(--green2); border-color: var(--green); }
+    .com-tab.active { background: rgba(255,92,122,.12); color: var(--green2); border-color: var(--green); }
 
     /* ── POST CARD ───────────────────────────────────────────────── */
     .com-post {
@@ -447,7 +447,7 @@ const showWeightLost = weightLostKg > 0;
     .com-tier-pro   { font-size: .6rem; font-weight: 800; padding: .1rem .4rem; border-radius: 99px; background: linear-gradient(135deg,#1d4ed8,#3b82f6); color: #fff; }
     .com-cat-tag { font-size: .65rem; font-weight: 700; padding: .12rem .42rem; border-radius: 6px; text-transform: capitalize; }
     .com-cat-tag.progress   { background: rgba(59,130,246,.15);  color: #60a5fa; }
-    .com-cat-tag.recipes    { background: rgba(16,185,129,.15);  color: var(--green2); }
+    .com-cat-tag.recipes    { background: rgba(255,92,122,.15);  color: var(--green2); }
     .com-cat-tag.tips       { background: rgba(245,158,11,.15);  color: var(--gold); }
     .com-cat-tag.motivation { background: rgba(139,92,246,.15);  color: #a78bfa; }
     .com-cat-tag.general    { background: rgba(77,112,85,.15);   color: var(--soft); }
@@ -488,12 +488,12 @@ const showWeightLost = weightLostKg > 0;
     /* Progress card (in feed) */
     .com-progress-card {
       margin: .1rem 1.1rem .85rem;
-      background: linear-gradient(135deg, rgba(16,185,129,.1) 0%, rgba(52,211,153,.04) 100%);
-      border: 1px solid rgba(16,185,129,.18); border-radius: 16px; padding: 1.1rem 1.1rem .9rem;
+      background: linear-gradient(135deg, rgba(255,92,122,.1) 0%, rgba(52,211,153,.04) 100%);
+      border: 1px solid rgba(255,92,122,.18); border-radius: 16px; padding: 1.1rem 1.1rem .9rem;
     }
     .com-progress-card-label { font-size: .72rem; font-weight: 800; color: var(--green); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .75rem; }
     .com-pc-row { display: flex; gap: .75rem; flex-wrap: wrap; }
-    .com-pc-stat { flex: 1; min-width: 60px; text-align: center; padding: .5rem .25rem; background: rgba(16,185,129,.06); border-radius: 12px; }
+    .com-pc-stat { flex: 1; min-width: 60px; text-align: center; padding: .5rem .25rem; background: rgba(255,92,122,.06); border-radius: 12px; }
     .com-pc-val { font-size: 1.55rem; font-weight: 700; color: var(--green2); }
     .com-pc-lbl { font-size: .66rem; color: var(--soft); margin-top: .15rem; }
 
@@ -557,7 +557,7 @@ const showWeightLost = weightLostKg > 0;
       border: 1px dashed var(--border2); border-radius: 14px;
       color: var(--soft); font-size: .85rem; cursor: pointer; transition: all .2s; font-family: inherit;
     }
-    #loadMoreBtn:hover { color: var(--text); border-color: var(--green); background: rgba(16,185,129,.04); }
+    #loadMoreBtn:hover { color: var(--text); border-color: var(--green); background: rgba(255,92,122,.04); }
 
     /* ── MODAL BASE ──────────────────────────────────────────────── */
     .com-modal-overlay {
@@ -599,7 +599,7 @@ const showWeightLost = weightLostKg > 0;
       cursor: pointer; transition: all .15s; font-family: inherit;
     }
     .com-mode-tab:hover  { color: var(--text); background: var(--card2); }
-    .com-mode-tab.active { background: rgba(16,185,129,.12); color: var(--green2); border-color: rgba(16,185,129,.3); }
+    .com-mode-tab.active { background: rgba(255,92,122,.12); color: var(--green2); border-color: rgba(255,92,122,.3); }
     .com-mode-panel { animation: comFadeUp .18s ease both; }
 
     /* Photo upload UI */
@@ -609,7 +609,7 @@ const showWeightLost = weightLostKg > 0;
       background: transparent; color: var(--green2); font-size: .88rem; font-weight: 700;
       cursor: pointer; font-family: inherit; transition: all .2s;
     }
-    .com-photo-pick:hover { border-color: var(--green); background: rgba(16,185,129,.06); }
+    .com-photo-pick:hover { border-color: var(--green); background: rgba(255,92,122,.06); }
     .com-photo-hint { font-size: .73rem; color: var(--soft); margin-top: .5rem; }
     #photoPreviewWrap { position: relative; padding: .75rem 1.25rem .25rem; }
     .com-photo-preview { width: 100%; max-height: 260px; object-fit: cover; border-radius: 12px; display: block; }
@@ -618,12 +618,12 @@ const showWeightLost = weightLostKg > 0;
     /* Progress preview (modal) */
     .com-progress-preview {
       margin: .75rem 1.25rem .35rem;
-      background: linear-gradient(135deg, rgba(16,185,129,.12) 0%, rgba(52,211,153,.05) 100%);
-      border: 1px solid rgba(16,185,129,.22); border-radius: 16px; padding: 1rem;
+      background: linear-gradient(135deg, rgba(255,92,122,.12) 0%, rgba(52,211,153,.05) 100%);
+      border: 1px solid rgba(255,92,122,.22); border-radius: 16px; padding: 1rem;
     }
     .com-progress-preview-label { font-size: .72rem; font-weight: 800; color: var(--green); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .7rem; }
     .com-pp-grid { display: flex; gap: .6rem; flex-wrap: wrap; }
-    .com-pp-stat { flex: 1; min-width: 55px; text-align: center; padding: .45rem .2rem; background: rgba(16,185,129,.06); border-radius: 10px; }
+    .com-pp-stat { flex: 1; min-width: 55px; text-align: center; padding: .45rem .2rem; background: rgba(255,92,122,.06); border-radius: 10px; }
     .com-pp-val { font-size: 1.35rem; font-weight: 700; color: var(--green2); }
     .com-pp-lbl { font-size: .63rem; color: var(--soft); margin-top: .1rem; }
 
@@ -645,7 +645,7 @@ const showWeightLost = weightLostKg > 0;
     /* ── TOAST ───────────────────────────────────────────────────── */
     #comToast {
       display: none; position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
-      background: #1a2e1f; border: 1px solid rgba(16,185,129,.35); color: var(--green2);
+      background: #1a2e1f; border: 1px solid rgba(255,92,122,.35); color: var(--green2);
       padding: .65rem 1.3rem; border-radius: 999px; font-size: .83rem; font-weight: 600;
       z-index: 2000; align-items: center; gap: .5rem; box-shadow: 0 4px 24px rgba(0,0,0,.4);
       white-space: nowrap;
@@ -660,7 +660,7 @@ const showWeightLost = weightLostKg > 0;
     var pendingImgBase64 = null;
     var pendingImgType   = null;
     var myInitial        = userName.charAt(0).toUpperCase();
-    var avatarColors     = ['#10b981','#3b82f6','#8b5cf6','#f59e0b','#ef4444','#06b6d4'];
+    var avatarColors     = ['#FF5C7A','#3b82f6','#8b5cf6','#f59e0b','#ef4444','#06b6d4'];
 
     // ── Helpers ──────────────────────────────────────────────────────
     function colorFor(name) {

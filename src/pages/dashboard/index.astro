@@ -295,7 +295,7 @@ const journeyMilestones = Array.from({ length: milestoneCount }, (_, i) => {
 
 const mealTypeConfig = {
   breakfast: { label: 'Breakfast', color: '#b45309', bg: 'linear-gradient(135deg,#92400e,#b45309)' },
-  lunch:     { label: 'Lunch',     color: '#059669', bg: 'linear-gradient(135deg,#065f46,#059669)' },
+  lunch:     { label: 'Lunch',     color: '#E0394F', bg: 'linear-gradient(135deg,#065f46,#E0394F)' },
   dinner:    { label: 'Dinner',    color: '#7c3aed', bg: 'linear-gradient(135deg,#3730a3,#6d28d9)' },
   snack:     { label: 'Snack',     color: '#0284c7', bg: 'linear-gradient(135deg,#0c4a6e,#0369a1)' },
 };
@@ -312,22 +312,22 @@ const recentAvgEnergy = recentCheckins?.length
 const week1Tips = [
   { icon:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', color:'#f59e0b', title:'Salt is your best friend this week', body:'Your kidneys dump sodium on keto. Add ½ tsp of salt to a glass of water each morning. This alone fixes most keto flu symptoms within hours.' },
   { icon:'<path d="M12 2C12 2 5 10 5 15a7 7 0 0014 0c0-5-7-13-7-13z"/>', color:'#3b82f6', title:'Drink before you feel thirsty', body:'On keto, thirst response lags behind. Aim for 2.5–3L of water per day. Set phone reminders if needed — dehydration causes false hunger cravings.' },
-  { icon:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>', color:'#10b981', title:'Fat doesn\'t make you fat on keto', body:'The old "dietary fat = body fat" myth is wrong. On keto, dietary fat is your primary fuel. Eating fat turns OFF fat storage hormones and keeps you satiated for hours.' },
+  { icon:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>', color:'#FF5C7A', title:'Fat doesn\'t make you fat on keto', body:'The old "dietary fat = body fat" myth is wrong. On keto, dietary fat is your primary fuel. Eating fat turns OFF fat storage hormones and keeps you satiated for hours.' },
   { icon:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>', color:'#ef4444', title:'Keto flu is temporary — push through', body:'Headaches, fatigue, and brain fog in days 1–5 are normal. Your brain is switching fuel sources. Electrolytes + hydration + sleep will cut this phase short.' },
   { icon:'<path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>', color:'#8b5cf6', title:'Your brain runs on ketones now', body:'The brain is 25% of your energy budget. It\'s learning to use ketones instead of glucose. By week 2, most people report sharper mental clarity than they\'ve had in years.' },
-  { icon:'<path d="M3 11l19-9-9 19-2-8-8-2z"/>', color:'#10b981', title:'Protein protects your muscle', body:'Aim for 1.2–1.7g of protein per kg of bodyweight per day. Too little = muscle loss. Too much = gluconeogenesis. For a 75kg person: 90–130g protein/day.' },
+  { icon:'<path d="M3 11l19-9-9 19-2-8-8-2z"/>', color:'#FF5C7A', title:'Protein protects your muscle', body:'Aim for 1.2–1.7g of protein per kg of bodyweight per day. Too little = muscle loss. Too much = gluconeogenesis. For a 75kg person: 90–130g protein/day.' },
   { icon:'<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>', color:'#8b5cf6', title:'Sleep is a keto superpower', body:'During sleep, growth hormone surges and fat burning peaks. Poor sleep raises cortisol → raises blood sugar → kicks you out of ketosis. Protect your sleep this week.' },
 ];
 
 const week2Tips = [
   { icon:'<path d="M12 2c0 0-5 4.5-5 9a5 5 0 0010 0c0-4.5-5-9-5-9zm0 14a3 3 0 01-3-3c0-2 2-4.5 3-6 1 1.5 3 4 3 6a3 3 0 01-3 3z"/>', color:'#f97316', title:'You\'re building fat-burning machinery', body:'Week 2 is when your mitochondria start multiplying and fat-oxidation enzymes upregulate. Energy will stabilize. The keto flu is behind you — the real benefits are ahead.' },
   { icon:'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>', color:'#3b82f6', title:'Scale stall? That\'s normal.', body:'After week 1\'s water loss, the scale often stalls for 3–5 days. Your body is adapting internally. Waist circumference is shrinking even when weight doesn\'t move. Keep going.' },
-  { icon:'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>', color:'#10b981', title:'You can exercise now — but go easy', body:'Light weights and walking are perfect this week. High-intensity training is best saved for week 4+ when fat adaptation is complete. Your muscles are still learning.' },
+  { icon:'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>', color:'#FF5C7A', title:'You can exercise now — but go easy', body:'Light weights and walking are perfect this week. High-intensity training is best saved for week 4+ when fat adaptation is complete. Your muscles are still learning.' },
   { icon:'<path d="M3 11l19-9-9 19-2-8-8-2z"/>', color:'#f59e0b', title:'Meal prep is the #1 habit', body:'People who succeed on keto have one thing in common: they cook in batches. Spend 90 minutes on Sunday preparing proteins and vegetables. It removes daily willpower decisions.' },
 ];
 
 const week3Tips = [
-  { icon:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', color:'#10b981', title:'You\'ve entered fat-adaptation', body:'By week 3, your fat-burning enzymes are maximized. Energy is stable all day. This is why keto feels so different from calorie restriction — you\'re running on a clean, abundant fuel.' },
+  { icon:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', color:'#FF5C7A', title:'You\'ve entered fat-adaptation', body:'By week 3, your fat-burning enzymes are maximized. Energy is stable all day. This is why keto feels so different from calorie restriction — you\'re running on a clean, abundant fuel.' },
   { icon:'<path d="M3 11l19-9-9 19-2-8-8-2z"/>', color:'#f59e0b', title:'Try combining keto + intermittent fasting', body:'Now that you\'re adapted, 16:8 fasting is effortless. Skip breakfast, eat noon–8pm. The synergy between keto and IF burns fat at a rate neither achieves alone.' },
   { icon:'<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>', color:'#8b5cf6', title:'Your inflammation is dropping', body:'Ketones are anti-inflammatory. By week 3, many people notice less joint pain, better skin, reduced bloating, and clearer sinuses. This is your body healing systemically.' },
 ];
@@ -339,7 +339,7 @@ const habitsDoneCount = dashHabits.filter(h => habitDoneIds.has(h.id)).length;
 
 const dailyTip = (() => {
   if (!checkinDone && currentDay > 1)
-    return { icon:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>', color:'#10b981', title:'Complete your daily check-in', body:'Tracking energy, mood, and water takes 60 seconds but gives you weeks of insight. Your streak depends on it — don\'t break it today!' };
+    return { icon:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>', color:'#FF5C7A', title:'Complete your daily check-in', body:'Tracking energy, mood, and water takes 60 seconds but gives you weeks of insight. Your streak depends on it — don\'t break it today!' };
   if (waterGlasses === 0 && currentDay > 1)
     return { icon:'<path d="M12 2C12 2 5 10 5 15a7 7 0 0014 0c0-5-7-13-7-13z"/>', color:'#3b82f6', title:'Start drinking water now', body:'You haven\'t logged any water today. Keto demands more hydration than a standard diet. Low water = false hunger, headaches, and reduced fat burning. Drink a glass right now.' };
   if (recentAvgEnergy < 2.5 && recentCheckins && recentCheckins.length >= 3)
@@ -378,7 +378,7 @@ const pendingTasks   = totalTasks - completedTasks;
 const focusIconKey   = !checkinDone ? 'checkin' : (pendingTasks > 0 ? 'tasks' : 'done');
 const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
   ? { label: "You're all caught up today!", sub: 'Great consistency — keep the streak alive', href: null,
-      color: '#10b981', bg: 'rgba(16,185,129,.12)', border: 'rgba(16,185,129,.28)', btnLabel: 'View Progress', btnHref: '/dashboard/progress' }
+      color: '#FF5C7A', bg: 'rgba(255,92,122,.12)', border: 'rgba(255,92,122,.28)', btnLabel: 'View Progress', btnHref: '/dashboard/progress' }
   : !checkinDone
   ? { label: t('dash.checkin_now') + ' — protect your streak', sub: `${streakDays > 0 ? `${streakDays}-day ${t('dash.streak_at_risk')}` : 'Start your streak today'} · Earn 30 XP`,
       href: '/dashboard/checkin', color: '#f59e0b', bg: 'rgba(245,158,11,.1)', border: 'rgba(245,158,11,.3)', btnLabel: 'Check In Now →', btnHref: '/dashboard/checkin' }
@@ -386,7 +386,7 @@ const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
   ? { label: `Complete today's tasks`, sub: `${completedTasks}/${totalTasks} tasks done · ${pendingTasks} remaining`,
       href: '#tour-tasks', color: '#3b82f6', bg: 'rgba(59,130,246,.1)', border: 'rgba(59,130,246,.28)', btnLabel: 'View Tasks →', btnHref: '#tour-tasks' }
   : { label: "Log your weight to track progress", sub: 'Weight tracking shows your true results',
-      href: '#weight-card', color: '#10b981', bg: 'rgba(16,185,129,.1)', border: 'rgba(16,185,129,.25)', btnLabel: 'Log Weight →', btnHref: '#weight-card' };
+      href: '#weight-card', color: '#FF5C7A', bg: 'rgba(255,92,122,.1)', border: 'rgba(255,92,122,.25)', btnLabel: 'Log Weight →', btnHref: '#weight-card' };
 
 // ── Rose Vital template data ──────────────────────────────
 const wLogsArr = (weightLogs || []).slice(0, 8).reverse();

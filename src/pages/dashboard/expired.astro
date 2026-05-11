@@ -40,8 +40,8 @@ const allPlans = [
     emoji: '🥑',
     price: '29',
     period: '30-Day Kickstart',
-    color: '#10b981',
-    gradient: 'linear-gradient(135deg,#10b981,#34d399)',
+    color: '#FF5C7A',
+    gradient: 'linear-gradient(135deg,#FF5C7A,#B6FF3C)',
     perks: ['30-day meal plan', '30 keto recipes', '4 eBooks', 'Basic tracking'],
     popular: false,
     checkoutUrl: LS_BASIC_URL,
@@ -81,10 +81,10 @@ const suggestedPlans = currentTier === 'basic_30'
 const tierMeta = {
   basic_30: {
     badge: '30 Days ✓',
-    badgeColor: '#10b981',
-    badgeBg: 'rgba(16,185,129,0.1)',
+    badgeColor: '#FF5C7A',
+    badgeBg: 'rgba(255,92,122,0.1)',
     icon: '🏅',
-    iconBg: 'rgba(16,185,129,0.1)',
+    iconBg: 'rgba(255,92,122,0.1)',
     title: `You completed your 30-Day Keto Foundation!`,
     sub: `Your body has adapted to ketosis. Now it's time to go deeper.`,
     headline: `Your 30 Days Are Up — But Your Journey Isn't, ${userName}`,
@@ -154,7 +154,7 @@ const defaultSelected = suggestedPlans.find(p => p.popular)?.id || suggestedPlan
       animation:orbDrift ease-in-out infinite;
     }
     .o1{width:600px;height:600px;background:rgba(99,102,241,.07);top:-150px;left:-150px;animation-duration:20s;}
-    .o2{width:500px;height:500px;background:rgba(16,185,129,.05);bottom:-100px;right:-100px;animation-duration:25s;animation-delay:-10s;}
+    .o2{width:500px;height:500px;background:rgba(255,92,122,.05);bottom:-100px;right:-100px;animation-duration:25s;animation-delay:-10s;}
     .o3{width:350px;height:350px;background:rgba(245,158,11,.04);top:50%;left:50%;animation-duration:17s;animation-delay:-6s;}
     @keyframes orbDrift{
       0%,100%{transform:translate(0,0) scale(1);}
@@ -188,7 +188,7 @@ const defaultSelected = suggestedPlans.find(p => p.popular)?.id || suggestedPlan
     }
     .hero h1 .hl{
       font-style:italic;
-      background:linear-gradient(135deg,#10b981,#34d399);
+      background:linear-gradient(135deg,#FF5C7A,#B6FF3C);
       -webkit-background-clip:text;-webkit-text-fill-color:transparent;
     }
     .hero p{font-size:1rem;color:var(--soft);line-height:1.75;max-width:560px;}

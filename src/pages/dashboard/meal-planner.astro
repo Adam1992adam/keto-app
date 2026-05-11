@@ -93,7 +93,7 @@ const todayStr = new Date().toISOString().slice(0, 10);
       --bg:#FAF6F1; --card:#FFFFFF; --card2:#F2EDE5;
       --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
       --text:#1A110D; --soft:#7A5C52; --muted:#C8B5AD;
-      --green:#10b981; --green2:#34d399;
+      --green:#FF5C7A; --green2:#B6FF3C;
       --gold:#f59e0b; --purple:#8b5cf6; --blue:#3b82f6; --red:#ef4444;
       --rv-accent:#FF5C7A;
     }
@@ -122,7 +122,7 @@ const todayStr = new Date().toISOString().slice(0, 10);
     .grid-corner { background:var(--card2); border-right:1px solid var(--border); border-bottom:1px solid var(--border); padding:.65rem .5rem; }
     .day-header { background:var(--card2); border-right:1px solid var(--border); border-bottom:1px solid var(--border); padding:.55rem .5rem; text-align:center; }
     .day-header:last-child { border-right:none; }
-    .day-header.today { background:rgba(16,185,129,.07); }
+    .day-header.today { background:rgba(255,92,122,.07); }
     .day-dow { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--soft); }
     .day-num { font-size:1.05rem; font-weight:700; color:var(--text); line-height:1.2; }
     .day-mon { font-size:.68rem; color:var(--soft); }
@@ -139,7 +139,7 @@ const todayStr = new Date().toISOString().slice(0, 10);
     /* last row — no bottom border */
     .meal-row:last-child .meal-cell,
     .meal-row:last-child .meal-label { border-bottom:none; }
-    .meal-cell.today-col { background:rgba(16,185,129,.03); }
+    .meal-cell.today-col { background:rgba(255,92,122,.03); }
 
     /* Recipe chip in cell */
     .mp-chip { display:flex; align-items:center; gap:.3rem; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:.3rem .4rem; font-size:.72rem; color:var(--text); position:relative; }
@@ -153,7 +153,7 @@ const todayStr = new Date().toISOString().slice(0, 10);
 
     /* Add button */
     .add-slot-btn { display:flex; align-items:center; justify-content:center; width:100%; border-radius:7px; border:1.5px dashed var(--border); background:transparent; color:var(--soft); cursor:pointer; font-size:.75rem; padding:.28rem; transition:all .18s; gap:.2rem; margin-top:auto; }
-    .add-slot-btn:hover { border-color:var(--green); color:var(--green); background:rgba(16,185,129,.05); }
+    .add-slot-btn:hover { border-color:var(--green); color:var(--green); background:rgba(255,92,122,.05); }
 
     /* Mobile: day tabs view */
     @media(max-width:700px) {
@@ -191,7 +191,7 @@ const todayStr = new Date().toISOString().slice(0, 10);
     .modal-results::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
     .ms-status { font-size:.8rem; color:var(--soft); padding:.4rem .25rem; }
     .ms-card { display:flex; align-items:center; gap:.7rem; padding:.5rem .6rem; border-radius:10px; border:1.5px solid var(--border); background:var(--card2); margin-bottom:.4rem; cursor:pointer; transition:all .18s; }
-    .ms-card:hover { border-color:var(--green); background:rgba(16,185,129,.05); }
+    .ms-card:hover { border-color:var(--green); background:rgba(255,92,122,.05); }
     .ms-img { width:44px; height:44px; border-radius:8px; object-fit:cover; flex-shrink:0; background:var(--muted); }
     .ms-img-ph { width:44px; height:44px; border-radius:8px; background:var(--muted); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.2rem; }
     .ms-info { flex:1; min-width:0; }

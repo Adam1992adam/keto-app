@@ -87,7 +87,7 @@ const freqBuckets = [
   { label: '0 days',  color: '#ef4444', count: activeUsers - Object.keys(userCheckinCounts).length },
   { label: '1–3 days', color: '#f59e0b', count: Object.values(userCheckinCounts).filter(n => n >= 1 && n <= 3).length },
   { label: '4–6 days', color: '#3b82f6', count: Object.values(userCheckinCounts).filter(n => n >= 4 && n <= 6).length },
-  { label: '7 days',  color: '#10b981', count: Object.values(userCheckinCounts).filter(n => n === 7).length },
+  { label: '7 days',  color: '#FF5C7A', count: Object.values(userCheckinCounts).filter(n => n === 7).length },
 ];
 const maxFreq = Math.max(...freqBuckets.map(b => b.count), 1);
 
@@ -111,7 +111,7 @@ const foodLoggersWeek  = new Set(weekFoodLogs?.map(f => f.user_id) || []).size;
 // ── Plan distribution ────────────────────────────────────────────────
 const planDist = [
   { label: '🥑 Basic', tier: 'basic_30', color: '#6366f1' },
-  { label: '⚡ Pro',   tier: 'pro_6',    color: '#10b981' },
+  { label: '⚡ Pro',   tier: 'pro_6',    color: '#FF5C7A' },
   { label: '👑 Elite', tier: 'elite_12', color: '#f59e0b' },
 ].map(p => ({
   ...p,
@@ -144,9 +144,9 @@ const maxSignup = Math.max(...signupTrend.map(w => w.count), 1);
   <style>
     :root {
       --bg:#060d09;--bg2:#0a1510;--card:#0d1a0f;--card2:#111f13;
-      --border:rgba(16,185,129,.12);--border2:rgba(16,185,129,.25);
+      --border:rgba(255,92,122,.12);--border2:rgba(255,92,122,.25);
       --text:#dfeedd;--soft:#4d7055;--muted:#233328;
-      --green:#10b981;--green2:#34d399;--gold:#f59e0b;--red:#ef4444;--blue:#3b82f6;--purple:#8b5cf6;
+      --green:#FF5C7A;--green2:#B6FF3C;--gold:#f59e0b;--red:#ef4444;--blue:#3b82f6;--purple:#8b5cf6;
     }
     *{margin:0;padding:0;box-sizing:border-box;}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
@@ -162,7 +162,7 @@ const maxSignup = Math.max(...signupTrend.map(w => w.count), 1);
     .nav-links{display:flex;align-items:center;gap:.5rem;}
     .nav-link{font-size:.82rem;font-weight:600;color:var(--soft);padding:.4rem .8rem;border-radius:8px;transition:all .2s;}
     .nav-link:hover{color:var(--text);background:var(--muted);text-decoration:none;}
-    .nav-link.active{color:var(--green);background:rgba(16,185,129,.08);}
+    .nav-link.active{color:var(--green);background:rgba(255,92,122,.08);}
     .nav-link.danger{color:#ef9494;border:1px solid rgba(239,68,68,.2);}
     .nav-link.danger:hover{background:rgba(239,68,68,.1);color:#ef4444;}
 
@@ -179,7 +179,7 @@ const maxSignup = Math.max(...signupTrend.map(w => w.count), 1);
     .kpi-value{font-size:2rem;font-weight:900;line-height:1;margin-bottom:.25rem;}
     .kpi-sub{font-size:.72rem;color:var(--soft);}
     .kpi-trend{display:inline-block;font-size:.68rem;font-weight:700;padding:.1rem .45rem;border-radius:99px;margin-left:.4rem;}
-    .trend-up{background:rgba(16,185,129,.12);color:var(--green);}
+    .trend-up{background:rgba(255,92,122,.12);color:var(--green);}
     .trend-down{background:rgba(239,68,68,.1);color:#ef9494;}
 
     /* Section cards */
@@ -223,7 +223,7 @@ const maxSignup = Math.max(...signupTrend.map(w => w.count), 1);
     /* Signup trend mini-bars */
     .trend-bars{display:flex;align-items:flex-end;gap:.3rem;height:60px;margin-top:.5rem;}
     .trend-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:.2rem;}
-    .trend-bar{width:100%;border-radius:3px 3px 0 0;min-height:3px;background:rgba(16,185,129,.3);transition:all .3s;}
+    .trend-bar{width:100%;border-radius:3px 3px 0 0;min-height:3px;background:rgba(255,92,122,.3);transition:all .3s;}
     .trend-bar.current{background:var(--green);}
     .trend-lbl{font-size:.52rem;color:var(--soft);writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;}
 
@@ -304,7 +304,7 @@ const maxSignup = Math.max(...signupTrend.map(w => w.count), 1);
         <div class="funnel-row">
           <div class="funnel-label">Day {r.day}</div>
           <div class="funnel-bar-wrap">
-            <div class="funnel-bar" style={`width:${r.pct}%;background:${i === 0 ? '#10b981' : i === 1 ? '#34d399' : i === 2 ? '#3b82f6' : i === 3 ? '#8b5cf6' : i === 4 ? '#f59e0b' : '#ef4444'};`}>
+            <div class="funnel-bar" style={`width:${r.pct}%;background:${i === 0 ? '#FF5C7A' : i === 1 ? '#B6FF3C' : i === 2 ? '#3b82f6' : i === 3 ? '#8b5cf6' : i === 4 ? '#f59e0b' : '#ef4444'};`}>
               {r.pct > 15 && <span class="funnel-bar-label">{r.pct}%</span>}
             </div>
           </div>
@@ -331,7 +331,7 @@ const maxSignup = Math.max(...signupTrend.map(w => w.count), 1);
       <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border);">
         <div style="font-size:.72rem;color:var(--soft);margin-bottom:.4rem;">This week's check-in health</div>
         <div class="metric-chips">
-          <span class="chip" style="background:rgba(16,185,129,.1);color:var(--green);">⚡ Avg energy {avgEnergy}/5</span>
+          <span class="chip" style="background:rgba(255,92,122,.1);color:var(--green);">⚡ Avg energy {avgEnergy}/5</span>
           <span class="chip" style="background:rgba(59,130,246,.1);color:var(--blue);">💧 Avg water {avgWater} gl</span>
           <span class="chip" style="background:rgba(139,92,246,.1);color:var(--purple);">⏱️ {fastingThisWeek} fasts logged</span>
         </div>

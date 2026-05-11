@@ -35,7 +35,7 @@ const today = new Date().toISOString().split('T')[0];
       --bg:#FAF6F1;--card:#FFFFFF;--card2:#F2EDE5;
       --border:rgba(22,17,15,.08);--border2:rgba(255,92,122,.25);
       --text:#16110F;--soft:#4A4340;--muted:#C8BFBA;
-      --green:#10b981;--green2:#34d399;--gold:#f59e0b;
+      --green:#FF5C7A;--green2:#B6FF3C;--gold:#f59e0b;
       --red:#ef4444;--red2:#fca5a5;--purple:#8b5cf6;
       --blue:#3b82f6;--radius:20px;
       --rv-accent:#FF5C7A;--rv-warm:#FF914D;
@@ -65,10 +65,10 @@ const today = new Date().toISOString().split('T')[0];
     }
     .upload-zone:hover { border-color:var(--green); background:var(--card2); }
     .upload-zone.has-image { padding:0; border-style:solid; }
-    .upload-zone.dragover { border-color:var(--green2); background:rgba(16,185,129,.05); }
+    .upload-zone.dragover { border-color:var(--green2); background:rgba(255,92,122,.05); }
     .upload-icon {
       width:52px; height:52px; border-radius:50%;
-      background:rgba(16,185,129,.12); display:flex; align-items:center; justify-content:center;
+      background:rgba(255,92,122,.12); display:flex; align-items:center; justify-content:center;
       color:var(--green2);
     }
     .upload-title { font-weight:700; font-size:1rem; }
@@ -150,7 +150,7 @@ const today = new Date().toISOString().split('T')[0];
       flex-shrink:0; padding:.35rem .85rem; border-radius:20px;
       font-size:.78rem; font-weight:700; display:flex; align-items:center; gap:.3rem;
     }
-    .verdict-badge.keto_friendly { background:rgba(16,185,129,.15); color:var(--green2); border:1px solid rgba(16,185,129,.3); }
+    .verdict-badge.keto_friendly { background:rgba(255,92,122,.15); color:var(--green2); border:1px solid rgba(255,92,122,.3); }
     .verdict-badge.caution       { background:rgba(245,158,11,.15); color:var(--gold);   border:1px solid rgba(245,158,11,.3); }
     .verdict-badge.not_keto      { background:rgba(239,68,68,.15);  color:var(--red2);   border:1px solid rgba(239,68,68,.3); }
 

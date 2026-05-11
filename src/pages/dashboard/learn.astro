@@ -44,8 +44,8 @@ const doneCount = quickStart.filter(i => i.done).length; // client items counted
 
 // ── Tab definitions ──────────────────────────────────────────
 const tabs = [
-  { key: 'guide',  label: 'App Guide', color: '#10b981' },
-  { key: 'basics',  label: 'Basics',  color: '#10b981' },
+  { key: 'guide',  label: 'App Guide', color: '#FF5C7A' },
+  { key: 'basics',  label: 'Basics',  color: '#FF5C7A' },
   { key: 'science', label: 'Science', color: '#3b82f6' },
   { key: 'faq',     label: 'FAQ',     color: '#f59e0b' },
   { key: 'tips',    label: '💡 Tips',    color: '#8b5cf6' },
@@ -55,7 +55,7 @@ const tabs = [
 const articles = [
   // ── BASICS ──────────────────────────────────────────────
   {
-    id: 'b1', tab: 'basics', icon: '🔥', color: '#10b981',
+    id: 'b1', tab: 'basics', icon: '🔥', color: '#FF5C7A',
     title: 'What is Ketosis?',
     summary: 'How your body switches from glucose to fat as its primary fuel source.',
     body: [
@@ -65,7 +65,7 @@ const articles = [
     ]
   },
   {
-    id: 'b2', tab: 'basics', icon: '⚖️', color: '#10b981',
+    id: 'b2', tab: 'basics', icon: '⚖️', color: '#FF5C7A',
     title: 'Macros on Keto',
     summary: 'The ideal fat, protein, and carb ratios to stay in ketosis and feel great.',
     body: [
@@ -77,7 +77,7 @@ const articles = [
     ]
   },
   {
-    id: 'b3', tab: 'basics', icon: '✅', color: '#10b981',
+    id: 'b3', tab: 'basics', icon: '✅', color: '#FF5C7A',
     title: 'Foods to Eat',
     summary: 'Your go-to keto staples — fats, proteins, and low-carb vegetables.',
     body: [
@@ -90,7 +90,7 @@ const articles = [
     ]
   },
   {
-    id: 'b4', tab: 'basics', icon: '❌', color: '#10b981',
+    id: 'b4', tab: 'basics', icon: '❌', color: '#FF5C7A',
     title: 'Foods to Avoid',
     summary: 'What to cut out completely to enter and stay in ketosis.',
     body: [
@@ -104,7 +104,7 @@ const articles = [
     ]
   },
   {
-    id: 'b5', tab: 'basics', icon: '⚡', color: '#10b981',
+    id: 'b5', tab: 'basics', icon: '⚡', color: '#FF5C7A',
     title: 'Electrolytes',
     summary: 'Why sodium, potassium, and magnesium are critical — and how to get enough.',
     body: [
@@ -116,7 +116,7 @@ const articles = [
     ]
   },
   {
-    id: 'b6', tab: 'basics', icon: '🤒', color: '#10b981',
+    id: 'b6', tab: 'basics', icon: '🤒', color: '#FF5C7A',
     title: 'Keto Flu',
     summary: 'The temporary symptoms that hit in week one — and how to power through them.',
     body: [
@@ -351,7 +351,7 @@ const articles = [
       --bg:#FAF6F1; --bg2:#F2EDE5; --card:#FFFFFF; --card2:#F2EDE5;
       --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
       --text:#1A110D; --soft:#7A5C52; --muted:#C8B5AD;
-      --green:#10b981; --green2:#34d399; --gold:#f59e0b;
+      --green:#FF5C7A; --green2:#B6FF3C; --gold:#f59e0b;
       --purple:#8b5cf6; --blue:#3b82f6; --red:#ef4444;
       --rv-accent:#FF5C7A;
     }
@@ -372,7 +372,7 @@ const articles = [
 
     /* ── Page Hero ─────────────────────────────────────── */
     .learn-hero {
-      background: linear-gradient(135deg, rgba(16,185,129,.08) 0%, rgba(99,102,241,.04) 100%);
+      background: linear-gradient(135deg, rgba(255,92,122,.08) 0%, rgba(99,102,241,.04) 100%);
       border-bottom: 1px solid var(--border);
       padding: 2.25rem 1.5rem 1.75rem;
       animation: fadeUp .5s ease both;
@@ -400,12 +400,12 @@ const articles = [
       color: #fff; font-weight: 800; font-size: .82rem;
       padding: .65rem 1.35rem; border-radius: 12px;
       text-decoration: none;
-      box-shadow: 0 6px 20px rgba(16,185,129,.35);
+      box-shadow: 0 6px 20px rgba(255,92,122,.35);
       transition: transform .2s, box-shadow .2s;
       margin-top: .35rem;
       white-space: nowrap;
     }
-    .tour-launch-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(16,185,129,.45); }
+    .tour-launch-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(255,92,122,.45); }
 
     /* ── App Guide Tab ──────────────────────────────────── */
     .guide-section { margin-bottom: 2rem; }
@@ -425,7 +425,7 @@ const articles = [
       animation: fadeUp .4s ease both;
     }
     .qs-item:hover { border-color: var(--border2); transform: translateX(3px); }
-    .qs-item.done { border-color: rgba(16,185,129,.25); background: rgba(16,185,129,.04); }
+    .qs-item.done { border-color: rgba(255,92,122,.25); background: rgba(255,92,122,.04); }
     .qs-check {
       width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
       border: 2px solid var(--border2); background: transparent;
@@ -476,7 +476,7 @@ const articles = [
     .fc-top { display: flex; align-items: flex-start; gap: .75rem; }
     .fc-icon {
       width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-      background: var(--fi-bg, rgba(16,185,129,.1)); color: var(--fc, var(--green));
+      background: var(--fi-bg, rgba(255,92,122,.1)); color: var(--fc, var(--green));
       display: flex; align-items: center; justify-content: center;
     }
     .fc-info { flex: 1; min-width: 0; }
@@ -496,7 +496,7 @@ const articles = [
     .fc-step { display: flex; align-items: flex-start; gap: .6rem; font-size: .79rem; color: var(--soft); line-height: 1.45; }
     .fc-step-num {
       width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
-      background: var(--fi-bg, rgba(16,185,129,.1)); color: var(--fc, var(--green));
+      background: var(--fi-bg, rgba(255,92,122,.1)); color: var(--fc, var(--green));
       font-size: .65rem; font-weight: 900;
       display: flex; align-items: center; justify-content: center;
     }
@@ -505,10 +505,10 @@ const articles = [
       margin-top: .8rem; font-size: .77rem; font-weight: 800;
       color: var(--fc, var(--green)); text-decoration: none;
       padding: .4rem .85rem; border-radius: 8px;
-      background: var(--fi-bg, rgba(16,185,129,.1));
+      background: var(--fi-bg, rgba(255,92,122,.1));
       transition: background .15s, transform .15s;
     }
-    .fc-goto:hover { background: rgba(16,185,129,.18); transform: translateX(2px); }
+    .fc-goto:hover { background: rgba(255,92,122,.18); transform: translateX(2px); }
     .fc-locked { opacity: .5; pointer-events: none; }
     .fc-lock-overlay {
       position: absolute; inset: 0; border-radius: 18px;
@@ -767,7 +767,7 @@ const articles = [
       <div class="feat-grid">
 
         <!-- Daily Check-In -->
-        <div class="feat-card" style="--fc:#10b981;--fi-bg:rgba(16,185,129,.1)" onclick="toggleFeat('fc-checkin')">
+        <div class="feat-card" style="--fc:#FF5C7A;--fi-bg:rgba(255,92,122,.1)" onclick="toggleFeat('fc-checkin')">
           <div class="fc-top">
             <div class="fc-icon">📋</div>
             <div class="fc-info">
@@ -851,7 +851,7 @@ const articles = [
         </div>
 
         <!-- Habits & Streaks -->
-        <div class="feat-card" style="--fc:#10b981;--fi-bg:rgba(16,185,129,.1)" onclick="toggleFeat('fc-habits')">
+        <div class="feat-card" style="--fc:#FF5C7A;--fi-bg:rgba(255,92,122,.1)" onclick="toggleFeat('fc-habits')">
           <div class="fc-top">
             <div class="fc-icon">🔄</div>
             <div class="fc-info">

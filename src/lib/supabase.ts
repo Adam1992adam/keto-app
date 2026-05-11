@@ -128,8 +128,8 @@ export const PLANS = {
     emoji: '🥉',
     tagline: '30-Day Keto Kickstart',
     durationDays: 30,
-    color: '#10b981',
-    gradient: 'linear-gradient(135deg, #10b981, #34d399)',
+    color: '#FF5C7A',
+    gradient: 'linear-gradient(135deg, #FF5C7A, #B6FF3C)',
     features: [
       '30-Day structured meal plan',
       '30 keto recipes included',

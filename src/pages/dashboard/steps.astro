@@ -85,7 +85,7 @@ const ringStroke = `${CIRC}`;
       --bg:var(--rv-bg);--card:var(--rv-card);--card2:var(--rv-bg-alt);
       --border:var(--rv-line);--border2:rgba(255,92,122,.3);
       --text:var(--rv-ink);--soft:var(--rv-ink-soft);--muted:#C8BFBA;
-      --green:#10b981;--green2:#34d399;--gold:#f59e0b;--radius:20px;
+      --green:#FF5C7A;--green2:#B6FF3C;--gold:#f59e0b;--radius:20px;
     }
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
     body { font-family:'Bricolage Grotesque',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
@@ -165,7 +165,7 @@ const ringStroke = `${CIRC}`;
       display:flex; align-items:center; justify-content:center; gap:.5rem; margin-bottom:.75rem;
     }
     .btn-auto:hover { border-color:var(--green); }
-    .btn-auto.active { background:rgba(16,185,129,.12); border-color:var(--green); color:var(--green2); }
+    .btn-auto.active { background:rgba(255,92,122,.12); border-color:var(--green); color:var(--green2); }
     .pulse-dot { width:8px; height:8px; border-radius:50%; background:var(--green); animation:pulse 1s infinite; }
     @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.75)} }
 

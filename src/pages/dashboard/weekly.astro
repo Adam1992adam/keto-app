@@ -164,7 +164,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
       --bg:var(--rv-bg);--card:var(--rv-card);--card2:var(--rv-bg-alt);
       --border:var(--rv-line);--border2:rgba(255,92,122,.3);--border3:rgba(255,92,122,.5);
       --text:var(--rv-ink);--soft:var(--rv-ink-soft);--muted:#C8BFBA;
-      --green:#10b981;--green2:#34d399;--gold:#f59e0b;--red:#ef4444;
+      --green:#FF5C7A;--green2:#B6FF3C;--gold:#f59e0b;--red:#ef4444;
       --blue:#3b82f6;--purple:#8b5cf6;--cyan:#06b6d4;--indigo:#6366f1;
     }
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
@@ -229,7 +229,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
     .sb-val{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.8rem;font-weight:900;line-height:1;margin-bottom:.2rem;}
     .sb-lbl{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);}
     .sb-change{font-size:.72rem;font-weight:800;margin-top:.3rem;padding:.15rem .5rem;border-radius:99px;display:inline-block;}
-    .change-good{background:rgba(16,185,129,.12);color:var(--green);}
+    .change-good{background:rgba(255,92,122,.12);color:var(--green);}
     .change-warn{background:rgba(245,158,11,.12);color:var(--amber);}
     .change-bad{background:rgba(239,68,68,.1);color:var(--red);}
 
@@ -267,8 +267,8 @@ const weekStars = Math.round((complianceRate / 100) * 5);
 
     /* ADJUSTMENT BOX */
     .adj-box{
-      background:linear-gradient(135deg,rgba(16,185,129,.08),rgba(6,182,212,.05));
-      border:1.5px solid rgba(16,185,129,.22);border-radius:16px;
+      background:linear-gradient(135deg,rgba(255,92,122,.08),rgba(6,182,212,.05));
+      border:1.5px solid rgba(255,92,122,.22);border-radius:16px;
       padding:1.25rem 1.5rem;margin-bottom:1rem;
     }
     .adj-title{font-weight:900;font-size:.85rem;color:var(--green);display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;}
@@ -280,18 +280,18 @@ const weekStars = Math.round((complianceRate / 100) * 5);
     .hist-table th{font-size:.7rem;font-weight:800;color:var(--soft);text-transform:uppercase;letter-spacing:.07em;padding:.5rem .875rem;text-align:left;border-bottom:1px solid var(--border);}
     .hist-table td{padding:.75rem .875rem;font-size:.82rem;border-bottom:1px solid var(--border);}
     .hist-table tr:last-child td{border-bottom:none;}
-    .hist-table tr:hover td{background:rgba(16,185,129,.03);}
+    .hist-table tr:hover td{background:rgba(255,92,122,.03);}
 
     /* FORM */
     .field{margin-bottom:1.1rem;}
     .field-label{display:block;font-size:.72rem;font-weight:800;color:var(--soft);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.45rem;}
     .field-input{width:100%;background:var(--card2);border:1.5px solid var(--border);border-radius:11px;padding:.8rem 1rem;color:var(--text);font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:.875rem;font-weight:500;outline:none;transition:all .22s;}
     .field-input::placeholder{color:var(--muted);}
-    .field-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(16,185,129,.1);background:rgba(16,185,129,.03);}
+    .field-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(255,92,122,.1);background:rgba(255,92,122,.03);}
     .mood-row{display:flex;gap:.5rem;}
     .mood-btn{flex:1;padding:.65rem;background:var(--card2);border:1.5px solid var(--border);border-radius:10px;font-size:1.1rem;text-align:center;cursor:pointer;transition:all .22s;font-family:'Bricolage Grotesque',system-ui,sans-serif;}
     .mood-btn:hover{border-color:var(--border2);transform:scale(1.05);}
-    .mood-btn.active{background:rgba(16,185,129,.12);border-color:var(--green);}
+    .mood-btn.active{background:rgba(255,92,122,.12);border-color:var(--green);}
 
     /* CHALLENGE CHIPS */
     .chip-wrap{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem;}
@@ -331,11 +331,11 @@ const weekStars = Math.round((complianceRate / 100) * 5);
     /* DAY TIMELINE */
     .day-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:.5rem;margin-bottom:1.25rem;animation:fadeUp .35s .02s ease both;}
     .day-slot{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:.75rem .5rem;text-align:center;transition:all .22s;}
-    .day-slot.has-ci{border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.04);}
+    .day-slot.has-ci{border-color:rgba(255,92,122,.3);background:rgba(255,92,122,.04);}
     .day-slot:hover{transform:translateY(-2px);}
     .ds-lbl{font-size:.65rem;font-weight:800;color:var(--soft);text-transform:uppercase;margin-bottom:.4rem;}
     .ds-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto .4rem;font-size:.75rem;font-weight:800;}
-    .ds-dot.done{background:rgba(16,185,129,.15);border:1.5px solid var(--green);color:var(--green);}
+    .ds-dot.done{background:rgba(255,92,122,.15);border:1.5px solid var(--green);color:var(--green);}
     .ds-dot.miss{background:var(--muted);border:1.5px solid var(--border);color:var(--soft);}
     .ds-energy{font-size:.58rem;font-weight:700;color:var(--soft);line-height:1.4;}
     .ds-bars{display:flex;flex-direction:column;gap:.18rem;margin-top:.35rem;}
@@ -494,7 +494,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
       <!-- Weight Progress -->
       <div class="card" style="animation:fadeUp .4s .1s ease both;">
         <div class="card-head">
-          <div class="ch-icon" style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 10px rgba(16,185,129,.25);">📈</div>
+          <div class="ch-icon" style="background:linear-gradient(135deg,#FF5C7A,#E0394F);box-shadow:0 4px 10px rgba(255,92,122,.25);">📈</div>
           <div class="ch-title">Weight Progress</div>
         </div>
         <div class="card-body">
@@ -526,7 +526,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
                       <defs>
                         <linearGradient id="wg" x1="0%" y1="0%" x2="100%" y2="0%">
                           <stop offset="0%" stop-color="#3b82f6"/>
-                          <stop offset="100%" stop-color="#10b981"/>
+                          <stop offset="100%" stop-color="#FF5C7A"/>
                         </linearGradient>
                       </defs>
                     </>
@@ -640,7 +640,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
       <>
       <div class="card" style="animation:fadeUp .4s ease both;">
         <div class="card-head">
-          <div class="ch-icon" style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 10px rgba(16,185,129,.25);">📈</div>
+          <div class="ch-icon" style="background:linear-gradient(135deg,#FF5C7A,#E0394F);box-shadow:0 4px 10px rgba(255,92,122,.25);">📈</div>
           <div class="ch-title">This Week's Weight</div>
         </div>
         <div class="card-body">
@@ -853,7 +853,7 @@ function buildInsightsTab() {
   else if (checkIns >= 4) score += 8;
   score = Math.min(score, 100);
 
-  const scoreColor = score >= 75 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
+  const scoreColor = score >= 75 ? '#FF5C7A' : score >= 50 ? '#f59e0b' : '#ef4444';
   const scoreLabel = score >= 80 ? 'Excellent' : score >= 65 ? 'Good' : score >= 45 ? 'Fair' : 'Needs work';
 
   /* ── GENERATE INSIGHTS ── */
@@ -862,7 +862,7 @@ function buildInsightsTab() {
   if (comp >= 90 && checkIns >= 6) {
     insights.push({ type:'🏆 Perfect', color:'#f59e0b', bg:'rgba(245,158,11,.08)', border:'rgba(245,158,11,.25)', text:`<strong>Near-perfect week at ${comp}% compliance with ${checkIns}/7 check-ins.</strong> You're in the top tier of keto practitioners. This level of consistency puts you in fat-burning mode 24/7.`, action:null });
   } else if (comp >= 80) {
-    insights.push({ type:'✅ Win', color:'#10b981', bg:'rgba(16,185,129,.08)', border:'rgba(16,185,129,.22)', text:`<strong>Strong compliance at ${comp}%</strong> — you followed your meal plan on most days. This is the single most important factor for ketosis and fat loss.`, action:null });
+    insights.push({ type:'✅ Win', color:'#FF5C7A', bg:'rgba(255,92,122,.08)', border:'rgba(255,92,122,.22)', text:`<strong>Strong compliance at ${comp}%</strong> — you followed your meal plan on most days. This is the single most important factor for ketosis and fat loss.`, action:null });
   } else if (comp >= 60) {
     insights.push({ type:'⚠️ Moderate', color:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:`Compliance was <strong>${comp}%</strong> — decent, but there's room to improve. Identify which days you fell off and why. Usually it's a lack of prepared food, not willpower.`, action:'Plan problem days' });
   } else {
@@ -871,9 +871,9 @@ function buildInsightsTab() {
 
   // Weight progress — nuanced by compliance
   if (wLost >= 1.5) {
-    insights.push({ type:'🔥 Progress', color:'#10b981', bg:'rgba(16,185,129,.08)', border:'rgba(16,185,129,.22)', text:`You lost <strong>${wLost.toFixed(1)}kg this week</strong> — excellent progress! You're in active fat-burning mode. Maintain your current plan exactly.`, action:null });
+    insights.push({ type:'🔥 Progress', color:'#FF5C7A', bg:'rgba(255,92,122,.08)', border:'rgba(255,92,122,.22)', text:`You lost <strong>${wLost.toFixed(1)}kg this week</strong> — excellent progress! You're in active fat-burning mode. Maintain your current plan exactly.`, action:null });
   } else if (wLost >= 0.5 && wLost < 1.5) {
-    insights.push({ type:'📈 Progress', color:'#10b981', bg:'rgba(16,185,129,.08)', border:'rgba(16,185,129,.22)', text:`<strong>${wLost.toFixed(1)}kg lost</strong> — steady, healthy progress. Sustainable fat loss is 0.5–1kg/week. You're right on track.`, action:null });
+    insights.push({ type:'📈 Progress', color:'#FF5C7A', bg:'rgba(255,92,122,.08)', border:'rgba(255,92,122,.22)', text:`<strong>${wLost.toFixed(1)}kg lost</strong> — steady, healthy progress. Sustainable fat loss is 0.5–1kg/week. You're right on track.`, action:null });
   } else if (wLost > 0 && wLost < 0.5 && comp >= 75) {
     insights.push({ type:'📉 Plateau', color:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:`Only <strong>${wLost.toFixed(1)}kg</strong> despite good compliance. You may have hit a plateau — try reducing calories by 100 kcal or adding a 24h water fast once this week.`, action:'Break the plateau' });
   } else if (wLost > 0 && wLost < 0.5 && comp < 75) {
@@ -884,7 +884,7 @@ function buildInsightsTab() {
 
   // Energy — detailed
   if (energy >= 4.5) {
-    insights.push({ type:'⚡ Peak Energy', color:'#10b981', bg:'rgba(16,185,129,.08)', border:'rgba(16,185,129,.22)', text:`Energy average <strong>${energy}/5</strong> — you're running on ketones at full efficiency. This is the "keto advantage" most people talk about. You're fat-adapted.`, action:null });
+    insights.push({ type:'⚡ Peak Energy', color:'#FF5C7A', bg:'rgba(255,92,122,.08)', border:'rgba(255,92,122,.22)', text:`Energy average <strong>${energy}/5</strong> — you're running on ketones at full efficiency. This is the "keto advantage" most people talk about. You're fat-adapted.`, action:null });
   } else if (energy >= 3.5) {
     insights.push({ type:'⚡ Good Energy', color:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:`Energy average <strong>${energy}/5</strong> — solid. To push it higher, try adding MCT oil to your morning coffee and ensure you're hitting your fat targets daily.`, action:null });
   } else if (energy <= 2.5 && water < 6) {
@@ -971,8 +971,8 @@ function buildInsightsTab() {
         </p>
         <div style="display:flex;gap:.5rem;margin-top:.75rem;flex-wrap:wrap;">
           ${[
-            { l:'Check-ins', v:checkinCount+'/7',         c:checkinCount>=6?'#10b981':'#f59e0b' },
-            { l:'Compliance', v:comp+'%',                  c:comp>=75?'#10b981':comp>=55?'#f59e0b':'#ef4444' },
+            { l:'Check-ins', v:checkinCount+'/7',         c:checkinCount>=6?'#FF5C7A':'#f59e0b' },
+            { l:'Compliance', v:comp+'%',                  c:comp>=75?'#FF5C7A':comp>=55?'#f59e0b':'#ef4444' },
             { l:'XP Earned', v:'+'+weekXP,                 c:'#8b5cf6' },
           ].map(s => `
             <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:.35rem .65rem;font-size:.7rem;">

@@ -153,7 +153,7 @@ const bcGender = profile.gender || 'male';
 const bcBMI    = (bcWeight && bcHeight) ? Math.round((bcWeight / Math.pow(bcHeight / 100, 2)) * 10) / 10 : null;
 const bcBMIcat = !bcBMI ? null
   : bcBMI < 18.5 ? { label:'Underweight', color:'#3b82f6', pct:15 }
-  : bcBMI < 25   ? { label:'Healthy',     color:'#10b981', pct:40 }
+  : bcBMI < 25   ? { label:'Healthy',     color:'#FF5C7A', pct:40 }
   : bcBMI < 30   ? { label:'Overweight',  color:'#f59e0b', pct:65 }
   : { label:'Obese', color:'#ef4444', pct:88 };
 // Deurenberg body fat estimate
@@ -172,7 +172,7 @@ const latestKetone = ketoneLogs?.[0] ?? null;
 const ketoneStatus = !latestKetone ? null
   : latestKetone.ketone_mmol < 0.5  ? { label: 'Not in ketosis', color: '#ef4444', tip: 'Keep carbs under 20g net to enter ketosis.' }
   : latestKetone.ketone_mmol < 1.5  ? { label: 'Light ketosis', color: '#f59e0b', tip: 'You\'re in ketosis! Aim for 1.5–3.0 mmol/L for optimal fat burning.' }
-  : latestKetone.ketone_mmol < 3.0  ? { label: 'Optimal ketosis 🔥', color: '#10b981', tip: 'Optimal range! This is where fat burning peaks.' }
+  : latestKetone.ketone_mmol < 3.0  ? { label: 'Optimal ketosis 🔥', color: '#FF5C7A', tip: 'Optimal range! This is where fat burning peaks.' }
   : latestKetone.ketone_mmol < 5.0  ? { label: 'Deep ketosis', color: '#8b5cf6', tip: 'Deep ketosis — great for therapeutic or athletic use.' }
   : { label: 'Very high — check health', color: '#ef4444', tip: 'Levels above 5 mmol/L should be discussed with a doctor.' };
 
@@ -298,7 +298,7 @@ const sleepChart = (checkins || []).slice(0,7).reverse().filter(c => c.sleep_hou
   hours:   c.sleep_hours || 0,
   quality: c.sleep_quality || 0,
   pct:     Math.round(((c.sleep_hours || 0) / 9) * 100),
-  color:   (c.sleep_hours || 0) >= 7 ? '#10b981' : (c.sleep_hours || 0) >= 5 ? '#f59e0b' : '#ef4444',
+  color:   (c.sleep_hours || 0) >= 7 ? '#FF5C7A' : (c.sleep_hours || 0) >= 5 ? '#f59e0b' : '#ef4444',
 }));
 const avgSleepHours = sleepChart.length
   ? (sleepChart.reduce((s,c) => s + c.hours, 0) / sleepChart.length).toFixed(1)
@@ -343,7 +343,7 @@ const goalMetDays = waterHistory.filter(d => d.met).length;
 // Ketone trend bars (pre-computed to avoid const-in-map)
 const ketoneTrendBars = (ketoneLogs || []).slice(0,7).reverse().map(k => ({
   pct:   Math.min(100, Math.round((k.ketone_mmol / 5) * 100)),
-  color: k.ketone_mmol < 0.5 ? '#ef4444' : k.ketone_mmol < 1.5 ? '#f59e0b' : k.ketone_mmol < 3 ? '#10b981' : '#8b5cf6',
+  color: k.ketone_mmol < 0.5 ? '#ef4444' : k.ketone_mmol < 1.5 ? '#f59e0b' : k.ketone_mmol < 3 ? '#FF5C7A' : '#8b5cf6',
   label: new Date(k.logged_date + 'T12:00:00').toLocaleDateString('en',{month:'short',day:'numeric'}),
   val:   k.ketone_mmol,
 }));
@@ -451,9 +451,9 @@ const goalMs100Done = goalPctDone >= 100;
 
 // Progress bar gradient color: ramps red → gold → green as pct grows
 const goalBarColor = goalPctDone >= 75
-  ? 'linear-gradient(90deg,#ef4444,#f59e0b,#10b981)'
+  ? 'linear-gradient(90deg,#ef4444,#f59e0b,#FF5C7A)'
   : goalPctDone >= 50
-  ? 'linear-gradient(90deg,#ef4444,#f59e0b,#34d399)'
+  ? 'linear-gradient(90deg,#ef4444,#f59e0b,#B6FF3C)'
   : goalPctDone >= 25
   ? 'linear-gradient(90deg,#ef4444,#f59e0b)'
   : 'linear-gradient(90deg,#ef4444,#f87171)';
@@ -564,7 +564,7 @@ const initialPhotos = progressPhotos || [];
       --border:var(--rv-line);--border2:rgba(255,92,122,.3);
       --text:var(--rv-ink);--soft:var(--rv-ink-soft);--muted:#C8BFBA;
       /* Keep semantic data/chart colors unchanged */
-      --green:#10b981;--green2:#34d399;--gold:#f59e0b;--red:#ef4444;
+      --green:#FF5C7A;--green2:#B6FF3C;--gold:#f59e0b;--red:#ef4444;
       --blue:#3b82f6;--purple:#8b5cf6;--cyan:#06b6d4;
     }
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
@@ -681,8 +681,8 @@ const initialPhotos = progressPhotos || [];
     .cal-future{background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.04);}
     .cal-12{background:rgba(239,68,68,.35);}
     .cal-3{background:rgba(245,158,11,.4);}
-    .cal-4{background:rgba(16,185,129,.4);}
-    .cal-5{background:#10b981;}
+    .cal-4{background:rgba(255,92,122,.4);}
+    .cal-5{background:#FF5C7A;}
     .cal-legend{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;margin-top:.7rem;}
     .cal-legend-sq{width:11px;height:11px;border-radius:2px;display:inline-block;flex-shrink:0;}
     .cal-legend-lbl{font-size:.67rem;color:var(--soft);font-weight:600;}
@@ -707,8 +707,8 @@ const initialPhotos = progressPhotos || [];
       transition:all .25s;
     }
     .ach-card:hover{border-color:rgba(255,92,122,.45);transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,92,122,.08);}
-    .ach-card.green-ach{border-color:rgba(16,185,129,.25);}
-    .ach-card.green-ach:hover{border-color:rgba(16,185,129,.55);box-shadow:0 6px 20px rgba(16,185,129,.1);}
+    .ach-card.green-ach{border-color:rgba(255,92,122,.25);}
+    .ach-card.green-ach:hover{border-color:rgba(255,92,122,.55);box-shadow:0 6px 20px rgba(255,92,122,.1);}
     .ach-icon{font-size:2rem;line-height:1;flex-shrink:0;margin-top:.1rem;}
     .ach-body{flex:1;min-width:0;}
     .ach-name{font-weight:800;font-size:.83rem;color:var(--rv-accent);margin-bottom:.2rem;}
@@ -761,7 +761,7 @@ const initialPhotos = progressPhotos || [];
       <div class="hstat-icon">⚖️</div>
       <div class="hstat-val" style="color:var(--green);">{dispWeightLost > 0 ? `-${dispWeightLost}` : '—'}</div>
       <div class="hstat-lbl">{wUnit} Lost</div>
-      <div class="hstat-sub" style="background:rgba(16,185,129,.1);color:var(--green);">{weightGoalPct}% of goal</div>
+      <div class="hstat-sub" style="background:rgba(255,92,122,.1);color:var(--green);">{weightGoalPct}% of goal</div>
     </div>
     <div class="hstat gold" style="animation-delay:.08s;">
       <div class="hstat-icon">🔥</div>
@@ -795,7 +795,7 @@ const initialPhotos = progressPhotos || [];
       </div>
       <div style="display:flex;flex-direction:column;gap:.6rem;">
         {smartInsights.map((ins: any) => (
-          <div style={`display:flex;gap:.7rem;align-items:flex-start;padding:.7rem .85rem;border-radius:12px;border:1px solid;background:${ins.level==='positive'?'rgba(16,185,129,.06)':ins.level==='warning'?'rgba(245,158,11,.06)':'rgba(59,130,246,.05)'};border-color:${ins.level==='positive'?'rgba(16,185,129,.18)':ins.level==='warning'?'rgba(245,158,11,.2)':'rgba(59,130,246,.15)'};`}>
+          <div style={`display:flex;gap:.7rem;align-items:flex-start;padding:.7rem .85rem;border-radius:12px;border:1px solid;background:${ins.level==='positive'?'rgba(255,92,122,.06)':ins.level==='warning'?'rgba(245,158,11,.06)':'rgba(59,130,246,.05)'};border-color:${ins.level==='positive'?'rgba(255,92,122,.18)':ins.level==='warning'?'rgba(245,158,11,.2)':'rgba(59,130,246,.15)'};`}>
             <span style="font-size:1.1rem;flex-shrink:0;">{ins.icon}</span>
             <div>
               <div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:.15rem;">{ins.title}</div>
@@ -812,7 +812,7 @@ const initialPhotos = progressPhotos || [];
   {goalHasTarget && (
     <div class="card" style="animation-delay:.2s;margin-bottom:1.75rem;">
       <div class="ch">
-        <div class="ch-ic" style="background:linear-gradient(135deg,#ef4444,#f59e0b,#10b981);box-shadow:0 4px 10px rgba(16,185,129,.2);">🎯</div>
+        <div class="ch-ic" style="background:linear-gradient(135deg,#ef4444,#f59e0b,#FF5C7A);box-shadow:0 4px 10px rgba(255,92,122,.2);">🎯</div>
         <div style="flex:1;">
           <div class="ch-tt">Goal Timeline</div>
           <div class="ch-sub">{goalStartLbs} {wUnit} → {goalWeightLbs} {wUnit} · {goalPctDone}% complete</div>
@@ -874,7 +874,7 @@ const initialPhotos = progressPhotos || [];
   {showProjection && (
     <div class="card" style="animation-delay:.22s;margin-bottom:1.75rem;">
       <div class="ch">
-        <div class="ch-ic" style="background:linear-gradient(135deg,#10b981,#f59e0b);box-shadow:0 4px 10px rgba(245,158,11,.18);">📈</div>
+        <div class="ch-ic" style="background:linear-gradient(135deg,#FF5C7A,#f59e0b);box-shadow:0 4px 10px rgba(245,158,11,.18);">📈</div>
         <div style="flex:1;">
           <div class="ch-tt">Weight Projection</div>
           <div class="ch-sub">Trajectory to goal · {projRateWeekDisp} {wUnit}/week loss</div>
@@ -894,8 +894,8 @@ const initialPhotos = progressPhotos || [];
         <svg width="100%" viewBox={`0 0 ${PROJ_W} ${PROJ_H}`} preserveAspectRatio="xMidYMid meet" style="overflow:visible;display:block;">
           <defs>
             <linearGradient id="projAreaGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#10b981" stop-opacity="0.22" />
-              <stop offset="100%" stop-color="#10b981" stop-opacity="0" />
+              <stop offset="0%" stop-color="#FF5C7A" stop-opacity="0.22" />
+              <stop offset="100%" stop-color="#FF5C7A" stop-opacity="0" />
             </linearGradient>
           </defs>
           {projYTicks.map(tk => (
@@ -916,14 +916,14 @@ const initialPhotos = progressPhotos || [];
               fill="url(#projAreaGrad)" />
           )}
           {projHistPts.length > 1 && (
-            <path d={projHistPath} fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d={projHistPath} fill="none" stroke="#FF5C7A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
           )}
           {projGoalDateMs && (
             <line x1={projLastX} y1={projLastY} x2={projGoalSvgX} y2={projGoalSvgY}
               stroke="#f59e0b" stroke-width="2" stroke-dasharray="7 4" stroke-linecap="round" opacity="0.75" />
           )}
           {projHistPts.map(p => (
-            <circle cx={p.x} cy={p.y} r="3.5" fill="#10b981" stroke="#34d399" stroke-width="1.5">
+            <circle cx={p.x} cy={p.y} r="3.5" fill="#FF5C7A" stroke="#B6FF3C" stroke-width="1.5">
               <title>{p.weightDisp} {wUnit} — {p.date}</title>
             </circle>
           ))}
@@ -950,7 +950,7 @@ const initialPhotos = progressPhotos || [];
       <!-- JOURNEY PROGRESS -->
       <div class="card" style="animation-delay:.05s;">
         <div class="ch">
-          <div class="ch-ic" style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 10px rgba(16,185,129,.2);">📅</div>
+          <div class="ch-ic" style="background:linear-gradient(135deg,#FF5C7A,#E0394F);box-shadow:0 4px 10px rgba(255,92,122,.2);">📅</div>
           <div style="flex:1;"><div class="ch-tt">Journey Progress</div><div class="ch-sub">Day {currentDay} of 30</div></div>
         </div>
         <div class="cb">
@@ -979,7 +979,7 @@ const initialPhotos = progressPhotos || [];
                 <span class="prog-val" style="color:var(--blue);">{weightGoalPct}%</span>
               </div>
               <div class="prog-trk">
-                <div class="prog-fill" style={`width:${weightGoalPct}%;background:linear-gradient(90deg,#3b82f6,#10b981);`}></div>
+                <div class="prog-fill" style={`width:${weightGoalPct}%;background:linear-gradient(90deg,#3b82f6,#FF5C7A);`}></div>
               </div>
             </div>
           )}
@@ -1031,7 +1031,7 @@ const initialPhotos = progressPhotos || [];
                   </linearGradient>
                   <linearGradient id="wLineGrad" x1="0" y1="0" x2="1" y2="0">
                     <stop offset="0%" stop-color="#3b82f6" />
-                    <stop offset="100%" stop-color="#10b981" />
+                    <stop offset="100%" stop-color="#FF5C7A" />
                   </linearGradient>
                 </defs>
                 {wChartPts.length > 1 && <path d={wFillPath} fill="url(#wAreaGrad)" />}
@@ -1044,8 +1044,8 @@ const initialPhotos = progressPhotos || [];
                 ))}
                 {wChartPtsLbs.map(p => (
                   <circle cx={p.x} cy={p.y} r={p.isLatest ? 5 : 3.5}
-                    fill={p.isLatest ? '#10b981' : '#3b82f6'}
-                    stroke={p.isLatest ? '#34d399' : '#60a5fa'}
+                    fill={p.isLatest ? '#FF5C7A' : '#3b82f6'}
+                    stroke={p.isLatest ? '#B6FF3C' : '#60a5fa'}
                     stroke-width="1.5">
                     <title>{p.weightLbs} {wUnit} — {p.date}</title>
                   </circle>
@@ -1069,7 +1069,7 @@ const initialPhotos = progressPhotos || [];
       <!-- ACTIVITY HEATMAP CALENDAR -->
       <div class="card" style="animation-delay:.12s;">
         <div class="ch">
-          <div class="ch-ic" style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 4px 10px rgba(16,185,129,.2);">📆</div>
+          <div class="ch-ic" style="background:linear-gradient(135deg,#FF5C7A,#E0394F);box-shadow:0 4px 10px rgba(255,92,122,.2);">📆</div>
           <div style="flex:1;"><div class="ch-tt">Activity Calendar</div><div class="ch-sub">90-day check-in history</div></div>
           <div style="font-size:.72rem;font-weight:800;color:var(--green);">{Object.keys(checkinMap).length} days logged</div>
         </div>
@@ -1150,7 +1150,7 @@ const initialPhotos = progressPhotos || [];
             <div class="echart">
               {energyChart.map(d => (
                 <div class="ebar-wrap">
-                  <div class="ebar" style={`height:${d.pct}%;background:${d.energy >= 4 ? 'linear-gradient(to top,#10b981,#34d399)' : d.energy >= 2 ? 'linear-gradient(to top,#f59e0b,#fbbf24)' : 'linear-gradient(to top,#ef4444,#f87171)'};`} title={`Energy ${d.energy}/5 · ${d.water} glasses`}></div>
+                  <div class="ebar" style={`height:${d.pct}%;background:${d.energy >= 4 ? 'linear-gradient(to top,#FF5C7A,#B6FF3C)' : d.energy >= 2 ? 'linear-gradient(to top,#f59e0b,#fbbf24)' : 'linear-gradient(to top,#ef4444,#f87171)'};`} title={`Energy ${d.energy}/5 · ${d.water} glasses`}></div>
                   <div class="ebar-day">{d.day}</div>
                 </div>
               ))}
@@ -1255,7 +1255,7 @@ const initialPhotos = progressPhotos || [];
         </div>
         <div class="cb" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
           {[
-            {pct:journeyPct,  color:'#10b981', stroke:'url(#g1)', lbl:'Journey',  val:`${currentDay}d`},
+            {pct:journeyPct,  color:'#FF5C7A', stroke:'url(#g1)', lbl:'Journey',  val:`${currentDay}d`},
             {pct:xpPct,       color:'#8b5cf6', stroke:'url(#g2)', lbl:'Level XP', val:`Lv${xpLevel}`},
             {pct:weightGoalPct||0, color:'#3b82f6', stroke:'url(#g3)', lbl:'Weight',  val:`${weightGoalPct}%`},
             {pct:mealAdherence, color:'#f59e0b', stroke:'url(#g4)', lbl:'Meals',   val:`${mealAdherence}%`},
@@ -1466,7 +1466,7 @@ const initialPhotos = progressPhotos || [];
           {ketoneLogs.slice(0, 10).map(k => (
             <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .8rem;background:var(--bg);border:1px solid var(--border);border-radius:10px;">
               <div style="display:flex;align-items:center;gap:.6rem;">
-                <span style={`font-size:.7rem;font-weight:800;padding:.15rem .45rem;border-radius:6px;background:${k.ketone_mmol >= 1.5 && k.ketone_mmol < 3.0 ? 'rgba(16,185,129,.15)' : k.ketone_mmol >= 0.5 ? 'rgba(245,158,11,.15)' : 'rgba(239,68,68,.15)'};color:${k.ketone_mmol >= 1.5 && k.ketone_mmol < 3.0 ? 'var(--green)' : k.ketone_mmol >= 0.5 ? 'var(--gold)' : 'var(--red)'};`}>{k.measurement_type}</span>
+                <span style={`font-size:.7rem;font-weight:800;padding:.15rem .45rem;border-radius:6px;background:${k.ketone_mmol >= 1.5 && k.ketone_mmol < 3.0 ? 'rgba(255,92,122,.15)' : k.ketone_mmol >= 0.5 ? 'rgba(245,158,11,.15)' : 'rgba(239,68,68,.15)'};color:${k.ketone_mmol >= 1.5 && k.ketone_mmol < 3.0 ? 'var(--green)' : k.ketone_mmol >= 0.5 ? 'var(--gold)' : 'var(--red)'};`}>{k.measurement_type}</span>
                 <span style="font-weight:800;font-size:.85rem;">{k.ketone_mmol} <span style="font-size:.65rem;color:var(--soft);">mmol/L</span></span>
               </div>
               <span style="font-size:.72rem;color:var(--soft);">{new Date(k.logged_date).toLocaleDateString('en',{month:'short',day:'numeric'})}</span>
@@ -1487,7 +1487,7 @@ const initialPhotos = progressPhotos || [];
         {[
           {range:'< 0.5', label:'No ketosis', color:'#ef4444'},
           {range:'0.5–1.5', label:'Light', color:'#f59e0b'},
-          {range:'1.5–3.0', label:'Optimal 🔥', color:'#10b981'},
+          {range:'1.5–3.0', label:'Optimal 🔥', color:'#FF5C7A'},
           {range:'3.0–5.0', label:'Deep', color:'#8b5cf6'},
         ].map(s => (
           <div style={`font-size:.65rem;font-weight:700;padding:.2rem .5rem;border-radius:6px;background:${s.color}15;color:${s.color};border:1px solid ${s.color}25;`}>{s.range} {s.label}</div>
@@ -1512,7 +1512,7 @@ const initialPhotos = progressPhotos || [];
             <span style={`font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.5rem;font-weight:900;color:${bcBMIcat?.color};`}>{bcBMI}</span>
           </div>
           <!-- Gradient bar with marker -->
-          <div style="position:relative;height:10px;border-radius:99px;background:linear-gradient(90deg,#3b82f6 0%,#10b981 30%,#f59e0b 65%,#ef4444 100%);margin-bottom:.3rem;">
+          <div style="position:relative;height:10px;border-radius:99px;background:linear-gradient(90deg,#3b82f6 0%,#FF5C7A 30%,#f59e0b 65%,#ef4444 100%);margin-bottom:.3rem;">
             <div style={`position:absolute;top:50%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#fff;border:2.5px solid ${bcBMIcat?.color};box-shadow:0 0 0 2px rgba(0,0,0,.2);left:${bcGaugePct}%;`}></div>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:.6rem;color:var(--soft);">
@@ -1543,7 +1543,7 @@ const initialPhotos = progressPhotos || [];
 
         <!-- Healthy weight range -->
         {bcHealthyMin && bcHealthyMax && (
-          <div style="padding:.75rem 1rem;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);border-radius:11px;">
+          <div style="padding:.75rem 1rem;background:rgba(255,92,122,.06);border:1px solid rgba(255,92,122,.15);border-radius:11px;">
             <div style="font-size:.7rem;font-weight:800;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.35rem;">Healthy Weight Range for Your Height</div>
             <div style="display:flex;align-items:center;justify-content:space-between;">
               <span style="font-weight:800;font-size:.92rem;color:var(--green);">{dispHealthyMin} – {dispHealthyMax} {wUnit}</span>
@@ -2278,7 +2278,7 @@ const initialPhotos = progressPhotos || [];
       + '</linearGradient>'
       + '<linearGradient id="wLineGrad" x1="0" y1="0" x2="1" y2="0">'
       + '<stop offset="0%" stop-color="#3b82f6"/>'
-      + '<stop offset="100%" stop-color="#10b981"/>'
+      + '<stop offset="100%" stop-color="#FF5C7A"/>'
       + '</linearGradient></defs>';
 
     if (pts.length > 1) {
@@ -2291,8 +2291,8 @@ const initialPhotos = progressPhotos || [];
     });
     pts.forEach(function(p) {
       html += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (p.isLatest ? 5 : 3.5) + '"'
-        + ' fill="' + (p.isLatest ? '#10b981' : '#3b82f6') + '"'
-        + ' stroke="' + (p.isLatest ? '#34d399' : '#60a5fa') + '" stroke-width="1.5">'
+        + ' fill="' + (p.isLatest ? '#FF5C7A' : '#3b82f6') + '"'
+        + ' stroke="' + (p.isLatest ? '#B6FF3C' : '#60a5fa') + '" stroke-width="1.5">'
         + '<title>' + toDisp(p.w) + ' ' + wUnit + ' \u2014 ' + p.date + '</title></circle>';
     });
     dateLabels.forEach(function(p) {

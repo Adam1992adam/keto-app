@@ -13,7 +13,7 @@ const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
 const maxDays   = getMaxJourneyDays(planType);
 const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
-const tierColor = planType === 'elite_12' ? '#f59e0b' : planType === 'pro_6' ? '#6366f1' : '#10b981';
+const tierColor = planType === 'elite_12' ? '#f59e0b' : planType === 'pro_6' ? '#6366f1' : '#FF5C7A';
 const firstName = profile.full_name?.split(' ')[0] || 'there';
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
@@ -68,7 +68,7 @@ const isPro   = planType === 'pro_6' || isElite;
       --bg:var(--rv-bg);--card:var(--rv-card);--card2:var(--rv-bg-alt);
       --border:var(--rv-line);--border2:rgba(255,92,122,.3);
       --text:var(--rv-ink);--soft:var(--rv-ink-soft);--muted:#C8BFBA;
-      --green:#10b981;--green2:#34d399;--amber:#f59e0b;
+      --green:#FF5C7A;--green2:#B6FF3C;--amber:#f59e0b;
       --purple:#8b5cf6;--blue:#3b82f6;--red:#ef4444;
     }
     *{box-sizing:border-box;margin:0;padding:0;}
@@ -94,7 +94,7 @@ const isPro   = planType === 'pro_6' || isElite;
     .gp-step{display:flex;flex-direction:column;align-items:center;gap:.3rem;flex:1;}
     .gp-dot{width:32px;height:32px;border-radius:50%;border:2px solid;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:900;transition:all .3s;position:relative;z-index:1;}
     .gp-dot.done{background:var(--green);border-color:var(--green);color:#fff;}
-    .gp-dot.active{background:rgba(16,185,129,.15);border-color:var(--green);color:var(--green);}
+    .gp-dot.active{background:rgba(255,92,122,.15);border-color:var(--green);color:var(--green);}
     .gp-dot.pending{background:var(--card2);border-color:var(--muted);color:var(--muted);}
     .gp-lbl{font-size:.6rem;font-weight:700;color:var(--soft);text-align:center;max-width:60px;}
     .gp-line{flex:1;height:2px;background:var(--border);margin-bottom:1.1rem;}
@@ -112,7 +112,7 @@ const isPro   = planType === 'pro_6' || isElite;
     .feat-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.1rem 1.25rem;display:flex;gap:1rem;align-items:flex-start;transition:all .2s;text-decoration:none;color:inherit;position:relative;overflow:hidden;}
     .feat-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.25);}
     .feat-card.done-card{opacity:.75;}
-    .feat-card.done-card::after{content:'✓ Done';position:absolute;top:.6rem;right:.75rem;font-size:.65rem;font-weight:800;color:var(--green);background:rgba(16,185,129,.12);padding:.15rem .45rem;border-radius:6px;}
+    .feat-card.done-card::after{content:'✓ Done';position:absolute;top:.6rem;right:.75rem;font-size:.65rem;font-weight:800;color:var(--green);background:rgba(255,92,122,.12);padding:.15rem .45rem;border-radius:6px;}
     .fc-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.3rem;}
     .fc-body{flex:1;min-width:0;}
     .fc-title{font-size:.9rem;font-weight:800;margin-bottom:.2rem;display:flex;align-items:center;gap:.4rem;}
@@ -121,7 +121,7 @@ const isPro   = planType === 'pro_6' || isElite;
     .fc-xp{font-size:.65rem;font-weight:800;padding:.15rem .45rem;border-radius:6px;background:rgba(139,92,246,.12);color:#a78bfa;white-space:nowrap;}
 
     /* TIP BOXES */
-    .tip-box{display:flex;gap:.75rem;padding:.9rem 1rem;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.18);border-radius:12px;margin-top:.6rem;}
+    .tip-box{display:flex;gap:.75rem;padding:.9rem 1rem;background:rgba(255,92,122,.07);border:1px solid rgba(255,92,122,.18);border-radius:12px;margin-top:.6rem;}
     .tip-icon{font-size:1.1rem;flex-shrink:0;margin-top:.05rem;}
     .tip-text{font-size:.78rem;color:var(--soft);line-height:1.65;}
     .tip-text strong{color:var(--text);}
@@ -134,15 +134,15 @@ const isPro   = planType === 'pro_6' || isElite;
     /* XP OVERVIEW */
     .xp-table{width:100%;border-collapse:collapse;font-size:.8rem;}
     .xp-table th{text-align:left;padding:.5rem .75rem;color:var(--soft);font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);}
-    .xp-table td{padding:.6rem .75rem;border-bottom:1px solid rgba(16,185,129,.06);}
+    .xp-table td{padding:.6rem .75rem;border-bottom:1px solid rgba(255,92,122,.06);}
     .xp-table tr:last-child td{border-bottom:none;}
     .xp-amt{font-weight:800;color:#a78bfa;}
 
     /* CTA */
-    .guide-cta{background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(52,211,153,.07));border:1.5px solid rgba(16,185,129,.28);border-radius:20px;padding:2rem;text-align:center;margin-top:2rem;}
+    .guide-cta{background:linear-gradient(135deg,rgba(255,92,122,.12),rgba(52,211,153,.07));border:1.5px solid rgba(255,92,122,.28);border-radius:20px;padding:2rem;text-align:center;margin-top:2rem;}
     .gc-title{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;font-weight:900;margin-bottom:.4rem;}
     .gc-sub{font-size:.85rem;color:var(--soft);margin-bottom:1.25rem;line-height:1.6;}
-    .gc-btn{display:inline-block;padding:.875rem 2rem;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;font-weight:900;font-size:.95rem;border-radius:14px;text-decoration:none;box-shadow:0 6px 20px rgba(16,185,129,.35);}
+    .gc-btn{display:inline-block;padding:.875rem 2rem;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;font-weight:900;font-size:.95rem;border-radius:14px;text-decoration:none;box-shadow:0 6px 20px rgba(255,92,122,.35);}
 
     @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
     .guide-section{animation:fadeUp .4s ease both;}
@@ -167,7 +167,7 @@ const isPro   = planType === 'pro_6' || isElite;
 
   <!-- HERO -->
   <div class="guide-hero">
-    <div class="gh-badge" style={`background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.25);color:var(--green);`}>
+    <div class="gh-badge" style={`background:rgba(255,92,122,.1);border-color:rgba(255,92,122,.25);color:var(--green);`}>
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
       App Guide
     </div>
@@ -217,14 +217,14 @@ const isPro   = planType === 'pro_6' || isElite;
   <!-- SECTION 1: DAILY ROUTINE -->
   <div class="guide-section">
     <div class="gs-header">
-      <div class="gs-num" style="background:linear-gradient(135deg,#10b981,#34d399);">1</div>
+      <div class="gs-num" style="background:linear-gradient(135deg,#FF5C7A,#B6FF3C);">1</div>
       <div class="gs-title">Your Daily Routine</div>
-      <span class="gs-badge" style="background:rgba(16,185,129,.12);color:var(--green);">Do This Every Day</span>
+      <span class="gs-badge" style="background:rgba(255,92,122,.12);color:var(--green);">Do This Every Day</span>
     </div>
     <div class="feat-grid">
 
       <a href="/dashboard/checkin" class={`feat-card ${hasCheckedIn ? 'done-card' : ''}`}>
-        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(52,211,153,.1));border:1px solid rgba(16,185,129,.25);">✏️</div>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(255,92,122,.2),rgba(52,211,153,.1));border:1px solid rgba(255,92,122,.25);">✏️</div>
         <div class="fc-body">
           <div class="fc-title">Daily Check-in <span class="fc-xp">+30 XP</span></div>
           <div class="fc-desc">Every day, log your energy level (1–5), mood, water glasses, and whether you followed your meal plan. This builds your streak and gives the AI Coach data to personalise your advice. Takes under 2 minutes.</div>
@@ -232,7 +232,7 @@ const isPro   = planType === 'pro_6' || isElite;
             <span class="tip-icon">💡</span>
             <div class="tip-text"><strong>Best time:</strong> Do your check-in right after dinner — you'll have all the day's data fresh in your mind. Set a phone alarm for 8 pm.</div>
           </div>
-          <a href="/dashboard/checkin" class="fc-action" style="background:rgba(16,185,129,.12);color:var(--green);">Check In Now →</a>
+          <a href="/dashboard/checkin" class="fc-action" style="background:rgba(255,92,122,.12);color:var(--green);">Check In Now →</a>
         </div>
       </a>
 
@@ -261,7 +261,7 @@ const isPro   = planType === 'pro_6' || isElite;
     <div class="feat-grid">
 
       <a href="/dashboard/progress" class={`feat-card ${hasLoggedWeight ? '' : ''}`}>
-        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(52,211,153,.1));border:1px solid rgba(16,185,129,.25);">⚖️</div>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(255,92,122,.2),rgba(52,211,153,.1));border:1px solid rgba(255,92,122,.25);">⚖️</div>
         <div class="fc-body">
           <div class="fc-title">Weight Log <span class="fc-xp">+10 XP</span></div>
           <div class="fc-desc">Log your weight 1–2× per week (same time of day, same conditions). The app tracks your loss curve over time and calculates % progress toward your goal weight. You can also log body measurements.</div>
@@ -269,7 +269,7 @@ const isPro   = planType === 'pro_6' || isElite;
             <span class="tip-icon">📅</span>
             <div class="tip-text"><strong>Best time:</strong> Weigh yourself on Monday morning, before eating, after using the bathroom. This gives the most consistent readings and avoids weekend food variation.</div>
           </div>
-          <a href="/dashboard/progress" class="fc-action" style="background:rgba(16,185,129,.12);color:var(--green);">Go to Progress →</a>
+          <a href="/dashboard/progress" class="fc-action" style="background:rgba(255,92,122,.12);color:var(--green);">Go to Progress →</a>
         </div>
       </a>
 
@@ -412,7 +412,7 @@ const isPro   = planType === 'pro_6' || isElite;
       </a>
 
       <a href="/dashboard/shopping" class="feat-card">
-        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(52,211,153,.1));border:1px solid rgba(16,185,129,.25);">🛒</div>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(255,92,122,.2),rgba(52,211,153,.1));border:1px solid rgba(255,92,122,.25);">🛒</div>
         <div class="fc-body">
           <div class="fc-title">Shopping List</div>
           <div class="fc-desc">Auto-generated weekly shopping list based on your meal plan. Organised by food category. Print or screenshot before heading to the supermarket — everything you need for the week is already listed.</div>
@@ -444,11 +444,11 @@ const isPro   = planType === 'pro_6' || isElite;
       </a>
 
       <a href="/dashboard/referrals" class="feat-card">
-        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(52,211,153,.1));border:1px solid rgba(16,185,129,.25);">🤝</div>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(255,92,122,.2),rgba(52,211,153,.1));border:1px solid rgba(255,92,122,.25);">🤝</div>
         <div class="fc-body">
           <div class="fc-title">Referral Program <span class="fc-xp">+150 XP per friend</span></div>
           <div class="fc-desc">Share your unique referral code with friends. When they sign up and use your code, you earn 150 XP and they get a 50 XP welcome bonus. No limit — refer as many people as you like.</div>
-          <a href="/dashboard/referrals" class="fc-action" style="background:rgba(16,185,129,.12);color:var(--green);">Get Your Code →</a>
+          <a href="/dashboard/referrals" class="fc-action" style="background:rgba(255,92,122,.12);color:var(--green);">Get Your Code →</a>
         </div>
       </a>
 

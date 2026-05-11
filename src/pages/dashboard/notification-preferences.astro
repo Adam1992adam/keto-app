@@ -114,7 +114,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
       --bg:#FAF6F1; --card:#FFFFFF; --card2:#F2EDE5;
       --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
       --text:#1A110D; --soft:#7A5C52; --muted:#C8B5AD;
-      --green:#10b981; --green2:#34d399; --gold:#f59e0b;
+      --green:#FF5C7A; --green2:#B6FF3C; --gold:#f59e0b;
       --purple:#8b5cf6; --blue:#3b82f6; --red:#ef4444;
       --rv-accent:#FF5C7A;
     }
@@ -148,7 +148,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
     /* ── Summary badge ── */
     .summary-badge {
       display:inline-flex; align-items:center; gap:.4rem;
-      background:rgba(16,185,129,.1); border:1px solid var(--border2);
+      background:rgba(255,92,122,.1); border:1px solid var(--border2);
       color:var(--green); font-size:.8rem; font-weight:700;
       padding:.3rem .75rem; border-radius:99px;
       width:fit-content;
@@ -170,7 +170,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
       transition:background .2s;
     }
     .toggle-row:last-child { border-bottom:none; }
-    .toggle-row:hover { background:rgba(16,185,129,.04); }
+    .toggle-row:hover { background:rgba(255,92,122,.04); }
 
     .row-icon {
       font-size:1.4rem; flex-shrink:0;
@@ -208,7 +208,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
     }
     .toggle-input:checked + .toggle-track::after {
       transform:translateX(20px);
-      box-shadow:0 1px 6px rgba(16,185,129,.45);
+      box-shadow:0 1px 6px rgba(255,92,122,.45);
     }
 
     /* ── Actions ── */
@@ -232,7 +232,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
       padding:.75rem 1.1rem; cursor:pointer;
       transition:color .2s, border-color .2s, background .2s;
     }
-    .btn-all:hover { color:var(--text); border-color:var(--green); background:rgba(16,185,129,.07); }
+    .btn-all:hover { color:var(--text); border-color:var(--green); background:rgba(255,92,122,.07); }
 
     /* ── Back link ── */
     .back-link {

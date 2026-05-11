@@ -37,7 +37,7 @@ const mUnit = imperial ? 'in'  : 'cm';
       --bg:#FAF6F1; --card:#FFFFFF; --card2:#F2EDE5;
       --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
       --text:#1A110D; --soft:#7A5C52; --muted:#C8B5AD;
-      --green:#10b981; --green2:#34d399; --gold:#f59e0b;
+      --green:#FF5C7A; --green2:#B6FF3C; --gold:#f59e0b;
       --purple:#8b5cf6; --blue:#3b82f6; --red:#ef4444;
       --rv-accent:#FF5C7A;
     }
@@ -100,7 +100,7 @@ const mUnit = imperial ? 'in'  : 'cm';
     .export-card:hover {
       transform: translateY(-3px);
       border-color: var(--border2);
-      box-shadow: 0 8px 30px rgba(16,185,129,.07);
+      box-shadow: 0 8px 30px rgba(255,92,122,.07);
     }
     .export-card:nth-child(1) { animation-delay: .05s; }
     .export-card:nth-child(2) { animation-delay: .10s; }
@@ -123,7 +123,7 @@ const mUnit = imperial ? 'in'  : 'cm';
       font-size: 1.4rem;
       flex-shrink: 0;
     }
-    .icon-green  { background: rgba(16,185,129,.12); }
+    .icon-green  { background: rgba(255,92,122,.12); }
     .icon-blue   { background: rgba(59,130,246,.12); }
     .icon-purple { background: rgba(139,92,246,.12); }
     .icon-gold   { background: rgba(245,158,11,.12); }
@@ -174,7 +174,7 @@ const mUnit = imperial ? 'in'  : 'cm';
       padding: .75rem 1.25rem;
       border-radius: 12px;
       border: 1px solid var(--border2);
-      background: rgba(16,185,129,.08);
+      background: rgba(255,92,122,.08);
       color: var(--green);
       font-weight: 700;
       font-size: .88rem;
@@ -183,9 +183,9 @@ const mUnit = imperial ? 'in'  : 'cm';
       font-family: inherit;
     }
     .btn-download:hover {
-      background: rgba(16,185,129,.16);
+      background: rgba(255,92,122,.16);
       transform: translateY(-1px);
-      box-shadow: 0 4px 16px rgba(16,185,129,.12);
+      box-shadow: 0 4px 16px rgba(255,92,122,.12);
     }
     .btn-download:active { transform: scale(.98); }
     .btn-download.loading {

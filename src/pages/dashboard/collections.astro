@@ -63,7 +63,7 @@ const EMOJI_OPTIONS = ['📚','🍳','🥗','🍽️','💪','❤️','⭐','�
       --bg:#FAF6F1;--card:#FFFFFF;--card2:#F2EDE5;
       --border:rgba(22,17,15,.08);--border2:rgba(255,92,122,.25);
       --text:#16110F;--soft:#4A4340;--muted:#C8BFBA;
-      --green:#10b981;--green2:#34d399;--gold:#f59e0b;
+      --green:#FF5C7A;--green2:#B6FF3C;--gold:#f59e0b;
       --purple:#8b5cf6;--blue:#3b82f6;--red:#ef4444;
       --rv-accent:#FF5C7A;--rv-warm:#FF914D;
     }
@@ -86,8 +86,8 @@ const EMOJI_OPTIONS = ['📚','🍳','🥗','🍽️','💪','❤️','⭐','�
     /* Collections grid */
     .collections-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; margin-bottom:36px; animation:fadeUp .5s .05s ease both; }
     .col-card { background:var(--card); border:1.5px solid var(--border); border-radius:16px; padding:1.1rem 1rem; cursor:pointer; transition:all .2s; position:relative; text-decoration:none; display:block; }
-    .col-card:hover, .col-card.active { border-color:var(--border2); box-shadow:0 6px 20px rgba(16,185,129,.1); transform:translateY(-2px); }
-    .col-card.active { border-color:var(--green); background:rgba(16,185,129,.06); }
+    .col-card:hover, .col-card.active { border-color:var(--border2); box-shadow:0 6px 20px rgba(255,92,122,.1); transform:translateY(-2px); }
+    .col-card.active { border-color:var(--green); background:rgba(255,92,122,.06); }
     .col-emoji { font-size:2rem; margin-bottom:.5rem; }
     .col-name { font-weight:700; font-size:.95rem; color:var(--text); margin-bottom:.25rem; }
     .col-count { font-size:.78rem; color:var(--soft); }
@@ -113,7 +113,7 @@ const EMOJI_OPTIONS = ['📚','🍳','🥗','🍽️','💪','❤️','⭐','�
     @media(max-width:480px){.recipe-grid{grid-template-columns:1fr;}}
 
     .recipe-card { background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; transition:all .2s; }
-    .recipe-card:hover { transform:translateY(-3px); border-color:var(--border2); box-shadow:0 8px 28px rgba(16,185,129,.1); }
+    .recipe-card:hover { transform:translateY(-3px); border-color:var(--border2); box-shadow:0 8px 28px rgba(255,92,122,.1); }
     .card-img { position:relative; height:150px; overflow:hidden; }
     .card-img img { width:100%; height:100%; object-fit:cover; }
     .card-img-ph { width:100%; height:100%; background:linear-gradient(135deg,#F2EDE5,#E8DDD0); display:flex; align-items:center; justify-content:center; font-size:2rem; }
@@ -128,9 +128,9 @@ const EMOJI_OPTIONS = ['📚','🍳','🥗','🍽️','💪','❤️','⭐','�
     .mp-cal { background:rgba(245,158,11,.15); color:#f59e0b; }
     .mp-pro { background:rgba(59,130,246,.15);  color:#3b82f6; }
     .mp-fat { background:rgba(139,92,246,.15);  color:#8b5cf6; }
-    .mp-carb{ background:rgba(16,185,129,.15);  color:#10b981; }
+    .mp-carb{ background:rgba(255,92,122,.15);  color:#FF5C7A; }
     .diff-badge { font-size:.65rem; font-weight:800; text-transform:uppercase; padding:.12rem .38rem; border-radius:5px; }
-    .diff-badge.easy   { background:rgba(16,185,129,.15); color:#34d399; }
+    .diff-badge.easy   { background:rgba(255,92,122,.15); color:#B6FF3C; }
     .diff-badge.medium { background:rgba(245,158,11,.15); color:#fbbf24; }
     .diff-badge.hard   { background:rgba(239,68,68,.15);  color:#f87171; }
 
@@ -149,7 +149,7 @@ const EMOJI_OPTIONS = ['📚','🍳','🥗','🍽️','💪','❤️','⭐','�
     .form-input:focus { border-color:var(--green); }
     .emoji-picker { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.4rem; }
     .ep-btn { width:36px; height:36px; border-radius:8px; border:1.5px solid var(--border); background:transparent; cursor:pointer; font-size:1.1rem; transition:all .15s; }
-    .ep-btn:hover, .ep-btn.active { border-color:var(--green); background:rgba(16,185,129,.1); }
+    .ep-btn:hover, .ep-btn.active { border-color:var(--green); background:rgba(255,92,122,.1); }
     .modal-actions { display:flex; gap:.6rem; margin-top:1.2rem; justify-content:flex-end; }
     .btn-cancel { padding:.5rem 1rem; border-radius:10px; background:transparent; border:1.5px solid var(--border2); color:var(--soft); font-family:'Bricolage Grotesque',system-ui,sans-serif; font-size:.87rem; cursor:pointer; transition:all .15s; }
     .btn-cancel:hover { border-color:var(--border2); color:var(--text); }
