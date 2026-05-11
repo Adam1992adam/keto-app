@@ -39,28 +39,34 @@ function layout(content: string, preheader = '') {
   }
 </style>
 </head>
-<body style="margin:0;padding:0;background:#0a0f0b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${preheader}</div>` : ''}
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0f0b;">
+<body style="margin:0;padding:0;background:#FAF6F1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;">
+${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${preheader}&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>` : ''}
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#FAF6F1;">
   <tr><td align="center" class="email-body" style="padding:32px 16px;">
     <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
 
       <!-- Logo header -->
-      <tr><td style="padding-bottom:24px;text-align:center;">
-        <div style="display:inline-flex;align-items:center;gap:8px;">
-          <span style="font-size:28px;">🥑</span>
-          <span style="font-family:Georgia,serif;font-size:20px;font-weight:900;color:#FF5C7A;letter-spacing:-.5px;">Keto Journey</span>
-        </div>
+      <tr><td style="padding-bottom:20px;text-align:center;">
+        <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+          <tr>
+            <td style="background:#FF5C7A;border-radius:10px;width:36px;height:36px;text-align:center;vertical-align:middle;">
+              <span style="font-size:18px;line-height:36px;">🌿</span>
+            </td>
+            <td style="padding-left:10px;vertical-align:middle;">
+              <span style="font-family:Georgia,serif;font-size:20px;font-weight:900;color:#16110F;letter-spacing:-.4px;">Keto Journey</span>
+            </td>
+          </tr>
+        </table>
       </td></tr>
 
       <!-- Card -->
-      <tr><td class="email-card" style="background:#0d1a0f;border:1px solid rgba(255,92,122,.2);border-radius:20px;padding:36px 32px;">
+      <tr><td class="email-card" style="background:#FFFFFF;border:1px solid #E5DED2;border-radius:20px;padding:36px 32px;">
         ${content}
       </td></tr>
 
       <!-- Footer -->
       <tr><td style="padding:24px 0 8px;text-align:center;">
-        <p style="margin:0;font-size:12px;color:#2e4a32;line-height:1.6;">
+        <p style="margin:0;font-size:12px;color:#8A8077;line-height:1.6;">
           You're receiving this because you have an active Keto Journey subscription.<br/>
           <a href="${APP_URL}/dashboard/notification-preferences" style="color:#FF5C7A;text-decoration:none;">Manage email preferences</a>
           &nbsp;·&nbsp;
@@ -75,18 +81,18 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${prehead
 </html>`;
 }
 
-// ── Green CTA button ─────────────────────────────────────────────────────────
+// ── CTA button ───────────────────────────────────────────────────────────────
 function btn(href: string, label: string) {
-  return `<a href="${href}" style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#FF5C7A,#B6FF3C);color:#fff;font-weight:800;font-size:15px;border-radius:12px;text-decoration:none;letter-spacing:-.2px;">${label}</a>`;
+  return `<a href="${href}" style="display:inline-block;padding:14px 32px;background:#FF5C7A;color:#fff;font-weight:800;font-size:15px;border-radius:12px;text-decoration:none;letter-spacing:-.2px;">${label}</a>`;
 }
 
 // ── Heading style shortcut ───────────────────────────────────────────────────
 function h1(text: string) {
-  return `<h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:26px;font-weight:900;color:#dfeedd;line-height:1.2;">${text}</h1>`;
+  return `<h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:26px;font-weight:900;color:#16110F;line-height:1.2;">${text}</h1>`;
 }
 
 function p(text: string, style = '') {
-  return `<p style="margin:0 0 16px;font-size:15px;color:#4d7055;line-height:1.7;${style}">${text}</p>`;
+  return `<p style="margin:0 0 16px;font-size:15px;color:#4A4340;line-height:1.7;${style}">${text}</p>`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -98,7 +104,7 @@ export async function sendWelcomeEmail(to: string, name: string, tier: string) {
 
   const content = `
     ${h1(`Welcome, ${firstName}! 🎉`)}
-    ${p(`Your <strong style="color:#dfeedd;">${tierLabel}</strong> plan is now active. You're about to transform your health with the ketogenic diet — and we'll be with you every step of the way.`)}
+    ${p(`Your <strong style="color:#16110F;">${tierLabel}</strong> plan is now active. You're about to transform your health with the ketogenic diet — and we'll be with you every step of the way.`)}
 
     <!-- Steps -->
     <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;">
@@ -111,9 +117,9 @@ export async function sendWelcomeEmail(to: string, name: string, tier: string) {
       ${btn(`${APP_URL}/dashboard`, 'Start Your Journey →')}
     </div>
 
-    <div style="margin-top:28px;padding:16px;background:rgba(255,92,122,.08);border-radius:12px;border:1px solid rgba(255,92,122,.15);">
-      <p style="margin:0;font-size:13px;color:#4d7055;line-height:1.6;">
-        💡 <strong style="color:#dfeedd;">Keto Tip:</strong> In the first 3–5 days you may experience the "keto flu" (fatigue, headaches).
+    <div style="margin-top:28px;padding:16px;background:#FFF0F3;border-radius:12px;border:1px solid #FFCCD5;">
+      <p style="margin:0;font-size:13px;color:#4A4340;line-height:1.6;">
+        💡 <strong style="color:#16110F;">Keto Tip:</strong> In the first 3–5 days you may experience the "keto flu" (fatigue, headaches).
         Stay hydrated, add electrolytes, and keep your carbs under 20g. It passes quickly!
       </p>
     </div>`;
@@ -131,15 +137,15 @@ export async function sendWelcomeEmail(to: string, name: string, tier: string) {
 }
 
 function step(num: string, icon: string, title: string, desc: string, link: string) {
-  return `<tr><td style="padding:10px 0;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(255,92,122,.06);border-radius:12px;border:1px solid rgba(255,92,122,.12);">
+  return `<tr><td style="padding:8px 0;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#FAF6F1;border-radius:12px;border:1px solid #E5DED2;">
       <tr>
         <td style="padding:14px 16px;width:36px;vertical-align:top;">
-          <div style="width:28px;height:28px;background:linear-gradient(135deg,#FF5C7A,#B6FF3C);border-radius:8px;text-align:center;line-height:28px;font-size:14px;font-weight:900;color:#fff;">${num}</div>
+          <div style="width:28px;height:28px;background:#FF5C7A;border-radius:8px;text-align:center;line-height:28px;font-size:13px;font-weight:900;color:#fff;">${num}</div>
         </td>
         <td style="padding:14px 16px 14px 4px;vertical-align:top;">
-          <p style="margin:0 0 3px;font-size:14px;font-weight:700;color:#dfeedd;">${icon} ${title}</p>
-          <p style="margin:0;font-size:13px;color:#4d7055;line-height:1.5;">${desc}</p>
+          <p style="margin:0 0 3px;font-size:14px;font-weight:700;color:#16110F;">${icon} ${title}</p>
+          <p style="margin:0;font-size:13px;color:#4A4340;line-height:1.5;">${desc}</p>
         </td>
         <td style="padding:14px 16px;vertical-align:middle;width:24px;text-align:right;">
           <a href="${link}" style="color:#FF5C7A;font-size:18px;text-decoration:none;">→</a>
@@ -191,8 +197,8 @@ export async function sendWeeklySummaryEmail(to: string, name: string, stats: {
                 (taskPct >= 80 ? 1 : 0);
   const performanceMsg =
     score >= 5 ? `🏆 <strong style="color:#FF5C7A;">Incredible week, ${firstName}!</strong> You're firing on all cylinders — your consistency is what separates you from people who give up.` :
-    score >= 3 ? `💪 <strong style="color:#dfeedd;">Solid effort this week, ${firstName}!</strong> A few more check-ins next week and you'll be unstoppable.` :
-                 `🌱 <strong style="color:#dfeedd;">Every journey has tough weeks, ${firstName}.</strong> The important thing is you're still here. Reset, refocus, and let's make next week count.`;
+    score >= 3 ? `💪 <strong style="color:#16110F;">Solid effort this week, ${firstName}!</strong> A few more check-ins next week and you'll be unstoppable.` :
+                 `🌱 <strong style="color:#16110F;">Every journey has tough weeks, ${firstName}.</strong> The important thing is you're still here. Reset, refocus, and let's make next week count.`;
 
   // Week-over-week weight chip
   const weightDeltaChip = weekWeightDelta !== undefined && Math.abs(weekWeightDelta) >= 0.1
@@ -203,8 +209,8 @@ export async function sendWeeklySummaryEmail(to: string, name: string, stats: {
 
   const content = `
     ${h1(`Week ${weekNum} Summary 📊`)}
-    <div style="padding:14px 16px;background:rgba(255,92,122,.07);border-radius:12px;border:1px solid rgba(255,92,122,.14);margin-bottom:20px;">
-      <p style="margin:0;font-size:14px;color:#4d7055;line-height:1.7;">${performanceMsg}</p>
+    <div style="padding:14px 16px;background:#FAF6F1;border-radius:12px;border:1px solid #F0D4D9;margin-bottom:20px;">
+      <p style="margin:0;font-size:14px;color:#4A4340;line-height:1.7;">${performanceMsg}</p>
     </div>
 
     <!-- Stats grid -->
@@ -218,21 +224,21 @@ export async function sendWeeklySummaryEmail(to: string, name: string, stats: {
     </table>
 
     ${tasksTotal > 0 ? `<!-- Task completion bar -->
-    <div style="padding:14px 16px;background:rgba(255,92,122,.06);border-radius:12px;border:1px solid rgba(255,92,122,.12);margin-bottom:16px;">
+    <div style="padding:14px 16px;background:#FAF6F1;border-radius:12px;border:1px solid #F0D4D9;margin-bottom:16px;">
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
-          <td><p style="margin:0;font-size:13px;font-weight:700;color:#dfeedd;">✅ Tasks completed this week</p></td>
+          <td><p style="margin:0;font-size:13px;font-weight:700;color:#16110F;">✅ Tasks completed this week</p></td>
           <td style="text-align:right;white-space:nowrap;"><p style="margin:0;font-size:13px;font-weight:900;color:#FF5C7A;">${tasksCompleted}/${tasksTotal} (${taskPct}%)</p></td>
         </tr>
       </table>
-      <div style="height:6px;background:rgba(255,255,255,.06);border-radius:3px;margin-top:8px;">
+      <div style="height:6px;background:#F2EDE5;border-radius:3px;margin-top:8px;">
         <div style="height:6px;width:${taskPct}%;background:linear-gradient(90deg,#FF5C7A,#B6FF3C);border-radius:3px;"></div>
       </div>
     </div>` : ''}
 
     ${topFoods.length > 0 ? `<!-- Top foods this week -->
-    <div style="padding:14px 16px;background:rgba(255,92,122,.05);border-radius:12px;border:1px solid rgba(255,92,122,.11);margin-bottom:16px;">
-      <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#dfeedd;">🍽️ What you ate most this week</p>
+    <div style="padding:14px 16px;background:#FAF6F1;border-radius:12px;border:1px solid #F0D4D9;margin-bottom:16px;">
+      <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#16110F;">🍽️ What you ate most this week</p>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         ${topFoods.map(f => `<span style="display:inline-block;padding:4px 11px;background:rgba(255,92,122,.1);border:1px solid rgba(255,92,122,.18);border-radius:99px;font-size:12px;color:#B6FF3C;font-weight:700;">${f}</span>`).join('')}
       </div>
@@ -246,7 +252,7 @@ export async function sendWeeklySummaryEmail(to: string, name: string, stats: {
       <p style="margin:0;font-size:13px;color:#a78bfa;">⏱️ <strong>${fastingSessions} fasting session${fastingSessions !== 1 ? 's' : ''}</strong> completed this week${fastingSessions >= 4 ? ' — elite-level discipline!' : fastingSessions >= 2 ? ' — great consistency' : ''}</p>
     </div>` : ''}
 
-    ${weightLost > 0 || weekWeightDelta !== undefined ? `<div style="padding:14px 16px;background:rgba(255,92,122,.08);border-radius:12px;border:1px solid rgba(255,92,122,.15);margin-bottom:16px;">
+    ${weightLost > 0 || weekWeightDelta !== undefined ? `<div style="padding:14px 16px;background:#FFF0F3;border-radius:12px;border:1px solid #FFCCD5;margin-bottom:16px;">
       <table width="100%" cellpadding="0" cellspacing="0"><tr>
         <td><p style="margin:0;font-size:14px;color:#FF5C7A;font-weight:700;">🎯 ${weightLost > 0 ? `${(weightLost * 2.20462).toFixed(1)} lbs lost since you started` : 'Weight tracking active'}</p></td>
         ${weekWeightDelta !== undefined ? `<td style="text-align:right;">${weightDeltaChip}</td>` : ''}
@@ -255,19 +261,19 @@ export async function sendWeeklySummaryEmail(to: string, name: string, stats: {
 
     ${topInsight ? `<!-- Personalized insight -->
     <div style="padding:16px;background:rgba(245,158,11,.07);border-radius:12px;border:1px solid rgba(245,158,11,.18);margin-bottom:16px;">
-      <p style="margin:0 0 6px;font-size:14px;font-weight:800;color:#dfeedd;">${topInsight.icon} ${topInsight.title}</p>
+      <p style="margin:0 0 6px;font-size:14px;font-weight:800;color:#16110F;">${topInsight.icon} ${topInsight.title}</p>
       <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.6;">${topInsight.body}</p>
     </div>` : ''}
 
-    ${p(`Day <strong style="color:#dfeedd;">${currentDay}</strong> · <strong style="color:#8b5cf6;">Level ${level} — ${levelTitle}</strong> · <strong style="color:#f59e0b;">${totalXp.toLocaleString()} XP</strong>. Week ${nextWeek} starts now!`)}
+    ${p(`Day <strong style="color:#16110F;">${currentDay}</strong> · <strong style="color:#8b5cf6;">Level ${level} — ${levelTitle}</strong> · <strong style="color:#f59e0b;">${totalXp.toLocaleString()} XP</strong>. Week ${nextWeek} starts now!`)}
 
     <div style="text-align:center;margin:24px 0;">
       ${btn(`${APP_URL}/dashboard/weekly`, `View Week ${weekNum} Full Report →`)}
     </div>
 
-    <div style="padding:16px;background:rgba(255,92,122,.06);border-radius:12px;border:1px solid rgba(255,92,122,.12);">
-      <p style="margin:0;font-size:13px;color:#4d7055;line-height:1.6;">
-        💡 <strong style="color:#dfeedd;">Week ${nextWeek} Focus:</strong> ${weekFocus(weekNum)}
+    <div style="padding:16px;background:#FAF6F1;border-radius:12px;border:1px solid #F0D4D9;">
+      <p style="margin:0;font-size:13px;color:#4A4340;line-height:1.6;">
+        💡 <strong style="color:#16110F;">Week ${nextWeek} Focus:</strong> ${weekFocus(weekNum)}
       </p>
     </div>`;
 
@@ -298,10 +304,10 @@ export async function sendWeeklySummaryEmail(to: string, name: string, stats: {
 
 function statCell(icon: string, value: string, label: string, color: string) {
   return `<td class="stat-cell" style="padding:6px;text-align:center;width:25%;">
-    <div style="background:rgba(255,92,122,.06);border:1px solid rgba(255,92,122,.12);border-radius:12px;padding:14px 8px;">
+    <div style="background:#FAF6F1;border:1px solid #E5DED2;border-radius:12px;padding:14px 8px;">
       <div style="font-size:20px;margin-bottom:4px;">${icon}</div>
       <div style="font-size:16px;font-weight:900;color:${color};line-height:1;">${value}</div>
-      <div style="font-size:11px;color:#2e4a32;margin-top:3px;font-weight:600;">${label}</div>
+      <div style="font-size:11px;color:#8A8077;margin-top:3px;font-weight:600;">${label}</div>
     </div>
   </td>`;
 }
@@ -350,12 +356,12 @@ export async function sendMilestoneEmail(to: string, name: string, day: number, 
       <div style="display:inline-block;padding:20px 32px;background:linear-gradient(135deg,rgba(255,92,122,.15),rgba(52,211,153,.1));border:2px solid rgba(255,92,122,.3);border-radius:20px;">
         <div style="font-size:48px;margin-bottom:8px;">${m.icon}</div>
         <div style="font-family:Georgia,serif;font-size:22px;font-weight:900;color:#FF5C7A;">Day ${day}</div>
-        <div style="font-size:12px;color:#4d7055;font-weight:700;margin-top:4px;text-transform:uppercase;letter-spacing:1px;">${m.badge} Unlocked</div>
+        <div style="font-size:12px;color:#4A4340;font-weight:700;margin-top:4px;text-transform:uppercase;letter-spacing:1px;">${m.badge} Unlocked</div>
       </div>
     </div>
 
     ${h1(`${m.title}`)}
-    ${p(`Congratulations <strong style="color:#dfeedd;">${firstName}</strong>! ${m.msg}`)}
+    ${p(`Congratulations <strong style="color:#16110F;">${firstName}</strong>! ${m.msg}`)}
 
     <!-- Stats row -->
     <table width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;">
@@ -434,17 +440,17 @@ export async function sendWinbackEmail(to: string, name: string, daysMissed: num
     </div>
 
     ${h1(`We miss you, ${firstName}!`)}
-    ${p(`It's been <strong style="color:#dfeedd;">${daysMissed} days</strong> since your last check-in. Life gets busy — we totally get it.`)}
+    ${p(`It's been <strong style="color:#16110F;">${daysMissed} days</strong> since your last check-in. Life gets busy — we totally get it.`)}
     ${p(`But here's the thing: you've already made it to <strong style="color:#FF5C7A;">Day ${currentDay}</strong> of your keto journey. That's real progress. Don't let it slip away.`)}
 
     <!-- What they're missing -->
     <table width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;">
       <tr><td style="padding:6px 0;">
-        <div style="background:rgba(255,92,122,.06);border-radius:12px;border:1px solid rgba(255,92,122,.12);padding:16px;">
-          <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#dfeedd;">While you were away, you missed out on:</p>
-          <p style="margin:0 0 6px;font-size:13px;color:#4d7055;">🔥 <strong style="color:#f59e0b;">${daysMissed * 30} XP</strong> from daily check-ins</p>
-          <p style="margin:0 0 6px;font-size:13px;color:#4d7055;">📅 <strong style="color:#FF5C7A;">${daysMissed}</strong> streak day${daysMissed !== 1 ? 's' : ''} that would have counted</p>
-          <p style="margin:0;font-size:13px;color:#4d7055;">🍽️ Fresh meal suggestions and recipes ready for you</p>
+        <div style="background:#FAF6F1;border-radius:12px;border:1px solid #F0D4D9;padding:16px;">
+          <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#16110F;">While you were away, you missed out on:</p>
+          <p style="margin:0 0 6px;font-size:13px;color:#4A4340;">🔥 <strong style="color:#f59e0b;">${daysMissed * 30} XP</strong> from daily check-ins</p>
+          <p style="margin:0 0 6px;font-size:13px;color:#4A4340;">📅 <strong style="color:#FF5C7A;">${daysMissed}</strong> streak day${daysMissed !== 1 ? 's' : ''} that would have counted</p>
+          <p style="margin:0;font-size:13px;color:#4A4340;">🍽️ Fresh meal suggestions and recipes ready for you</p>
         </div>
       </td></tr>
     </table>
@@ -455,7 +461,7 @@ export async function sendWinbackEmail(to: string, name: string, daysMissed: num
       ${btn(`${APP_URL}/dashboard/checkin`, '🚀 Get Back on Track →')}
     </div>
 
-    <p style="font-size:13px;color:#2e4a32;text-align:center;margin:0;">
+    <p style="font-size:13px;color:#8A8077;text-align:center;margin:0;">
       Your journey is waiting. No judgment — just progress. 💚
     </p>`;
 
@@ -487,17 +493,17 @@ export async function sendFreeBookEmail(to: string) {
 
   const recipeCards = recipes.map(r => `
     <tr><td style="padding:8px 0;">
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(255,92,122,.05);border:1px solid rgba(255,92,122,.12);border-radius:14px;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#FAF6F1;border:1px solid #F0D4D9;border-radius:14px;">
         <tr>
           <td style="padding:14px 16px;width:44px;vertical-align:top;font-size:26px;">${r.icon}</td>
           <td style="padding:14px 8px 14px 0;vertical-align:top;">
-            <p style="margin:0 0 2px;font-size:14px;font-weight:800;color:#dfeedd;">${r.name}</p>
-            <p style="margin:0 0 5px;font-size:12px;color:#2e4a32;">⏱ ${r.time}</p>
-            <p style="margin:0;font-size:12px;color:#4d7055;line-height:1.5;">${r.desc}</p>
+            <p style="margin:0 0 2px;font-size:14px;font-weight:800;color:#16110F;">${r.name}</p>
+            <p style="margin:0 0 5px;font-size:12px;color:#8A8077;">⏱ ${r.time}</p>
+            <p style="margin:0;font-size:12px;color:#4A4340;line-height:1.5;">${r.desc}</p>
           </td>
           <td style="padding:14px 16px;vertical-align:top;text-align:right;white-space:nowrap;">
             <p style="margin:0;font-size:12px;font-weight:700;color:#FF5C7A;">${r.cal} cal</p>
-            <p style="margin:0;font-size:11px;color:#2e4a32;">${r.net}g net carbs</p>
+            <p style="margin:0;font-size:11px;color:#8A8077;">${r.net}g net carbs</p>
           </td>
         </tr>
       </table>
@@ -510,20 +516,22 @@ export async function sendFreeBookEmail(to: string) {
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Your Free Keto Recipe Book</title>
 </head>
-<body style="margin:0;padding:0;background:#0a0f0b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${preheader}</div>` : ''}
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0f0b;">
+<body style="margin:0;padding:0;background:#FAF6F1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;">
+${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${preheader}&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>` : ''}
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#FAF6F1;">
   <tr><td align="center" style="padding:32px 16px;">
     <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
-      <tr><td style="padding-bottom:24px;text-align:center;">
-        <span style="font-size:28px;">🥑</span>
-        <span style="font-family:Georgia,serif;font-size:20px;font-weight:900;color:#FF5C7A;letter-spacing:-.5px;margin-left:8px;">Keto Journey</span>
+      <tr><td style="padding-bottom:20px;text-align:center;">
+        <table cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr>
+          <td style="background:#FF5C7A;border-radius:10px;width:36px;height:36px;text-align:center;vertical-align:middle;"><span style="font-size:18px;line-height:36px;">🌿</span></td>
+          <td style="padding-left:10px;vertical-align:middle;"><span style="font-family:Georgia,serif;font-size:20px;font-weight:900;color:#16110F;letter-spacing:-.4px;">Keto Journey</span></td>
+        </tr></table>
       </td></tr>
-      <tr><td style="background:#0d1a0f;border:1px solid rgba(255,92,122,.2);border-radius:20px;padding:36px 32px;">
+      <tr><td style="background:#FFFFFF;border:1px solid #E5DED2;border-radius:20px;padding:36px 32px;">
         ${content}
       </td></tr>
       <tr><td style="padding:24px 0 8px;text-align:center;">
-        <p style="margin:0;font-size:12px;color:#2e4a32;line-height:1.6;">
+        <p style="margin:0;font-size:12px;color:#8A8077;line-height:1.6;">
           You requested the free recipe book at ketojourney.fun<br/>
           <a href="${APP_URL}/free-book" style="color:#FF5C7A;text-decoration:none;">Unsubscribe</a>
         </p>
@@ -537,8 +545,8 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${prehead
   const content = `
     <div style="text-align:center;margin-bottom:28px;">
       <div style="font-size:52px;">📖</div>
-      <h1 style="margin:12px 0 6px;font-family:Georgia,serif;font-size:26px;font-weight:900;color:#dfeedd;line-height:1.2;">Your Free Keto Recipe Book</h1>
-      <p style="margin:0;font-size:15px;color:#4d7055;">7 delicious recipes · under 5g net carbs each · ready in 30 min or less</p>
+      <h1 style="margin:12px 0 6px;font-family:Georgia,serif;font-size:26px;font-weight:900;color:#16110F;line-height:1.2;">Your Free Keto Recipe Book</h1>
+      <p style="margin:0;font-size:15px;color:#4A4340;">7 delicious recipes · under 5g net carbs each · ready in 30 min or less</p>
     </div>
 
     <div style="padding:14px 18px;background:linear-gradient(135deg,rgba(255,92,122,.12),rgba(52,211,153,.06));border:1px solid rgba(255,92,122,.25);border-radius:14px;margin-bottom:24px;">
@@ -553,10 +561,10 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${prehead
 
     <div style="padding:20px 24px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:16px;text-align:center;margin-bottom:8px;">
       <p style="margin:0 0 6px;font-size:18px;font-weight:900;color:#f59e0b;">Want 500+ more recipes like these?</p>
-      <p style="margin:0 0 16px;font-size:14px;color:#6b5a2a;line-height:1.6;">
+      <p style="margin:0 0 16px;font-size:14px;color:#4A4340;line-height:1.6;">
         Get a full 30-day keto meal plan, daily coaching, AI food scanner, progress tracking, and more — <strong style="color:#f59e0b;">free for 7 days.</strong>
       </p>
-      <a href="${APP_URL}/start" style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#FF5C7A,#B6FF3C);color:#fff;font-weight:800;font-size:15px;border-radius:12px;text-decoration:none;">
+      <a href="${APP_URL}/start" style="display:inline-block;padding:14px 32px;background:#FF5C7A;color:#fff;font-weight:800;font-size:15px;border-radius:12px;text-decoration:none;">
         Start My Free 7-Day Trial →
       </a>
     </div>`;
@@ -583,18 +591,20 @@ function nurtureLayout(content: string, preheader = '') {
 <html lang="en">
 <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Keto Journey</title></head>
-<body style="margin:0;padding:0;background:#0a0f0b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${preheader}</div>` : ''}
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0f0b;">
+<body style="margin:0;padding:0;background:#FAF6F1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;">
+${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${preheader}&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>` : ''}
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#FAF6F1;">
 <tr><td align="center" style="padding:32px 16px;">
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
 <tr><td style="padding-bottom:20px;text-align:center;">
-  <span style="font-size:26px;">🥑</span>
-  <span style="font-family:Georgia,serif;font-size:19px;font-weight:900;color:#FF5C7A;letter-spacing:-.5px;margin-left:8px;">Keto Journey</span>
+  <table cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr>
+    <td style="background:#FF5C7A;border-radius:10px;width:32px;height:32px;text-align:center;vertical-align:middle;"><span style="font-size:16px;line-height:32px;">🌿</span></td>
+    <td style="padding-left:9px;vertical-align:middle;"><span style="font-family:Georgia,serif;font-size:19px;font-weight:900;color:#16110F;letter-spacing:-.4px;">Keto Journey</span></td>
+  </tr></table>
 </td></tr>
-<tr><td style="background:#0d1a0f;border:1px solid rgba(255,92,122,.2);border-radius:20px;padding:36px 32px;">${content}</td></tr>
+<tr><td style="background:#FFFFFF;border:1px solid #E5DED2;border-radius:20px;padding:36px 32px;">${content}</td></tr>
 <tr><td style="padding:20px 0 8px;text-align:center;">
-  <p style="margin:0;font-size:11px;color:#2e4a32;">You requested our free recipe book · <a href="${APP_URL}/free-book" style="color:#FF5C7A;">Unsubscribe</a></p>
+  <p style="margin:0;font-size:11px;color:#8A8077;">You requested our free recipe book · <a href="${APP_URL}/free-book" style="color:#FF5C7A;text-decoration:none;">Unsubscribe</a></p>
 </td></tr>
 </table>
 </td></tr>
@@ -605,19 +615,19 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${prehead
 // Lead Nurture Step 1 — Day 2: "Did you try the recipes?"
 export async function sendLeadNurture1(to: string) {
   const content = `
-    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#dfeedd;">Did you try any of the recipes? 🍳</h1>
-    <p style="margin:0 0 16px;font-size:15px;color:#4d7055;line-height:1.7;">Two days ago we sent you 7 keto recipes. If you haven't tried one yet, here's the easiest one to start with tonight — Bacon & Egg Cups.</p>
-    <div style="padding:18px 20px;background:rgba(255,92,122,.07);border:1px solid rgba(255,92,122,.15);border-radius:14px;margin-bottom:20px;">
-      <p style="margin:0 0 10px;font-size:14px;font-weight:800;color:#dfeedd;">🥚 Bacon & Egg Cups — 15 minutes, 1g net carb</p>
-      <p style="margin:0 0 6px;font-size:13px;color:#4d7055;">1. Preheat oven to 200°C / 390°F</p>
-      <p style="margin:0 0 6px;font-size:13px;color:#4d7055;">2. Line a muffin tin with 1 bacon rasher per cup</p>
-      <p style="margin:0 0 6px;font-size:13px;color:#4d7055;">3. Crack 1 egg into each cup, season with salt &amp; pepper</p>
-      <p style="margin:0;font-size:13px;color:#4d7055;">4. Bake 12–15 minutes until whites are set. Done.</p>
+    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#16110F;">Did you try any of the recipes? 🍳</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#4A4340;line-height:1.7;">Two days ago we sent you 7 keto recipes. If you haven't tried one yet, here's the easiest one to start with tonight — Bacon & Egg Cups.</p>
+    <div style="padding:18px 20px;background:#FAF6F1;border:1px solid #FFCCD5;border-radius:14px;margin-bottom:20px;">
+      <p style="margin:0 0 10px;font-size:14px;font-weight:800;color:#16110F;">🥚 Bacon & Egg Cups — 15 minutes, 1g net carb</p>
+      <p style="margin:0 0 6px;font-size:13px;color:#4A4340;">1. Preheat oven to 200°C / 390°F</p>
+      <p style="margin:0 0 6px;font-size:13px;color:#4A4340;">2. Line a muffin tin with 1 bacon rasher per cup</p>
+      <p style="margin:0 0 6px;font-size:13px;color:#4A4340;">3. Crack 1 egg into each cup, season with salt &amp; pepper</p>
+      <p style="margin:0;font-size:13px;color:#4A4340;">4. Bake 12–15 minutes until whites are set. Done.</p>
     </div>
-    <p style="margin:0 0 20px;font-size:14px;color:#4d7055;line-height:1.7;">💡 <strong style="color:#dfeedd;">Keto tip:</strong> The hardest part of starting keto isn't the food — it's the first 3 days. After that, your hunger drops dramatically and your energy stabilises. Most people are surprised by how easy it gets.</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#4A4340;line-height:1.7;">💡 <strong style="color:#16110F;">Keto tip:</strong> The hardest part of starting keto isn't the food — it's the first 3 days. After that, your hunger drops dramatically and your energy stabilises. Most people are surprised by how easy it gets.</p>
     <div style="text-align:center;margin-top:24px;">
-      <a href="${APP_URL}/start" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#FF5C7A,#B6FF3C);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Start My Free 7-Day Plan →</a>
-      <p style="margin:10px 0 0;font-size:12px;color:#2e4a32;">No credit card · Full app access for 7 days</p>
+      <a href="${APP_URL}/start" style="display:inline-block;padding:13px 30px;background:#FF5C7A;color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Start My Free 7-Day Plan →</a>
+      <p style="margin:10px 0 0;font-size:12px;color:#8A8077;">No credit card · Full app access for 7 days</p>
     </div>`;
   const resend = getResend();
   return resend.emails.send({ from: FROM, to, subject: 'Did you try the keto recipes? 🍳', html: nurtureLayout(content, 'Day 2 — a quick keto win for tonight'), headers: H_LEAD() });
@@ -626,8 +636,8 @@ export async function sendLeadNurture1(to: string) {
 // Lead Nurture Step 2 — Day 5: "The science behind keto"
 export async function sendLeadNurture2(to: string) {
   const content = `
-    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#dfeedd;">Why keto works when nothing else does 🔬</h1>
-    <p style="margin:0 0 16px;font-size:15px;color:#4d7055;line-height:1.7;">Most diets fail because they fight your body. Keto works <em style="color:#dfeedd;">with</em> it.</p>
+    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#16110F;">Why keto works when nothing else does 🔬</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#4A4340;line-height:1.7;">Most diets fail because they fight your body. Keto works <em style="color:#16110F;">with</em> it.</p>
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;">
       ${[
         ['🔥','Fat becomes fuel','When carbs are cut below 20g/day, your liver converts fat into ketones — a cleaner, more stable energy source than glucose.'],
@@ -635,14 +645,14 @@ export async function sendLeadNurture2(to: string) {
         ['🧠','Mental clarity returns','The brain runs up to 25% more efficiently on ketones than on glucose. The "brain fog" lifting is one of the most reported benefits.'],
         ['⚖️','Weight loss accelerates','Insulin levels drop, signalling your body to release stored fat. Water weight drops first (3–5 lbs in week 1), then steady fat loss follows.'],
       ].map(([icon, title, desc]) => `
-        <div style="padding:14px 16px;background:rgba(255,92,122,.05);border:1px solid rgba(255,92,122,.1);border-radius:12px;">
-          <p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#dfeedd;">${icon} ${title}</p>
-          <p style="margin:0;font-size:13px;color:#4d7055;line-height:1.5;">${desc}</p>
+        <div style="padding:14px 16px;background:#FAF6F1;border:1px solid #F0D4D9;border-radius:12px;">
+          <p style="margin:0 0 4px;font-size:14px;font-weight:700;color:#16110F;">${icon} ${title}</p>
+          <p style="margin:0;font-size:13px;color:#4A4340;line-height:1.5;">${desc}</p>
         </div>`).join('')}
     </div>
-    <p style="margin:0 0 20px;font-size:14px;color:#4d7055;line-height:1.7;">The first 7 days are the transition. After that, your body is fat-adapted and the results compound. Our free trial gives you a guided 7-day plan with daily check-ins, meal tracking, and coaching so you don't have to figure it out alone.</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#4A4340;line-height:1.7;">The first 7 days are the transition. After that, your body is fat-adapted and the results compound. Our free trial gives you a guided 7-day plan with daily check-ins, meal tracking, and coaching so you don't have to figure it out alone.</p>
     <div style="text-align:center;">
-      <a href="${APP_URL}/start" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#FF5C7A,#B6FF3C);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Try the 7-Day Free Plan →</a>
+      <a href="${APP_URL}/start" style="display:inline-block;padding:13px 30px;background:#FF5C7A;color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Try the 7-Day Free Plan →</a>
     </div>`;
   const resend = getResend();
   return resend.emails.send({ from: FROM, to, subject: 'The science behind why keto actually works 🔬', html: nurtureLayout(content, 'Why keto works when other diets fail — the real science'), headers: H_LEAD() });
@@ -651,11 +661,11 @@ export async function sendLeadNurture2(to: string) {
 // Lead Nurture Step 3 — Day 8: "The #1 mistake"
 export async function sendLeadNurture3(to: string) {
   const content = `
-    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#dfeedd;">The #1 mistake that kills keto results ⚠️</h1>
-    <p style="margin:0 0 16px;font-size:15px;color:#4d7055;line-height:1.7;">After helping thousands of people through their keto journey, we see the same mistake over and over:</p>
+    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#16110F;">The #1 mistake that kills keto results ⚠️</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#4A4340;line-height:1.7;">After helping thousands of people through their keto journey, we see the same mistake over and over:</p>
     <div style="padding:20px 22px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.18);border-radius:14px;margin-bottom:20px;">
       <p style="margin:0 0 8px;font-size:16px;font-weight:800;color:#f87171;">❌ Going it alone without tracking</p>
-      <p style="margin:0;font-size:14px;color:#4d7055;line-height:1.7;">People cut carbs but unknowingly eat hidden carbs in sauces, dressings, and "healthy" foods. Without tracking, they stall in week 2 and assume keto doesn't work for them. It does — they just missed the carbs hiding in plain sight.</p>
+      <p style="margin:0;font-size:14px;color:#4A4340;line-height:1.7;">People cut carbs but unknowingly eat hidden carbs in sauces, dressings, and "healthy" foods. Without tracking, they stall in week 2 and assume keto doesn't work for them. It does — they just missed the carbs hiding in plain sight.</p>
     </div>
     ${[
       ['Hidden carbs in "healthy" yogurt', '12g per serving'],
@@ -664,12 +674,12 @@ export async function sendLeadNurture3(to: string) {
       ['Salad dressings', '5–12g per 2 tbsp'],
     ].map(([food, carbs]) => `
       <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(255,92,122,.08);">
-        <span style="font-size:13px;color:#4d7055;">${food}</span>
+        <span style="font-size:13px;color:#4A4340;">${food}</span>
         <span style="font-size:13px;font-weight:700;color:#f87171;">${carbs}</span>
       </div>`).join('')}
-    <p style="margin:20px 0;font-size:14px;color:#4d7055;line-height:1.7;">Our app tracks every macro automatically, flags hidden carbs, and keeps your net carbs in the safe zone every day. That's why our users see consistent results — not because they're more disciplined, but because they have the right data.</p>
+    <p style="margin:20px 0;font-size:14px;color:#4A4340;line-height:1.7;">Our app tracks every macro automatically, flags hidden carbs, and keeps your net carbs in the safe zone every day. That's why our users see consistent results — not because they're more disciplined, but because they have the right data.</p>
     <div style="text-align:center;">
-      <a href="${APP_URL}/start" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#FF5C7A,#B6FF3C);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Track My Macros Free for 7 Days →</a>
+      <a href="${APP_URL}/start" style="display:inline-block;padding:13px 30px;background:#FF5C7A;color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Track My Macros Free for 7 Days →</a>
     </div>`;
   const resend = getResend();
   return resend.emails.send({ from: FROM, to, subject: 'The #1 mistake that kills keto results (and how to avoid it) ⚠️', html: nurtureLayout(content, 'Are hidden carbs killing your results?'), headers: H_LEAD() });
@@ -678,16 +688,16 @@ export async function sendLeadNurture3(to: string) {
 // Lead Nurture Step 4 — Day 12: Last nudge
 export async function sendLeadNurture4(to: string) {
   const content = `
-    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#dfeedd;">Last one from us 👋</h1>
-    <p style="margin:0 0 16px;font-size:15px;color:#4d7055;line-height:1.7;">We've sent you a few emails about keto. We won't keep nudging you — but we'd love for you to give it one real shot.</p>
-    <div style="padding:20px 22px;background:rgba(255,92,122,.07);border:1px solid rgba(255,92,122,.15);border-radius:14px;margin-bottom:20px;">
-      <p style="margin:0 0 12px;font-size:14px;font-weight:800;color:#dfeedd;">What you get in the free 7-day trial:</p>
+    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#16110F;">Last one from us 👋</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#4A4340;line-height:1.7;">We've sent you a few emails about keto. We won't keep nudging you — but we'd love for you to give it one real shot.</p>
+    <div style="padding:20px 22px;background:#FAF6F1;border:1px solid #FFCCD5;border-radius:14px;margin-bottom:20px;">
+      <p style="margin:0 0 12px;font-size:14px;font-weight:800;color:#16110F;">What you get in the free 7-day trial:</p>
       ${['✅ Personalized 30-day keto meal plan','✅ Daily check-ins + streak tracking','✅ 500+ keto recipes with full macros','✅ AI food scanner (snap a photo → instant macros)','✅ Daily coaching tips + progress charts','✅ No credit card required — ever'].map(item => `<p style="margin:0 0 6px;font-size:13px;color:#B6FF3C;">${item}</p>`).join('')}
     </div>
-    <p style="margin:0 0 20px;font-size:14px;color:#4d7055;line-height:1.7;">The trial starts with a 5-minute quiz so we can personalise your plan. Most people complete it in one sitting and start their first keto day the same day.</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#4A4340;line-height:1.7;">The trial starts with a 5-minute quiz so we can personalise your plan. Most people complete it in one sitting and start their first keto day the same day.</p>
     <div style="text-align:center;">
-      <a href="${APP_URL}/start" style="display:inline-block;padding:14px 34px;background:linear-gradient(135deg,#FF5C7A,#B6FF3C);color:#fff;font-weight:800;font-size:15px;border-radius:12px;text-decoration:none;">Start My Free Trial →</a>
-      <p style="margin:10px 0 0;font-size:12px;color:#2e4a32;">Takes 5 minutes · No card needed</p>
+      <a href="${APP_URL}/start" style="display:inline-block;padding:14px 34px;background:#FF5C7A;color:#fff;font-weight:800;font-size:15px;border-radius:12px;text-decoration:none;">Start My Free Trial →</a>
+      <p style="margin:10px 0 0;font-size:12px;color:#8A8077;">Takes 5 minutes · No card needed</p>
     </div>`;
   const resend = getResend();
   return resend.emails.send({ from: FROM, to, subject: "One last thing before we go quiet 👋", html: nurtureLayout(content, 'Your keto transformation is one step away'), headers: H_LEAD() });
@@ -701,19 +711,19 @@ export async function sendLeadNurture4(to: string) {
 export async function sendTrialNurture1(to: string, name: string) {
   const firstName = name.split(' ')[0];
   const content = `
-    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#dfeedd;">Your free trial has ended, ${firstName} 🔒</h1>
-    <p style="margin:0 0 16px;font-size:15px;color:#4d7055;line-height:1.7;">Your 7-day free trial is over — but everything you built is still there, waiting for you.</p>
+    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#16110F;">Your free trial has ended, ${firstName} 🔒</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#4A4340;line-height:1.7;">Your 7-day free trial is over — but everything you built is still there, waiting for you.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
       ${[['📅','Your meal plan','30 days ready'],['📊','Your progress','Saved & tracked'],['🍽️','Your recipes','500+ unlocked'],['🔥','Your streak','Ready to resume']].map(([icon,label,val]) => `
-        <div style="padding:14px;background:rgba(255,92,122,.06);border:1px solid rgba(255,92,122,.12);border-radius:12px;text-align:center;">
+        <div style="padding:14px;background:#FAF6F1;border:1px solid #F0D4D9;border-radius:12px;text-align:center;">
           <div style="font-size:22px;">${icon}</div>
-          <div style="font-size:12px;color:#4d7055;margin-top:4px;">${label}</div>
-          <div style="font-size:13px;font-weight:700;color:#dfeedd;">${val}</div>
+          <div style="font-size:12px;color:#4A4340;margin-top:4px;">${label}</div>
+          <div style="font-size:13px;font-weight:700;color:#16110F;">${val}</div>
         </div>`).join('')}
     </div>
-    <p style="margin:0 0 20px;font-size:14px;color:#4d7055;line-height:1.7;">Subscribing unlocks everything from where you left off. No re-setup, no starting over. Plans start from just a few dollars per week.</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#4A4340;line-height:1.7;">Subscribing unlocks everything from where you left off. No re-setup, no starting over. Plans start from just a few dollars per week.</p>
     <div style="text-align:center;">
-      <a href="${APP_URL}/dashboard/expired" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#FF5C7A,#B6FF3C);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Continue My Journey →</a>
+      <a href="${APP_URL}/dashboard/expired" style="display:inline-block;padding:13px 30px;background:#FF5C7A;color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Continue My Journey →</a>
     </div>`;
   const resend = getResend();
   return resend.emails.send({ from: FROM, to, subject: `${firstName}, your free trial has ended — here's how to continue`, html: layout(content, 'Your 7-day trial is over — unlock your journey'), headers: H_SUB() });
@@ -723,19 +733,19 @@ export async function sendTrialNurture1(to: string, name: string) {
 export async function sendTrialNurture2(to: string, name: string) {
   const firstName = name.split(' ')[0];
   const content = `
-    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#dfeedd;">What you proved in 7 days, ${firstName} 💪</h1>
-    <p style="margin:0 0 16px;font-size:15px;color:#4d7055;line-height:1.7;">You completed a 7-day keto trial. That already puts you ahead of 80% of people who say they'll "start Monday."</p>
-    <div style="padding:18px 20px;background:rgba(255,92,122,.07);border:1px solid rgba(255,92,122,.15);border-radius:14px;margin-bottom:20px;">
-      <p style="margin:0 0 10px;font-size:14px;font-weight:700;color:#dfeedd;">Here's what typically happens after day 7:</p>
+    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#16110F;">What you proved in 7 days, ${firstName} 💪</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#4A4340;line-height:1.7;">You completed a 7-day keto trial. That already puts you ahead of 80% of people who say they'll "start Monday."</p>
+    <div style="padding:18px 20px;background:#FAF6F1;border:1px solid #FFCCD5;border-radius:14px;margin-bottom:20px;">
+      <p style="margin:0 0 10px;font-size:14px;font-weight:700;color:#16110F;">Here's what typically happens after day 7:</p>
       ${[['Day 8–14','Fat adaptation completes. Energy stabilises. Hunger drops.'],['Day 15–21','Visible body composition changes begin. Sleep improves.'],['Day 22–30','Metabolic shift locked in. Weight loss becomes predictable.']].map(([d,desc]) => `
         <div style="display:flex;gap:12px;margin-bottom:8px;">
           <span style="font-size:12px;font-weight:700;color:#FF5C7A;white-space:nowrap;padding-top:2px;">${d}</span>
-          <span style="font-size:13px;color:#4d7055;line-height:1.5;">${desc}</span>
+          <span style="font-size:13px;color:#4A4340;line-height:1.5;">${desc}</span>
         </div>`).join('')}
     </div>
-    <p style="margin:0 0 20px;font-size:14px;color:#4d7055;line-height:1.7;">You're right at the point where the results accelerate — and the hardest part (adaptation) is already behind you. Don't let that work go to waste.</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#4A4340;line-height:1.7;">You're right at the point where the results accelerate — and the hardest part (adaptation) is already behind you. Don't let that work go to waste.</p>
     <div style="text-align:center;">
-      <a href="${APP_URL}/dashboard/expired" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#FF5C7A,#B6FF3C);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Continue From Day 8 →</a>
+      <a href="${APP_URL}/dashboard/expired" style="display:inline-block;padding:13px 30px;background:#FF5C7A;color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Continue From Day 8 →</a>
     </div>`;
   const resend = getResend();
   return resend.emails.send({ from: FROM, to, subject: `What typically happens in days 8–30 of keto, ${firstName}`, html: layout(content, "The best results are in days 8–30 — don't stop now"), headers: H_SUB() });
@@ -745,15 +755,15 @@ export async function sendTrialNurture2(to: string, name: string) {
 export async function sendTrialNurture3(to: string, name: string) {
   const firstName = name.split(' ')[0];
   const content = `
-    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#dfeedd;">Is something holding you back, ${firstName}?</h1>
-    <p style="margin:0 0 16px;font-size:15px;color:#4d7055;line-height:1.7;">You haven't subscribed yet. That's completely fine — but I want to make sure it's not because of something we can fix.</p>
+    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#16110F;">Is something holding you back, ${firstName}?</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#4A4340;line-height:1.7;">You haven't subscribed yet. That's completely fine — but I want to make sure it's not because of something we can fix.</p>
     ${[['💰 Cost concern','Our Basic plan is less than a coffee per week. Less than one skipped takeaway meal pays for a full month.'],['⏰ Not ready yet',"That's fair. But every day in adaptation mode is progress. Pick it back up whenever — your data is saved."],['🤷 Not sure it works','The trial gave you real data on how your body responds to keto. The results don\'t lie — check your progress page.']].map(([q,a]) => `
-      <div style="padding:14px 16px;background:rgba(255,92,122,.05);border:1px solid rgba(255,92,122,.1);border-radius:12px;margin-bottom:10px;">
-        <p style="margin:0 0 5px;font-size:14px;font-weight:700;color:#dfeedd;">${q}</p>
-        <p style="margin:0;font-size:13px;color:#4d7055;line-height:1.5;">${a}</p>
+      <div style="padding:14px 16px;background:#FAF6F1;border:1px solid #F0D4D9;border-radius:12px;margin-bottom:10px;">
+        <p style="margin:0 0 5px;font-size:14px;font-weight:700;color:#16110F;">${q}</p>
+        <p style="margin:0;font-size:13px;color:#4A4340;line-height:1.5;">${a}</p>
       </div>`).join('')}
     <div style="text-align:center;margin-top:22px;">
-      <a href="${APP_URL}/dashboard/expired" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#FF5C7A,#B6FF3C);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">See Plans & Pricing →</a>
+      <a href="${APP_URL}/dashboard/expired" style="display:inline-block;padding:13px 30px;background:#FF5C7A;color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">See Plans & Pricing →</a>
     </div>`;
   const resend = getResend();
   return resend.emails.send({ from: FROM, to, subject: `Quick question, ${firstName} — what's holding you back?`, html: layout(content, "We want to help — what's in the way?"), headers: H_SUB() });
@@ -763,17 +773,17 @@ export async function sendTrialNurture3(to: string, name: string) {
 export async function sendTrialNurture4(to: string, name: string) {
   const firstName = name.split(' ')[0];
   const content = `
-    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#dfeedd;">Our last email to you, ${firstName}</h1>
-    <p style="margin:0 0 16px;font-size:15px;color:#4d7055;line-height:1.7;">We don't believe in spamming people. This is the last time we'll reach out about your trial.</p>
-    <p style="margin:0 0 20px;font-size:14px;color:#4d7055;line-height:1.7;">If you ever want to continue your keto journey — your account, progress, and meal plan are all saved. You can pick it back up any time at the link below.</p>
-    <div style="padding:20px 22px;background:rgba(255,92,122,.07);border:1px solid rgba(255,92,122,.15);border-radius:14px;margin-bottom:20px;text-align:center;">
-      <p style="margin:0 0 6px;font-size:15px;font-weight:800;color:#dfeedd;">Your journey is paused, not over.</p>
-      <p style="margin:0;font-size:13px;color:#4d7055;">Everything you logged during your trial is waiting for you.</p>
+    <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:900;color:#16110F;">Our last email to you, ${firstName}</h1>
+    <p style="margin:0 0 16px;font-size:15px;color:#4A4340;line-height:1.7;">We don't believe in spamming people. This is the last time we'll reach out about your trial.</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#4A4340;line-height:1.7;">If you ever want to continue your keto journey — your account, progress, and meal plan are all saved. You can pick it back up any time at the link below.</p>
+    <div style="padding:20px 22px;background:#FAF6F1;border:1px solid #FFCCD5;border-radius:14px;margin-bottom:20px;text-align:center;">
+      <p style="margin:0 0 6px;font-size:15px;font-weight:800;color:#16110F;">Your journey is paused, not over.</p>
+      <p style="margin:0;font-size:13px;color:#4A4340;">Everything you logged during your trial is waiting for you.</p>
     </div>
     <div style="text-align:center;">
-      <a href="${APP_URL}/dashboard/expired" style="display:inline-block;padding:13px 30px;background:linear-gradient(135deg,#FF5C7A,#B6FF3C);color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Resume My Journey →</a>
+      <a href="${APP_URL}/dashboard/expired" style="display:inline-block;padding:13px 30px;background:#FF5C7A;color:#fff;font-weight:800;font-size:14px;border-radius:12px;text-decoration:none;">Resume My Journey →</a>
     </div>
-    <p style="margin:20px 0 0;font-size:12px;color:#2e4a32;text-align:center;">After this, we'll stop emailing you about your subscription. You'll only hear from us if you re-activate.</p>`;
+    <p style="margin:20px 0 0;font-size:12px;color:#8A8077;text-align:center;">After this, we'll stop emailing you about your subscription. You'll only hear from us if you re-activate.</p>`;
   const resend = getResend();
   return resend.emails.send({ from: FROM, to, subject: `${firstName}, this is our last email about your trial`, html: layout(content, "Your keto journey is paused, not over"), headers: H_SUB() });
 }
