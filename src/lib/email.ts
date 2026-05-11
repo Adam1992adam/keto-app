@@ -480,7 +480,8 @@ export async function sendWinbackEmail(to: string, name: string, daysMissed: num
 // ─────────────────────────────────────────────────────────────────────────────
 // 6. FREE BOOK EMAIL — lead magnet delivery
 // ─────────────────────────────────────────────────────────────────────────────
-export async function sendFreeBookEmail(to: string) {
+export async function sendFreeBookEmail(to: string, name?: string) {
+  const greeting = name ? `Hi ${name},` : 'Hi there,';
   const recipes = [
     { name: 'Bacon & Egg Cups', time: '15 min', cal: 280, net: 1, icon: '🥚', desc: 'Crispy bacon-lined muffin tin cups filled with a baked egg. Zero carb, zero effort.' },
     { name: 'Avocado Tuna Boats', time: '10 min', cal: 320, net: 2, icon: '🥑', desc: 'Halved avocados stuffed with tuna, mayo, and lemon. Perfect for lunch.' },
@@ -543,6 +544,7 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${prehead
 </html>`;
 
   const content = `
+    <p style="margin:0 0 20px;font-size:15px;color:#4A4340;">${greeting}</p>
     <div style="text-align:center;margin-bottom:28px;">
       <div style="font-size:52px;">📖</div>
       <h1 style="margin:12px 0 6px;font-family:Georgia,serif;font-size:26px;font-weight:900;color:#16110F;line-height:1.2;">Your Free Keto Recipe Book</h1>
