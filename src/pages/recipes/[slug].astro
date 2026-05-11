@@ -232,6 +232,26 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
     .footer-links { display:flex; gap:20px; }
     .footer-links a { font-size:.8rem; color:var(--muted); transition:color .15s; }
     .footer-links a:hover { color:var(--ink); }
+
+    /* EXIT-INTENT POPUP */
+    .exit-overlay { position:fixed; inset:0; z-index:9999; background:rgba(22,17,15,.52); backdrop-filter:blur(5px); display:flex; align-items:center; justify-content:center; padding:20px; opacity:0; pointer-events:none; transition:opacity .3s ease; }
+    .exit-overlay.open { opacity:1; pointer-events:all; }
+    .exit-card { background:var(--card); border-radius:28px; max-width:460px; width:100%; padding:40px 36px 32px; position:relative; box-shadow:0 32px 80px rgba(22,17,15,.18); transform:translateY(20px) scale(.98); transition:transform .35s cubic-bezier(.22,1,.36,1); }
+    .exit-overlay.open .exit-card { transform:translateY(0) scale(1); }
+    .exit-close { position:absolute; top:16px; right:18px; background:none; border:none; font-size:1.6rem; color:var(--muted); cursor:pointer; line-height:1; padding:4px 8px; border-radius:8px; transition:color .15s,background .15s; font-family:var(--body); }
+    .exit-close:hover { color:var(--ink); background:var(--bg-alt); }
+    .exit-eyebrow { font-size:.67rem; font-weight:700; text-transform:uppercase; letter-spacing:.18em; color:var(--accent); margin-bottom:10px; }
+    .exit-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(255,92,122,.08); border:1px solid rgba(255,92,122,.2); border-radius:999px; padding:5px 13px; font-size:.76rem; font-weight:600; color:var(--accent); margin-bottom:16px; }
+    .exit-title { font-family:var(--display); font-size:clamp(1.55rem,5vw,2rem); font-weight:800; color:var(--ink); line-height:1.18; margin-bottom:10px; }
+    .exit-sub { font-size:.91rem; color:var(--ink-soft); line-height:1.68; margin-bottom:20px; }
+    .exit-perks { list-style:none; display:flex; flex-direction:column; gap:8px; margin-bottom:26px; }
+    .exit-perks li { font-size:.87rem; color:var(--ink-soft); display:flex; align-items:center; gap:10px; }
+    .exit-perks li::before { content:'✓'; color:var(--accent); font-weight:800; font-size:.8rem; flex-shrink:0; }
+    .exit-cta { display:block; text-align:center; padding:15px 28px; border-radius:999px; background:var(--accent); color:#fff; font-size:.95rem; font-weight:800; font-family:var(--display); transition:opacity .2s; margin-bottom:11px; }
+    .exit-cta:hover { opacity:.88; }
+    .exit-dismiss { display:block; width:100%; text-align:center; background:none; border:none; font-size:.82rem; color:var(--muted); cursor:pointer; padding:6px; font-family:var(--body); transition:color .15s; }
+    .exit-dismiss:hover { color:var(--ink-soft); text-decoration:underline; }
+    @media(max-width:480px){ .exit-card{padding:32px 22px 26px;} }
   </style>
 </head>
 <body>
@@ -461,6 +481,63 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
     <a href="/recipes">Recipes</a>
   </div>
 </footer>
+
+<!-- EXIT-INTENT POPUP -->
+<div id="exitPopup" class="exit-overlay" role="dialog" aria-modal="true" aria-label="Free Recipe Book offer">
+  <div class="exit-card">
+    <button class="exit-close" id="exitClose" aria-label="Close">×</button>
+    <p class="exit-eyebrow">Wait — before you go</p>
+    <div class="exit-badge">📖 Free Recipe Book</div>
+    <h2 class="exit-title">80+ Keto Recipes,<br/>Completely Free</h2>
+    <p class="exit-sub">Breakfasts, lunches, dinners, and desserts — all under 5g net carbs, with full macros and shopping lists included.</p>
+    <ul class="exit-perks">
+      <li>80+ beginner-friendly recipes</li>
+      <li>Under 5g net carbs per recipe</li>
+      <li>Full nutrition breakdown on every dish</li>
+      <li>Shopping lists &amp; meal prep tips</li>
+    </ul>
+    <a href="/free-book" class="exit-cta">Get the Free Book →</a>
+    <button class="exit-dismiss" id="exitDismiss">No thanks, I'll keep reading</button>
+  </div>
+</div>
+
+<script is:inline>
+(function () {
+  var KEY = 'kj_exit_shown';
+  if (sessionStorage.getItem(KEY)) return;
+
+  var overlay  = document.getElementById('exitPopup');
+  var btnClose = document.getElementById('exitClose');
+  var btnSkip  = document.getElementById('exitDismiss');
+
+  function openPopup() {
+    if (!overlay) return;
+    overlay.classList.add('open');
+    sessionStorage.setItem(KEY, '1');
+  }
+  function closePopup() {
+    if (overlay) overlay.classList.remove('open');
+  }
+
+  /* Desktop only — exit-intent fires when cursor leaves toward browser chrome */
+  if (window.matchMedia('(pointer:fine)').matches) {
+    var armed = false;
+    setTimeout(function () { armed = true; }, 5000); /* arm after 5 s on page */
+    document.addEventListener('mouseleave', function (e) {
+      if (armed && e.clientY < 60) openPopup();
+    });
+  }
+
+  if (btnClose) btnClose.addEventListener('click', closePopup);
+  if (btnSkip)  btnSkip.addEventListener('click', closePopup);
+  if (overlay)  overlay.addEventListener('click', function (e) {
+    if (e.target === overlay) closePopup();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closePopup();
+  });
+}());
+</script>
 
 </body>
 </html>
