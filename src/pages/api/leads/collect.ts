@@ -7,12 +7,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!allowed) return json({ error: `Too many requests. Try again in ${retryAfterSec}s.` }, 429);
 
   try {
-    const { email } = await request.json();
+    const body  = await request.json();
+    const { email, name } = body as { email?: string; name?: string };
     if (!email || typeof email !== 'string' || !email.includes('@')) {
       return json({ error: 'A valid email address is required.' }, 400);
     }
 
     const cleanEmail = email.trim().toLowerCase().slice(0, 254);
+    const cleanName  = (name || '').trim().slice(0, 100) || null;
 
     const env = (locals as any)?.runtime?.env || {};
     const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL || env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
@@ -25,13 +27,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Upsert — silently accept already-subscribed emails (no error shown to user)
     await supabase.from('leads').upsert(
-      { email: cleanEmail, source: 'free_book' },
-      { onConflict: 'email', ignoreDuplicates: true }
+      { email: cleanEmail, name: cleanName, source: 'free_book' },
+      { onConflict: 'email', ignoreDuplicates: false }
     );
 
     // Send the free book email
     const { sendFreeBookEmail } = await import('../../../lib/email');
-    await sendFreeBookEmail(cleanEmail);
+    await sendFreeBookEmail(cleanEmail, cleanName || undefined);
 
     return json({ success: true });
   } catch (err) {
