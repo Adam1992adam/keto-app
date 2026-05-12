@@ -1,6 +1,6 @@
 // Static marketing pages sitemap.
 // Update this list whenever you add a new public marketing page.
-export const prerender = false;
+export const prerender = true;
 
 interface Page {
   url: string;

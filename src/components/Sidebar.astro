@@ -44,8 +44,8 @@ const activeId = activeMap[activePage] || activePage;
 <script is:inline>
 (function () {
   try {
-    if (localStorage.getItem('rv-theme') === 'dark')
-      document.documentElement.setAttribute('data-theme', 'dark');
+    var t = localStorage.getItem('keto-theme') || localStorage.getItem('rv-theme');
+    if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
   } catch (e) {}
 })();
 </script>
@@ -271,6 +271,11 @@ const activeId = activeMap[activePage] || activePage;
     .rv-dm-label { display: none; }
     .rv-tbar-dm { padding: 0 8px; }
   }
+
+  /* ── Reserve top-right space for floating bar (desktop) ─────── */
+  @media (min-width: 901px) {
+    .rv-pg-main { padding-top: 58px; }
+  }
 </style>
 
 <style>
@@ -486,13 +491,13 @@ const activeId = activeMap[activePage] || activePage;
 <!-- ── Floating top-right action bar (fixed, overlays all pages) ── -->
 <div class="rv-tbar" style="position:fixed;top:14px;right:18px;z-index:300;display:flex;align-items:center;gap:6px;">
   <!-- Dark mode toggle -->
-  <button class="rv-tbar-btn rv-tbar-dm" id="rvDmBtn" aria-label="Toggle dark mode" style="width:auto;padding:0 10px;gap:7px;display:flex;align-items:center;height:36px;border-radius:10px;background:#fff;border:1px solid #E5DED2;cursor:pointer;">
+  <button class="rv-tbar-btn rv-tbar-dm" id="rvDmBtn" aria-label="Toggle dark mode" style="width:auto;padding:0 10px;gap:7px;display:flex;align-items:center;height:36px;border-radius:10px;cursor:pointer;">
     <span class="rv-dm-label" id="rvDmLbl">Light</span>
     <span class="rv-dm-pill" id="rvDmPill"></span>
   </button>
 
   <!-- Notification bell -->
-  <button class="rv-tbar-btn" id="rvBellBtn" aria-label="Notifications" style="width:36px;height:36px;border-radius:10px;background:#fff;border:1px solid #E5DED2;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;flex-shrink:0;">
+  <button class="rv-tbar-btn" id="rvBellBtn" aria-label="Notifications" style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;flex-shrink:0;">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;pointer-events:none;flex-shrink:0;">
       <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
       <path d="M13.73 21a2 2 0 01-3.46 0"/>
@@ -527,7 +532,7 @@ const activeId = activeMap[activePage] || activePage;
     document.documentElement[d ? 'setAttribute' : 'removeAttribute']('data-theme', 'dark');
     if (pill) pill.classList[d ? 'add' : 'remove']('on');
     if (lbl)  lbl.textContent = d ? 'Dark' : 'Light';
-    try { localStorage.setItem('rv-theme', d ? 'dark' : 'light'); } catch (e) {}
+    try { localStorage.setItem('keto-theme', d ? 'dark' : 'light'); localStorage.removeItem('rv-theme'); } catch (e) {}
   }
   applyTheme(dark);
   var dmBtn = document.getElementById('rvDmBtn');

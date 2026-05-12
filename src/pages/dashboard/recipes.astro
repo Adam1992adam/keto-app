@@ -201,6 +201,9 @@ const bookCategories = [
 
 const totalUnlocked = bookCategories.length * unlockedCount;
 const totalBooks    = bookCategories.length * 12;
+
+// Unique gradient angle per book slot so covers look distinct
+const gradientAngles = [128, 155, 110, 168, 118, 148, 133, 162, 115, 142, 157, 122];
 ---
 
 <!DOCTYPE html>
@@ -264,7 +267,8 @@ const totalBooks    = bookCategories.length * 12;
     .nav-avatar:hover{transform:scale(1.05);}
 
     /* PAGE */
-    .page{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:2rem 1.5rem 5rem;}
+    .page{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:1.25rem 1.5rem 5rem;}
+    @media(min-width:901px){.page{padding-top:1.25rem;}} /* rv-pg-main provides 58px top clearance */
 
     /* HERO */
     .hero{margin-bottom:2.5rem;animation:fadeUp .5s ease both;}
@@ -354,12 +358,41 @@ const totalBooks    = bookCategories.length * 12;
     .book-card:not(.locked-card):hover .book-img-header img{transform:scale(1.06);}
     .book-img-placeholder{
       width:100%;height:100%;display:flex;flex-direction:column;
-      align-items:center;justify-content:center;gap:.4rem;
+      align-items:center;justify-content:center;gap:.5rem;
+      position:relative;overflow:hidden;
+    }
+    /* Radial light spots for depth */
+    .book-img-placeholder::before{
+      content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+      background-image:
+        radial-gradient(circle at 25% 20%,rgba(255,255,255,.22) 0%,transparent 55%),
+        radial-gradient(circle at 78% 80%,rgba(255,255,255,.14) 0%,transparent 48%);
+    }
+    /* Bottom fade so label stays readable */
+    .book-img-placeholder::after{
+      content:'';position:absolute;bottom:0;left:0;right:0;height:38%;pointer-events:none;z-index:0;
+      background:linear-gradient(to top,rgba(0,0,0,.28),transparent);
+    }
+    .book-card:not(.locked-card):hover .book-img-placeholder::before{
+      background-image:
+        radial-gradient(circle at 30% 25%,rgba(255,255,255,.28) 0%,transparent 55%),
+        radial-gradient(circle at 72% 75%,rgba(255,255,255,.18) 0%,transparent 48%);
+    }
+    .book-img-placeholder-emoji{
+      font-size:3.8rem;
+      filter:drop-shadow(0 6px 20px rgba(0,0,0,.45));
+      position:relative;z-index:1;
+      transform:rotate(-6deg);
       transition:transform .35s ease;
     }
-    .book-card:not(.locked-card):hover .book-img-placeholder{transform:scale(1.04);}
-    .book-img-placeholder-emoji{font-size:3.2rem;filter:drop-shadow(0 4px 12px rgba(0,0,0,.35));}
-    .book-img-placeholder-label{font-size:.65rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.75);}
+    .book-card:not(.locked-card):hover .book-img-placeholder-emoji{
+      transform:rotate(0deg) scale(1.1);
+    }
+    .book-img-placeholder-label{
+      font-size:.68rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+      color:rgba(255,255,255,.9);text-shadow:0 1px 6px rgba(0,0,0,.35);
+      position:relative;z-index:1;
+    }
     .book-meal-badge{
       position:absolute;top:.6rem;left:.7rem;z-index:2;
       display:inline-flex;align-items:center;gap:.3rem;
@@ -722,9 +755,9 @@ const totalBooks    = bookCategories.length * 12;
           return (
             <div class={`book-card ${!isUnlocked ? 'locked-card' : ''}`} data-book-cat={cat.id} data-book-title={book.title.toLowerCase()} data-book-desc={book.desc.toLowerCase()}>
               <div class="book-img-header">
-                <div class="book-img-placeholder" style={`background:${isUnlocked ? cat.gradient : 'linear-gradient(135deg,var(--surface),var(--card2))'};`}>
+                <div class="book-img-placeholder" style={`background:${isUnlocked ? cat.gradient.replace(/\d+deg/, `${gradientAngles[bookIdx % 12]}deg`) : 'linear-gradient(145deg,#BFC6CC,#8B959C)'};`}>
                   <span class="book-img-placeholder-emoji">{isUnlocked ? book.emoji : '🔒'}</span>
-                  <span class="book-img-placeholder-label">{cat.name}</span>
+                  <span class="book-img-placeholder-label">{isUnlocked ? cat.name : 'Locked'}</span>
                 </div>
                 <div class="book-meal-badge">{cat.emoji} {cat.name}</div>
                 <div class="book-number-badge">{bookIdx + 1}</div>
