@@ -1,4 +1,5 @@
 ---
+// src/pages/dashboard/ai-coach.astro — AI Coach (Rose Vital editorial design)
 import { getUserJourney, getMealCycleDays } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import Sidebar from '../../components/Sidebar.astro';
@@ -13,10 +14,11 @@ if (profile.subscription_tier !== 'elite_12') return Astro.redirect('/dashboard/
 const planType  = profile.subscription_tier;
 const tierLabel = 'Elite';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
+const fullName  = profile.full_name || userName;
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
-const today     = new Date().toISOString().split('T')[0];
-const nowHour   = new Date().getHours();
+const today    = new Date().toISOString().split('T')[0];
+const nowHour  = new Date().getHours();
 
 const journey    = await getUserJourney(user.id, db);
 const currentDay = journey?.current_day || 1;
@@ -26,7 +28,6 @@ const level      = journey?.level || 1;
 const weekNum    = Math.ceil(currentDay / 7);
 const cycledDay  = ((currentDay - 1) % getMealCycleDays(planType)) + 1;
 
-// Parallel data fetch
 const results = await Promise.all([
   db.from('onboarding_data').select('current_weight,target_weight,dietary_restrictions,fasting_protocol').eq('user_id', user.id).maybeSingle(),
   db.from('daily_checkins').select('energy_level,water_glasses,had_headache,had_fatigue').eq('user_id', user.id).eq('checkin_date', today).maybeSingle(),
@@ -47,33 +48,18 @@ const macroGoals    = results[5].data;
 const mealComps     = results[6].data || [];
 const chatHistory   = (results[7].data || []).reverse();
 
-// Meal plan for today
-const { data: mealPlanDirect } = await db
-  .from('meal_plans')
-  .select('meal_type, recipe:recipes(id,title,calories,protein,fat,net_carbs)')
-  .eq('plan_type', planType)
-  .eq('day_number', cycledDay)
-  .order('meal_type');
-
-const { data: mealPlanFallback } = mealPlanDirect?.length ? { data: null } : await db
-  .from('meal_plans')
-  .select('meal_type, recipe:recipes(id,title,calories,protein,fat,net_carbs)')
-  .eq('plan_type', 'basic_30')
-  .eq('day_number', cycledDay)
-  .order('meal_type');
-
+const { data: mealPlanDirect } = await db.from('meal_plans').select('meal_type, recipe:recipes(id,title,calories,protein,fat,net_carbs)').eq('plan_type', planType).eq('day_number', cycledDay).order('meal_type');
+const { data: mealPlanFallback } = mealPlanDirect?.length ? { data: null } : await db.from('meal_plans').select('meal_type, recipe:recipes(id,title,calories,protein,fat,net_carbs)').eq('plan_type', 'basic_30').eq('day_number', cycledDay).order('meal_type');
 const mealPlan = (mealPlanDirect?.length ? mealPlanDirect : mealPlanFallback) || [];
 
-// Group chat history by date for sidebar history panel
 const historyByDate = chatHistory.reduce((acc, msg) => {
   const d = new Date((msg as any).created_at).toISOString().split('T')[0];
   if (!acc[d]) acc[d] = { date: d, msgs: [] };
   acc[d].msgs.push(msg);
   return acc;
 }, {} as Record<string, { date: string; msgs: any[] }>);
-const historyDates = Object.values(historyByDate).sort((a, b) => b.date.localeCompare(a.date));
+const historyDates = Object.values(historyByDate).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
 
-// Derived stats
 const startWeight   = onboarding?.current_weight || 0;
 const goalWeight    = onboarding?.target_weight  || 0;
 const latestWeight  = weightLogs[0]?.weight || startWeight;
@@ -83,14 +69,11 @@ const goalPct       = Math.min(100, Math.round((weightLost / toGoal) * 100));
 const completedTasksCount = todayTasks.filter((t) => t.completed).length;
 const eatenCount    = mealComps.length;
 const totalMeals    = mealPlan.length || 4;
-const taskPct       = todayTasks.length > 0 ? Math.round((completedTasksCount / todayTasks.length) * 100) : 0;
-const mealPct       = Math.round((eatenCount / totalMeals) * 100);
-const waterCount    = (todayCheckin as any)?.water_glasses || 0;
-const waterPct      = Math.round((waterCount / 8) * 100);
 const fastingActive = !!activeFast;
 const fastHours     = activeFast ? Math.floor((Date.now() - new Date(activeFast.started_at).getTime()) / 3600000) : 0;
+const fastMins      = activeFast ? Math.floor(((Date.now() - new Date(activeFast.started_at).getTime()) / 60000) % 60) : 0;
+const waterCount    = (todayCheckin as any)?.water_glasses || 0;
 
-// Consumed macros
 const eatenSet = new Set(mealComps.map((c) => (c as any).meal_type));
 const consumed = mealPlan.filter((m) => eatenSet.has((m as any).meal_type) && (m as any).recipe)
   .reduce((acc, m) => {
@@ -98,727 +81,941 @@ const consumed = mealPlan.filter((m) => eatenSet.has((m as any).meal_type) && (m
     return { cal: acc.cal + (r.calories||0), prot: acc.prot + parseFloat(r.protein||0), fat: acc.fat + parseFloat(r.fat||0), carbs: acc.carbs + parseFloat(r.net_carbs||0) };
   }, { cal: 0, prot: 0, fat: 0, carbs: 0 });
 
-const calPct  = macroGoals?.daily_calories ? Math.min(100, Math.round((consumed.cal  / macroGoals.daily_calories) * 100)) : 0;
-const protPct = macroGoals?.protein_g      ? Math.min(100, Math.round((consumed.prot / macroGoals.protein_g)      * 100)) : 0;
-const restrictions = onboarding?.dietary_restrictions || [];
+const calPct   = macroGoals?.daily_calories ? Math.min(100, Math.round((consumed.cal / macroGoals.daily_calories) * 100)) : 0;
+const fatPctOfCal = consumed.cal > 0 ? Math.min(100, Math.round((consumed.fat * 9 / consumed.cal) * 100)) : 0;
 
-// Pre-computed booleans for JSX conditionals — avoids `< NUMBER` inside {} JSX which Astro reads as a tag
-const showLowWater   = !!todayCheckin && (waterCount < 4);
-const showBreakfast  = nowHour < 11;
-const showLunch      = nowHour >= 11 && nowHour < 15;
-const showSnack      = nowHour >= 15 && nowHour < 19;
+const restrictionsList = Array.isArray(onboarding?.dietary_restrictions) ? (onboarding!.dietary_restrictions as string[]) : [];
+
+// Pre-computed booleans
+const showLowWater  = !!todayCheckin && waterCount < 4;
+const showBreakfast = nowHour < 11;
+const showLunch     = nowHour >= 11 && nowHour < 15;
+const showSnack     = nowHour >= 15 && nowHour < 19;
+const showDinner    = nowHour >= 19;
+const hasWeightGain = weightLogs.length > 1 && weightLogs[0].weight > weightLogs[1].weight;
+const showNoCheckin = !todayCheckin;
+
+// Chips display strings
+const fastDisplay   = fastingActive ? (fastHours + ':' + fastMins.toString().padStart(2,'0')) : '—';
+const fastUnit      = fastingActive ? 'hrs' : '';
+const fastSub       = fastingActive ? ('window: ' + (activeFast?.target_hours || 16) + 'h') : 'No active fast';
+const macroDisplay  = calPct > 0 ? (calPct + '%') : (consumed.cal > 0 ? Math.round(consumed.cal) + '' : '—');
+const macroUnit     = calPct > 0 ? 'fat' : (consumed.cal > 0 ? 'kcal' : '');
+const macroSub      = macroGoals?.daily_calories ? (Math.round(consumed.cal) + ' / ' + macroGoals.daily_calories + ' kcal') : 'Set macro goals first';
+const sessionsCount = chatHistory.filter(m => (m as any).role === 'user').length;
+
+// Dynamic quote
+const miraQuoteText = hasWeightGain
+  ? 'Your weight went up ' + (weightLogs[0].weight - weightLogs[1].weight).toFixed(1) + 'kg — that\'s water from yesterday\'s sodium, not fat. The 7-day trend is what matters.'
+  : weightLost > 0
+    ? 'You\'ve dropped ' + weightLost.toFixed(1) + 'kg since Day 1. You\'re ' + goalPct + '% toward your goal — the adaptation is working.'
+    : 'Day ' + currentDay + ' is here. Every day you show up compounds — the metabolic shift takes 2–3 weeks and you\'re right in it.';
+
+// Memory items
+const miraMemory = [
+  onboarding?.fasting_protocol ? { l: 'Fasting protocol', v: String(onboarding.fasting_protocol).replace('_',':') + ' IF' } : null,
+  goalWeight ? { l: 'Goal weight', v: goalWeight + 'kg · ' + (weightLost > 0 ? weightLost.toFixed(1) + 'kg lost so far' : 'working toward it') } : null,
+  restrictionsList.length ? { l: 'Dietary restrictions', v: restrictionsList.join(', ') } : null,
+  { l: 'Journey progress', v: 'Day ' + currentDay + ' · Week ' + weekNum + ' · Lv.' + level },
+  sessionsCount ? { l: 'Messages sent', v: sessionsCount + ' total across all sessions' } : null,
+].filter(Boolean) as Array<{l:string; v:string}>;
 ---
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{t('coach.title')} — Keto Journey</title>
+  <title>AI Coach · Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet"/>
-  <style>
-    :root{--bg:#FAF6F1;--card:#FFFFFF;--card2:#F2EDE5;--border:rgba(255,90,122,.12);--border2:rgba(255,90,122,.28);--rv-accent:#FF5C7A;--surface:#F2EDE5;--text:#1A0A00;--soft:#7A6055;--muted:#E8DDD5;--green:#FF5C7A;--green2:#B6FF3C;--purple:#8b5cf6;--indigo:#6366f1;--gold:#f59e0b;--blue:#3b82f6;}
-    *{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:'Bricolage Grotesque',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
-
-    /* ── Layout ── */
-    .ai-layout{display:flex;position:fixed;top:0;bottom:0;left:232px;right:0;overflow:hidden;z-index:200;}
-
-    /* ── Sidebar ── */
-    .ai-sidebar{
-      width:270px;flex-shrink:0;overflow-y:auto;
-      border-right:1px solid var(--border);
-      background:var(--card);
-      display:flex;flex-direction:column;gap:0;
-      scrollbar-width:thin;scrollbar-color:rgba(255,90,122,.15) transparent;
-    }
-    .ai-sidebar::-webkit-scrollbar{width:3px;}
-    .ai-sidebar::-webkit-scrollbar-thumb{background:rgba(255,90,122,.15);border-radius:99px;}
-
-    /* Coach card */
-    .ai-coach-card{
-      padding:1.25rem 1.1rem 1rem;
-      background:linear-gradient(135deg,rgba(255,92,122,.08),rgba(255,92,122,.03));
-      border-bottom:1px solid var(--border);
-      flex-shrink:0;
-    }
-    .ai-coach-top{display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem;}
-    .ai-coach-avatar{
-      width:44px;height:44px;border-radius:14px;flex-shrink:0;
-      background:linear-gradient(135deg,#6366f1,#8b5cf6);
-      display:flex;align-items:center;justify-content:center;font-size:1.3rem;
-      box-shadow:0 6px 20px rgba(99,102,241,.4);position:relative;
-    }
-    .ai-coach-dot{position:absolute;bottom:-2px;right:-2px;width:11px;height:11px;border-radius:50%;background:#FF5C7A;border:2px solid var(--card);}
-    .ai-coach-name{font-size:.95rem;font-weight:800;line-height:1.2;}
-    .ai-coach-sub{font-size:.67rem;color:var(--rv-accent);font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
-    .ai-user-chip{
-      display:flex;align-items:center;gap:.5rem;
-      background:rgba(255,92,122,.06);border:1px solid rgba(255,92,122,.15);
-      border-radius:10px;padding:.45rem .7rem;
-    }
-    .ai-user-avatar{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--green),#E0394F);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.7rem;color:#fff;flex-shrink:0;}
-    .ai-user-info{flex:1;min-width:0;}
-    .ai-user-name{font-size:.78rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .ai-user-meta{font-size:.63rem;color:var(--soft);}
-
-    /* Stats block */
-    .ai-stats-block{padding:.9rem 1.1rem;border-bottom:1px solid var(--border);}
-    .ai-stats-title{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin-bottom:.65rem;}
-    .ai-stat-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:.55rem;}
-    .ai-stat-row:last-child{margin-bottom:0;}
-    .ai-stat-label{font-size:.72rem;color:var(--soft);display:flex;align-items:center;gap:.3rem;}
-    .ai-stat-val{font-size:.78rem;font-weight:800;}
-    .ai-mini-bar{height:4px;border-radius:99px;background:rgba(0,0,0,.07);margin-top:.2rem;overflow:hidden;}
-    .ai-mini-fill{height:100%;border-radius:99px;transition:width .4s;}
-
-    /* Today block */
-    .ai-today-block{padding:.9rem 1.1rem;border-bottom:1px solid var(--border);}
-    .ai-meal-chip{
-      display:flex;align-items:center;gap:.4rem;padding:.3rem .6rem;
-      border-radius:8px;font-size:.7rem;margin-bottom:.3rem;
-    }
-    .ai-meal-chip.eaten{background:rgba(255,92,122,.1);color:var(--green);}
-    .ai-meal-chip.pending{background:var(--card2);color:var(--soft);}
-
-    /* Suggestions */
-    .ai-sug-block{padding:.9rem 1.1rem;flex:1;}
-    .ai-sug-title{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin-bottom:.6rem;}
-    .ai-sug-btn{
-      display:block;width:100%;text-align:left;
-      padding:.55rem .75rem;border-radius:11px;margin-bottom:.35rem;
-      background:rgba(255,92,122,.06);border:1px solid rgba(255,92,122,.15);
-      color:var(--text);font-size:.73rem;font-weight:600;cursor:pointer;
-      transition:all .18s;font-family:inherit;
-    }
-    .ai-sug-btn:hover{background:rgba(255,92,122,.12);border-color:rgba(255,92,122,.3);transform:translateX(3px);}
-    .ai-sug-btn:last-child{margin-bottom:0;}
-
-    /* ── Chat main ── */
-    .ai-main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
-
-    /* Chat header */
-    .ai-chat-header{
-      padding:.8rem 1.25rem;border-bottom:1px solid var(--border);
-      display:flex;align-items:center;justify-content:space-between;
-      background:var(--card);flex-shrink:0;
-    }
-    .ai-chat-header-left{display:flex;align-items:center;gap:.6rem;}
-    .ai-chat-title{font-size:.95rem;font-weight:800;}
-    .ai-chat-sub{font-size:.68rem;color:var(--soft);}
-    .ai-hbtn{
-      padding:.3rem .7rem;border-radius:9px;font-size:.68rem;font-weight:700;
-      background:var(--card2);border:1px solid var(--border);
-      color:var(--soft);cursor:pointer;transition:all .18s;font-family:inherit;
-    }
-    .ai-hbtn:hover{border-color:var(--green);color:var(--green);}
-    .ai-hbtn.danger:hover{border-color:#ef4444;color:#f87171;}
-
-    /* Messages */
-    .ai-messages{
-      flex:1;overflow-y:auto;padding:1.25rem;
-      display:flex;flex-direction:column;gap:.875rem;
-      scroll-behavior:smooth;
-    }
-    .ai-messages::-webkit-scrollbar{width:4px;}
-    .ai-messages::-webkit-scrollbar-track{background:transparent;}
-    .ai-messages::-webkit-scrollbar-thumb{background:rgba(0,0,0,.1);border-radius:99px;}
-
-    .ai-msg{display:flex;gap:.6rem;align-items:flex-end;animation:msgIn .2s ease;}
-    @keyframes msgIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
-    .ai-msg.user{flex-direction:row-reverse;}
-
-    .ai-msg-avatar{
-      width:30px;height:30px;border-radius:9px;flex-shrink:0;
-      display:flex;align-items:center;justify-content:center;font-size:.9rem;
-      background:linear-gradient(135deg,#6366f1,#8b5cf6);
-    }
-    .ai-msg.user .ai-msg-avatar{background:linear-gradient(135deg,var(--green),#E0394F);}
-
-    .ai-msg-bubble{
-      max-width:78%;padding:.7rem .95rem;
-      border-radius:18px;font-size:.82rem;line-height:1.65;word-break:break-word;
-    }
-    .ai-msg.bot .ai-msg-bubble{
-      background:var(--card2);border:1px solid var(--border);
-      color:var(--text);border-radius:4px 18px 18px 18px;
-    }
-    .ai-msg.user .ai-msg-bubble{
-      background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;
-      border-radius:18px 4px 18px 18px;
-    }
-    .ai-msg.bot .ai-msg-bubble img{max-width:100%;border-radius:10px;margin-top:.5rem;display:block;}
-
-    /* Markdown styles inside bot bubbles */
-    .ai-msg.bot .ai-msg-bubble strong{color:var(--green2);font-weight:800;}
-    .ai-msg.bot .ai-msg-bubble em{color:var(--gold);font-style:italic;}
-    .ai-msg.bot .ai-msg-bubble .ai-h2{font-size:.92rem;font-weight:800;color:var(--text);margin:.6rem 0 .3rem;padding-bottom:.2rem;border-bottom:1px solid var(--border);}
-    .ai-msg.bot .ai-msg-bubble .ai-h3{font-size:.82rem;font-weight:800;color:var(--green);margin:.5rem 0 .2rem;}
-    .ai-msg.bot .ai-msg-bubble .ai-li{padding:.15rem 0 .15rem .5rem;border-left:2px solid rgba(255,92,122,.3);margin:.15rem 0;color:var(--text);}
-    .ai-msg.bot .ai-msg-bubble .ai-li-num{padding:.15rem 0;color:var(--text);}
-    .ai-msg.bot .ai-msg-bubble .ai-li-num .ai-num{display:inline-block;min-width:1.4rem;font-weight:800;color:var(--purple);}
-    .ai-msg.bot .ai-msg-bubble code{background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.2);border-radius:5px;padding:.1rem .35rem;font-family:monospace;font-size:.78rem;color:#a5b4fc;}
-    .ai-msg.bot .ai-msg-bubble pre{background:rgba(0,0,0,.05);border:1px solid var(--border);border-radius:10px;padding:.75rem;margin:.5rem 0;overflow-x:auto;}
-    .ai-msg.bot .ai-msg-bubble pre code{background:none;border:none;padding:0;font-size:.75rem;}
-    .ai-avocado{display:inline-block;letter-spacing:-.05em;}
-
-    /* Typing dots */
-    .ai-typing{display:flex;gap:4px;align-items:center;padding:.15rem 0;}
-    .ai-typing span{width:6px;height:6px;border-radius:50%;background:var(--soft);animation:tdot 1s infinite;}
-    .ai-typing span:nth-child(2){animation-delay:.15s;}
-    .ai-typing span:nth-child(3){animation-delay:.3s;}
-    @keyframes tdot{0%,60%,100%{transform:translateY(0);opacity:.4;}30%{transform:translateY(-5px);opacity:1;}}
-
-    /* Welcome */
-    .ai-welcome .ai-msg-bubble{background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.2);}
-
-    /* Image preview */
-    .ai-img-preview{
-      margin:.5rem 1.25rem 0;display:none;
-      background:var(--card2);border:1px solid var(--border);border-radius:14px;
-      padding:.6rem .75rem;align-items:center;gap:.75rem;
-    }
-    .ai-img-preview.show{display:flex;}
-    .ai-img-preview img{width:56px;height:56px;object-fit:cover;border-radius:9px;border:1px solid rgba(99,102,241,.3);}
-    .ai-img-preview-info{flex:1;font-size:.72rem;color:var(--soft);}
-    .ai-img-remove{width:24px;height:24px;border-radius:6px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.2);color:#f87171;font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-
-    /* Input area */
-    .ai-input-area{
-      padding:.875rem 1.25rem 1rem;border-top:1px solid var(--border);
-      background:var(--card);flex-shrink:0;
-    }
-    .ai-input-row{display:flex;align-items:center;gap:.5rem;}
-    .ai-img-btn{
-      width:38px;height:38px;border-radius:11px;flex-shrink:0;
-      background:var(--card2);border:1px solid var(--border);
-      display:flex;align-items:center;justify-content:center;font-size:1.05rem;cursor:pointer;transition:all .18s;
-    }
-    .ai-img-btn:hover{border-color:var(--rv-accent);background:rgba(255,92,122,.1);}
-    .ai-input{
-      flex:1;padding:.65rem 1rem;border-radius:13px;
-      background:var(--card2);border:1px solid var(--border);
-      color:var(--text);font-size:.82rem;font-family:inherit;outline:none;
-      transition:border-color .18s;resize:none;height:40px;max-height:120px;overflow-y:auto;
-    }
-    .ai-input:focus{border-color:rgba(255,92,122,.45);}
-    .ai-input::placeholder{color:var(--soft);}
-    .ai-send{
-      width:38px;height:38px;border-radius:11px;flex-shrink:0;
-      background:linear-gradient(135deg,var(--rv-accent),#ff8fa3);border:none;color:#fff;
-      cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;
-    }
-    .ai-send:hover{transform:scale(1.08);box-shadow:0 6px 18px rgba(255,92,122,.35);}
-    .ai-send:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none;}
-    .ai-input-hint{font-size:.62rem;color:var(--soft);margin-top:.4rem;text-align:center;}
-
-    /* Mobile */
-    @media(max-width:900px){
-      .ai-sidebar{display:none;}
-      .ai-layout{left:0;bottom:72px;}
-      .ai-messages{padding:.875rem;}
-      .ai-input-area{padding:.75rem;}
-      .ai-msg-bubble{max-width:88%;}
-    }
-    @media(max-width:400px){
-      .ai-msg-bubble{max-width:94%;font-size:.82rem;padding:.6rem .8rem;}
-      .ai-messages{padding:.625rem;}
-    }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
 </head>
 <body>
+<div class="rv-pg-shell">
 <Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="ai-coach" />
+<div class="rv-pg-main">
 
-<div class="ai-layout">
-
-  <!-- ── SIDEBAR ── -->
-  <aside class="ai-sidebar">
-
-    <!-- Coach info -->
-    <div class="ai-coach-card">
-      <div class="ai-coach-top">
-        <div class="ai-coach-avatar">
-          🤖
-          <div class="ai-coach-dot"></div>
-        </div>
+  <!-- ══ BRIEF / HERO ══ -->
+  <section class="cb">
+    <div class="cb-glow lime"></div>
+    <div class="cb-glow"></div>
+    <div class="cb-inner">
+      <div class="cb-bar">
+        <div class="cb-mark">✦</div>
         <div>
-          <div class="ai-coach-name">Keto AI Coach</div>
-          <div class="ai-coach-sub">✦ Elite Exclusive</div>
+          <div class="cb-name">Mira <span class="cb-name-sub">· your keto coach</span></div>
+          <div class="cb-status">Listening · context updated just now</div>
         </div>
       </div>
-      <div class="ai-user-chip">
-        <div class="ai-user-avatar">{userName.charAt(0).toUpperCase()}</div>
-        <div class="ai-user-info">
-          <div class="ai-user-name">{profile.full_name || userName}</div>
-          <div class="ai-user-meta">Day {currentDay} · Week {weekNum} · Lv.{level}</div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Journey stats -->
-    <div class="ai-stats-block">
-      <div class="ai-stats-title">📊 Journey Stats</div>
-
-      <div class="ai-stat-row">
-        <span class="ai-stat-label">🔥 Streak</span>
-        <span class="ai-stat-val" style="color:var(--gold)">{streak} days</span>
-      </div>
-      <div class="ai-stat-row">
-        <span class="ai-stat-label">⭐ XP</span>
-        <span class="ai-stat-val" style="color:var(--purple)">{totalXp}</span>
-      </div>
-      {weightLost > 0 && (
-        <div class="ai-stat-row">
-          <span class="ai-stat-label">📉 Lost</span>
-          <span class="ai-stat-val" style="color:var(--green)">-{weightLost.toFixed(1)}kg</span>
-        </div>
-      )}
-      {latestWeight > 0 && (
-        <div class="ai-stat-row">
-          <span class="ai-stat-label">🎯 Current</span>
-          <span class="ai-stat-val">{latestWeight}kg</span>
-        </div>
-      )}
-      {goalPct > 0 && (
-        <div style="margin-top:.5rem;">
-          <div style="display:flex;justify-content:space-between;font-size:.67rem;color:var(--soft);margin-bottom:.25rem;">
-            <span>Goal progress</span>
-            <span style="color:var(--green);font-weight:800;">{goalPct}%</span>
-          </div>
-          <div class="ai-mini-bar">
-            <div class="ai-mini-fill" style={`width:${goalPct}%;background:linear-gradient(90deg,var(--green),var(--green2));`}></div>
-          </div>
-        </div>
-      )}
-    </div>
-
-    <!-- Today's status -->
-    <div class="ai-today-block">
-      <div class="ai-stats-title">📅 Today</div>
-
-      <div class="ai-stat-row">
-        <span class="ai-stat-label">✅ Tasks</span>
-        <span class="ai-stat-val">{completedTasksCount}/{todayTasks.length}</span>
-      </div>
-      <div class="ai-mini-bar" style="margin-bottom:.55rem;">
-        <div class="ai-mini-fill" style={`width:${taskPct}%;background:linear-gradient(90deg,#3b82f6,#60a5fa);`}></div>
-      </div>
-
-      <div class="ai-stat-row">
-        <span class="ai-stat-label">🍽️ Meals</span>
-        <span class="ai-stat-val">{eatenCount}/{totalMeals}</span>
-      </div>
-      <div class="ai-mini-bar" style="margin-bottom:.55rem;">
-        <div class="ai-mini-fill" style={`width:${mealPct}%;background:linear-gradient(90deg,var(--green),var(--green2));`}></div>
-      </div>
-
-      <div class="ai-stat-row">
-        <span class="ai-stat-label">💧 Water</span>
-        <span class="ai-stat-val">{waterCount}/8 gl</span>
-      </div>
-      <div class="ai-mini-bar" style="margin-bottom:.55rem;">
-        <div class="ai-mini-fill" style={`width:${waterPct}%;background:linear-gradient(90deg,#06b6d4,#22d3ee);`}></div>
-      </div>
-
-      {macroGoals && (
+      <div class="cb-headline">
         <div>
-          <div class="ai-stat-row">
-            <span class="ai-stat-label">🔥 Calories</span>
-            <span class="ai-stat-val">{Math.round(consumed.cal)}/{macroGoals.daily_calories}</span>
-          </div>
-          <div class="ai-mini-bar" style="margin-bottom:.3rem;">
-            <div class="ai-mini-fill" style={`width:${calPct}%;background:linear-gradient(90deg,var(--gold),#fbbf24);`}></div>
-          </div>
-          <div class="ai-stat-row">
-            <span class="ai-stat-label">⚡ Protein</span>
-            <span class="ai-stat-val">{Math.round(consumed.prot)}g/{macroGoals.protein_g}g</span>
-          </div>
-          <div class="ai-mini-bar">
-            <div class="ai-mini-fill" style={`width:${protPct}%;background:linear-gradient(90deg,var(--purple),#a78bfa);`}></div>
+          <div class="cb-eyebrow"><span class="cb-pip"></span>TODAY · DAY {currentDay} OF 90</div>
+          <h1 class="cb-h">
+            You're on Week {weekNum}. <em>Ask me anything</em> — a craving, a doubt, a win.
+          </h1>
+        </div>
+        <div class="cb-quote-card">
+          <div class="cb-qhead"><span class="cb-dot"></span>MIRA NOTICED</div>
+          <p class="cb-q">{miraQuoteText}</p>
+          <div class="cb-qcta">
+            <button data-msg="Tell me more about what you noticed about my progress">Tell me more</button>
+            <button class="ghost" onclick="this.closest('.cb-quote-card').style.display='none'">Dismiss</button>
           </div>
         </div>
-      )}
+      </div>
 
-      {fastingActive && (
-        <div style="margin-top:.65rem;padding:.5rem .65rem;border-radius:10px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);font-size:.72rem;color:#a78bfa;font-weight:700;">
-          ⏱️ Fasting: {fastHours}h active
+      <div class="cb-chips">
+        <div class="cb-cc live">
+          <div class="ccc-l">CONTEXT LOADED</div>
+          <div class="ccc-v">{currentDay}<em>days of you</em></div>
+          <div class="ccc-sub">Meals, weight, check-ins, fasting.</div>
         </div>
-      )}
+        <div class="cb-cc">
+          <div class="ccc-l">MACROS TODAY</div>
+          <div class="ccc-v">{macroDisplay}<em>{macroUnit}</em></div>
+          <div class="ccc-sub">{macroSub}</div>
+        </div>
+        <div class="cb-cc">
+          <div class="ccc-l">TASKS TODAY</div>
+          <div class="ccc-v">{completedTasksCount}<em>/{todayTasks.length}</em></div>
+          <div class="ccc-sub">{eatenCount}/{totalMeals} meals logged</div>
+        </div>
+        <div class="cb-cc">
+          <div class="ccc-l">FASTING NOW</div>
+          <div class="ccc-v">{fastDisplay}<em>{fastUnit}</em></div>
+          <div class="ccc-sub">{fastSub}</div>
+        </div>
+        <div class="cb-cc">
+          <div class="ccc-l">SESSIONS</div>
+          <div class="ccc-v">{sessionsCount}<em>msgs</em></div>
+          <div class="ccc-sub">Your full journey in context</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ BODY ══ -->
+  <div class="ac-body">
+    <div class="ac-layout">
+
+      <!-- ─── CHAT ─── -->
+      <div class="ch-wrap">
+        <div class="ch-head">
+          <div class="ch-head-mark">✦</div>
+          <div>
+            <div class="ch-head-title">Conversation with Mira</div>
+            <div class="ch-head-sub">Day {currentDay} · {streak}-day streak · {totalXp} XP · Lv.{level}</div>
+          </div>
+          <div class="ch-head-tools">
+            <button id="clearBtn" title="New conversation">+</button>
+          </div>
+        </div>
+
+        <div class="ch-conv" id="aiMessages">
+          <div class="ch-day">Session start</div>
+
+          <!-- Welcome -->
+          <div class="ch-row coach">
+            <div class="ch-ava">✦</div>
+            <div class="ch-bubble-wrap">
+              <div class="ch-bubble">
+                Morning, <strong>{userName}</strong>! I'm Mira, your personal keto coach — I have full context of your journey.<br><br>
+                You're on <strong>Day {currentDay}</strong> with a <strong>{streak}-day streak</strong> and <strong>{totalXp} XP</strong>.
+                {weightLost > 0 && <> You've lost <strong>{weightLost.toFixed(1)}kg</strong> so far — that's real.</>}
+                <br><br>
+                <span class="ch-hint">Send a food photo for instant macro analysis · Ask me anything about keto</span>
+              </div>
+              <div class="ch-meta">Just now · Mira</div>
+            </div>
+          </div>
+
+          <!-- Pre-rendered history -->
+          {chatHistory.map((msg) => (
+            <div class={`ch-row ${(msg as any).role === 'user' ? 'user' : 'coach'}`} data-date={(msg as any).created_at ? (msg as any).created_at.split('T')[0] : ''}>
+              {(msg as any).role !== 'user' && <div class="ch-ava">✦</div>}
+              <div class="ch-bubble-wrap">
+                <div class="ch-bubble" data-raw={(msg as any).role === 'assistant' ? (msg as any).content : undefined}>
+                  {(msg as any).role === 'user' ? (msg as any).content : ''}
+                </div>
+                <div class="ch-meta">{(msg as any).role === 'user' ? 'You' : 'Mira'}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <!-- Image preview -->
+        <div id="aiImgPreview" class="ch-img-preview">
+          <img id="aiImgThumb" src="" alt=""/>
+          <div class="ch-img-info">Image ready · tap send or add a message</div>
+          <button id="aiImgRemove" class="ch-img-remove">×</button>
+        </div>
+
+        <div class="ch-compose">
+          <div class="ch-compose-row">
+            <label class="ch-compose-icon" for="aiImgInput" title="Attach photo">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <input type="file" id="aiImgInput" accept="image/*" style="display:none"/>
+            </label>
+            <textarea
+              class="ch-compose-ta"
+              id="aiInput"
+              placeholder="Ask Mira anything — a craving, a question, a doubt…"
+              rows="1"
+            ></textarea>
+            <button class="ch-send" id="aiSend">→</button>
+          </div>
+          <div class="ch-foot">
+            <span class="ch-pip"></span>
+            <span>Context: Day {currentDay} · macros · weight · fasting · last {Math.min(14, currentDay)} days</span>
+            <span class="ch-spacer"></span>
+            <button class="ch-deep" id="deepThinkBtn">
+              <span class="ch-deep-box" id="deepBox"></span>
+              Deep think
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── RAIL ─── -->
+      <aside class="ac-rail">
+
+        <!-- Persona picker -->
+        <div class="cr-card" id="personaPicker">
+          <div class="cr-h"><span class="cr-pip"></span>COACH TONE</div>
+          <div class="cr-personas">
+            <div class="cr-pers active" data-persona="Warm friend">
+              <div class="cr-pers-g">◐</div>
+              <div>
+                <div class="cr-pers-n">Warm friend</div>
+                <div class="cr-pers-s">Compassionate, plain language</div>
+              </div>
+              <div class="cr-pers-check">✓</div>
+            </div>
+            <div class="cr-pers" data-persona="Drill sergeant">
+              <div class="cr-pers-g">◑</div>
+              <div>
+                <div class="cr-pers-n">Drill sergeant</div>
+                <div class="cr-pers-s">No-nonsense, direct, blunt</div>
+              </div>
+              <div class="cr-pers-check">✓</div>
+            </div>
+            <div class="cr-pers" data-persona="Clinical">
+              <div class="cr-pers-g">◍</div>
+              <div>
+                <div class="cr-pers-n">Clinical</div>
+                <div class="cr-pers-s">Cite biology, numbers, sources</div>
+              </div>
+              <div class="cr-pers-check">✓</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- What Mira remembers -->
+        <div class="cr-card">
+          <div class="cr-h"><span class="cr-pip lime"></span>WHAT MIRA KNOWS</div>
+          <div class="cr-mem-list">
+            {miraMemory.map(item => (
+              <div class="cr-mem">
+                <div class="cr-mem-l">{item.l}</div>
+                <div class="cr-mem-v">{item.v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <!-- Quick tools (dark) -->
+        <div class="cr-card cr-dark">
+          <div class="cr-h"><span class="cr-pip lime"></span>QUICK TOOLS</div>
+          <div class="cr-tools">
+            <button class="cr-tool" data-msg={`I'm on Day ${currentDay}. Plan tomorrow's meals for me — 3 meals, keto-compliant.`}>
+              <div class="cr-tool-g">◇</div>
+              <div class="cr-tool-l">Plan tomorrow</div>
+              <div class="cr-tool-s">3 meals from your goals</div>
+            </button>
+            <button class="cr-tool" data-msg={`I have ${Math.max(0, (macroGoals?.daily_calories || 1800) - Math.round(consumed.cal))} kcal left today. What should I eat for dinner to hit my macros?`}>
+              <div class="cr-tool-g">◔</div>
+              <div class="cr-tool-l">Macro autopilot</div>
+              <div class="cr-tool-s">Reverse-fit to dinner</div>
+            </button>
+            <button class="cr-tool" data-msg={`Recap the last week of my journey. What patterns do you see? What should I fix?`}>
+              <div class="cr-tool-g">◎</div>
+              <div class="cr-tool-l">Read my week</div>
+              <div class="cr-tool-s">Pattern recap & notes</div>
+            </button>
+            <button class="cr-tool" data-msg={`Give me the single most important keto tip for Day ${currentDay} of a 90-day journey.`}>
+              <div class="cr-tool-g">✦</div>
+              <div class="cr-tool-l">Day {currentDay} tip</div>
+              <div class="cr-tool-s">Best tip for right now</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Nudges -->
+        <div class="cr-card">
+          <div class="cr-h"><span class="cr-pip"></span>NUDGES</div>
+          <div class="cr-nudge">
+            <div class="cr-nudge-l">
+              <div class="cr-nudge-h">Morning brief</div>
+              <div class="cr-nudge-s">Daily · 8:00 AM</div>
+            </div>
+            <div class="cr-switch on" data-nudge="morning"></div>
+          </div>
+          <div class="cr-nudge" style="margin-top:.75rem">
+            <div class="cr-nudge-l">
+              <div class="cr-nudge-h">Pre-meal check-in</div>
+              <div class="cr-nudge-s">When you open meal log</div>
+            </div>
+            <div class="cr-switch on" data-nudge="premeal"></div>
+          </div>
+          <div class="cr-nudge" style="margin-top:.75rem">
+            <div class="cr-nudge-l">
+              <div class="cr-nudge-h">Quiet hours</div>
+              <div class="cr-nudge-s">10pm → 7am · No nudges</div>
+            </div>
+            <div class="cr-switch on" data-nudge="quiet"></div>
+          </div>
+        </div>
+
+      </aside>
     </div>
 
-    <!-- Chat History panel -->
+    <!-- ══ TOPICS ══ -->
+    <div class="ct">
+      <div class="ct-head">
+        <h2>What do you want to <em>ask</em> today?</h2>
+        <p>Click any topic to open a conversation with Mira.</p>
+      </div>
+      <div class="ct-grid">
+        <button class="ct-card rose" data-msg={`I'm on Day ${currentDay} and I haven't lost weight in 5 days — is this a real plateau?`}>
+          <div class="ct-cat"><div class="ct-g">◑</div>STUCK</div>
+          <div class="ct-t">I haven't lost weight in {Math.min(5, currentDay)} days.</div>
+          <div class="ct-s">Plateaus before day 21 are almost always water. Mira will check yours.</div>
+        </button>
+        <button class="ct-card lime" data-msg="I am craving bread right now — what should I do? What's actually missing?">
+          <div class="ct-cat"><div class="ct-g">◇</div>CRAVING</div>
+          <div class="ct-t">I want bread. Specifically right now.</div>
+          <div class="ct-s">We'll find what's actually missing — usually fat, salt, or sleep.</div>
+        </button>
+        <button class="ct-card orange" data-msg="I have dinner out tonight — plan my day backwards from there. Keep me in ketosis.">
+          <div class="ct-cat"><div class="ct-g">◎</div>PLANNING</div>
+          <div class="ct-t">Plan today around my dinner out.</div>
+          <div class="ct-s">Reverse-fit the day. Save room for olive oil and a glass of red.</div>
+        </button>
+        <button class="ct-card rose" data-msg="Why am I crashing at 3pm every day this week? What's causing it on keto?">
+          <div class="ct-cat"><div class="ct-g">◔</div>ENERGY</div>
+          <div class="ct-t">Why am I tired at 3pm?</div>
+          <div class="ct-s">Likely sodium. Possibly protein timing. Definitely not motivation.</div>
+        </button>
+        <button class="ct-card lime" data-msg={`Give me a full progress review for Day ${currentDay} of my keto journey — honest assessment with specific things to improve.`}>
+          <div class="ct-cat"><div class="ct-g">◬</div>REVIEW</div>
+          <div class="ct-t">Give me a full progress review.</div>
+          <div class="ct-s">An honest read on where you are and what to change.</div>
+        </button>
+        <button class="ct-card orange" data-msg="My morning ketones dropped overnight — what changed? What should I do?">
+          <div class="ct-cat"><div class="ct-g">◯</div>BODY</div>
+          <div class="ct-t">My ketones dropped overnight.</div>
+          <div class="ct-s">We'll look at protein, salt, and your last 14 hours.</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ SESSIONS ══ -->
     {historyDates.length > 0 && (
-      <div class="ai-stats-block">
-        <div class="ai-stats-title" style="display:flex;align-items:center;justify-content:space-between;">
-          💬 Chat History
-          <span style="color:var(--soft);font-size:.6rem;font-weight:600;">{chatHistory.length} messages</span>
+      <div class="cs">
+        <div class="cs-col-h">
+          <h3>Conversations <em>so far</em>.</h3>
+          <div class="cs-meta">{sessionsCount} messages · Day 1 → today</div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:.25rem;">
+        <div class="cs-list">
           {historyDates.map(d => {
             const label = new Date(d.date + 'T12:00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' });
             const firstUser = d.msgs.find((m) => (m as any).role === 'user');
-            const preview = firstUser ? (firstUser as any).content.slice(0, 40) + ((firstUser as any).content.length > 40 ? '…' : '') : '';
-            const userCount = d.msgs.filter((m) => (m as any).role === 'user').length;
+            const preview = firstUser ? String((firstUser as any).content).slice(0, 80) + (String((firstUser as any).content).length > 80 ? '…' : '') : '';
+            const userMsgs = d.msgs.filter((m) => (m as any).role === 'user').length;
             return (
-              <button
-                onclick={`window.scrollToDate('${d.date}')`}
-                style="text-align:left;background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:.45rem .65rem;cursor:pointer;transition:all .18s;width:100%;"
-                onmouseover="this.style.borderColor='rgba(255,92,122,.3)'"
-                onmouseout="this.style.borderColor='var(--border)'">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.12rem;">
-                  <span style="font-size:.72rem;font-weight:800;color:var(--green);">{label}</span>
-                  <span style="font-size:.6rem;color:var(--soft);">{userCount} msg{userCount !== 1 ? 's' : ''}</span>
+              <div class="cs-row" onclick={`window.scrollToDate('${d.date}')`}>
+                <div class="cs-date">{label}<span class="cs-time">{userMsgs} msg{userMsgs !== 1 ? 's' : ''}</span></div>
+                <div class="cs-mid">
+                  <div class="cs-preview">{preview || 'Session started'}</div>
                 </div>
-                {preview && <div style="font-size:.65rem;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{preview}</div>}
-              </button>
+                <div class="cs-arr">→</div>
+              </div>
             );
           })}
         </div>
       </div>
     )}
 
-    <!-- Dynamic suggestions -->
-    <div class="ai-sug-block">
-      <div class="ai-sug-title">🧠 Ask me</div>
-      {!todayCheckin && (
-        <button class="ai-sug-btn" data-msg="I haven't done my check-in yet. What should I focus on today based on my journey?">✅ Today's priorities</button>
-      )}
-      {fastingActive && (
-        <button class="ai-sug-btn" data-msg={`I've been fasting for ${fastHours} hours. Any tips to stay strong and break my fast correctly?`}>⏱️ Fasting {fastHours}h — tips</button>
-      )}
-      {(todayCheckin as any)?.energy_level <= 2 && (
-        <button class="ai-sug-btn" data-msg="My energy is very low today. What can I do to boost it on keto?">⚡ Low energy fix</button>
-      )}
-      {showLowWater && (
-        <button class="ai-sug-btn" data-msg="I've only had a few glasses of water today. How important is hydration on keto and how do I drink more?">💧 Hydration help</button>
-      )}
-      {(todayCheckin as any)?.had_headache && (
-        <button class="ai-sug-btn" data-msg="I have a keto headache today. What are the best immediate remedies?">🧠 Keto headache fix</button>
-      )}
-      {showBreakfast && (
-        <button class="ai-sug-btn" data-msg="What's a quick high-protein keto breakfast I can make in under 10 minutes?">🍽️ Quick keto breakfast</button>
-      )}
-      {showLunch && (
-        <button class="ai-sug-btn" data-msg="Suggest a keto lunch that's filling, easy to make, and keeps me in ketosis.">🍽️ Keto lunch ideas</button>
-      )}
-      {showSnack && (
-        <button class="ai-sug-btn" data-msg="What keto snacks can I have right now to avoid afternoon cravings?">✨ Afternoon snack ideas</button>
-      )}
-      {nowHour >= 19 && (
-        <button class="ai-sug-btn" data-msg="What's a satisfying and easy keto dinner I can cook tonight?">🍽️ Tonight's keto dinner</button>
-      )}
-      <button class="ai-sug-btn" data-msg={`I'm on Day ${currentDay} of my keto journey. Give me an honest assessment of how I'm doing and what to improve.`}>📊 Full progress review</button>
-      <button class="ai-sug-btn" data-msg="What are the best keto foods to improve fat burning and stay in deep ketosis?">🔥 Maximize fat burn</button>
-      <button class="ai-sug-btn" data-msg={`I have ${Math.max(0, (macroGoals?.protein_g || 130) - Math.round(consumed.prot))}g protein left to hit my goal today. What foods should I eat?`}>🎯 Hit protein goal</button>
-      {restrictions.includes('no_pork') && (
-        <button class="ai-sug-btn" data-msg="Give me a high-protein keto meal with no pork — chicken or beef based.">🍽️ No-pork keto meal</button>
-      )}
-      <button class="ai-sug-btn" data-msg={`Give me the best single keto tip specifically for someone on Day ${currentDay} of their journey.`}>✨ Day {currentDay} tip</button>
-    </div>
+  </div><!-- /ac-body -->
+</div><!-- /rv-pg-main -->
+</div><!-- /rv-pg-shell -->
 
-  </aside>
+<style is:global>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  <!-- ── MAIN CHAT ── -->
-  <main class="ai-main">
-
-    <!-- Chat header -->
-    <div class="ai-chat-header">
-      <div class="ai-chat-header-left">
-        <div style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;"></div>
-        <div>
-          <div class="ai-chat-title">Chat with your AI Coach</div>
-          <div class="ai-chat-sub">Day {currentDay} · {streak}-day streak · {totalXp} XP · Level {level}</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:.4rem;">
-        <button class="ai-hbtn" id="clearBtn">🗑️ Clear chat</button>
-      </div>
-    </div>
-
-    <!-- Messages -->
-    <div class="ai-messages" id="aiMessages">
-      <!-- Welcome -->
-      <div class="ai-msg bot ai-welcome">
-        <div class="ai-msg-avatar">🤖</div>
-        <div class="ai-msg-bubble">
-          Hey <strong>{userName}</strong>! I'm your personal Keto AI Coach — I have full access to your journey data.<br/><br/>
-          You're on <strong>Day {currentDay}</strong> with a <strong>{streak}-day streak</strong> and <strong>{totalXp} XP</strong> at <strong>Level {level}</strong>.
-          {weightLost > 0 && <> You've lost <strong>{weightLost.toFixed(1)}kg</strong> — keep going! 🔥</>}
-          <br/><br/>
-          <span style="opacity:.7;font-size:.75rem;">📷 Send a food photo for instant macro analysis · Send a fridge photo for recipe ideas · Ask me anything about keto!</span>
-        </div>
-      </div>
-
-      <!-- Pre-rendered history -->
-      {chatHistory.map((msg) => (
-        <div class={`ai-msg ${(msg as any).role === 'user' ? 'user' : 'bot'}`} data-date={(msg as any).created_at ? (msg as any).created_at.split('T')[0] : ''}>
-          <div class="ai-msg-avatar">{(msg as any).role === 'user' ? '👤' : '🤖'}</div>
-          <div class="ai-msg-bubble" data-raw={(msg as any).role === 'assistant' ? (msg as any).content : undefined}>
-            {(msg as any).role === 'user' ? (msg as any).content : ''}
-          </div>
-        </div>
-      ))}
-    </div>
-
-    <!-- Image preview -->
-    <div class="ai-img-preview" id="aiImgPreview">
-      <img id="aiImgThumb" src="" alt=""/>
-      <div class="ai-img-preview-info">Image ready to send<br/><span style="font-size:.65rem;opacity:.6;">Tap send or add a message</span></div>
-      <button class="ai-img-remove" id="aiImgRemove">×</button>
-    </div>
-
-    <!-- Input -->
-    <div class="ai-input-area">
-      <div class="ai-input-row">
-        <label class="ai-img-btn" for="aiImgInput" title="Send a food photo">
-          📷
-          <input type="file" id="aiImgInput" accept="image/*" style="display:none;"/>
-        </label>
-        <textarea
-          class="ai-input"
-          id="aiInput"
-          placeholder="Ask me anything — recipes, progress, symptoms, meal ideas…"
-          rows="1"
-        ></textarea>
-        <button class="ai-send" id="aiSend">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-          </svg>
-        </button>
-      </div>
-      <div class="ai-input-hint">Enter to send · Shift+Enter for new line · Powered by Hy3 AI</div>
-    </div>
-
-  </main>
-</div>
-
-<script is:inline>
-// ── Markdown renderer ───────────────────────────────────────
-function md(raw) {
-  if (!raw) return '';
-  var s = raw;
-  // Preserve code blocks
-  var codeBlocks = [];
-  s = s.replace(/```[\w]*\n?([\s\S]*?)```/g, function(_, code) {
-    var i = codeBlocks.length;
-    codeBlocks.push(code.trim().replace(/</g,'&lt;').replace(/>/g,'&gt;'));
-    return '\x00CB'+i+'\x00';
-  });
-  // Inline code
-  var inlineCodes = [];
-  s = s.replace(/`([^`\n]+)`/g, function(_, code) {
-    var i = inlineCodes.length;
-    inlineCodes.push(code.replace(/</g,'&lt;').replace(/>/g,'&gt;'));
-    return '\x00IC'+i+'\x00';
-  });
-  // Bold italic
-  s = s.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
-  // Bold
-  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  // Italic
-  s = s.replace(/\*([^\*\n]+?)\*/g, '<em>$1</em>');
-  // Headings
-  s = s.replace(/^### (.+)$/gm, '<div class="ai-h3">$1</div>');
-  s = s.replace(/^## (.+)$/gm,  '<div class="ai-h2">$1</div>');
-  // Numbered list
-  s = s.replace(/^(\d+)\. (.+)$/gm, '<div class="ai-li-num"><span class="ai-num">$1.</span> $2</div>');
-  // Bullet list
-  s = s.replace(/^[-*•] (.+)$/gm, '<div class="ai-li">$1</div>');
-  // Avocado rating
-  s = s.replace(/(🥑+)\/5/g, '<span class="ai-avocado">$1</span>/5');
-  // Line breaks
-  s = s.replace(/\n\n/g, '<br/><br/>');
-  s = s.replace(/\n/g, '<br/>');
-  // Restore code blocks
-  codeBlocks.forEach(function(code, i) {
-    s = s.replace('\x00CB'+i+'\x00', '<pre><code>'+code+'</code></pre>');
-  });
-  inlineCodes.forEach(function(code, i) {
-    s = s.replace('\x00IC'+i+'\x00', '<code>'+code+'</code>');
-  });
-  return s;
-}
-
-// Render pre-rendered history bot messages
-document.querySelectorAll('.ai-msg.bot .ai-msg-bubble[data-raw]').forEach(function(el) {
-  var raw = el.getAttribute('data-raw');
-  if (raw) el.innerHTML = md(raw);
-  el.removeAttribute('data-raw');
-});
-
-// ── Elements ────────────────────────────────────────────────
-var messages = document.getElementById('aiMessages');
-var input    = document.getElementById('aiInput');
-var sendBtn  = document.getElementById('aiSend');
-var imgInput = document.getElementById('aiImgInput');
-var imgPrev  = document.getElementById('aiImgPreview');
-var imgThumb = document.getElementById('aiImgThumb');
-var imgRem   = document.getElementById('aiImgRemove');
-var clearBtn = document.getElementById('clearBtn');
-
-var pendingImg = null;
-var isLoading  = false;
-
-// Auto-scroll to bottom on load
-scrollBottom();
-
-// ── Suggestions ─────────────────────────────────────────────
-document.querySelectorAll('.ai-sug-btn').forEach(function(btn) {
-  btn.addEventListener('click', function() {
-    var msg = btn.getAttribute('data-msg');
-    if (msg && input) {
-      input.value = msg;
-      autoResize();
-      sendMsg();
-    }
-  });
-});
-
-// ── Image handling ───────────────────────────────────────────
-imgInput.addEventListener('change', function() {
-  var file = this.files && this.files[0];
-  if (!file) return;
-  if (file.size > 4 * 1024 * 1024) { alert('Max image size: 4MB'); return; }
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    var result = ev.target.result;
-    var base64 = result.split(',')[1];
-    pendingImg = { base64: base64, type: file.type };
-    imgThumb.src = result;
-    imgPrev.classList.add('show');
-  };
-  reader.readAsDataURL(file);
-});
-
-imgRem.addEventListener('click', clearImage);
-function clearImage() {
-  pendingImg = null;
-  imgInput.value = '';
-  imgPrev.classList.remove('show');
-  imgThumb.src = '';
-}
-
-// ── Clear chat ───────────────────────────────────────────────
-clearBtn.addEventListener('click', function() {
-  if (!confirm('Clear all chat history?')) return;
-  fetch('/api/chat/history', { method: 'DELETE' }).then(function() {
-    messages.innerHTML = '';
-    addWelcome();
-  });
-});
-
-function addWelcome() {
-  var w = document.createElement('div');
-  w.className = 'ai-msg bot ai-welcome';
-  w.innerHTML = '<div class="ai-msg-avatar">🤖</div><div class="ai-msg-bubble"><strong>Chat cleared!</strong> Ready for a fresh start. Ask me anything 💪</div>';
-  messages.appendChild(w);
-  scrollBottom();
-}
-
-// ── Send ─────────────────────────────────────────────────────
-sendBtn.addEventListener('click', sendMsg);
-input.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
-});
-
-// Auto-resize textarea
-input.addEventListener('input', autoResize);
-function autoResize() {
-  input.style.height = '40px';
-  input.style.height = Math.min(input.scrollHeight, 120) + 'px';
-}
-
-async function sendMsg() {
-  var text = input.value.trim();
-  if ((!text && !pendingImg) || isLoading) return;
-
-  isLoading = true;
-  sendBtn.disabled = true;
-
-  // User bubble
-  if (pendingImg) {
-    addBubble('<img src="data:' + pendingImg.type + ';base64,' + pendingImg.base64 + '" style="max-width:200px;border-radius:10px;margin-bottom:.3rem;display:block;"/>' + (text ? escHtml(text) : '📸 Image sent'), 'user', true);
-  } else {
-    addBubble(escHtml(text), 'user', true);
+  :root {
+    --bg:       #FAF6F1;
+    --bg-alt:   #F2EDE5;
+    --ink:      #16110F;
+    --ink-soft: #4A4340;
+    --muted:    #8A8077;
+    --line:     #E5DED2;
+    --accent:   #FF5C7A;
+    --accent-2: #B6FF3C;
+    --accent-3: #FF914D;
+    --card:     #FFFFFF;
+    --display:  'Bricolage Grotesque', system-ui, sans-serif;
+    --serif:    'Instrument Serif', Georgia, serif;
+    --mono:     'Geist Mono', 'Courier New', monospace;
+    /* legacy aliases for JS-generated elements */
+    --border:   var(--line);
+    --border2:  rgba(255,92,122,.28);
+    --text:     var(--ink);
+    --soft:     var(--ink-soft);
+    --green:    var(--accent);
+    --green2:   var(--accent-2);
+    --gold:     #f59e0b;
+    --purple:   #8b5cf6;
+    --blue:     #3b82f6;
+    --red:      #ef4444;
+    --card2:    var(--bg-alt);
   }
 
-  input.value = '';
-  input.style.height = '40px';
+  body { background: var(--bg); color: var(--ink); font-family: var(--display); min-height: 100vh; }
+  .rv-pg-shell { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+  .rv-pg-main  { overflow-y: auto; min-height: 100vh; }
+  @media (max-width: 900px) { .rv-pg-shell { grid-template-columns: 1fr; } }
 
-  var typing = addTyping();
+  /* ══ BRIEF / HERO ══ */
+  .cb { position: relative; background: var(--ink); color: var(--bg); overflow: hidden; }
+  .cb-glow {
+    position: absolute; width: 720px; height: 720px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,71,117,.35), transparent 65%);
+    filter: blur(80px); bottom: -360px; right: -200px; z-index: 0; pointer-events: none;
+  }
+  .cb-glow.lime {
+    background: radial-gradient(circle, rgba(182,255,60,.2), transparent 65%);
+    top: -240px; left: -120px; width: 540px; height: 540px;
+  }
+  .cb-inner { position: relative; z-index: 2; max-width: 1320px; margin: 0 auto; padding: 44px 32px 0; }
 
-  try {
-    var res = await fetch('/api/chat/gemini', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ message: text || '', imageBase64: pendingImg ? pendingImg.base64 : null, imageType: pendingImg ? pendingImg.type : null }),
+  .cb-bar { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+  .cb-mark {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: var(--accent); color: #fff;
+    display: grid; place-items: center; font-size: 22px;
+    box-shadow: 0 0 0 6px rgba(255,71,117,.2), 0 0 60px rgba(255,71,117,.4);
+    flex-shrink: 0;
+  }
+  .cb-name { font-family: var(--display); font-size: 19px; font-weight: 600; letter-spacing: -.02em; }
+  .cb-name-sub { font-family: var(--serif); font-style: italic; font-weight: 400; color: rgba(250,246,241,.45); }
+  .cb-status { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--accent-2); display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+  .cb-status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 0 3px rgba(182,255,60,.25); }
+
+  .cb-headline { display: grid; grid-template-columns: minmax(0,1fr) 380px; gap: 56px; align-items: end; }
+  .cb-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 16px; display: inline-flex; align-items: center; gap: 8px; }
+  .cb-pip { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 0 4px rgba(182,255,60,.22); display: inline-block; }
+  .cb-h { font-family: var(--display); font-size: clamp(32px, 4vw, 60px); line-height: 1; letter-spacing: -.04em; font-weight: 600; max-width: 22ch; }
+  .cb-h em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
+
+  .cb-quote-card {
+    background: rgba(250,246,241,.06); border: 1px solid rgba(250,246,241,.12);
+    border-radius: 20px; padding: 22px 22px 20px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .cb-qhead { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: rgba(250,246,241,.5); display: flex; align-items: center; gap: 10px; }
+  .cb-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-3); display: inline-block; }
+  .cb-q { font-family: var(--serif); font-style: italic; font-size: 18px; line-height: 1.4; color: var(--bg); }
+  .cb-q::before { content: '"'; font-size: 26px; line-height: 0; vertical-align: -8px; color: var(--accent-2); margin-right: 2px; }
+  .cb-qcta { display: flex; gap: 8px; margin-top: 4px; }
+  .cb-qcta button { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; padding: 8px 12px; border-radius: 999px; background: var(--accent-2); color: var(--ink); font-weight: 600; cursor: pointer; transition: opacity .15s; }
+  .cb-qcta button:hover { opacity: .85; }
+  .cb-qcta button.ghost { background: transparent; color: rgba(250,246,241,.7); border: 1px solid rgba(250,246,241,.18); }
+  .cb-qcta button.ghost:hover { color: var(--bg); }
+
+  /* Chips strip */
+  .cb-chips {
+    margin-top: 36px;
+    display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr;
+    background: rgba(250,246,241,.06); border: 1px solid rgba(250,246,241,.12);
+    border-radius: 22px 22px 0 0; overflow: hidden;
+  }
+  .cb-cc {
+    padding: 18px 20px; border-right: 1px solid rgba(250,246,241,.1);
+    display: flex; flex-direction: column; gap: 6px; min-height: 110px;
+  }
+  .cb-cc:last-child { border-right: none; }
+  .ccc-l { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: rgba(250,246,241,.45); }
+  .ccc-v { font-family: var(--display); font-size: 28px; font-weight: 600; letter-spacing: -.03em; line-height: 1; margin-top: auto; }
+  .ccc-v em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent-2); font-size: 13px; margin-left: 4px; }
+  .ccc-sub { font-family: var(--serif); font-style: italic; font-size: 12px; color: rgba(250,246,241,.5); }
+  .cb-cc.live .ccc-l { color: var(--accent-2); }
+  .cb-cc.live .ccc-l::before { content: '● '; }
+
+  @media (max-width: 1100px) {
+    .cb-inner { padding: 28px 18px 0; }
+    .cb-headline { grid-template-columns: 1fr; gap: 24px; }
+    .cb-chips { grid-template-columns: 1fr 1fr; }
+    .cb-cc:nth-child(n+4) { display: none; }
+  }
+  @media (max-width: 640px) {
+    .cb-chips { grid-template-columns: 1fr 1fr; }
+    .cb-cc:nth-child(n+3) { display: none; }
+  }
+
+  /* ══ BODY ══ */
+  .ac-body { max-width: 1320px; margin: 0 auto; padding: 32px 32px 80px; }
+  .ac-layout { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 22px; align-items: start; }
+  @media (max-width: 1100px) { .ac-layout { grid-template-columns: 1fr; } }
+  @media (max-width: 640px)  { .ac-body   { padding: 20px 14px 60px; } }
+
+  /* ══ CHAT ══ */
+  .ch-wrap {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 28px; display: flex; flex-direction: column;
+    min-height: 680px; overflow: hidden;
+  }
+  .ch-head {
+    display: flex; align-items: center; gap: 14px;
+    padding: 18px 22px; border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+  .ch-head-mark {
+    width: 36px; height: 36px; border-radius: 12px;
+    background: var(--ink); color: var(--accent-2);
+    display: grid; place-items: center; font-size: 16px; flex-shrink: 0;
+  }
+  .ch-head-title { font-family: var(--display); font-size: 16px; font-weight: 600; letter-spacing: -.02em; }
+  .ch-head-sub { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+  .ch-head-tools { margin-left: auto; display: flex; gap: 4px; }
+  .ch-head-tools button {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: none; border: none; color: var(--ink-soft);
+    display: grid; place-items: center; font-size: 18px; cursor: pointer; transition: background .15s;
+  }
+  .ch-head-tools button:hover { background: var(--bg-alt); color: var(--ink); }
+
+  /* Conversation */
+  .ch-conv {
+    flex: 1; overflow-y: auto; padding: 28px 26px 18px;
+    display: flex; flex-direction: column; gap: 16px;
+    scroll-behavior: smooth; min-height: 0;
+  }
+  .ch-conv::-webkit-scrollbar { width: 3px; }
+  .ch-conv::-webkit-scrollbar-thumb { background: var(--line); border-radius: 99px; }
+  .ch-day {
+    display: flex; align-items: center; gap: 10px; margin: 4px 0;
+    font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+  }
+  .ch-day::before, .ch-day::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+  .ch-row { display: flex; gap: 12px; max-width: 100%; }
+  .ch-row.user { justify-content: flex-end; }
+  .ch-ava {
+    width: 32px; height: 32px; border-radius: 10px;
+    background: var(--ink); color: var(--accent-2);
+    display: grid; place-items: center; font-size: 14px; flex-shrink: 0;
+  }
+  .ch-bubble-wrap { display: flex; flex-direction: column; gap: 5px; max-width: 78%; }
+  .ch-row.user .ch-bubble-wrap { align-items: flex-end; }
+
+  .ch-bubble {
+    font-size: 14.5px; line-height: 1.55; padding: 13px 16px;
+    border-radius: 16px; white-space: pre-wrap;
+  }
+  .ch-row.coach .ch-bubble {
+    background: var(--bg-alt); color: var(--ink); border-bottom-left-radius: 4px;
+  }
+  .ch-row.user .ch-bubble {
+    background: var(--ink); color: var(--bg); border-bottom-right-radius: 4px;
+  }
+  .ch-bubble em { font-family: var(--serif); font-style: italic; color: var(--accent); }
+  .ch-bubble strong { font-weight: 700; }
+  .ch-meta { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); padding: 0 6px; }
+  .ch-hint { font-size: 12px; opacity: .6; }
+
+  /* Typing indicator */
+  .ch-thinking {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--bg-alt); border-radius: 16px; border-bottom-left-radius: 4px;
+    padding: 14px 16px; font-family: var(--serif); font-style: italic; font-size: 15px; color: var(--ink-soft);
+  }
+  .ch-pulse { display: inline-flex; gap: 4px; }
+  .ch-pulse span { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: chp 1s infinite ease-in-out; }
+  .ch-pulse span:nth-child(2) { animation-delay: .15s; }
+  .ch-pulse span:nth-child(3) { animation-delay: .3s; }
+  @keyframes chp { 0%,80%,100% { transform: scale(.5); opacity: .4; } 40% { transform: scale(1); opacity: 1; } }
+
+  /* Markdown styles in chat bubbles */
+  .ch-row.coach .ch-bubble .ai-h2 { font-size: 15px; font-weight: 700; margin: .5rem 0 .25rem; padding-bottom: .2rem; border-bottom: 1px solid var(--line); }
+  .ch-row.coach .ch-bubble .ai-h3 { font-size: 14px; font-weight: 700; color: var(--accent); margin: .4rem 0 .2rem; }
+  .ch-row.coach .ch-bubble .ai-li { padding: .1rem 0 .1rem .5rem; border-left: 2px solid rgba(255,92,122,.3); margin: .1rem 0; }
+  .ch-row.coach .ch-bubble .ai-li-num { padding: .1rem 0; }
+  .ch-row.coach .ch-bubble .ai-num { display: inline-block; min-width: 1.4rem; font-weight: 700; color: var(--accent); }
+  .ch-row.coach .ch-bubble code { background: var(--bg-alt); border: 1px solid var(--line); border-radius: 4px; padding: .1rem .3rem; font-family: var(--mono); font-size: 12px; }
+
+  /* Image preview */
+  .ch-img-preview {
+    display: none; align-items: center; gap: 10px;
+    margin: 0 16px 8px; padding: 10px 14px;
+    background: var(--bg-alt); border: 1px solid var(--line); border-radius: 12px;
+  }
+  .ch-img-preview.show { display: flex; }
+  .ch-img-preview img { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+  .ch-img-info { flex: 1; font-size: 12px; color: var(--muted); }
+  .ch-img-remove { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1; transition: color .15s; }
+  .ch-img-remove:hover { color: var(--red); }
+
+  /* Compose */
+  .ch-compose { border-top: 1px solid var(--line); padding: 14px 16px 16px; background: var(--bg); display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+  .ch-compose-row {
+    display: flex; gap: 10px; align-items: flex-end;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 22px; padding: 10px 10px 10px 14px;
+  }
+  .ch-compose-icon {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center; color: var(--ink-soft);
+    cursor: pointer; transition: background .15s; flex-shrink: 0;
+  }
+  .ch-compose-icon:hover { background: var(--bg-alt); color: var(--ink); }
+  .ch-compose-ta {
+    flex: 1; background: transparent; border: none; outline: none; resize: none;
+    font-size: 14.5px; line-height: 1.5; min-height: 28px; max-height: 140px;
+    color: var(--ink); font-family: inherit;
+  }
+  .ch-compose-ta::placeholder { color: var(--muted); }
+  .ch-send {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--accent); color: #fff; border: none;
+    display: grid; place-items: center; font-size: 18px; font-weight: 600;
+    cursor: pointer; transition: background .15s; flex-shrink: 0;
+  }
+  .ch-send:hover:not(:disabled) { background: var(--ink); }
+  .ch-send:disabled { opacity: .4; cursor: default; }
+  .ch-foot {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+    padding: 0 4px;
+  }
+  .ch-pip { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 0 3px rgba(182,255,60,.25); flex-shrink: 0; }
+  .ch-spacer { flex: 1; }
+  .ch-deep {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line);
+    background: var(--card); cursor: pointer; font-family: inherit;
+    font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+    transition: all .15s;
+  }
+  .ch-deep.on { background: var(--accent-2); color: var(--ink); border-color: var(--accent-2); }
+  .ch-deep-box { width: 10px; height: 10px; border-radius: 3px; background: var(--bg-alt); border: 1px solid var(--line); display: grid; place-items: center; font-size: 8px; flex-shrink: 0; }
+  .ch-deep.on .ch-deep-box { background: var(--ink); color: var(--accent-2); border-color: var(--ink); }
+
+  @keyframes msgIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+  .ch-row { animation: msgIn .22s ease both; }
+
+  /* ══ RAIL ══ */
+  .ac-rail { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 24px; }
+  @media (max-width: 1100px) { .ac-rail { position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; } }
+  @media (max-width: 640px)  { .ac-rail { grid-template-columns: 1fr; } }
+
+  .cr-card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 20px; }
+  .cr-h { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+  .cr-pip { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; flex-shrink: 0; }
+  .cr-pip.lime { background: var(--accent-2); box-shadow: 0 0 0 3px rgba(182,255,60,.25); }
+
+  /* Persona picker */
+  .cr-personas { display: flex; flex-direction: column; gap: 6px; }
+  .cr-pers {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+    border-radius: 12px; border: 1px solid var(--line);
+    cursor: pointer; transition: all .15s;
+  }
+  .cr-pers:hover { background: var(--bg-alt); }
+  .cr-pers.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .cr-pers-g { width: 32px; height: 32px; border-radius: 10px; background: var(--bg-alt); color: var(--accent); display: grid; place-items: center; font-size: 14px; flex-shrink: 0; }
+  .cr-pers.active .cr-pers-g { background: rgba(250,246,241,.12); color: var(--accent-2); }
+  .cr-pers-n { font-family: var(--display); font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+  .cr-pers-s { font-family: var(--serif); font-style: italic; font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+  .cr-pers.active .cr-pers-s { color: rgba(250,246,241,.6); }
+  .cr-pers-check { width: 18px; height: 18px; border-radius: 50%; margin-left: auto; border: 1.5px solid var(--line); display: grid; place-items: center; font-size: 10px; color: transparent; flex-shrink: 0; }
+  .cr-pers.active .cr-pers-check { background: var(--accent-2); border-color: var(--accent-2); color: var(--ink); }
+
+  /* Memory */
+  .cr-mem-list { display: flex; flex-direction: column; }
+  .cr-mem { padding: 10px 0; border-bottom: 1px dashed var(--line); }
+  .cr-mem:last-child { border-bottom: none; padding-bottom: 0; }
+  .cr-mem-l { font-size: 13.5px; font-weight: 500; letter-spacing: -.005em; }
+  .cr-mem-v { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; color: var(--muted); margin-top: 2px; text-transform: uppercase; }
+
+  /* Dark card */
+  .cr-dark { background: var(--ink); color: var(--bg); border-color: transparent; }
+  .cr-dark .cr-h { color: rgba(250,246,241,.5); }
+  .cr-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cr-tool {
+    background: rgba(250,246,241,.06); border: 1px solid rgba(250,246,241,.12);
+    padding: 12px; border-radius: 14px; text-align: left; cursor: pointer; transition: all .15s;
+  }
+  .cr-tool:hover { background: var(--accent-2); color: var(--ink); border-color: var(--accent-2); }
+  .cr-tool:hover .cr-tool-g { background: var(--ink); color: var(--accent-2); }
+  .cr-tool:hover .cr-tool-s { color: rgba(22,17,15,.6); }
+  .cr-tool-g { width: 28px; height: 28px; border-radius: 9px; background: rgba(250,246,241,.1); color: var(--accent-2); display: grid; place-items: center; font-size: 13px; margin-bottom: 10px; }
+  .cr-tool-l { font-family: var(--display); font-size: 13px; font-weight: 600; line-height: 1.2; letter-spacing: -.01em; }
+  .cr-tool-s { font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: rgba(250,246,241,.5); margin-top: 4px; }
+
+  /* Nudges */
+  .cr-nudge { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .cr-nudge-l { display: flex; flex-direction: column; gap: 2px; }
+  .cr-nudge-h { font-size: 14px; font-weight: 500; }
+  .cr-nudge-s { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
+  .cr-switch { width: 40px; height: 22px; border-radius: 999px; background: var(--bg-alt); position: relative; flex-shrink: 0; cursor: pointer; transition: background .15s; }
+  .cr-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .15s; }
+  .cr-switch.on { background: var(--accent); }
+  .cr-switch.on::after { left: 20px; }
+
+  /* ══ TOPICS ══ */
+  .ct { margin-top: 48px; }
+  .ct-head { display: flex; align-items: end; gap: 24px; margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+  .ct-head h2 { font-family: var(--display); font-size: clamp(24px, 3vw, 40px); font-weight: 600; letter-spacing: -.035em; line-height: 1; }
+  .ct-head h2 em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
+  .ct-head p { font-family: var(--serif); font-style: italic; font-size: 15px; color: var(--ink-soft); margin-left: auto; text-align: right; line-height: 1.4; max-width: 30ch; }
+  .ct-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 900px) { .ct-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 520px) { .ct-grid { grid-template-columns: 1fr; } }
+  .ct-card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+    padding: 22px 22px 20px; display: flex; flex-direction: column; gap: 14px;
+    text-align: left; cursor: pointer; transition: all .2s;
+    position: relative; min-height: 200px; overflow: hidden;
+  }
+  .ct-card:hover { transform: translateY(-2px); border-color: var(--ink); }
+  .ct-card::after { content: '→'; position: absolute; top: 22px; right: 22px; font-size: 18px; color: var(--muted); transition: all .2s; }
+  .ct-card:hover::after { color: var(--accent); transform: translate(4px,-2px); }
+  .ct-cat { font-family: var(--mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 8px; }
+  .ct-g { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-size: 13px; }
+  .ct-card.rose .ct-g { background: var(--accent); color: #fff; }
+  .ct-card.lime .ct-g { background: var(--accent-2); color: var(--ink); }
+  .ct-card.orange .ct-g { background: var(--accent-3); color: #fff; }
+  .ct-t { font-family: var(--display); font-size: 20px; font-weight: 600; line-height: 1.1; letter-spacing: -.025em; }
+  .ct-s { font-family: var(--serif); font-style: italic; font-size: 13.5px; color: var(--ink-soft); line-height: 1.45; margin-top: auto; }
+
+  /* ══ SESSIONS ══ */
+  .cs { margin-top: 56px; padding-top: 32px; border-top: 1px solid var(--line); }
+  .cs-col-h { display: flex; align-items: end; gap: 16px; margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+  .cs-col-h h3 { font-family: var(--display); font-size: 28px; font-weight: 600; letter-spacing: -.035em; line-height: 1; }
+  .cs-col-h h3 em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
+  .cs-meta { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-left: auto; }
+  .cs-list { display: flex; flex-direction: column; }
+  .cs-row {
+    display: grid; grid-template-columns: 90px minmax(0,1fr) 30px; gap: 18px;
+    padding: 16px 0; border-bottom: 1px dashed var(--line); cursor: pointer; transition: padding .15s;
+  }
+  .cs-row:last-child { border-bottom: none; }
+  .cs-row:hover { padding-left: 8px; }
+  .cs-date { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .cs-time { display: block; color: var(--ink-soft); margin-top: 3px; }
+  .cs-preview { font-family: var(--serif); font-style: italic; font-size: 14.5px; color: var(--ink-soft); line-height: 1.45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cs-arr { font-size: 18px; color: var(--muted); display: flex; align-items: center; transition: color .15s; }
+  .cs-row:hover .cs-arr { color: var(--accent); }
+</style>
+
+<script is:inline define:vars={{ userName, currentDay, streak, totalXp, level, weightLost: weightLost }}>
+(function() {
+  // ── Markdown renderer ─────────────────────────────────────
+  function md(raw) {
+    if (!raw) return '';
+    var s = raw, codeBlocks = [], inlineCodes = [];
+    s = s.replace(/```[\w]*\n?([\s\S]*?)```/g, function(_, code) { var i = codeBlocks.length; codeBlocks.push(code.trim().replace(/</g,'&lt;').replace(/>/g,'&gt;')); return '\x00CB'+i+'\x00'; });
+    s = s.replace(/`([^`\n]+)`/g, function(_, code) { var i = inlineCodes.length; inlineCodes.push(code.replace(/</g,'&lt;').replace(/>/g,'&gt;')); return '\x00IC'+i+'\x00'; });
+    s = s.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/\*([^\*\n]+?)\*/g, '<em>$1</em>');
+    s = s.replace(/^### (.+)$/gm, '<div class="ai-h3">$1</div>');
+    s = s.replace(/^## (.+)$/gm,  '<div class="ai-h2">$1</div>');
+    s = s.replace(/^(\d+)\. (.+)$/gm, '<div class="ai-li-num"><span class="ai-num">$1.</span> $2</div>');
+    s = s.replace(/^[-*•] (.+)$/gm, '<div class="ai-li">$1</div>');
+    s = s.replace(/\n\n/g, '<br><br>'); s = s.replace(/\n/g, '<br>');
+    codeBlocks.forEach(function(c,i) { s = s.replace('\x00CB'+i+'\x00', '<pre><code>'+c+'</code></pre>'); });
+    inlineCodes.forEach(function(c,i) { s = s.replace('\x00IC'+i+'\x00', '<code>'+c+'</code>'); });
+    return s;
+  }
+
+  // Render pre-loaded history
+  document.querySelectorAll('.ch-row.coach .ch-bubble[data-raw]').forEach(function(el) {
+    var raw = el.getAttribute('data-raw');
+    if (raw) el.innerHTML = md(raw);
+    el.removeAttribute('data-raw');
+  });
+
+  // ── State ─────────────────────────────────────────────────
+  var msgs      = document.getElementById('aiMessages');
+  var input     = document.getElementById('aiInput');
+  var sendBtn   = document.getElementById('aiSend');
+  var imgInput  = document.getElementById('aiImgInput');
+  var imgPrev   = document.getElementById('aiImgPreview');
+  var imgThumb  = document.getElementById('aiImgThumb');
+  var imgRem    = document.getElementById('aiImgRemove');
+  var clearBtn  = document.getElementById('clearBtn');
+  var deepBtn   = document.getElementById('deepThinkBtn');
+  var deepBox   = document.getElementById('deepBox');
+
+  var pendingImg   = null;
+  var isLoading    = false;
+  var deepThink    = false;
+  var coachPersona = 'Warm friend';
+
+  scrollBottom();
+
+  // ── Persona picker ────────────────────────────────────────
+  var picker = document.getElementById('personaPicker');
+  if (picker) {
+    picker.addEventListener('click', function(e) {
+      var p = e.target.closest('.cr-pers');
+      if (!p) return;
+      coachPersona = p.dataset.persona || 'Warm friend';
+      picker.querySelectorAll('.cr-pers').forEach(function(el) { el.classList.toggle('active', el === p); });
     });
+  }
 
-    typing.remove();
+  // ── Deep think toggle ─────────────────────────────────────
+  if (deepBtn) {
+    deepBtn.addEventListener('click', function() {
+      deepThink = !deepThink;
+      deepBtn.classList.toggle('on', deepThink);
+      if (deepBox) deepBox.textContent = deepThink ? '✓' : '';
+    });
+  }
 
-    var data = await res.json();
-    if (!res.ok || data.error) {
-      addBubble('❌ ' + (data.error || 'Something went wrong. Please try again.'), 'bot', true);
+  // ── Nudge toggles ─────────────────────────────────────────
+  document.querySelectorAll('.cr-switch').forEach(function(sw) {
+    sw.addEventListener('click', function() { this.classList.toggle('on'); });
+  });
+
+  // ── Topic / suggestion cards ──────────────────────────────
+  document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-msg]');
+    if (el && input) {
+      var msg = el.getAttribute('data-msg');
+      if (msg) { input.value = msg; autoResize(); scrollBottom(); sendMsg(); }
+    }
+  });
+
+  // ── Image handling ────────────────────────────────────────
+  if (imgInput) imgInput.addEventListener('change', function() {
+    var file = this.files && this.files[0];
+    if (!file) return;
+    if (file.size > 4194304) { alert('Max image size: 4 MB'); return; }
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var result = ev.target.result;
+      pendingImg = { base64: String(result).split(',')[1], type: file.type };
+      imgThumb.src = String(result);
+      imgPrev.classList.add('show');
+    };
+    reader.readAsDataURL(file);
+  });
+  if (imgRem) imgRem.addEventListener('click', clearImage);
+  function clearImage() {
+    pendingImg = null; if (imgInput) imgInput.value = '';
+    imgPrev.classList.remove('show'); imgThumb.src = '';
+  }
+
+  // ── Clear / new chat ──────────────────────────────────────
+  if (clearBtn) clearBtn.addEventListener('click', function() {
+    if (!confirm('Start a new conversation? This will clear the current chat.')) return;
+    fetch('/api/chat/history', { method: 'DELETE' }).then(function() {
+      msgs.innerHTML = '';
+      var w = document.createElement('div');
+      w.className = 'ch-row coach';
+      w.innerHTML = '<div class="ch-ava">✦</div><div class="ch-bubble-wrap"><div class="ch-bubble"><strong>Fresh start!</strong> Ask me anything, ' + escHtml(userName) + '.</div><div class="ch-meta">Just now · Mira</div></div>';
+      msgs.appendChild(w);
+      scrollBottom();
+    });
+  });
+
+  // ── Send ──────────────────────────────────────────────────
+  if (sendBtn) sendBtn.addEventListener('click', sendMsg);
+  if (input) input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+  });
+  if (input) input.addEventListener('input', autoResize);
+  function autoResize() { if (!input) return; input.style.height = '28px'; input.style.height = Math.min(input.scrollHeight, 140) + 'px'; }
+
+  async function sendMsg() {
+    var text = input ? input.value.trim() : '';
+    if ((!text && !pendingImg) || isLoading) return;
+    isLoading = true; sendBtn.disabled = true;
+
+    if (pendingImg) {
+      addBubble('<img src="data:' + pendingImg.type + ';base64,' + pendingImg.base64 + '" style="max-width:200px;border-radius:10px;margin-bottom:.3rem;display:block"/>' + (text ? escHtml(text) : '📸 Image sent'), 'user');
     } else {
-      var bubble = addBubble('', 'bot', true);
-      bubble.querySelector('.ai-msg-bubble').innerHTML = md(data.reply);
+      addBubble(escHtml(text), 'user');
     }
-  } catch (e) {
-    typing.remove();
-    addBubble('❌ Connection error. Please check your network and try again.', 'bot', true);
+
+    input.value = ''; input.style.height = '28px';
+    var typing = addTyping();
+
+    try {
+      var res = await fetch('/api/chat/gemini', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text || '', imageBase64: pendingImg ? pendingImg.base64 : null, imageType: pendingImg ? pendingImg.type : null, persona: coachPersona, deepThink: deepThink }),
+      });
+      typing.remove();
+      var data = await res.json();
+      if (!res.ok || data.error) {
+        addBubble('❌ ' + (data.error || 'Something went wrong. Please try again.'), 'coach');
+      } else {
+        var row = addBubble('', 'coach');
+        row.querySelector('.ch-bubble').innerHTML = md(data.reply);
+      }
+    } catch (err) {
+      typing.remove();
+      addBubble('❌ Connection error. Please check your network and try again.', 'coach');
+    }
+
+    clearImage();
+    isLoading = false; sendBtn.disabled = false;
+    if (input) input.focus();
   }
 
-  clearImage();
-  isLoading = false;
-  sendBtn.disabled = false;
-  input.focus();
-}
-
-// ── Helpers ──────────────────────────────────────────────────
-function addBubble(htmlContent, role, scroll) {
-  var wrap   = document.createElement('div');
-  wrap.className = 'ai-msg ' + role;
-  var avatar = document.createElement('div');
-  avatar.className = 'ai-msg-avatar';
-  avatar.textContent = role === 'user' ? '👤' : '🤖';
-  var bubble = document.createElement('div');
-  bubble.className = 'ai-msg-bubble';
-  bubble.innerHTML = htmlContent;
-  wrap.appendChild(avatar);
-  wrap.appendChild(bubble);
-  messages.appendChild(wrap);
-  if (scroll) scrollBottom();
-  return wrap;
-}
-
-function addTyping() {
-  var wrap = document.createElement('div');
-  wrap.className = 'ai-msg bot';
-  wrap.innerHTML = '<div class="ai-msg-avatar">🤖</div><div class="ai-msg-bubble"><div class="ai-typing"><span></span><span></span><span></span></div></div>';
-  messages.appendChild(wrap);
-  scrollBottom();
-  return wrap;
-}
-
-function scrollBottom() {
-  if (messages) messages.scrollTop = messages.scrollHeight;
-}
-
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-// ── History scroll ───────────────────────────────────────────
-window.scrollToDate = function(date) {
-  var msgs = messages.querySelectorAll('.ai-msg[data-date]');
-  for (var i = 0; i < msgs.length; i++) {
-    if (msgs[i].getAttribute('data-date') === date) {
-      msgs[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
+  function addBubble(htmlContent, role) {
+    var row = document.createElement('div');
+    row.className = 'ch-row ' + role;
+    if (role === 'coach') {
+      var ava = document.createElement('div');
+      ava.className = 'ch-ava'; ava.textContent = '✦';
+      row.appendChild(ava);
     }
+    var wrap = document.createElement('div'); wrap.className = 'ch-bubble-wrap';
+    var bubble = document.createElement('div'); bubble.className = 'ch-bubble';
+    bubble.innerHTML = htmlContent;
+    var meta = document.createElement('div'); meta.className = 'ch-meta';
+    meta.textContent = role === 'user' ? 'You' : 'Mira';
+    wrap.appendChild(bubble); wrap.appendChild(meta);
+    row.appendChild(wrap);
+    msgs.appendChild(row);
+    scrollBottom();
+    return row;
   }
-};
+
+  function addTyping() {
+    var row = document.createElement('div'); row.className = 'ch-row coach';
+    row.innerHTML = '<div class="ch-ava">✦</div><div class="ch-bubble-wrap"><div class="ch-thinking"><span class="ch-pulse"><span></span><span></span><span></span></span>Mira is reading your day…</div></div>';
+    msgs.appendChild(row); scrollBottom();
+    return row;
+  }
+
+  function scrollBottom() { if (msgs) msgs.scrollTop = msgs.scrollHeight; }
+  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  window.scrollToDate = function(date) {
+    var els = msgs.querySelectorAll('[data-date]');
+    for (var i = 0; i < els.length; i++) {
+      if (els[i].getAttribute('data-date') === date) { els[i].scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    }
+  };
+})();
 </script>
 </body>
 </html>
