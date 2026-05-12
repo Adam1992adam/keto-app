@@ -25,11 +25,15 @@ const tier = planType;
 // Tier unlock levels: basic=4, pro=8, elite=12 books per category
 const unlockedCount = tier === 'elite_12' ? 12 : tier === 'pro_6' ? 8 : 4;
 
-// Real recipe counts per book_id from DB
-const { data: bookCountRows } = await db.from('recipes').select('book_id').not('book_id', 'is', null);
+// Real recipe counts + one cover image per book_id from DB
+const { data: bookCountRows } = await db.from('recipes').select('book_id, image_url').not('book_id', 'is', null);
 const recipeCountMap: Record<string, number> = {};
+const bookImageMap: Record<string, string> = {};
 for (const r of (bookCountRows || [])) {
-  if (r.book_id) recipeCountMap[r.book_id] = (recipeCountMap[r.book_id] || 0) + 1;
+  if (r.book_id) {
+    recipeCountMap[r.book_id] = (recipeCountMap[r.book_id] || 0) + 1;
+    if (r.image_url && !bookImageMap[r.book_id]) bookImageMap[r.book_id] = r.image_url;
+  }
 }
 
 const userName = profile.full_name?.split(' ')[0] || 'Friend';
@@ -351,15 +355,16 @@ const gradientAngles = [128, 155, 110, 168, 118, 148, 133, 162, 115, 142, 157, 1
       width:100%;height:180px;position:relative;overflow:hidden;
       border-radius:14px 14px 0 0;flex-shrink:0;
     }
-    .book-img-header img{
-      width:100%;height:100%;object-fit:cover;display:block;
+    .book-cover-img{
+      position:absolute;inset:0;width:100%;height:100%;
+      object-fit:cover;display:block;z-index:1;
       transition:transform .35s ease;
     }
-    .book-card:not(.locked-card):hover .book-img-header img{transform:scale(1.06);}
+    .book-card:not(.locked-card):hover .book-cover-img{transform:scale(1.06);}
     .book-img-placeholder{
-      width:100%;height:100%;display:flex;flex-direction:column;
+      position:absolute;inset:0;display:flex;flex-direction:column;
       align-items:center;justify-content:center;gap:.5rem;
-      position:relative;overflow:hidden;
+      overflow:hidden;z-index:0;
     }
     /* Radial light spots for depth */
     .book-img-placeholder::before{
@@ -755,6 +760,15 @@ const gradientAngles = [128, 155, 110, 168, 118, 148, 133, 162, 115, 142, 157, 1
           return (
             <div class={`book-card ${!isUnlocked ? 'locked-card' : ''}`} data-book-cat={cat.id} data-book-title={book.title.toLowerCase()} data-book-desc={book.desc.toLowerCase()}>
               <div class="book-img-header">
+                {isUnlocked && bookImageMap[book.id] && (
+                  <img
+                    class="book-cover-img"
+                    src={bookImageMap[book.id]}
+                    alt={book.title}
+                    loading="lazy"
+                    onerror="this.style.display='none'"
+                  />
+                )}
                 <div class="book-img-placeholder" style={`background:${isUnlocked ? cat.gradient.replace(/\d+deg/, `${gradientAngles[bookIdx % 12]}deg`) : 'linear-gradient(145deg,#BFC6CC,#8B959C)'};`}>
                   <span class="book-img-placeholder-emoji">{isUnlocked ? book.emoji : '🔒'}</span>
                   <span class="book-img-placeholder-label">{isUnlocked ? cat.name : 'Locked'}</span>

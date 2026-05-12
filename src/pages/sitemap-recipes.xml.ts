@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 
 export const prerender = false;
 
-const SITE = 'https://ketojourney.fun';
+const SITE = 'https://www.ketojourney.fun';
 
 function escapeXml(str: string): string {
   return str

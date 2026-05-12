@@ -8,7 +8,7 @@ interface Page {
   changefreq: string;
 }
 
-const SITE = 'https://ketojourney.fun';
+const SITE = 'https://www.ketojourney.fun';
 
 const PAGES: Page[] = [
   { url: `${SITE}/`,               priority: '1.0', changefreq: 'weekly'  },
