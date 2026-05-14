@@ -307,7 +307,7 @@ if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
 <script src="https://unpkg.com/grapesjs@0.21.12/dist/grapes.min.js"></script>
 <script src="https://unpkg.com/grapesjs-preset-webpage@1.0.3/dist/grapesjs-preset-webpage.min.js"></script>
 
-<script>
+<script is:inline>
 var editor = null;
 var currentPage = null;
 var currentPageName = '';
