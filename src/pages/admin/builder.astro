@@ -71,7 +71,7 @@ if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
 
     /* ── Shell ── */
     .ab-shell {
-      display: flex; height: 100vh; padding-top: 48px;
+      display: flex; height: calc(100vh - 48px); margin-top: 48px;
     }
 
     /* ── Left sidebar ── */
@@ -79,6 +79,7 @@ if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
       width: var(--ab-w); flex-shrink: 0;
       background: var(--ab-panel); border-right: 1px solid var(--ab-border);
       display: flex; flex-direction: column; overflow-y: auto;
+      height: calc(100vh - 48px);
     }
     .ab-left-section { padding: 14px 12px 6px; font-size: .6rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ab-soft); }
     .ab-page-item {
@@ -104,11 +105,12 @@ if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
     .ab-left-link svg { width: 15px; height: 15px; flex-shrink: 0; }
 
     /* ── Main editor area ── */
-    .ab-main { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+    .ab-main { flex: 1; display: block; min-width: 0; height: calc(100vh - 48px); position: relative; }
 
     /* ── Empty state ── */
     .ab-empty {
-      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
       gap: 16px; color: var(--ab-soft); text-align: center; padding: 2rem;
     }
     .ab-empty-icon { font-size: 3rem; }
@@ -116,7 +118,7 @@ if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
     .ab-empty p { font-size: .82rem; max-width: 320px; line-height: 1.6; }
 
     /* ── GrapeJS overrides ── */
-    #gjs { flex: 1; }
+    #gjs { display: block; width: 100%; height: 100%; }
     .gjs-cv-canvas { background: #F0ECE6; }
     .gjs-pn-panels { background: var(--ab-panel) !important; border-left: 1px solid var(--ab-border) !important; }
     .gjs-pn-panel { background: var(--ab-panel) !important; border-bottom: 1px solid var(--ab-border) !important; }
@@ -287,7 +289,7 @@ if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
       <h3>Page Builder</h3>
       <p>Select a page from the left panel to start editing it with the drag-and-drop builder.</p>
     </div>
-    <div id="gjs" style="display:none;flex:1;"></div>
+    <div id="gjs" style="display:none;"></div>
   </div>
 </div>
 
@@ -446,10 +448,11 @@ function selectPage(el) {
 function initEditor(initialHtml) {
   if (editor) { editor.setComponents(initialHtml); return; }
 
+  var gjsH = (window.innerHeight - 48) + 'px';
   editor = grapesjs.init({
     container: '#gjs',
     fromElement: false,
-    height: '100%',
+    height: gjsH,
     width: '100%',
     storageManager: { autoload: false, autosave: false },
     deviceManager: {
@@ -497,7 +500,7 @@ function initEditor(initialHtml) {
 /* ── Load page content from API ── */
 function loadPageIntoEditor(page) {
   document.getElementById('abEmpty').style.display = 'none';
-  document.getElementById('gjs').style.display = 'flex';
+  document.getElementById('gjs').style.display = 'block';
 
   setStatus('Loading…', '');
 
