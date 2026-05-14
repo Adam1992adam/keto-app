@@ -1,0 +1,653 @@
+---
+// /admin/builder — GrapeJS drag-drop page builder
+const adminSession = Astro.cookies.get('admin-session')?.value;
+if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Page Builder — Keto Journey Admin</title>
+  <link rel="stylesheet" href="https://unpkg.com/grapesjs@0.21.12/dist/css/grapes.min.css" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --ab-bg:      #0F0D0C;
+      --ab-panel:   #1A1714;
+      --ab-border:  rgba(255,255,255,.08);
+      --ab-accent:  #FF5C7A;
+      --ab-accent2: #B6FF3C;
+      --ab-text:    #F0E8E0;
+      --ab-soft:    #8A7A70;
+      --ab-w:       240px;
+    }
+    html, body { height: 100%; overflow: hidden; font-family: 'Bricolage Grotesque', system-ui, sans-serif; background: var(--ab-bg); color: var(--ab-text); }
+
+    /* ── Top bar ── */
+    .ab-topbar {
+      height: 48px; display: flex; align-items: center; gap: 12px;
+      padding: 0 16px;
+      background: var(--ab-panel); border-bottom: 1px solid var(--ab-border);
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    }
+    .ab-topbar-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; margin-right: 8px; }
+    .ab-topbar-mark { width: 26px; height: 26px; border-radius: 6px; background: var(--ab-accent2); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: .8rem; color: #0F0D0C; }
+    .ab-topbar-name { font-size: .78rem; font-weight: 700; color: var(--ab-text); letter-spacing: .05em; }
+    .ab-topbar-sep { width: 1px; height: 20px; background: var(--ab-border); flex-shrink: 0; }
+    .ab-topbar-page { font-size: .78rem; color: var(--ab-soft); flex: 1; }
+    .ab-topbar-page strong { color: var(--ab-text); }
+
+    .ab-device-grp { display: flex; gap: 2px; }
+    .ab-device-btn {
+      width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--ab-border);
+      background: transparent; color: var(--ab-soft); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: all .15s;
+    }
+    .ab-device-btn:hover, .ab-device-btn.on { background: rgba(255,92,122,.12); border-color: var(--ab-accent); color: var(--ab-accent); }
+    .ab-device-btn svg { width: 14px; height: 14px; pointer-events: none; }
+
+    .ab-btn {
+      height: 30px; padding: 0 14px; border-radius: 6px; border: none; cursor: pointer;
+      font-family: inherit; font-size: .75rem; font-weight: 700; letter-spacing: .02em;
+      transition: all .15s; white-space: nowrap;
+    }
+    .ab-btn-ghost { background: transparent; border: 1px solid var(--ab-border); color: var(--ab-soft); }
+    .ab-btn-ghost:hover { border-color: var(--ab-soft); color: var(--ab-text); }
+    .ab-btn-save { background: rgba(255,92,122,.15); border: 1px solid rgba(255,92,122,.3); color: var(--ab-accent); }
+    .ab-btn-save:hover { background: rgba(255,92,122,.25); }
+    .ab-btn-publish { background: var(--ab-accent); color: #fff; }
+    .ab-btn-publish:hover { background: #e84d6a; }
+    .ab-btn-undo { background: transparent; border: 1px solid var(--ab-border); color: var(--ab-soft); width: 30px; padding: 0; display: flex; align-items: center; justify-content: center; }
+    .ab-btn-undo:hover { color: var(--ab-text); border-color: var(--ab-soft); }
+    .ab-btn-undo svg { width: 13px; height: 13px; pointer-events: none; }
+
+    .ab-status { font-size: .7rem; color: var(--ab-soft); }
+    .ab-status.saved { color: var(--ab-accent2); }
+    .ab-status.error { color: #ef4444; }
+
+    .ab-back-link { font-size: .72rem; color: var(--ab-soft); text-decoration: none; display: flex; align-items: center; gap: 4px; }
+    .ab-back-link:hover { color: var(--ab-text); }
+
+    /* ── Shell ── */
+    .ab-shell {
+      display: flex; height: 100vh; padding-top: 48px;
+    }
+
+    /* ── Left sidebar ── */
+    .ab-left {
+      width: var(--ab-w); flex-shrink: 0;
+      background: var(--ab-panel); border-right: 1px solid var(--ab-border);
+      display: flex; flex-direction: column; overflow-y: auto;
+    }
+    .ab-left-section { padding: 14px 12px 6px; font-size: .6rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ab-soft); }
+    .ab-page-item {
+      display: flex; align-items: center; gap: 10px; padding: 9px 14px;
+      cursor: pointer; font-size: .8rem; color: var(--ab-soft);
+      border-radius: 8px; margin: 2px 6px; transition: all .13s;
+    }
+    .ab-page-item:hover { background: rgba(255,255,255,.05); color: var(--ab-text); }
+    .ab-page-item.active { background: rgba(255,92,122,.12); color: var(--ab-accent); border: 1px solid rgba(255,92,122,.2); }
+    .ab-page-icon { width: 28px; height: 28px; border-radius: 6px; background: rgba(255,255,255,.05); display: flex; align-items: center; justify-content: center; font-size: .9rem; flex-shrink: 0; }
+    .ab-page-info { display: flex; flex-direction: column; }
+    .ab-page-label { font-weight: 600; line-height: 1.2; }
+    .ab-page-url { font-size: .65rem; color: var(--ab-soft); font-family: 'Geist Mono', monospace; }
+    .ab-page-pub { width: 6px; height: 6px; border-radius: 50%; background: var(--ab-accent2); margin-left: auto; flex-shrink: 0; }
+
+    .ab-left-actions { padding: 12px; margin-top: auto; border-top: 1px solid var(--ab-border); display: flex; flex-direction: column; gap: 6px; }
+    .ab-left-link {
+      display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+      border-radius: 8px; font-size: .78rem; color: var(--ab-soft);
+      text-decoration: none; transition: all .13s;
+    }
+    .ab-left-link:hover { background: rgba(255,255,255,.05); color: var(--ab-text); }
+    .ab-left-link svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+    /* ── Main editor area ── */
+    .ab-main { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+    /* ── Empty state ── */
+    .ab-empty {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; color: var(--ab-soft); text-align: center; padding: 2rem;
+    }
+    .ab-empty-icon { font-size: 3rem; }
+    .ab-empty h3 { font-size: 1.1rem; color: var(--ab-text); }
+    .ab-empty p { font-size: .82rem; max-width: 320px; line-height: 1.6; }
+
+    /* ── GrapeJS overrides ── */
+    #gjs { flex: 1; }
+    .gjs-cv-canvas { background: #F0ECE6; }
+    .gjs-pn-panels { background: var(--ab-panel) !important; border-left: 1px solid var(--ab-border) !important; }
+    .gjs-pn-panel { background: var(--ab-panel) !important; border-bottom: 1px solid var(--ab-border) !important; }
+    .gjs-pn-btn { color: var(--ab-soft) !important; }
+    .gjs-pn-btn:hover, .gjs-pn-btn.gjs-pn-active { color: var(--ab-accent) !important; }
+    .gjs-block-category .gjs-title { background: var(--ab-panel) !important; color: var(--ab-soft) !important; font-size: .62rem !important; letter-spacing: .08em !important; }
+    .gjs-block { background: rgba(255,255,255,.04) !important; border: 1px solid var(--ab-border) !important; color: var(--ab-text) !important; border-radius: 8px !important; }
+    .gjs-block:hover { border-color: var(--ab-accent) !important; background: rgba(255,92,122,.08) !important; }
+    .gjs-sm-sector .gjs-sm-title { background: var(--ab-panel) !important; color: var(--ab-soft) !important; }
+    .gjs-field { background: rgba(255,255,255,.06) !important; border: 1px solid var(--ab-border) !important; color: var(--ab-text) !important; border-radius: 6px !important; }
+    .gjs-layer { background: transparent !important; color: var(--ab-text) !important; }
+    .gjs-layer:hover { background: rgba(255,255,255,.04) !important; }
+    .gjs-layer.gjs-selected { background: rgba(255,92,122,.1) !important; }
+    .gjs-toolbar { background: var(--ab-accent) !important; border-radius: 6px !important; }
+
+    /* Toast */
+    .ab-toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      background: var(--ab-panel); border: 1px solid var(--ab-border);
+      color: var(--ab-text); border-radius: 10px; padding: 10px 16px;
+      font-size: .8rem; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,.4);
+      display: flex; align-items: center; gap: 8px;
+      animation: toastIn .2s ease-out;
+    }
+    .ab-toast.ok { border-color: rgba(182,255,60,.3); color: var(--ab-accent2); }
+    .ab-toast.err { border-color: rgba(239,68,68,.3); color: #ef4444; }
+    @keyframes toastIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* Settings panel */
+    .ab-settings-overlay {
+      position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center;
+    }
+    .ab-settings-overlay.open { display: flex; }
+    .ab-settings-panel {
+      width: 640px; max-height: 80vh; overflow-y: auto;
+      background: var(--ab-panel); border: 1px solid var(--ab-border);
+      border-radius: 16px; box-shadow: 0 24px 64px rgba(0,0,0,.5);
+    }
+    .ab-settings-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 22px; border-bottom: 1px solid var(--ab-border);
+    }
+    .ab-settings-title { font-size: 1rem; font-weight: 700; color: var(--ab-text); }
+    .ab-settings-close { width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--ab-border); background: transparent; color: var(--ab-soft); cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; }
+    .ab-settings-close:hover { color: var(--ab-text); }
+    .ab-settings-body { padding: 20px 22px; display: flex; flex-direction: column; gap: 20px; }
+    .ab-settings-category { font-size: .6rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ab-soft); margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--ab-border); }
+    .ab-settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .ab-settings-field { display: flex; flex-direction: column; gap: 5px; }
+    .ab-settings-label { font-size: .72rem; font-weight: 600; color: var(--ab-soft); }
+    .ab-settings-input {
+      width: 100%; padding: 8px 10px; border-radius: 8px;
+      background: rgba(255,255,255,.06); border: 1px solid var(--ab-border);
+      color: var(--ab-text); font-family: inherit; font-size: .8rem; outline: none;
+    }
+    .ab-settings-input:focus { border-color: var(--ab-accent); }
+    .ab-color-wrap { display: flex; align-items: center; gap: 6px; }
+    .ab-color-swatch { width: 28px; height: 28px; border-radius: 6px; border: 2px solid var(--ab-border); flex-shrink: 0; cursor: pointer; }
+    input[type="color"] { opacity: 0; width: 0; height: 0; position: absolute; }
+    .ab-settings-save { background: var(--ab-accent); color: #fff; border: none; border-radius: 8px; padding: 10px 24px; font-family: inherit; font-size: .82rem; font-weight: 700; cursor: pointer; align-self: flex-end; }
+    .ab-settings-save:hover { background: #e84d6a; }
+  </style>
+</head>
+<body>
+
+<!-- ── Top bar ── -->
+<div class="ab-topbar">
+  <a href="/admin" class="ab-back-link">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+    Admin
+  </a>
+  <div class="ab-topbar-sep"></div>
+  <a href="/admin" class="ab-topbar-logo">
+    <div class="ab-topbar-mark">K</div>
+    <span class="ab-topbar-name">BUILDER</span>
+  </a>
+  <div class="ab-topbar-page" id="abPageLabel">Select a page →</div>
+
+  <div class="ab-device-grp" id="abDeviceGrp" style="display:none;">
+    <button class="ab-device-btn on" id="abDeskBtn" title="Desktop" onclick="setDevice('desktop')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+    </button>
+    <button class="ab-device-btn" id="abTabBtn" title="Tablet" onclick="setDevice('tablet')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+    </button>
+    <button class="ab-device-btn" id="abMobBtn" title="Mobile" onclick="setDevice('mobile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+    </button>
+  </div>
+
+  <button class="ab-btn ab-btn-undo" id="abUndoBtn" title="Undo" style="display:none;" onclick="editorUndo()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg>
+  </button>
+  <button class="ab-btn ab-btn-undo" id="abRedoBtn" title="Redo" style="display:none;" onclick="editorRedo()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016 2.3L21 13"/></svg>
+  </button>
+
+  <span class="ab-status" id="abStatus" style="display:none;"></span>
+
+  <button class="ab-btn ab-btn-save" id="abSaveBtn" style="display:none;" onclick="savePage(false)">Save Draft</button>
+  <button class="ab-btn ab-btn-publish" id="abPublishBtn" style="display:none;" onclick="savePage(true)">Publish</button>
+  <button class="ab-btn ab-btn-ghost" onclick="document.getElementById('abSettingsOverlay').classList.add('open')">⚙ Site Settings</button>
+</div>
+
+<!-- ── Shell ── -->
+<div class="ab-shell">
+
+  <!-- Left: page list -->
+  <aside class="ab-left">
+    <div class="ab-left-section">Marketing Pages</div>
+
+    <div class="ab-page-item" data-page="home" data-name="Homepage" onclick="selectPage(this)">
+      <span class="ab-page-icon">🏠</span>
+      <span class="ab-page-info">
+        <span class="ab-page-label">Homepage</span>
+        <span class="ab-page-url">/</span>
+      </span>
+    </div>
+    <div class="ab-page-item" data-page="blog" data-name="Blog" onclick="selectPage(this)">
+      <span class="ab-page-icon">📝</span>
+      <span class="ab-page-info">
+        <span class="ab-page-label">Blog</span>
+        <span class="ab-page-url">/blog</span>
+      </span>
+    </div>
+    <div class="ab-page-item" data-page="start" data-name="Start Page" onclick="selectPage(this)">
+      <span class="ab-page-icon">🚀</span>
+      <span class="ab-page-info">
+        <span class="ab-page-label">Start Page</span>
+        <span class="ab-page-url">/start</span>
+      </span>
+    </div>
+    <div class="ab-page-item" data-page="login" data-name="Login" onclick="selectPage(this)">
+      <span class="ab-page-icon">🔐</span>
+      <span class="ab-page-info">
+        <span class="ab-page-label">Login</span>
+        <span class="ab-page-url">/login</span>
+      </span>
+    </div>
+    <div class="ab-page-item" data-page="signup" data-name="Signup" onclick="selectPage(this)">
+      <span class="ab-page-icon">✨</span>
+      <span class="ab-page-info">
+        <span class="ab-page-label">Signup</span>
+        <span class="ab-page-url">/signup</span>
+      </span>
+    </div>
+
+    <div class="ab-left-section" style="margin-top:8px;">Quick Access</div>
+    <a href="/admin/site-settings" class="ab-left-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Site Settings
+    </a>
+    <a href="/admin/emails" class="ab-left-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      Email Sequences
+    </a>
+    <a href="/admin" class="ab-left-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Admin Dashboard
+    </a>
+  </aside>
+
+  <!-- Main: GrapeJS or empty state -->
+  <div class="ab-main">
+    <div class="ab-empty" id="abEmpty">
+      <div class="ab-empty-icon">🎨</div>
+      <h3>Page Builder</h3>
+      <p>Select a page from the left panel to start editing it with the drag-and-drop builder.</p>
+    </div>
+    <div id="gjs" style="display:none;flex:1;"></div>
+  </div>
+</div>
+
+<!-- ── Site Settings Overlay ── -->
+<div class="ab-settings-overlay" id="abSettingsOverlay">
+  <div class="ab-settings-panel">
+    <div class="ab-settings-head">
+      <span class="ab-settings-title">⚙ Site Settings</span>
+      <button class="ab-settings-close" onclick="document.getElementById('abSettingsOverlay').classList.remove('open')">×</button>
+    </div>
+    <div class="ab-settings-body" id="abSettingsBody">
+      <div style="color:var(--ab-soft);font-size:.8rem;">Loading settings…</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/grapesjs@0.21.12/dist/grapes.min.js"></script>
+<script src="https://unpkg.com/grapesjs-preset-webpage@1.0.3/dist/grapesjs-preset-webpage.min.js"></script>
+
+<script>
+var editor = null;
+var currentPage = null;
+var currentPageName = '';
+
+/* ── Keto starter templates ── */
+var STARTERS = {
+  home: '<section style="background:linear-gradient(135deg,#FAF6F1 0%,#F2EDE5 100%);padding:80px 40px;text-align:center;">' +
+        '<h1 style="font-family:Bricolage Grotesque,sans-serif;font-size:3.5rem;font-weight:800;color:#16110F;line-height:1.1;margin-bottom:20px;">Your 30-Day <em style="color:#FF5C7A;">Keto Journey</em><br>Starts Here</h1>' +
+        '<p style="font-size:1.1rem;color:#4A4340;max-width:540px;margin:0 auto 36px;line-height:1.7;">Structured meal plans, daily tracking, and AI coaching to help you achieve lasting results.</p>' +
+        '<a href="/signup" style="display:inline-block;background:#FF5C7A;color:#fff;padding:16px 40px;border-radius:999px;font-family:Bricolage Grotesque,sans-serif;font-weight:800;font-size:1rem;text-decoration:none;box-shadow:0 4px 20px rgba(255,92,122,.4);">Start My Journey →</a>' +
+        '</section>' +
+        '<section style="background:#fff;padding:60px 40px;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:900px;margin:0 auto;">' +
+        '<div style="background:#FAF6F1;border-radius:16px;padding:28px;text-align:center;"><div style="font-size:2.2rem;margin-bottom:12px;">🥗</div><h3 style="font-family:Bricolage Grotesque,sans-serif;font-weight:700;margin-bottom:8px;">Daily Meal Plans</h3><p style="font-size:.88rem;color:#4A4340;line-height:1.6;">200+ keto recipes tailored to your goals</p></div>' +
+        '<div style="background:#FAF6F1;border-radius:16px;padding:28px;text-align:center;"><div style="font-size:2.2rem;margin-bottom:12px;">📊</div><h3 style="font-family:Bricolage Grotesque,sans-serif;font-weight:700;margin-bottom:8px;">Smart Tracking</h3><p style="font-size:.88rem;color:#4A4340;line-height:1.6;">Macros, fasting, steps, and ketone levels</p></div>' +
+        '<div style="background:#FAF6F1;border-radius:16px;padding:28px;text-align:center;"><div style="font-size:2.2rem;margin-bottom:12px;">✨</div><h3 style="font-family:Bricolage Grotesque,sans-serif;font-weight:700;margin-bottom:8px;">AI Coaching</h3><p style="font-size:.88rem;color:#4A4340;line-height:1.6;">Personalized advice from your AI health coach</p></div>' +
+        '</section>',
+  blog: '<section style="background:#FAF6F1;padding:60px 40px;max-width:1200px;margin:0 auto;">' +
+        '<h1 style="font-family:Bricolage Grotesque,sans-serif;font-size:2.5rem;font-weight:800;margin-bottom:12px;">Keto Journey Blog</h1>' +
+        '<p style="color:#4A4340;margin-bottom:40px;">Tips, recipes, and science-backed keto advice.</p>' +
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;">' +
+        '<div style="background:#fff;border-radius:16px;overflow:hidden;"><div style="height:180px;background:#F2EDE5;display:flex;align-items:center;justify-content:center;font-size:3rem;">🥑</div><div style="padding:20px;"><h3 style="font-family:Bricolage Grotesque,sans-serif;font-weight:700;margin-bottom:8px;">Getting Started with Keto</h3><p style="font-size:.82rem;color:#4A4340;">Everything you need to know about starting your keto journey...</p></div></div>' +
+        '<div style="background:#fff;border-radius:16px;overflow:hidden;"><div style="height:180px;background:#F2EDE5;display:flex;align-items:center;justify-content:center;font-size:3rem;">🍳</div><div style="padding:20px;"><h3 style="font-family:Bricolage Grotesque,sans-serif;font-weight:700;margin-bottom:8px;">5 Easy Keto Breakfasts</h3><p style="font-size:.82rem;color:#4A4340;">Quick and delicious breakfast ideas for busy mornings...</p></div></div>' +
+        '<div style="background:#fff;border-radius:16px;overflow:hidden;"><div style="height:180px;background:#F2EDE5;display:flex;align-items:center;justify-content:center;font-size:3rem;">💪</div><div style="padding:20px;"><h3 style="font-family:Bricolage Grotesque,sans-serif;font-weight:700;margin-bottom:8px;">Keto and Exercise</h3><p style="font-size:.82rem;color:#4A4340;">How to stay active while in ketosis and maximize results...</p></div></div>' +
+        '</div></section>',
+  start: '<section style="background:#16110F;color:#F0E8E0;padding:80px 40px;text-align:center;">' +
+         '<h1 style="font-family:Bricolage Grotesque,sans-serif;font-size:3rem;font-weight:800;margin-bottom:16px;">Ready to Transform?</h1>' +
+         '<p style="font-size:1.1rem;color:#8A7A70;max-width:500px;margin:0 auto 36px;">Pick your plan and start your keto journey today. 30-day money-back guarantee.</p>' +
+         '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:900px;margin:0 auto;">' +
+         '<div style="background:#1F1916;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px 24px;text-align:center;"><h3 style="font-family:Bricolage Grotesque,sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:8px;color:#B6FF3C;">BASIC</h3><div style="font-size:2.2rem;font-weight:800;margin:16px 0;">$29<span style="font-size:1rem;font-weight:400;color:#8A7A70;">/30 days</span></div><a href="/signup?plan=basic" style="display:block;background:#B6FF3C;color:#0F0D0C;padding:12px;border-radius:12px;font-weight:800;text-decoration:none;margin-top:20px;">Get Started</a></div>' +
+         '<div style="background:#FF5C7A;border-radius:20px;padding:32px 24px;text-align:center;position:relative;"><div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#B6FF3C;color:#0F0D0C;font-size:.65rem;font-weight:800;padding:3px 12px;border-radius:999px;">MOST POPULAR</div><h3 style="font-family:Bricolage Grotesque,sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:8px;">PRO</h3><div style="font-size:2.2rem;font-weight:800;margin:16px 0;">$69<span style="font-size:1rem;font-weight:400;opacity:.7;">/90 days</span></div><a href="/signup?plan=pro" style="display:block;background:#fff;color:#FF5C7A;padding:12px;border-radius:12px;font-weight:800;text-decoration:none;margin-top:20px;">Get Started</a></div>' +
+         '<div style="background:#1F1916;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px 24px;text-align:center;"><h3 style="font-family:Bricolage Grotesque,sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:8px;color:#FF914D;">ELITE</h3><div style="font-size:2.2rem;font-weight:800;margin:16px 0;">$149<span style="font-size:1rem;font-weight:400;color:#8A7A70;">/year</span></div><a href="/signup?plan=elite" style="display:block;background:#FF914D;color:#fff;padding:12px;border-radius:12px;font-weight:800;text-decoration:none;margin-top:20px;">Get Started</a></div>' +
+         '</div></section>',
+  login: '<section style="background:#FAF6F1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px;">' +
+         '<div style="background:#fff;border-radius:24px;padding:48px;width:100%;max-width:440px;box-shadow:0 8px 40px rgba(0,0,0,.08);">' +
+         '<div style="text-align:center;margin-bottom:32px;"><h1 style="font-family:Bricolage Grotesque,sans-serif;font-size:1.8rem;font-weight:800;">Welcome back</h1><p style="color:#4A4340;margin-top:8px;">Sign in to continue your journey</p></div>' +
+         '<div style="margin-bottom:16px;"><label style="display:block;font-size:.78rem;font-weight:700;margin-bottom:6px;">Email</label><input type="email" placeholder="you@example.com" style="width:100%;padding:12px 14px;border:1.5px solid #E5DED2;border-radius:10px;font-size:.9rem;outline:none;" /></div>' +
+         '<div style="margin-bottom:24px;"><label style="display:block;font-size:.78rem;font-weight:700;margin-bottom:6px;">Password</label><input type="password" placeholder="••••••••" style="width:100%;padding:12px 14px;border:1.5px solid #E5DED2;border-radius:10px;font-size:.9rem;outline:none;" /></div>' +
+         '<button style="width:100%;background:#FF5C7A;color:#fff;border:none;border-radius:10px;padding:14px;font-family:Bricolage Grotesque,sans-serif;font-size:.95rem;font-weight:800;cursor:pointer;">Sign In</button>' +
+         '</div></section>',
+  signup: '<section style="background:#FAF6F1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px;">' +
+          '<div style="background:#fff;border-radius:24px;padding:48px;width:100%;max-width:440px;box-shadow:0 8px 40px rgba(0,0,0,.08);">' +
+          '<div style="text-align:center;margin-bottom:32px;"><h1 style="font-family:Bricolage Grotesque,sans-serif;font-size:1.8rem;font-weight:800;">Create Account</h1><p style="color:#4A4340;margin-top:8px;">Start your keto transformation today</p></div>' +
+          '<div style="margin-bottom:16px;"><label style="display:block;font-size:.78rem;font-weight:700;margin-bottom:6px;">Full Name</label><input type="text" placeholder="Your name" style="width:100%;padding:12px 14px;border:1.5px solid #E5DED2;border-radius:10px;font-size:.9rem;outline:none;" /></div>' +
+          '<div style="margin-bottom:16px;"><label style="display:block;font-size:.78rem;font-weight:700;margin-bottom:6px;">Email</label><input type="email" placeholder="you@example.com" style="width:100%;padding:12px 14px;border:1.5px solid #E5DED2;border-radius:10px;font-size:.9rem;outline:none;" /></div>' +
+          '<div style="margin-bottom:24px;"><label style="display:block;font-size:.78rem;font-weight:700;margin-bottom:6px;">Password</label><input type="password" placeholder="Min. 8 characters" style="width:100%;padding:12px 14px;border:1.5px solid #E5DED2;border-radius:10px;font-size:.9rem;outline:none;" /></div>' +
+          '<button style="width:100%;background:#FF5C7A;color:#fff;border:none;border-radius:10px;padding:14px;font-family:Bricolage Grotesque,sans-serif;font-size:.95rem;font-weight:800;cursor:pointer;">Create Account</button>' +
+          '</div></section>',
+};
+
+/* ── Custom keto blocks ── */
+var KETO_BLOCKS = [
+  {
+    id: 'keto-hero', label: '🥑 Keto Hero', category: 'Keto',
+    content: '<section style="background:linear-gradient(135deg,#FAF6F1,#F2EDE5);padding:80px 40px;text-align:center;">' +
+             '<h1 style="font-family:Bricolage Grotesque,sans-serif;font-size:3rem;font-weight:800;color:#16110F;line-height:1.1;margin-bottom:16px;">Your Headline Here</h1>' +
+             '<p style="font-size:1.1rem;color:#4A4340;max-width:520px;margin:0 auto 32px;line-height:1.7;">Add your compelling subtitle here.</p>' +
+             '<a href="#" style="display:inline-block;background:#FF5C7A;color:#fff;padding:15px 36px;border-radius:999px;font-family:Bricolage Grotesque,sans-serif;font-weight:800;font-size:.95rem;text-decoration:none;">Get Started →</a></section>',
+  },
+  {
+    id: 'keto-features', label: '⭐ Features 3-col', category: 'Keto',
+    content: '<section style="padding:60px 40px;background:#fff;"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:960px;margin:0 auto;">' +
+             '<div style="background:#FAF6F1;border-radius:16px;padding:28px;text-align:center;"><div style="font-size:2.5rem;margin-bottom:14px;">🎯</div><h3 style="font-family:Bricolage Grotesque,sans-serif;font-weight:700;font-size:1rem;margin-bottom:8px;">Feature One</h3><p style="font-size:.84rem;color:#4A4340;line-height:1.6;">Describe this feature and why it benefits the user.</p></div>' +
+             '<div style="background:#FAF6F1;border-radius:16px;padding:28px;text-align:center;"><div style="font-size:2.5rem;margin-bottom:14px;">💡</div><h3 style="font-family:Bricolage Grotesque,sans-serif;font-weight:700;font-size:1rem;margin-bottom:8px;">Feature Two</h3><p style="font-size:.84rem;color:#4A4340;line-height:1.6;">Describe this feature and why it benefits the user.</p></div>' +
+             '<div style="background:#FAF6F1;border-radius:16px;padding:28px;text-align:center;"><div style="font-size:2.5rem;margin-bottom:14px;">🚀</div><h3 style="font-family:Bricolage Grotesque,sans-serif;font-weight:700;font-size:1rem;margin-bottom:8px;">Feature Three</h3><p style="font-size:.84rem;color:#4A4340;line-height:1.6;">Describe this feature and why it benefits the user.</p></div>' +
+             '</div></section>',
+  },
+  {
+    id: 'keto-stats', label: '📊 Stats Row', category: 'Keto',
+    content: '<section style="padding:48px 40px;background:#16110F;">' +
+             '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:24px;max-width:960px;margin:0 auto;text-align:center;">' +
+             '<div><div style="font-size:2.4rem;font-weight:800;color:#FF5C7A;font-family:Bricolage Grotesque,sans-serif;">5,000+</div><div style="font-size:.82rem;color:#8A7A70;margin-top:4px;">Members</div></div>' +
+             '<div><div style="font-size:2.4rem;font-weight:800;color:#B6FF3C;font-family:Bricolage Grotesque,sans-serif;">200+</div><div style="font-size:.82rem;color:#8A7A70;margin-top:4px;">Recipes</div></div>' +
+             '<div><div style="font-size:2.4rem;font-weight:800;color:#FF914D;font-family:Bricolage Grotesque,sans-serif;">12 lbs</div><div style="font-size:.82rem;color:#8A7A70;margin-top:4px;">Avg. Lost</div></div>' +
+             '<div><div style="font-size:2.4rem;font-weight:800;color:#fff;font-family:Bricolage Grotesque,sans-serif;">4.9★</div><div style="font-size:.82rem;color:#8A7A70;margin-top:4px;">Rating</div></div>' +
+             '</div></section>',
+  },
+  {
+    id: 'keto-testimonial', label: '💬 Testimonial', category: 'Keto',
+    content: '<section style="padding:60px 40px;background:#FAF6F1;text-align:center;">' +
+             '<blockquote style="max-width:640px;margin:0 auto;">' +
+             '<p style="font-size:1.3rem;font-style:italic;color:#16110F;line-height:1.7;font-family:Georgia,serif;margin-bottom:24px;">"I lost 18 pounds in my first 30 days. The meal plans are incredible and the AI coach kept me on track."</p>' +
+             '<div style="display:flex;align-items:center;justify-content:center;gap:12px;">' +
+             '<div style="width:44px;height:44px;border-radius:50%;background:#FF5C7A;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;">S</div>' +
+             '<div style="text-align:left;"><div style="font-weight:700;font-size:.9rem;">Sarah M.</div><div style="font-size:.78rem;color:#4A4340;">Pro member, lost 18 lbs</div></div>' +
+             '</div></blockquote></section>',
+  },
+  {
+    id: 'keto-cta', label: '📢 CTA Banner', category: 'Keto',
+    content: '<section style="padding:60px 40px;background:#FF5C7A;text-align:center;">' +
+             '<h2 style="font-family:Bricolage Grotesque,sans-serif;font-size:2.2rem;font-weight:800;color:#fff;margin-bottom:12px;">Ready to Start Your Journey?</h2>' +
+             '<p style="color:rgba(255,255,255,.85);font-size:1rem;margin-bottom:28px;">Join thousands of members achieving their keto goals.</p>' +
+             '<a href="/signup" style="display:inline-block;background:#fff;color:#FF5C7A;padding:14px 36px;border-radius:999px;font-family:Bricolage Grotesque,sans-serif;font-weight:800;font-size:.95rem;text-decoration:none;">Start Free Today →</a>' +
+             '</section>',
+  },
+  {
+    id: 'keto-pricing', label: '💰 Pricing Table', category: 'Keto',
+    content: '<section style="padding:60px 40px;background:#16110F;">' +
+             '<h2 style="font-family:Bricolage Grotesque,sans-serif;font-size:2rem;font-weight:800;color:#fff;text-align:center;margin-bottom:36px;">Choose Your Plan</h2>' +
+             '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:900px;margin:0 auto;">' +
+             '<div style="background:#1F1916;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px 24px;text-align:center;"><h3 style="color:#B6FF3C;font-weight:700;margin-bottom:8px;">BASIC</h3><div style="font-size:2rem;font-weight:800;color:#fff;margin:16px 0;">$29<span style="font-size:.9rem;font-weight:400;color:#8A7A70;">/month</span></div><ul style="list-style:none;color:#8A7A70;font-size:.82rem;line-height:2.2;margin-bottom:24px;"><li>✓ 30-day meal plan</li><li>✓ Basic tracking</li><li>✓ Recipe library</li></ul><a href="/signup?plan=basic" style="display:block;background:#B6FF3C;color:#0F0D0C;padding:12px;border-radius:10px;font-weight:800;text-decoration:none;">Get Basic</a></div>' +
+             '<div style="background:#FF5C7A;border-radius:20px;padding:32px 24px;text-align:center;position:relative;"><div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#B6FF3C;color:#0F0D0C;font-size:.6rem;font-weight:800;padding:3px 10px;border-radius:999px;">POPULAR</div><h3 style="color:#fff;font-weight:700;margin-bottom:8px;">PRO</h3><div style="font-size:2rem;font-weight:800;color:#fff;margin:16px 0;">$69<span style="font-size:.9rem;font-weight:400;opacity:.7;">/90 days</span></div><ul style="list-style:none;color:rgba(255,255,255,.8);font-size:.82rem;line-height:2.2;margin-bottom:24px;"><li>✓ 90-day meal plan</li><li>✓ Advanced tracking</li><li>✓ Community access</li></ul><a href="/signup?plan=pro" style="display:block;background:#fff;color:#FF5C7A;padding:12px;border-radius:10px;font-weight:800;text-decoration:none;">Get Pro</a></div>' +
+             '<div style="background:#1F1916;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px 24px;text-align:center;"><h3 style="color:#FF914D;font-weight:700;margin-bottom:8px;">ELITE</h3><div style="font-size:2rem;font-weight:800;color:#fff;margin:16px 0;">$149<span style="font-size:.9rem;font-weight:400;color:#8A7A70;">/year</span></div><ul style="list-style:none;color:#8A7A70;font-size:.82rem;line-height:2.2;margin-bottom:24px;"><li>✓ 365-day plan</li><li>✓ AI Coach</li><li>✓ All features</li></ul><a href="/signup?plan=elite" style="display:block;background:#FF914D;color:#fff;padding:12px;border-radius:10px;font-weight:800;text-decoration:none;">Get Elite</a></div>' +
+             '</div></section>',
+  },
+  {
+    id: 'keto-faq', label: '❓ FAQ Section', category: 'Keto',
+    content: '<section style="padding:60px 40px;background:#FAF6F1;max-width:720px;margin:0 auto;">' +
+             '<h2 style="font-family:Bricolage Grotesque,sans-serif;font-size:2rem;font-weight:800;text-align:center;margin-bottom:36px;">Frequently Asked Questions</h2>' +
+             '<div style="display:flex;flex-direction:column;gap:12px;">' +
+             '<div style="background:#fff;border-radius:12px;padding:20px 24px;"><h4 style="font-weight:700;margin-bottom:8px;">What is the ketogenic diet?</h4><p style="font-size:.88rem;color:#4A4340;line-height:1.6;">The keto diet is a high-fat, low-carb eating plan that puts your body in a state of ketosis, burning fat for fuel.</p></div>' +
+             '<div style="background:#fff;border-radius:12px;padding:20px 24px;"><h4 style="font-weight:700;margin-bottom:8px;">How fast will I see results?</h4><p style="font-size:.88rem;color:#4A4340;line-height:1.6;">Most members notice changes in energy and weight within the first week, with significant results by day 30.</p></div>' +
+             '<div style="background:#fff;border-radius:12px;padding:20px 24px;"><h4 style="font-weight:700;margin-bottom:8px;">Is there a money-back guarantee?</h4><p style="font-size:.88rem;color:#4A4340;line-height:1.6;">Yes! We offer a 30-day money-back guarantee if you\'re not satisfied.</p></div>' +
+             '</div></section>',
+  },
+  {
+    id: 'keto-divider', label: '── Divider', category: 'Keto',
+    content: '<hr style="border:none;border-top:1px solid #E5DED2;margin:0;" />',
+  },
+  {
+    id: 'keto-spacer', label: '↕ Spacer', category: 'Keto',
+    content: '<div style="height:60px;"></div>',
+  },
+];
+
+/* ── Select page ── */
+function selectPage(el) {
+  document.querySelectorAll('.ab-page-item').forEach(function(i) { i.classList.remove('active'); });
+  el.classList.add('active');
+  currentPage = el.getAttribute('data-page');
+  currentPageName = el.getAttribute('data-name');
+  document.getElementById('abPageLabel').innerHTML = 'Editing: <strong>' + currentPageName + '</strong>';
+  loadPageIntoEditor(currentPage);
+}
+
+/* ── Init GrapeJS ── */
+function initEditor(initialHtml) {
+  if (editor) { editor.setComponents(initialHtml); return; }
+
+  editor = grapesjs.init({
+    container: '#gjs',
+    fromElement: false,
+    height: '100%',
+    width: '100%',
+    storageManager: { autoload: false, autosave: false },
+    deviceManager: {
+      devices: [
+        { name: 'Desktop', width: '' },
+        { name: 'Tablet',  width: '768px',  widthMedia: '992px' },
+        { name: 'Mobile',  width: '320px',  widthMedia: '480px' },
+      ]
+    },
+    plugins: ['gjs-preset-webpage'],
+    pluginsOpts: {
+      'gjs-preset-webpage': {
+        blocks: ['column1','column2','column3','column3-7','text','link','image','video','map'],
+        navbarOpts: false,
+        countdownOpts: false,
+        formsOpts: false,
+      }
+    },
+    blockManager: { blocks: KETO_BLOCKS },
+    styleManager: {
+      sectors: [
+        { name: 'Layout',      open: true,  buildProps: ['display','flex-direction','align-items','justify-content','gap','padding','margin','width','height','max-width'] },
+        { name: 'Typography',  open: false, buildProps: ['font-family','font-size','font-weight','color','text-align','line-height','letter-spacing'] },
+        { name: 'Background',  open: false, buildProps: ['background-color','background-image','background-size','background-position'] },
+        { name: 'Border',      open: false, buildProps: ['border-radius','border','border-color','border-width','box-shadow'] },
+      ]
+    },
+  });
+
+  editor.setComponents(initialHtml);
+
+  /* ── Keyboard shortcuts ── */
+  editor.Keymaps.add('general:undo', 'ctrl+z, cmd+z', function() { editor.UndoManager.undo(); });
+  editor.Keymaps.add('general:redo', 'ctrl+shift+z, cmd+shift+z', function() { editor.UndoManager.redo(); });
+
+  /* ── Show toolbar ── */
+  document.getElementById('abDeviceGrp').style.display = 'flex';
+  document.getElementById('abUndoBtn').style.display   = 'flex';
+  document.getElementById('abRedoBtn').style.display   = 'flex';
+  document.getElementById('abSaveBtn').style.display   = 'inline-flex';
+  document.getElementById('abPublishBtn').style.display = 'inline-flex';
+  document.getElementById('abStatus').style.display    = 'inline';
+}
+
+/* ── Load page content from API ── */
+function loadPageIntoEditor(page) {
+  document.getElementById('abEmpty').style.display = 'none';
+  document.getElementById('gjs').style.display = 'flex';
+
+  setStatus('Loading…', '');
+
+  fetch('/api/admin/page-config?page=' + page, { credentials: 'same-origin' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var html = (d.config && d.config.gjs_html) ? d.config.gjs_html : (STARTERS[page] || '<p>Start building your page here.</p>');
+      initEditor(html);
+      setStatus('', '');
+    })
+    .catch(function() {
+      initEditor(STARTERS[page] || '<p>Start building.</p>');
+      setStatus('', '');
+    });
+}
+
+/* ── Save page ── */
+function savePage(publish) {
+  if (!editor || !currentPage) return;
+  setStatus('Saving…', '');
+
+  var html = editor.getHtml();
+  var css  = editor.getCss();
+
+  fetch('/api/admin/page-config', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      page: currentPage,
+      html: html,
+      css: css,
+      publish: publish,
+    }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.success) {
+      setStatus(publish ? '✓ Published' : '✓ Saved', 'saved');
+      showToast(publish ? '✓ Page published live!' : '✓ Draft saved', 'ok');
+      setTimeout(function() { setStatus('', ''); }, 3000);
+    } else {
+      setStatus('✗ Error', 'error');
+      showToast('Error: ' + (d.error || 'Save failed'), 'err');
+    }
+  })
+  .catch(function() {
+    setStatus('✗ Error', 'error');
+    showToast('Network error — please retry', 'err');
+  });
+}
+
+/* ── Device switcher ── */
+function setDevice(d) {
+  if (!editor) return;
+  var map = { desktop: 'Desktop', tablet: 'Tablet', mobile: 'Mobile' };
+  editor.setDevice(map[d] || 'Desktop');
+  document.querySelectorAll('.ab-device-btn').forEach(function(b) { b.classList.remove('on'); });
+  document.getElementById('ab' + d.charAt(0).toUpperCase() + d.slice(1) + 'Btn').classList.add('on');
+}
+
+function editorUndo() { if (editor) editor.UndoManager.undo(); }
+function editorRedo() { if (editor) editor.UndoManager.redo(); }
+
+/* ── Helpers ── */
+function setStatus(msg, cls) {
+  var el = document.getElementById('abStatus');
+  el.textContent = msg;
+  el.className = 'ab-status' + (cls ? ' ' + cls : '');
+}
+
+function showToast(msg, type) {
+  var t = document.createElement('div');
+  t.className = 'ab-toast ' + (type || '');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function() { t.remove(); }, 3200);
+}
+
+/* ── Site settings ── */
+document.getElementById('abSettingsOverlay').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
+function loadSettings() {
+  fetch('/api/admin/site-settings', { credentials: 'same-origin' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) { renderSettings(d.settings || {}); })
+    .catch(function() {});
+}
+
+function renderSettings(settings) {
+  var CATS = { colors: 'Colors', typography: 'Typography', brand: 'Brand', email: 'Email Defaults', contact: 'Contact' };
+  var grouped = {};
+  Object.keys(settings).forEach(function(k) {
+    var s = settings[k];
+    var cat = s.category || 'other';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push({ key: k, value: s.value || '', label: s.label || k });
+  });
+
+  var html = '';
+  Object.keys(CATS).forEach(function(cat) {
+    if (!grouped[cat]) return;
+    html += '<div><div class="ab-settings-category">' + CATS[cat] + '</div><div class="ab-settings-grid">';
+    grouped[cat].forEach(function(s) {
+      var isColor = s.key.includes('color') || s.key.includes('_color');
+      if (isColor) {
+        html += '<div class="ab-settings-field">' +
+          '<label class="ab-settings-label">' + s.label + '</label>' +
+          '<div class="ab-color-wrap">' +
+          '<div class="ab-color-swatch" style="background:' + (s.value || '#ccc') + ';" onclick="document.getElementById(\'cp_' + s.key.replace(/\./g,'_') + '\').click()"></div>' +
+          '<input type="color" id="cp_' + s.key.replace(/\./g,'_') + '" value="' + (s.value || '#000000') + '" onchange="document.getElementById(\'sf_' + s.key.replace(/\./g,'_') + '\').value=this.value;this.previousElementSibling.style.background=this.value;" />' +
+          '<input class="ab-settings-input" id="sf_' + s.key.replace(/\./g,'_') + '" data-key="' + s.key + '" value="' + (s.value || '') + '" style="flex:1;" />' +
+          '</div></div>';
+      } else {
+        html += '<div class="ab-settings-field">' +
+          '<label class="ab-settings-label">' + s.label + '</label>' +
+          '<input class="ab-settings-input" data-key="' + s.key + '" value="' + (s.value || '') + '" />' +
+          '</div>';
+      }
+    });
+    html += '</div></div>';
+  });
+  html += '<button class="ab-settings-save" onclick="saveSettings()">Save All Settings</button>';
+
+  document.getElementById('abSettingsBody').innerHTML = html;
+}
+
+function saveSettings() {
+  var inputs = document.querySelectorAll('#abSettingsBody [data-key]');
+  var updates = {};
+  inputs.forEach(function(inp) { updates[inp.getAttribute('data-key')] = inp.value; });
+
+  fetch('/api/admin/site-settings', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ settings: updates }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (d.success) showToast('✓ Settings saved!', 'ok');
+    else showToast('Error saving settings', 'err');
+  })
+  .catch(function() { showToast('Network error', 'err'); });
+}
+
+/* ── Boot ── */
+loadSettings();
+</script>
+</body>
+</html>

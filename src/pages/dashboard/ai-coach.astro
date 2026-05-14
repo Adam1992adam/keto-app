@@ -1,5 +1,5 @@
----
-// src/pages/dashboard/ai-coach.astro — AI Coach (Rose Vital editorial design)
+﻿---
+// src/pages/dashboard/ai-coach.astro â€” AI Coach (Rose Vital editorial design)
 import { getUserJourney, getMealCycleDays } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import Sidebar from '../../components/Sidebar.astro';
@@ -96,27 +96,27 @@ const hasWeightGain = weightLogs.length > 1 && weightLogs[0].weight > weightLogs
 const showNoCheckin = !todayCheckin;
 
 // Chips display strings
-const fastDisplay   = fastingActive ? (fastHours + ':' + fastMins.toString().padStart(2,'0')) : '—';
+const fastDisplay   = fastingActive ? (fastHours + ':' + fastMins.toString().padStart(2,'0')) : 'â€”';
 const fastUnit      = fastingActive ? 'hrs' : '';
 const fastSub       = fastingActive ? ('window: ' + (activeFast?.target_hours || 16) + 'h') : 'No active fast';
-const macroDisplay  = calPct > 0 ? (calPct + '%') : (consumed.cal > 0 ? Math.round(consumed.cal) + '' : '—');
+const macroDisplay  = calPct > 0 ? (calPct + '%') : (consumed.cal > 0 ? Math.round(consumed.cal) + '' : 'â€”');
 const macroUnit     = calPct > 0 ? 'fat' : (consumed.cal > 0 ? 'kcal' : '');
 const macroSub      = macroGoals?.daily_calories ? (Math.round(consumed.cal) + ' / ' + macroGoals.daily_calories + ' kcal') : 'Set macro goals first';
 const sessionsCount = chatHistory.filter(m => (m as any).role === 'user').length;
 
 // Dynamic quote
 const miraQuoteText = hasWeightGain
-  ? 'Your weight went up ' + (weightLogs[0].weight - weightLogs[1].weight).toFixed(1) + 'kg — that\'s water from yesterday\'s sodium, not fat. The 7-day trend is what matters.'
+  ? 'Your weight went up ' + (weightLogs[0].weight - weightLogs[1].weight).toFixed(1) + 'kg â€” that\'s water from yesterday\'s sodium, not fat. The 7-day trend is what matters.'
   : weightLost > 0
-    ? 'You\'ve dropped ' + weightLost.toFixed(1) + 'kg since Day 1. You\'re ' + goalPct + '% toward your goal — the adaptation is working.'
-    : 'Day ' + currentDay + ' is here. Every day you show up compounds — the metabolic shift takes 2–3 weeks and you\'re right in it.';
+    ? 'You\'ve dropped ' + weightLost.toFixed(1) + 'kg since Day 1. You\'re ' + goalPct + '% toward your goal â€” the adaptation is working.'
+    : 'Day ' + currentDay + ' is here. Every day you show up compounds â€” the metabolic shift takes 2â€“3 weeks and you\'re right in it.';
 
 // Memory items
 const miraMemory = [
   onboarding?.fasting_protocol ? { l: 'Fasting protocol', v: String(onboarding.fasting_protocol).replace('_',':') + ' IF' } : null,
-  goalWeight ? { l: 'Goal weight', v: goalWeight + 'kg · ' + (weightLost > 0 ? weightLost.toFixed(1) + 'kg lost so far' : 'working toward it') } : null,
+  goalWeight ? { l: 'Goal weight', v: goalWeight + 'kg Â· ' + (weightLost > 0 ? weightLost.toFixed(1) + 'kg lost so far' : 'working toward it') } : null,
   restrictionsList.length ? { l: 'Dietary restrictions', v: restrictionsList.join(', ') } : null,
-  { l: 'Journey progress', v: 'Day ' + currentDay + ' · Week ' + weekNum + ' · Lv.' + level },
+  { l: 'Journey progress', v: 'Day ' + currentDay + ' Â· Week ' + weekNum + ' Â· Lv.' + level },
   sessionsCount ? { l: 'Messages sent', v: sessionsCount + ' total across all sessions' } : null,
 ].filter(Boolean) as Array<{l:string; v:string}>;
 ---
@@ -125,34 +125,34 @@ const miraMemory = [
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AI Coach · Keto Journey</title>
+  <title>AI Coach Â· Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
 </head>
 <body>
 <div class="rv-pg-shell">
-<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="ai-coach" />
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="ai-coach" />
 <div class="rv-pg-main">
 
-  <!-- ══ BRIEF / HERO ══ -->
+  <!-- â•â• BRIEF / HERO â•â• -->
   <section class="cb">
     <div class="cb-glow lime"></div>
     <div class="cb-glow"></div>
     <div class="cb-inner">
       <div class="cb-bar">
-        <div class="cb-mark">✦</div>
+        <div class="cb-mark">âœ¦</div>
         <div>
-          <div class="cb-name">Mira <span class="cb-name-sub">· your keto coach</span></div>
-          <div class="cb-status">Listening · context updated just now</div>
+          <div class="cb-name">Mira <span class="cb-name-sub">Â· your keto coach</span></div>
+          <div class="cb-status">Listening Â· context updated just now</div>
         </div>
       </div>
 
       <div class="cb-headline">
         <div>
-          <div class="cb-eyebrow"><span class="cb-pip"></span>TODAY · DAY {currentDay} OF 90</div>
+          <div class="cb-eyebrow"><span class="cb-pip"></span>TODAY Â· DAY {currentDay} OF 90</div>
           <h1 class="cb-h">
-            You're on Week {weekNum}. <em>Ask me anything</em> — a craving, a doubt, a win.
+            You're on Week {weekNum}. <em>Ask me anything</em> â€” a craving, a doubt, a win.
           </h1>
         </div>
         <div class="cb-quote-card">
@@ -195,17 +195,17 @@ const miraMemory = [
     </div>
   </section>
 
-  <!-- ══ BODY ══ -->
+  <!-- â•â• BODY â•â• -->
   <div class="ac-body">
     <div class="ac-layout">
 
-      <!-- ─── CHAT ─── -->
+      <!-- â”€â”€â”€ CHAT â”€â”€â”€ -->
       <div class="ch-wrap">
         <div class="ch-head">
-          <div class="ch-head-mark">✦</div>
+          <div class="ch-head-mark">âœ¦</div>
           <div>
             <div class="ch-head-title">Conversation with Mira</div>
-            <div class="ch-head-sub">Day {currentDay} · {streak}-day streak · {totalXp} XP · Lv.{level}</div>
+            <div class="ch-head-sub">Day {currentDay} Â· {streak}-day streak Â· {totalXp} XP Â· Lv.{level}</div>
           </div>
           <div class="ch-head-tools">
             <button id="clearBtn" title="New conversation">+</button>
@@ -217,23 +217,23 @@ const miraMemory = [
 
           <!-- Welcome -->
           <div class="ch-row coach">
-            <div class="ch-ava">✦</div>
+            <div class="ch-ava">âœ¦</div>
             <div class="ch-bubble-wrap">
               <div class="ch-bubble">
-                Morning, <strong>{userName}</strong>! I'm Mira, your personal keto coach — I have full context of your journey.<br><br>
+                Morning, <strong>{userName}</strong>! I'm Mira, your personal keto coach â€” I have full context of your journey.<br><br>
                 You're on <strong>Day {currentDay}</strong> with a <strong>{streak}-day streak</strong> and <strong>{totalXp} XP</strong>.
-                {weightLost > 0 && <> You've lost <strong>{weightLost.toFixed(1)}kg</strong> so far — that's real.</>}
+                {weightLost > 0 && <> You've lost <strong>{weightLost.toFixed(1)}kg</strong> so far â€” that's real.</>}
                 <br><br>
-                <span class="ch-hint">Send a food photo for instant macro analysis · Ask me anything about keto</span>
+                <span class="ch-hint">Send a food photo for instant macro analysis Â· Ask me anything about keto</span>
               </div>
-              <div class="ch-meta">Just now · Mira</div>
+              <div class="ch-meta">Just now Â· Mira</div>
             </div>
           </div>
 
           <!-- Pre-rendered history -->
           {chatHistory.map((msg) => (
             <div class={`ch-row ${(msg as any).role === 'user' ? 'user' : 'coach'}`} data-date={(msg as any).created_at ? (msg as any).created_at.split('T')[0] : ''}>
-              {(msg as any).role !== 'user' && <div class="ch-ava">✦</div>}
+              {(msg as any).role !== 'user' && <div class="ch-ava">âœ¦</div>}
               <div class="ch-bubble-wrap">
                 <div class="ch-bubble" data-raw={(msg as any).role === 'assistant' ? (msg as any).content : undefined}>
                   {(msg as any).role === 'user' ? (msg as any).content : ''}
@@ -247,8 +247,8 @@ const miraMemory = [
         <!-- Image preview -->
         <div id="aiImgPreview" class="ch-img-preview">
           <img id="aiImgThumb" src="" alt=""/>
-          <div class="ch-img-info">Image ready · tap send or add a message</div>
-          <button id="aiImgRemove" class="ch-img-remove">×</button>
+          <div class="ch-img-info">Image ready Â· tap send or add a message</div>
+          <button id="aiImgRemove" class="ch-img-remove">Ã—</button>
         </div>
 
         <div class="ch-compose">
@@ -260,14 +260,14 @@ const miraMemory = [
             <textarea
               class="ch-compose-ta"
               id="aiInput"
-              placeholder="Ask Mira anything — a craving, a question, a doubt…"
+              placeholder="Ask Mira anything â€” a craving, a question, a doubtâ€¦"
               rows="1"
             ></textarea>
-            <button class="ch-send" id="aiSend">→</button>
+            <button class="ch-send" id="aiSend">â†’</button>
           </div>
           <div class="ch-foot">
             <span class="ch-pip"></span>
-            <span>Context: Day {currentDay} · macros · weight · fasting · last {Math.min(14, currentDay)} days</span>
+            <span>Context: Day {currentDay} Â· macros Â· weight Â· fasting Â· last {Math.min(14, currentDay)} days</span>
             <span class="ch-spacer"></span>
             <button class="ch-deep" id="deepThinkBtn">
               <span class="ch-deep-box" id="deepBox"></span>
@@ -277,7 +277,7 @@ const miraMemory = [
         </div>
       </div>
 
-      <!-- ─── RAIL ─── -->
+      <!-- â”€â”€â”€ RAIL â”€â”€â”€ -->
       <aside class="ac-rail">
 
         <!-- Persona picker -->
@@ -285,28 +285,28 @@ const miraMemory = [
           <div class="cr-h"><span class="cr-pip"></span>COACH TONE</div>
           <div class="cr-personas">
             <div class="cr-pers active" data-persona="Warm friend">
-              <div class="cr-pers-g">◐</div>
+              <div class="cr-pers-g">â—</div>
               <div>
                 <div class="cr-pers-n">Warm friend</div>
                 <div class="cr-pers-s">Compassionate, plain language</div>
               </div>
-              <div class="cr-pers-check">✓</div>
+              <div class="cr-pers-check">âœ“</div>
             </div>
             <div class="cr-pers" data-persona="Drill sergeant">
-              <div class="cr-pers-g">◑</div>
+              <div class="cr-pers-g">â—‘</div>
               <div>
                 <div class="cr-pers-n">Drill sergeant</div>
                 <div class="cr-pers-s">No-nonsense, direct, blunt</div>
               </div>
-              <div class="cr-pers-check">✓</div>
+              <div class="cr-pers-check">âœ“</div>
             </div>
             <div class="cr-pers" data-persona="Clinical">
-              <div class="cr-pers-g">◍</div>
+              <div class="cr-pers-g">â—</div>
               <div>
                 <div class="cr-pers-n">Clinical</div>
                 <div class="cr-pers-s">Cite biology, numbers, sources</div>
               </div>
-              <div class="cr-pers-check">✓</div>
+              <div class="cr-pers-check">âœ“</div>
             </div>
           </div>
         </div>
@@ -328,23 +328,23 @@ const miraMemory = [
         <div class="cr-card cr-dark">
           <div class="cr-h"><span class="cr-pip lime"></span>QUICK TOOLS</div>
           <div class="cr-tools">
-            <button class="cr-tool" data-msg={`I'm on Day ${currentDay}. Plan tomorrow's meals for me — 3 meals, keto-compliant.`}>
-              <div class="cr-tool-g">◇</div>
+            <button class="cr-tool" data-msg={`I'm on Day ${currentDay}. Plan tomorrow's meals for me â€” 3 meals, keto-compliant.`}>
+              <div class="cr-tool-g">â—‡</div>
               <div class="cr-tool-l">Plan tomorrow</div>
               <div class="cr-tool-s">3 meals from your goals</div>
             </button>
             <button class="cr-tool" data-msg={`I have ${Math.max(0, (macroGoals?.daily_calories || 1800) - Math.round(consumed.cal))} kcal left today. What should I eat for dinner to hit my macros?`}>
-              <div class="cr-tool-g">◔</div>
+              <div class="cr-tool-g">â—”</div>
               <div class="cr-tool-l">Macro autopilot</div>
               <div class="cr-tool-s">Reverse-fit to dinner</div>
             </button>
             <button class="cr-tool" data-msg={`Recap the last week of my journey. What patterns do you see? What should I fix?`}>
-              <div class="cr-tool-g">◎</div>
+              <div class="cr-tool-g">â—Ž</div>
               <div class="cr-tool-l">Read my week</div>
               <div class="cr-tool-s">Pattern recap & notes</div>
             </button>
             <button class="cr-tool" data-msg={`Give me the single most important keto tip for Day ${currentDay} of a 90-day journey.`}>
-              <div class="cr-tool-g">✦</div>
+              <div class="cr-tool-g">âœ¦</div>
               <div class="cr-tool-l">Day {currentDay} tip</div>
               <div class="cr-tool-s">Best tip for right now</div>
             </button>
@@ -357,7 +357,7 @@ const miraMemory = [
           <div class="cr-nudge">
             <div class="cr-nudge-l">
               <div class="cr-nudge-h">Morning brief</div>
-              <div class="cr-nudge-s">Daily · 8:00 AM</div>
+              <div class="cr-nudge-s">Daily Â· 8:00 AM</div>
             </div>
             <div class="cr-switch on" data-nudge="morning"></div>
           </div>
@@ -371,7 +371,7 @@ const miraMemory = [
           <div class="cr-nudge" style="margin-top:.75rem">
             <div class="cr-nudge-l">
               <div class="cr-nudge-h">Quiet hours</div>
-              <div class="cr-nudge-s">10pm → 7am · No nudges</div>
+              <div class="cr-nudge-s">10pm â†’ 7am Â· No nudges</div>
             </div>
             <div class="cr-switch on" data-nudge="quiet"></div>
           </div>
@@ -380,58 +380,58 @@ const miraMemory = [
       </aside>
     </div>
 
-    <!-- ══ TOPICS ══ -->
+    <!-- â•â• TOPICS â•â• -->
     <div class="ct">
       <div class="ct-head">
         <h2>What do you want to <em>ask</em> today?</h2>
         <p>Click any topic to open a conversation with Mira.</p>
       </div>
       <div class="ct-grid">
-        <button class="ct-card rose" data-msg={`I'm on Day ${currentDay} and I haven't lost weight in 5 days — is this a real plateau?`}>
-          <div class="ct-cat"><div class="ct-g">◑</div>STUCK</div>
+        <button class="ct-card rose" data-msg={`I'm on Day ${currentDay} and I haven't lost weight in 5 days â€” is this a real plateau?`}>
+          <div class="ct-cat"><div class="ct-g">â—‘</div>STUCK</div>
           <div class="ct-t">I haven't lost weight in {Math.min(5, currentDay)} days.</div>
           <div class="ct-s">Plateaus before day 21 are almost always water. Mira will check yours.</div>
         </button>
-        <button class="ct-card lime" data-msg="I am craving bread right now — what should I do? What's actually missing?">
-          <div class="ct-cat"><div class="ct-g">◇</div>CRAVING</div>
+        <button class="ct-card lime" data-msg="I am craving bread right now â€” what should I do? What's actually missing?">
+          <div class="ct-cat"><div class="ct-g">â—‡</div>CRAVING</div>
           <div class="ct-t">I want bread. Specifically right now.</div>
-          <div class="ct-s">We'll find what's actually missing — usually fat, salt, or sleep.</div>
+          <div class="ct-s">We'll find what's actually missing â€” usually fat, salt, or sleep.</div>
         </button>
-        <button class="ct-card orange" data-msg="I have dinner out tonight — plan my day backwards from there. Keep me in ketosis.">
-          <div class="ct-cat"><div class="ct-g">◎</div>PLANNING</div>
+        <button class="ct-card orange" data-msg="I have dinner out tonight â€” plan my day backwards from there. Keep me in ketosis.">
+          <div class="ct-cat"><div class="ct-g">â—Ž</div>PLANNING</div>
           <div class="ct-t">Plan today around my dinner out.</div>
           <div class="ct-s">Reverse-fit the day. Save room for olive oil and a glass of red.</div>
         </button>
         <button class="ct-card rose" data-msg="Why am I crashing at 3pm every day this week? What's causing it on keto?">
-          <div class="ct-cat"><div class="ct-g">◔</div>ENERGY</div>
+          <div class="ct-cat"><div class="ct-g">â—”</div>ENERGY</div>
           <div class="ct-t">Why am I tired at 3pm?</div>
           <div class="ct-s">Likely sodium. Possibly protein timing. Definitely not motivation.</div>
         </button>
-        <button class="ct-card lime" data-msg={`Give me a full progress review for Day ${currentDay} of my keto journey — honest assessment with specific things to improve.`}>
-          <div class="ct-cat"><div class="ct-g">◬</div>REVIEW</div>
+        <button class="ct-card lime" data-msg={`Give me a full progress review for Day ${currentDay} of my keto journey â€” honest assessment with specific things to improve.`}>
+          <div class="ct-cat"><div class="ct-g">â—¬</div>REVIEW</div>
           <div class="ct-t">Give me a full progress review.</div>
           <div class="ct-s">An honest read on where you are and what to change.</div>
         </button>
-        <button class="ct-card orange" data-msg="My morning ketones dropped overnight — what changed? What should I do?">
-          <div class="ct-cat"><div class="ct-g">◯</div>BODY</div>
+        <button class="ct-card orange" data-msg="My morning ketones dropped overnight â€” what changed? What should I do?">
+          <div class="ct-cat"><div class="ct-g">â—¯</div>BODY</div>
           <div class="ct-t">My ketones dropped overnight.</div>
           <div class="ct-s">We'll look at protein, salt, and your last 14 hours.</div>
         </button>
       </div>
     </div>
 
-    <!-- ══ SESSIONS ══ -->
+    <!-- â•â• SESSIONS â•â• -->
     {historyDates.length > 0 && (
       <div class="cs">
         <div class="cs-col-h">
           <h3>Conversations <em>so far</em>.</h3>
-          <div class="cs-meta">{sessionsCount} messages · Day 1 → today</div>
+          <div class="cs-meta">{sessionsCount} messages Â· Day 1 â†’ today</div>
         </div>
         <div class="cs-list">
           {historyDates.map(d => {
             const label = new Date(d.date + 'T12:00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' });
             const firstUser = d.msgs.find((m) => (m as any).role === 'user');
-            const preview = firstUser ? String((firstUser as any).content).slice(0, 80) + (String((firstUser as any).content).length > 80 ? '…' : '') : '';
+            const preview = firstUser ? String((firstUser as any).content).slice(0, 80) + (String((firstUser as any).content).length > 80 ? 'â€¦' : '') : '';
             const userMsgs = d.msgs.filter((m) => (m as any).role === 'user').length;
             return (
               <div class="cs-row" onclick={`window.scrollToDate('${d.date}')`}>
@@ -439,7 +439,7 @@ const miraMemory = [
                 <div class="cs-mid">
                   <div class="cs-preview">{preview || 'Session started'}</div>
                 </div>
-                <div class="cs-arr">→</div>
+                <div class="cs-arr">â†’</div>
               </div>
             );
           })}
@@ -487,7 +487,7 @@ const miraMemory = [
   .rv-pg-main  { overflow-y: auto; min-height: 100vh; }
   @media (max-width: 900px) { .rv-pg-shell { grid-template-columns: 1fr; } }
 
-  /* ══ BRIEF / HERO ══ */
+  /* â•â• BRIEF / HERO â•â• */
   .cb { position: relative; background: var(--ink); color: var(--bg); overflow: hidden; }
   .cb-glow {
     position: absolute; width: 720px; height: 720px; border-radius: 50%;
@@ -551,7 +551,7 @@ const miraMemory = [
   .ccc-v em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent-2); font-size: 13px; margin-left: 4px; }
   .ccc-sub { font-family: var(--serif); font-style: italic; font-size: 12px; color: rgba(250,246,241,.5); }
   .cb-cc.live .ccc-l { color: var(--accent-2); }
-  .cb-cc.live .ccc-l::before { content: '● '; }
+  .cb-cc.live .ccc-l::before { content: 'â— '; }
 
   @media (max-width: 1100px) {
     .cb-inner { padding: 28px 18px 0; }
@@ -564,13 +564,13 @@ const miraMemory = [
     .cb-cc:nth-child(n+3) { display: none; }
   }
 
-  /* ══ BODY ══ */
+  /* â•â• BODY â•â• */
   .ac-body { max-width: 1320px; margin: 0 auto; padding: 32px 32px 80px; }
   .ac-layout { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 22px; align-items: start; }
   @media (max-width: 1100px) { .ac-layout { grid-template-columns: 1fr; } }
   @media (max-width: 640px)  { .ac-body   { padding: 20px 14px 60px; } }
 
-  /* ══ CHAT ══ */
+  /* â•â• CHAT â•â• */
   .ch-wrap {
     background: var(--card); border: 1px solid var(--line);
     border-radius: 28px; display: flex; flex-direction: column;
@@ -715,7 +715,7 @@ const miraMemory = [
   @keyframes msgIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
   .ch-row { animation: msgIn .22s ease both; }
 
-  /* ══ RAIL ══ */
+  /* â•â• RAIL â•â• */
   .ac-rail { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 24px; }
   @media (max-width: 1100px) { .ac-rail { position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; } }
   @media (max-width: 640px)  { .ac-rail { grid-template-columns: 1fr; } }
@@ -774,7 +774,7 @@ const miraMemory = [
   .cr-switch.on { background: var(--accent); }
   .cr-switch.on::after { left: 20px; }
 
-  /* ══ TOPICS ══ */
+  /* â•â• TOPICS â•â• */
   .ct { margin-top: 48px; }
   .ct-head { display: flex; align-items: end; gap: 24px; margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
   .ct-head h2 { font-family: var(--display); font-size: clamp(24px, 3vw, 40px); font-weight: 600; letter-spacing: -.035em; line-height: 1; }
@@ -790,7 +790,7 @@ const miraMemory = [
     position: relative; min-height: 200px; overflow: hidden;
   }
   .ct-card:hover { transform: translateY(-2px); border-color: var(--ink); }
-  .ct-card::after { content: '→'; position: absolute; top: 22px; right: 22px; font-size: 18px; color: var(--muted); transition: all .2s; }
+  .ct-card::after { content: 'â†’'; position: absolute; top: 22px; right: 22px; font-size: 18px; color: var(--muted); transition: all .2s; }
   .ct-card:hover::after { color: var(--accent); transform: translate(4px,-2px); }
   .ct-cat { font-family: var(--mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 8px; }
   .ct-g { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; font-size: 13px; }
@@ -800,7 +800,7 @@ const miraMemory = [
   .ct-t { font-family: var(--display); font-size: 20px; font-weight: 600; line-height: 1.1; letter-spacing: -.025em; }
   .ct-s { font-family: var(--serif); font-style: italic; font-size: 13.5px; color: var(--ink-soft); line-height: 1.45; margin-top: auto; }
 
-  /* ══ SESSIONS ══ */
+  /* â•â• SESSIONS â•â• */
   .cs { margin-top: 56px; padding-top: 32px; border-top: 1px solid var(--line); }
   .cs-col-h { display: flex; align-items: end; gap: 16px; margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
   .cs-col-h h3 { font-family: var(--display); font-size: 28px; font-weight: 600; letter-spacing: -.035em; line-height: 1; }
@@ -822,7 +822,7 @@ const miraMemory = [
 
 <script is:inline define:vars={{ userName, currentDay, streak, totalXp, level, weightLost: weightLost }}>
 (function() {
-  // ── Markdown renderer ─────────────────────────────────────
+  // â”€â”€ Markdown renderer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function md(raw) {
     if (!raw) return '';
     var s = raw, codeBlocks = [], inlineCodes = [];
@@ -834,7 +834,7 @@ const miraMemory = [
     s = s.replace(/^### (.+)$/gm, '<div class="ai-h3">$1</div>');
     s = s.replace(/^## (.+)$/gm,  '<div class="ai-h2">$1</div>');
     s = s.replace(/^(\d+)\. (.+)$/gm, '<div class="ai-li-num"><span class="ai-num">$1.</span> $2</div>');
-    s = s.replace(/^[-*•] (.+)$/gm, '<div class="ai-li">$1</div>');
+    s = s.replace(/^[-*â€¢] (.+)$/gm, '<div class="ai-li">$1</div>');
     s = s.replace(/\n\n/g, '<br><br>'); s = s.replace(/\n/g, '<br>');
     codeBlocks.forEach(function(c,i) { s = s.replace('\x00CB'+i+'\x00', '<pre><code>'+c+'</code></pre>'); });
     inlineCodes.forEach(function(c,i) { s = s.replace('\x00IC'+i+'\x00', '<code>'+c+'</code>'); });
@@ -848,7 +848,7 @@ const miraMemory = [
     el.removeAttribute('data-raw');
   });
 
-  // ── State ─────────────────────────────────────────────────
+  // â”€â”€ State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var msgs      = document.getElementById('aiMessages');
   var input     = document.getElementById('aiInput');
   var sendBtn   = document.getElementById('aiSend');
@@ -867,7 +867,7 @@ const miraMemory = [
 
   scrollBottom();
 
-  // ── Persona picker ────────────────────────────────────────
+  // â”€â”€ Persona picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var picker = document.getElementById('personaPicker');
   if (picker) {
     picker.addEventListener('click', function(e) {
@@ -878,21 +878,21 @@ const miraMemory = [
     });
   }
 
-  // ── Deep think toggle ─────────────────────────────────────
+  // â”€â”€ Deep think toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (deepBtn) {
     deepBtn.addEventListener('click', function() {
       deepThink = !deepThink;
       deepBtn.classList.toggle('on', deepThink);
-      if (deepBox) deepBox.textContent = deepThink ? '✓' : '';
+      if (deepBox) deepBox.textContent = deepThink ? 'âœ“' : '';
     });
   }
 
-  // ── Nudge toggles ─────────────────────────────────────────
+  // â”€â”€ Nudge toggles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   document.querySelectorAll('.cr-switch').forEach(function(sw) {
     sw.addEventListener('click', function() { this.classList.toggle('on'); });
   });
 
-  // ── Topic / suggestion cards ──────────────────────────────
+  // â”€â”€ Topic / suggestion cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   document.addEventListener('click', function(e) {
     var el = e.target.closest('[data-msg]');
     if (el && input) {
@@ -901,7 +901,7 @@ const miraMemory = [
     }
   });
 
-  // ── Image handling ────────────────────────────────────────
+  // â”€â”€ Image handling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (imgInput) imgInput.addEventListener('change', function() {
     var file = this.files && this.files[0];
     if (!file) return;
@@ -921,20 +921,20 @@ const miraMemory = [
     imgPrev.classList.remove('show'); imgThumb.src = '';
   }
 
-  // ── Clear / new chat ──────────────────────────────────────
+  // â”€â”€ Clear / new chat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (clearBtn) clearBtn.addEventListener('click', function() {
     if (!confirm('Start a new conversation? This will clear the current chat.')) return;
     fetch('/api/chat/history', { method: 'DELETE' }).then(function() {
       msgs.innerHTML = '';
       var w = document.createElement('div');
       w.className = 'ch-row coach';
-      w.innerHTML = '<div class="ch-ava">✦</div><div class="ch-bubble-wrap"><div class="ch-bubble"><strong>Fresh start!</strong> Ask me anything, ' + escHtml(userName) + '.</div><div class="ch-meta">Just now · Mira</div></div>';
+      w.innerHTML = '<div class="ch-ava">âœ¦</div><div class="ch-bubble-wrap"><div class="ch-bubble"><strong>Fresh start!</strong> Ask me anything, ' + escHtml(userName) + '.</div><div class="ch-meta">Just now Â· Mira</div></div>';
       msgs.appendChild(w);
       scrollBottom();
     });
   });
 
-  // ── Send ──────────────────────────────────────────────────
+  // â”€â”€ Send â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (sendBtn) sendBtn.addEventListener('click', sendMsg);
   if (input) input.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
@@ -948,7 +948,7 @@ const miraMemory = [
     isLoading = true; sendBtn.disabled = true;
 
     if (pendingImg) {
-      addBubble('<img src="data:' + pendingImg.type + ';base64,' + pendingImg.base64 + '" style="max-width:200px;border-radius:10px;margin-bottom:.3rem;display:block"/>' + (text ? escHtml(text) : '📸 Image sent'), 'user');
+      addBubble('<img src="data:' + pendingImg.type + ';base64,' + pendingImg.base64 + '" style="max-width:200px;border-radius:10px;margin-bottom:.3rem;display:block"/>' + (text ? escHtml(text) : 'ðŸ“¸ Image sent'), 'user');
     } else {
       addBubble(escHtml(text), 'user');
     }
@@ -964,14 +964,14 @@ const miraMemory = [
       typing.remove();
       var data = await res.json();
       if (!res.ok || data.error) {
-        addBubble('❌ ' + (data.error || 'Something went wrong. Please try again.'), 'coach');
+        addBubble('âŒ ' + (data.error || 'Something went wrong. Please try again.'), 'coach');
       } else {
         var row = addBubble('', 'coach');
         row.querySelector('.ch-bubble').innerHTML = md(data.reply);
       }
     } catch (err) {
       typing.remove();
-      addBubble('❌ Connection error. Please check your network and try again.', 'coach');
+      addBubble('âŒ Connection error. Please check your network and try again.', 'coach');
     }
 
     clearImage();
@@ -984,7 +984,7 @@ const miraMemory = [
     row.className = 'ch-row ' + role;
     if (role === 'coach') {
       var ava = document.createElement('div');
-      ava.className = 'ch-ava'; ava.textContent = '✦';
+      ava.className = 'ch-ava'; ava.textContent = 'âœ¦';
       row.appendChild(ava);
     }
     var wrap = document.createElement('div'); wrap.className = 'ch-bubble-wrap';
@@ -1001,7 +1001,7 @@ const miraMemory = [
 
   function addTyping() {
     var row = document.createElement('div'); row.className = 'ch-row coach';
-    row.innerHTML = '<div class="ch-ava">✦</div><div class="ch-bubble-wrap"><div class="ch-thinking"><span class="ch-pulse"><span></span><span></span><span></span></span>Mira is reading your day…</div></div>';
+    row.innerHTML = '<div class="ch-ava">âœ¦</div><div class="ch-bubble-wrap"><div class="ch-thinking"><span class="ch-pulse"><span></span><span></span><span></span></span>Mira is reading your dayâ€¦</div></div>';
     msgs.appendChild(row); scrollBottom();
     return row;
   }
@@ -1019,3 +1019,4 @@ const miraMemory = [
 </script>
 </body>
 </html>
+

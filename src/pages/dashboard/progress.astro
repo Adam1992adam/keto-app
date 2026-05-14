@@ -1,4 +1,4 @@
----
+﻿---
 import { getUserJourney, getMaxJourneyDays, getAchievements, kgToLbs, cmToInches } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import { generateInsights } from '../../lib/insights';
@@ -22,7 +22,7 @@ try {
 } catch (e) {
   console.error('[Progress] DB unavailable:', e);
   return new Response(
-    `<!DOCTYPE html><html><head><title>Temporarily Unavailable</title><meta http-equiv="refresh" content="15;url=/dashboard/progress"></head><body style="background:#FAF6F1;color:#16110F;font-family:'Bricolage Grotesque',system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:1.2rem;text-align:center;padding:2rem"><h2 style="font-size:1.6rem;margin:0;color:#FF5C7A">Keto Journey</h2><p style="font-size:1.1rem;margin:0">Progress page temporarily unavailable</p><p style="color:#8A8077;margin:0;font-size:.9rem">Retrying in 15 seconds…</p><a href="/dashboard/progress" style="color:#FF5C7A;font-size:.9rem;margin-top:.5rem">Retry now</a></body></html>`,
+    `<!DOCTYPE html><html><head><title>Temporarily Unavailable</title><meta http-equiv="refresh" content="15;url=/dashboard/progress"></head><body style="background:#FAF6F1;color:#16110F;font-family:'Bricolage Grotesque',system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:1.2rem;text-align:center;padding:2rem"><h2 style="font-size:1.6rem;margin:0;color:#FF5C7A">Keto Journey</h2><p style="font-size:1.1rem;margin:0">Progress page temporarily unavailable</p><p style="color:#8A8077;margin:0;font-size:.9rem">Retrying in 15 secondsâ€¦</p><a href="/dashboard/progress" style="color:#FF5C7A;font-size:.9rem;margin-top:.5rem">Retry now</a></body></html>`,
     { status: 503, headers: { 'Content-Type': 'text/html' } }
   );
 }
@@ -40,7 +40,7 @@ const xpPct       = Math.round((xpInLevel / 500) * 100);
 const journeyPct  = Math.min(100, Math.round((currentDay / maxDays) * 100));
 const userName    = profile.full_name?.split(' ')[0] || 'there';
 
-// ── Unit helpers ──────────────────────────────────────────────────────────────
+// â”€â”€ Unit helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const units  = profile.preferred_units || 'imperial';
 const wUnit  = units === 'imperial' ? 'lbs' : 'kg';
 const mUnit  = units === 'imperial' ? 'in'  : 'cm';
@@ -51,7 +51,7 @@ const toM    = (cm) => units === 'imperial' ? cmToInches(cm) : Math.round(cm * 1
 const fourteenAgo  = new Date(Date.now() - 13 * 86400000).toISOString().split('T')[0];
 const ninetyDaysAgo = new Date(Date.now() - 89 * 86400000).toISOString().split('T')[0];
 
-// ── PARALLEL batch: all 12 independent DB queries (graceful empty state on failure) ─────
+// â”€â”€ PARALLEL batch: all 12 independent DB queries (graceful empty state on failure) â”€â”€â”€â”€â”€
 let progressBatch = new Array(12).fill({ data: null });
 try {
   progressBatch = await Promise.all([
@@ -137,13 +137,13 @@ const weightGoalPct = targetWeight && startWeight > targetWeight
 // Stats
 const avgEnergy   = checkins?.length
   ? (checkins.reduce((s,c) => s + (c.energy_level||3), 0) / checkins.length).toFixed(1)
-  : '—';
+  : 'â€”';
 const mealAdherence = checkins?.length
   ? Math.round((checkins.filter(c => c.followed_meals).length / checkins.length) * 100)
   : 0;
 const avgWater = checkins?.length
   ? (checkins.reduce((s,c) => s + (c.water_glasses||0), 0) / checkins.length).toFixed(1)
-  : '—';
+  : 'â€”';
 
 // Body composition
 const bcWeight = latestWeight || profile.weight_kg || 0;
@@ -171,10 +171,10 @@ const bcGaugePct = bcBMI ? Math.min(100, Math.max(0, ((bcBMI - 15) / 25) * 100))
 const latestKetone = ketoneLogs?.[0] ?? null;
 const ketoneStatus = !latestKetone ? null
   : latestKetone.ketone_mmol < 0.5  ? { label: 'Not in ketosis', color: '#ef4444', tip: 'Keep carbs under 20g net to enter ketosis.' }
-  : latestKetone.ketone_mmol < 1.5  ? { label: 'Light ketosis', color: '#f59e0b', tip: 'You\'re in ketosis! Aim for 1.5–3.0 mmol/L for optimal fat burning.' }
-  : latestKetone.ketone_mmol < 3.0  ? { label: 'Optimal ketosis 🔥', color: '#FF5C7A', tip: 'Optimal range! This is where fat burning peaks.' }
-  : latestKetone.ketone_mmol < 5.0  ? { label: 'Deep ketosis', color: '#8b5cf6', tip: 'Deep ketosis — great for therapeutic or athletic use.' }
-  : { label: 'Very high — check health', color: '#ef4444', tip: 'Levels above 5 mmol/L should be discussed with a doctor.' };
+  : latestKetone.ketone_mmol < 1.5  ? { label: 'Light ketosis', color: '#f59e0b', tip: 'You\'re in ketosis! Aim for 1.5â€“3.0 mmol/L for optimal fat burning.' }
+  : latestKetone.ketone_mmol < 3.0  ? { label: 'Optimal ketosis ðŸ”¥', color: '#FF5C7A', tip: 'Optimal range! This is where fat burning peaks.' }
+  : latestKetone.ketone_mmol < 5.0  ? { label: 'Deep ketosis', color: '#8b5cf6', tip: 'Deep ketosis â€” great for therapeutic or athletic use.' }
+  : { label: 'Very high â€” check health', color: '#ef4444', tip: 'Levels above 5 mmol/L should be discussed with a doctor.' };
 
 // Weight SVG line chart (precomputed bezier path)
 const wMinRaw  = weightLogs?.length ? Math.min(...weightLogs.map(w => w.weight)) : 0;
@@ -238,7 +238,7 @@ const wDateLabels = wChartPts.length > 1
   ? [wChartPts[0], wChartPts[Math.floor((wChartPts.length - 1) / 2)], wChartPts[wChartPts.length - 1]]
   : wChartPts.slice(0, 1);
 
-// Hero stats — new set: current weight, goal, days active, checkins count
+// Hero stats â€” new set: current weight, goal, days active, checkins count
 const daysActive = journey.start_date
   ? Math.max(1, Math.floor((Date.now() - new Date(journey.start_date).getTime()) / 86400000) + 1)
   : currentDay;
@@ -248,7 +248,7 @@ const totalCheckins = checkins?.length
 const weightDeltaFromStart = latestWeight && startWeight ? Math.round((latestWeight - startWeight) * 10) / 10 : 0;
 const kgToGoal = targetWeight && latestWeight ? Math.round(Math.abs(latestWeight - targetWeight) * 10) / 10 : null;
 
-// ── Display values (converted based on preferred_units) ──────────────────────
+// â”€â”€ Display values (converted based on preferred_units) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const dispWeight       = latestWeight   ? toW(latestWeight)   : null;
 const dispStartWeight  = startWeight    ? toW(startWeight)    : null;
 const dispTargetWeight = targetWeight   ? toW(targetWeight)   : null;
@@ -265,7 +265,7 @@ const dispHeightStr    = bcHeight ? (() => {
     return `${Math.floor(totalIn / 12)}'${Math.round(totalIn % 12)}"`;
   }
   return `${Math.round(bcHeight)} cm`;
-})() : '—';
+})() : 'â€”';
 // Weight chart ticks in display unit
 const wTicksLbs = wTicks.map(t => ({ ...t, valLbs: toW(t.val) }));
 // Chart points with display unit labels for tooltips
@@ -275,7 +275,7 @@ const wChartPtsLbs = wChartPts.map(p => ({ ...p, weightLbs: toW(p.weight) }));
 const wRaw = (weightLogs || []).map(w => ({ w: w.weight, d: w.logged_date }));
 const wImperial = units === 'imperial';
 
-// Weight chart bars (kept for fallback reference — not used in new SVG chart)
+// Weight chart bars (kept for fallback reference â€” not used in new SVG chart)
 const weightChartBars = (weightLogs || []).map(w => ({
   weight:  w.weight,
   date:    new Date(w.logged_date).toLocaleDateString('en',{month:'short',day:'numeric'}),
@@ -350,13 +350,13 @@ const ketoneTrendBars = (ketoneLogs || []).slice(0,7).reverse().map(k => ({
 
 // Milestones
 const milestones = [
-  { day:1,  icon:'🚀', label:'Journey Started',      done: currentDay >= 1 },
-  { day:3,  icon:'💧', label:'3 Days Strong',         done: currentDay >= 3 },
-  { day:7,  icon:'🔥', label:'First Week Complete',   done: currentDay >= 7 },
-  { day:10, icon:'⚡', label:'Keto Adapted',          done: currentDay >= 10 },
-  { day:14, icon:'🏅', label:'2 Weeks Champion',      done: currentDay >= 14 },
-  { day:21, icon:'💪', label:'21-Day Habit Formed',   done: currentDay >= 21 },
-  { day:30, icon:'🏆', label:'30-Day Hero',           done: currentDay >= 30 },
+  { day:1,  icon:'ðŸš€', label:'Journey Started',      done: currentDay >= 1 },
+  { day:3,  icon:'ðŸ’§', label:'3 Days Strong',         done: currentDay >= 3 },
+  { day:7,  icon:'ðŸ”¥', label:'First Week Complete',   done: currentDay >= 7 },
+  { day:10, icon:'âš¡', label:'Keto Adapted',          done: currentDay >= 10 },
+  { day:14, icon:'ðŸ…', label:'2 Weeks Champion',      done: currentDay >= 14 },
+  { day:21, icon:'ðŸ’ª', label:'21-Day Habit Formed',   done: currentDay >= 21 },
+  { day:30, icon:'ðŸ†', label:'30-Day Hero',           done: currentDay >= 30 },
 ];
 
 const tier      = planType;
@@ -433,7 +433,7 @@ const goalPctDone       = (goalTotalToLose !== 0)
 const goalKgToGo        = Math.max(0, Math.round(Math.abs(goalCurrentWeight - goalWeight) * 10) / 10);
 const goalLostAbs       = Math.round(Math.abs(goalLost) * 10) / 10;
 
-// Milestone weights at 25 / 50 / 75 / 100 % — display in preferred unit
+// Milestone weights at 25 / 50 / 75 / 100 % â€” display in preferred unit
 const goalMs25Weight  = toW(Math.round((goalStartWeight - goalTotalToLose * 0.25) * 10) / 10);
 const goalMs50Weight  = toW(Math.round((goalStartWeight - goalTotalToLose * 0.50) * 10) / 10);
 const goalMs75Weight  = toW(Math.round((goalStartWeight - goalTotalToLose * 0.75) * 10) / 10);
@@ -449,7 +449,7 @@ const goalMs50Done  = goalPctDone >= 50;
 const goalMs75Done  = goalPctDone >= 75;
 const goalMs100Done = goalPctDone >= 100;
 
-// Progress bar gradient color: ramps red → gold → green as pct grows
+// Progress bar gradient color: ramps red â†’ gold â†’ green as pct grows
 const goalBarColor = goalPctDone >= 75
   ? 'linear-gradient(90deg,#ef4444,#f59e0b,#FF5C7A)'
   : goalPctDone >= 50
@@ -460,7 +460,7 @@ const goalBarColor = goalPctDone >= 75
 
 const goalHasTarget = goalWeight > 0 && goalStartWeight > 0 && goalTotalToLose !== 0;
 
-// ── Weight Projection Chart ───────────────────────────────────────────────────
+// â”€â”€ Weight Projection Chart â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const projHasData     = goalHasTarget && (weightLogs?.length || 0) >= 2;
 const projFirstLog    = weightLogs?.[0] || null;
 const projLastLog     = weightLogs?.[(weightLogs?.length || 0) - 1] || null;
@@ -534,7 +534,7 @@ const showProjection = projIsLosing && projHasData;
 
 // Pre-compute achievement display data to avoid const-in-map
 const achievementsDisplay = achievements.map(a => ({
-  icon:       a.icon || '🏅',
+  icon:       a.icon || 'ðŸ…',
   name:       a.achievement_name || a.name || '',
   desc:       a.description || a.desc || '',
   earnedDate: a.earned_at || a.created_at || '',
@@ -548,7 +548,7 @@ const initialPhotos = progressPhotos || [];
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{t('progress.title')} — Keto Journey</title>
+  <title>{t('progress.title')} â€” Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
@@ -607,7 +607,7 @@ const initialPhotos = progressPhotos || [];
       .ch{padding:.9rem 1rem;}
       /* iOS Safari input zoom prevention */
       input[type="number"],input[type="date"],input[type="text"],textarea,select{font-size:16px!important;min-height:44px;}
-      /* Measurement grid → 2 cols on small screens */
+      /* Measurement grid â†’ 2 cols on small screens */
       .meas-grid,[style*="grid-template-columns:repeat(3"]{grid-template-columns:1fr 1fr!important;}
     }
     /* CARD */
@@ -744,39 +744,39 @@ const initialPhotos = progressPhotos || [];
 <div id="calTip" class="cal-tip"></div>
 
 <div class="rv-pg-shell">
-<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="progress" />
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="progress" />
 <div class="rv-pg-main">
 <div class="page">
 
   <!-- HEADER -->
   <div class="pg-header">
-    <div class="pg-eyebrow">📈 Progress Tracker</div>
+    <div class="pg-eyebrow">ðŸ“ˆ Progress Tracker</div>
     <h1 class="pg-title">Your Journey, <em>{userName}</em></h1>
-    <p class="pg-sub">Day {currentDay} of 30 · {planLabel} · Tracking your transformation in real time</p>
+    <p class="pg-sub">Day {currentDay} of 30 Â· {planLabel} Â· Tracking your transformation in real time</p>
   </div>
 
   <!-- HERO STATS -->
   <div class="hero-stats">
     <div class="hstat g" style="animation-delay:.04s;">
-      <div class="hstat-icon">⚖️</div>
-      <div class="hstat-val" style="color:var(--green);">{dispWeightLost > 0 ? `-${dispWeightLost}` : '—'}</div>
+      <div class="hstat-icon">âš–ï¸</div>
+      <div class="hstat-val" style="color:var(--green);">{dispWeightLost > 0 ? `-${dispWeightLost}` : 'â€”'}</div>
       <div class="hstat-lbl">{wUnit} Lost</div>
       <div class="hstat-sub" style="background:rgba(255,92,122,.1);color:var(--green);">{weightGoalPct}% of goal</div>
     </div>
     <div class="hstat gold" style="animation-delay:.08s;">
-      <div class="hstat-icon">🔥</div>
+      <div class="hstat-icon">ðŸ”¥</div>
       <div class="hstat-val" style="color:var(--gold);">{streakDays}</div>
       <div class="hstat-lbl">Day Streak</div>
       <div class="hstat-sub" style="background:rgba(245,158,11,.1);color:var(--gold);">Best: {longestStreak}d</div>
     </div>
     <div class="hstat blue" style="animation-delay:.12s;">
-      <div class="hstat-icon">⭐</div>
+      <div class="hstat-icon">â­</div>
       <div class="hstat-val" style="color:var(--purple);">Lv.{xpLevel}</div>
       <div class="hstat-lbl">{totalXP.toLocaleString()} XP</div>
       <div class="hstat-sub" style="background:rgba(139,92,246,.1);color:var(--purple);">{xpInLevel}/500 to next</div>
     </div>
     <div class="hstat purple" style="animation-delay:.16s;">
-      <div class="hstat-icon">✅</div>
+      <div class="hstat-icon">âœ…</div>
       <div class="hstat-val" style="color:var(--cyan);">{totalCompletedTasks}</div>
       <div class="hstat-lbl">Tasks Done</div>
       <div class="hstat-sub" style="background:rgba(6,182,212,.1);color:var(--cyan);">{perfectDays} perfect days</div>
@@ -791,7 +791,7 @@ const initialPhotos = progressPhotos || [];
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:inline;vertical-align:-1px;margin-right:.3rem"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           Smart Insights
         </span>
-        <button onclick="document.getElementById('insightsCard').style.display='none'" style="background:none;border:none;color:var(--soft);font-size:1.1rem;cursor:pointer;padding:.1rem .3rem;border-radius:6px;">×</button>
+        <button onclick="document.getElementById('insightsCard').style.display='none'" style="background:none;border:none;color:var(--soft);font-size:1.1rem;cursor:pointer;padding:.1rem .3rem;border-radius:6px;">Ã—</button>
       </div>
       <div style="display:flex;flex-direction:column;gap:.6rem;">
         {smartInsights.map((ins: any) => (
@@ -800,7 +800,7 @@ const initialPhotos = progressPhotos || [];
             <div>
               <div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:.15rem;">{ins.title}</div>
               <div style="font-size:.77rem;color:var(--soft);line-height:1.55;">{ins.body}</div>
-              {ins.action && <a href={ins.action.url} style="font-size:.73rem;font-weight:700;color:var(--rv-accent);text-decoration:none;margin-top:.2rem;display:inline-block;">{ins.action.label} →</a>}
+              {ins.action && <a href={ins.action.url} style="font-size:.73rem;font-weight:700;color:var(--rv-accent);text-decoration:none;margin-top:.2rem;display:inline-block;">{ins.action.label} â†’</a>}
             </div>
           </div>
         ))}
@@ -812,10 +812,10 @@ const initialPhotos = progressPhotos || [];
   {goalHasTarget && (
     <div class="card" style="animation-delay:.2s;margin-bottom:1.75rem;">
       <div class="ch">
-        <div class="ch-ic" style="background:linear-gradient(135deg,#ef4444,#f59e0b,#FF5C7A);box-shadow:0 4px 10px rgba(255,92,122,.2);">🎯</div>
+        <div class="ch-ic" style="background:linear-gradient(135deg,#ef4444,#f59e0b,#FF5C7A);box-shadow:0 4px 10px rgba(255,92,122,.2);">ðŸŽ¯</div>
         <div style="flex:1;">
           <div class="ch-tt">Goal Timeline</div>
-          <div class="ch-sub">{goalStartLbs} {wUnit} → {goalWeightLbs} {wUnit} · {goalPctDone}% complete</div>
+          <div class="ch-sub">{goalStartLbs} {wUnit} â†’ {goalWeightLbs} {wUnit} Â· {goalPctDone}% complete</div>
         </div>
         <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;font-weight:800;color:var(--rv-accent);">{goalPctDone}%</div>
       </div>
@@ -831,30 +831,30 @@ const initialPhotos = progressPhotos || [];
 
           <!-- 25% -->
           <div class="gm">
-            <div class="gm-icon">{goalMs25Done ? '✅' : '⬜'}</div>
+            <div class="gm-icon">{goalMs25Done ? 'âœ…' : 'â¬œ'}</div>
             <div class={`gm-weight ${goalMs25Done ? 'done' : ''}`}>{goalMs25Weight} {wUnit}</div>
             <div class={`gm-label ${goalMs25Done ? 'done' : ''}`}>25% goal</div>
           </div>
 
           <!-- 50% -->
           <div class="gm">
-            <div class="gm-icon">{goalMs50Done ? '✅' : '⬜'}</div>
+            <div class="gm-icon">{goalMs50Done ? 'âœ…' : 'â¬œ'}</div>
             <div class={`gm-weight ${goalMs50Done ? 'done' : ''}`}>{goalMs50Weight} {wUnit}</div>
             <div class={`gm-label ${goalMs50Done ? 'done' : ''}`}>Halfway!</div>
           </div>
 
           <!-- 75% -->
           <div class="gm">
-            <div class="gm-icon">{goalMs75Done ? '✅' : '⬜'}</div>
+            <div class="gm-icon">{goalMs75Done ? 'âœ…' : 'â¬œ'}</div>
             <div class={`gm-weight ${goalMs75Done ? 'done' : ''}`}>{goalMs75Weight} {wUnit}</div>
             <div class={`gm-label ${goalMs75Done ? 'done' : ''}`}>75% there</div>
           </div>
 
           <!-- 100% -->
           <div class="gm">
-            <div class="gm-icon">{goalMs100Done ? '✅' : '⬜'}</div>
+            <div class="gm-icon">{goalMs100Done ? 'âœ…' : 'â¬œ'}</div>
             <div class={`gm-weight ${goalMs100Done ? 'done' : ''}`}>{goalMs100Weight} {wUnit}</div>
-            <div class={`gm-label ${goalMs100Done ? 'done' : ''}`}>Goal! 🎉</div>
+            <div class={`gm-label ${goalMs100Done ? 'done' : ''}`}>Goal! ðŸŽ‰</div>
           </div>
 
         </div>
@@ -874,20 +874,20 @@ const initialPhotos = progressPhotos || [];
   {showProjection && (
     <div class="card" style="animation-delay:.22s;margin-bottom:1.75rem;">
       <div class="ch">
-        <div class="ch-ic" style="background:linear-gradient(135deg,#FF5C7A,#f59e0b);box-shadow:0 4px 10px rgba(245,158,11,.18);">📈</div>
+        <div class="ch-ic" style="background:linear-gradient(135deg,#FF5C7A,#f59e0b);box-shadow:0 4px 10px rgba(245,158,11,.18);">ðŸ“ˆ</div>
         <div style="flex:1;">
           <div class="ch-tt">Weight Projection</div>
-          <div class="ch-sub">Trajectory to goal · {projRateWeekDisp} {wUnit}/week loss</div>
+          <div class="ch-sub">Trajectory to goal Â· {projRateWeekDisp} {wUnit}/week loss</div>
         </div>
         {projWeeksLeft && <div style="font-size:.72rem;font-weight:800;color:var(--gold);white-space:nowrap;">~{projWeeksLeft}w left</div>}
       </div>
       <div class="cb">
         {projGoalDateStr && (
           <div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.18);border-radius:12px;padding:.7rem 1rem;margin-bottom:1.1rem;display:flex;align-items:center;gap:.75rem;">
-            <span style="font-size:1.3rem;">🎯</span>
+            <span style="font-size:1.3rem;">ðŸŽ¯</span>
             <div>
               <div style="font-size:.8rem;font-weight:800;color:var(--gold);">Estimated goal date: {projGoalDateStr}</div>
-              <div style="font-size:.72rem;color:var(--soft);margin-top:.1rem;">At {projRateWeekDisp} {wUnit}/week · {projWeeksLeft} weeks away · Goal: {projGoalDisp} {wUnit}</div>
+              <div style="font-size:.72rem;color:var(--soft);margin-top:.1rem;">At {projRateWeekDisp} {wUnit}/week Â· {projWeeksLeft} weeks away Â· Goal: {projGoalDisp} {wUnit}</div>
             </div>
           </div>
         )}
@@ -924,12 +924,12 @@ const initialPhotos = progressPhotos || [];
           )}
           {projHistPts.map(p => (
             <circle cx={p.x} cy={p.y} r="3.5" fill="#FF5C7A" stroke="#B6FF3C" stroke-width="1.5">
-              <title>{p.weightDisp} {wUnit} — {p.date}</title>
+              <title>{p.weightDisp} {wUnit} â€” {p.date}</title>
             </circle>
           ))}
           {projGoalDateMs && (
             <circle cx={projGoalSvgX} cy={projGoalSvgY} r="5" fill="#f59e0b" stroke="#fbbf24" stroke-width="1.5" opacity="0.9">
-              <title>Goal: {projGoalDisp} {wUnit} — {projGoalDateStr}</title>
+              <title>Goal: {projGoalDisp} {wUnit} â€” {projGoalDateStr}</title>
             </circle>
           )}
           <text x={PROJ_PL} y={PROJ_H - PROJ_PB + 28} text-anchor="middle" font-size="9" fill="var(--soft)">{projXLabel1}</text>
@@ -950,7 +950,7 @@ const initialPhotos = progressPhotos || [];
       <!-- JOURNEY PROGRESS -->
       <div class="card" style="animation-delay:.05s;">
         <div class="ch">
-          <div class="ch-ic" style="background:linear-gradient(135deg,#FF5C7A,#E0394F);box-shadow:0 4px 10px rgba(255,92,122,.2);">📅</div>
+          <div class="ch-ic" style="background:linear-gradient(135deg,#FF5C7A,#E0394F);box-shadow:0 4px 10px rgba(255,92,122,.2);">ðŸ“…</div>
           <div style="flex:1;"><div class="ch-tt">Journey Progress</div><div class="ch-sub">Day {currentDay} of 30</div></div>
         </div>
         <div class="cb">
@@ -965,7 +965,7 @@ const initialPhotos = progressPhotos || [];
           </div>
           <div class="prog">
             <div class="prog-hd">
-              <span class="prog-lbl">Level {xpLevel} → {xpLevel+1}</span>
+              <span class="prog-lbl">Level {xpLevel} â†’ {xpLevel+1}</span>
               <span class="prog-val" style="color:var(--purple);">{xpPct}%</span>
             </div>
             <div class="prog-trk">
@@ -989,7 +989,7 @@ const initialPhotos = progressPhotos || [];
       <!-- WEIGHT CHART -->
       <div class="card" style="animation-delay:.1s;">
         <div class="ch">
-          <div class="ch-ic" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(59,130,246,.2);">⚖️</div>
+          <div class="ch-ic" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(59,130,246,.2);">âš–ï¸</div>
           <div style="flex:1;"><div class="ch-tt">{t('progress.weight')} History</div><div id="weightChartCount" class="ch-sub">{wChartPts.length} measurements logged</div></div>
           <div style="display:flex;align-items:center;gap:.4rem;">
             <button class="w-range-btn" data-days="30" onclick="setWRange(30,this)" style="font-size:.68rem;font-weight:800;padding:.25rem .55rem;border-radius:6px;border:none;cursor:pointer;background:rgba(255,92,122,.12);color:#FF5C7A;transition:all .2s;">30d</button>
@@ -1047,7 +1047,7 @@ const initialPhotos = progressPhotos || [];
                     fill={p.isLatest ? '#FF5C7A' : '#3b82f6'}
                     stroke={p.isLatest ? '#B6FF3C' : '#60a5fa'}
                     stroke-width="1.5">
-                    <title>{p.weightLbs} {wUnit} — {p.date}</title>
+                    <title>{p.weightLbs} {wUnit} â€” {p.date}</title>
                   </circle>
                 ))}
                 {wDateLabels.map(p => (
@@ -1057,7 +1057,7 @@ const initialPhotos = progressPhotos || [];
             </>
           ) : (
             <div style="text-align:center;padding:2rem;color:var(--soft);">
-              <div style="font-size:2.5rem;margin-bottom:.75rem;">⚖️</div>
+              <div style="font-size:2.5rem;margin-bottom:.75rem;">âš–ï¸</div>
               <div style="font-weight:700;margin-bottom:.3rem;">No weight logs yet</div>
               <div style="font-size:.78rem;">Log your first weight to start tracking progress</div>
               <button id="openWeightModalEmpty" style="display:inline-block;margin-top:1rem;padding:.6rem 1.4rem;background:var(--rv-ink);color:var(--rv-bg);border-radius:10px;font-weight:800;font-size:.8rem;border:none;cursor:pointer;">+ {t('progress.log_weight')}</button>
@@ -1069,7 +1069,7 @@ const initialPhotos = progressPhotos || [];
       <!-- ACTIVITY HEATMAP CALENDAR -->
       <div class="card" style="animation-delay:.12s;">
         <div class="ch">
-          <div class="ch-ic" style="background:linear-gradient(135deg,#FF5C7A,#E0394F);box-shadow:0 4px 10px rgba(255,92,122,.2);">📆</div>
+          <div class="ch-ic" style="background:linear-gradient(135deg,#FF5C7A,#E0394F);box-shadow:0 4px 10px rgba(255,92,122,.2);">ðŸ“†</div>
           <div style="flex:1;"><div class="ch-tt">Activity Calendar</div><div class="ch-sub">90-day check-in history</div></div>
           <div style="font-size:.72rem;font-weight:800;color:var(--green);">{Object.keys(checkinMap).length} days logged</div>
         </div>
@@ -1085,7 +1085,7 @@ const initialPhotos = progressPhotos || [];
                   );
                 })}
               </div>
-              <!-- Columns (each col = one week, rows = days Sun–Sat) -->
+              <!-- Columns (each col = one week, rows = days Sunâ€“Sat) -->
               <div class="cal-cols">
                 {Array.from({ length: calNumCols }, (_, ci) => (
                   <div class="cal-col">
@@ -1094,10 +1094,10 @@ const initialPhotos = progressPhotos || [];
                       const sq = calDays[idx];
                       const tipText = sq
                         ? (sq.isFuture
-                          ? sq.date + ' · future'
+                          ? sq.date + ' Â· future'
                           : sq.hasCheckin
-                          ? sq.date + ' · Energy: ' + sq.energy + '/5'
-                          : sq.date + ' · no check-in')
+                          ? sq.date + ' Â· Energy: ' + sq.energy + '/5'
+                          : sq.date + ' Â· no check-in')
                         : '';
                       return sq ? (
                         <div
@@ -1117,7 +1117,7 @@ const initialPhotos = progressPhotos || [];
           <!-- Legend -->
           <div class="cal-legend">
             <span class="cal-legend-sq cal-none"></span><span class="cal-legend-lbl">None</span>
-            <span class="cal-legend-sq cal-12"></span><span class="cal-legend-lbl">Low (1–2)</span>
+            <span class="cal-legend-sq cal-12"></span><span class="cal-legend-lbl">Low (1â€“2)</span>
             <span class="cal-legend-sq cal-3"></span><span class="cal-legend-lbl">OK (3)</span>
             <span class="cal-legend-sq cal-4"></span><span class="cal-legend-lbl">Good (4)</span>
             <span class="cal-legend-sq cal-5"></span><span class="cal-legend-lbl">Great (5)</span>
@@ -1129,7 +1129,7 @@ const initialPhotos = progressPhotos || [];
       {energyChart.length > 0 && (
         <div class="card" style="animation-delay:.15s;">
           <div class="ch">
-            <div class="ch-ic" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.2);">⚡</div>
+            <div class="ch-ic" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.2);">âš¡</div>
             <div style="flex:1;"><div class="ch-tt">Energy & Compliance</div><div class="ch-sub">Last 7 days</div></div>
           </div>
           <div class="cb">
@@ -1150,15 +1150,15 @@ const initialPhotos = progressPhotos || [];
             <div class="echart">
               {energyChart.map(d => (
                 <div class="ebar-wrap">
-                  <div class="ebar" style={`height:${d.pct}%;background:${d.energy >= 4 ? 'linear-gradient(to top,#FF5C7A,#B6FF3C)' : d.energy >= 2 ? 'linear-gradient(to top,#f59e0b,#fbbf24)' : 'linear-gradient(to top,#ef4444,#f87171)'};`} title={`Energy ${d.energy}/5 · ${d.water} glasses`}></div>
+                  <div class="ebar" style={`height:${d.pct}%;background:${d.energy >= 4 ? 'linear-gradient(to top,#FF5C7A,#B6FF3C)' : d.energy >= 2 ? 'linear-gradient(to top,#f59e0b,#fbbf24)' : 'linear-gradient(to top,#ef4444,#f87171)'};`} title={`Energy ${d.energy}/5 Â· ${d.water} glasses`}></div>
                   <div class="ebar-day">{d.day}</div>
                 </div>
               ))}
             </div>
             <div style="display:flex;gap:1rem;font-size:.68rem;color:var(--soft);justify-content:center;">
-              <span><span style="color:var(--green);">■</span> High (4-5)</span>
-              <span><span style="color:var(--gold);">■</span> Mid (2-3)</span>
-              <span><span style="color:var(--red);">■</span> Low (0-1)</span>
+              <span><span style="color:var(--green);">â– </span> High (4-5)</span>
+              <span><span style="color:var(--gold);">â– </span> Mid (2-3)</span>
+              <span><span style="color:var(--red);">â– </span> Low (0-1)</span>
             </div>
           </div>
         </div>
@@ -1167,7 +1167,7 @@ const initialPhotos = progressPhotos || [];
       <!-- SLEEP TREND -->
       <div class="card" style="animation-delay:.18s;">
         <div class="ch">
-          <div class="ch-ic" style="background:linear-gradient(135deg,#6366f1,#4f46e5);box-shadow:0 4px 10px rgba(99,102,241,.2);">🌙</div>
+          <div class="ch-ic" style="background:linear-gradient(135deg,#6366f1,#4f46e5);box-shadow:0 4px 10px rgba(99,102,241,.2);">ðŸŒ™</div>
           <div>
             <div class="ch-tt">Sleep Trend</div>
             <div class="ch-sub">{sleepChart.length > 0 ? `Last ${sleepChart.length} logged nights` : 'No data yet'}</div>
@@ -1184,28 +1184,28 @@ const initialPhotos = progressPhotos || [];
             <div class="echart" style="margin-top:.75rem;">
               {sleepChart.map(d => (
                 <div class="ebar-wrap">
-                  <div class="ebar" style={`height:${Math.max(8,d.pct)}%;background:linear-gradient(to top,${d.color},${d.color}88);`} title={`${d.hours}h sleep · Quality ${d.quality || '—'}/5`}></div>
+                  <div class="ebar" style={`height:${Math.max(8,d.pct)}%;background:linear-gradient(to top,${d.color},${d.color}88);`} title={`${d.hours}h sleep Â· Quality ${d.quality || 'â€”'}/5`}></div>
                   <div class="ebar-day">{d.day}</div>
                 </div>
               ))}
             </div>
             <div style="display:flex;align-items:center;gap:1rem;font-size:.68rem;color:var(--soft);justify-content:center;margin-top:.6rem;">
-              <span><span style="color:var(--green);">■</span> 7+ hrs</span>
-              <span><span style="color:var(--gold);">■</span> 5–7 hrs</span>
-              <span><span style="color:var(--red);">■</span> Under 5 hrs</span>
+              <span><span style="color:var(--green);">â– </span> 7+ hrs</span>
+              <span><span style="color:var(--gold);">â– </span> 5â€“7 hrs</span>
+              <span><span style="color:var(--red);">â– </span> Under 5 hrs</span>
             </div>
             {avgSleepHours && parseFloat(avgSleepHours) < 6 && (
               <div style="margin-top:.75rem;padding:.65rem .85rem;border-radius:11px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);font-size:.75rem;color:var(--red);">
-                ⚠️ Low average sleep may slow fat loss and increase keto flu symptoms. Aim for 7–9 hours.
+                âš ï¸ Low average sleep may slow fat loss and increase keto flu symptoms. Aim for 7â€“9 hours.
               </div>
             )}
           </>
         ) : (
           <div style="text-align:center;padding:1.5rem 1rem;">
-            <div style="font-size:2.5rem;margin-bottom:.6rem;">😴</div>
+            <div style="font-size:2.5rem;margin-bottom:.6rem;">ðŸ˜´</div>
             <div style="font-size:.82rem;font-weight:700;color:var(--soft);margin-bottom:.35rem;">No sleep data logged yet</div>
             <div style="font-size:.72rem;color:var(--muted);margin-bottom:1rem;">Track your sleep hours in your daily check-in to see trends here.</div>
-            <a href="/dashboard/checkin" style="display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.1rem;border-radius:10px;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.3);color:#a5b4fc;font-size:.75rem;font-weight:700;text-decoration:none;">📝 Go to Check-in</a>
+            <a href="/dashboard/checkin" style="display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.1rem;border-radius:10px;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.3);color:#a5b4fc;font-size:.75rem;font-weight:700;text-decoration:none;">ðŸ“ Go to Check-in</a>
           </div>
         )}
       </div>
@@ -1214,7 +1214,7 @@ const initialPhotos = progressPhotos || [];
       {macroTrend.some(d => d.hasData) && (
         <div class="card" style="animation-delay:.2s;">
           <div class="ch">
-            <div class="ch-ic" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.2);">📊</div>
+            <div class="ch-ic" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.2);">ðŸ“Š</div>
             <div>
               <div class="ch-tt">Calorie Trend</div>
               <div class="ch-sub">Last 14 days from food log</div>
@@ -1235,9 +1235,9 @@ const initialPhotos = progressPhotos || [];
             ))}
           </div>
           <div style="display:flex;gap:.75rem;font-size:.68rem;color:var(--soft);justify-content:center;margin-top:.5rem;">
-            <span><span style="color:var(--gold);">■</span> On target</span>
-            <span><span style="color:var(--red);">■</span> Over goal</span>
-            <span><span style="color:var(--muted);">■</span> Not logged</span>
+            <span><span style="color:var(--gold);">â– </span> On target</span>
+            <span><span style="color:var(--red);">â– </span> Over goal</span>
+            <span><span style="color:var(--muted);">â– </span> Not logged</span>
           </div>
         </div>
       )}
@@ -1250,7 +1250,7 @@ const initialPhotos = progressPhotos || [];
       <!-- RINGS -->
       <div class="card" style="animation-delay:.08s;">
         <div class="ch">
-          <div class="ch-ic" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 4px 10px rgba(139,92,246,.2);">🎯</div>
+          <div class="ch-ic" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 4px 10px rgba(139,92,246,.2);">ðŸŽ¯</div>
           <div class="ch-tt">Goal Rings</div>
         </div>
         <div class="cb" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
@@ -1286,7 +1286,7 @@ const initialPhotos = progressPhotos || [];
       {waterHistory.length > 0 && (
         <div class="card" style="animation-delay:.1s;">
           <div class="ch">
-            <div class="ch-ic" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(59,130,246,.2);">💧</div>
+            <div class="ch-ic" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(59,130,246,.2);">ðŸ’§</div>
             <div>
               <div class="ch-tt">Water History</div>
               <div class="ch-sub">Goal: 8 glasses/day</div>
@@ -1309,7 +1309,7 @@ const initialPhotos = progressPhotos || [];
             ))}
           </div>
           <div style="text-align:center;margin-top:.5rem;font-size:.7rem;color:var(--soft);">
-            🎯 {goalMetDays}/{waterHistory.length} days hit 8-glass goal
+            ðŸŽ¯ {goalMetDays}/{waterHistory.length} days hit 8-glass goal
           </div>
         </div>
       )}
@@ -1317,7 +1317,7 @@ const initialPhotos = progressPhotos || [];
       <!-- MILESTONES -->
       <div class="card" style="animation-delay:.12s;">
         <div class="ch">
-          <div class="ch-ic" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.2);">🏆</div>
+          <div class="ch-ic" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.2);">ðŸ†</div>
           <div style="flex:1;"><div class="ch-tt">Milestones</div><div class="ch-sub">{milestones.filter(m => m.done).length}/{milestones.length} achieved</div></div>
         </div>
         <div class="cb">
@@ -1329,7 +1329,7 @@ const initialPhotos = progressPhotos || [];
                   <div class="ms-lbl" style={m.done ? 'color:var(--rv-accent);' : ''}>{m.label}</div>
                   <div class="ms-day">Day {m.day}</div>
                 </div>
-                <div class="ms-check">{m.done ? '✓' : i === milestones.findIndex(x => !x.done) ? '⟳' : ''}</div>
+                <div class="ms-check">{m.done ? 'âœ“' : i === milestones.findIndex(x => !x.done) ? 'âŸ³' : ''}</div>
               </div>
             ))}
           </div>
@@ -1340,7 +1340,7 @@ const initialPhotos = progressPhotos || [];
       {xpTxns && xpTxns.length > 0 && (
         <div class="card" style="animation-delay:.18s;">
           <div class="ch">
-            <div class="ch-ic" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.2);">⭐</div>
+            <div class="ch-ic" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.2);">â­</div>
             <div class="ch-tt">Recent XP</div>
           </div>
           <div class="cb">
@@ -1363,7 +1363,7 @@ const initialPhotos = progressPhotos || [];
   <!-- BODY MEASUREMENTS -->
   <div class="card" style="animation-delay:.2s;">
     <div class="ch">
-      <div class="ch-ic" style="background:linear-gradient(135deg,#f97316,#ea580c);box-shadow:0 4px 10px rgba(249,115,22,.2);">📏</div>
+      <div class="ch-ic" style="background:linear-gradient(135deg,#f97316,#ea580c);box-shadow:0 4px 10px rgba(249,115,22,.2);">ðŸ“</div>
       <div style="flex:1;"><div class="ch-tt">{t('progress.measurements')}</div><div class="ch-sub">{latestMeasurements ? `Last logged ${new Date(latestMeasurements.logged_date).toLocaleDateString('en',{month:'short',day:'numeric'})}` : 'No measurements yet'}</div></div>
       <button id="openMeasModal" style="font-size:.72rem;font-weight:800;color:var(--rv-accent);background:none;border:none;cursor:pointer;padding:0;">+ Log</button>
     </div>
@@ -1383,7 +1383,7 @@ const initialPhotos = progressPhotos || [];
                 data-neck={latestMeasurements.neck_cm || ''}
                 data-arm={latestMeasurements.arm_cm || ''}
                 data-thigh={latestMeasurements.thigh_cm || ''}
-                style="font-size:.68rem;font-weight:800;color:#f97316;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.25);border-radius:7px;padding:.2rem .55rem;cursor:pointer;">✏️ Edit</button>
+                style="font-size:.68rem;font-weight:800;color:#f97316;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.25);border-radius:7px;padding:.2rem .55rem;cursor:pointer;">âœï¸ Edit</button>
             </div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;">
               {latestMeasurements.waist_cm && <div style="text-align:center;padding:.75rem;background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:12px;"><div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.3rem;font-weight:900;color:#f97316;">{toM(latestMeasurements.waist_cm)}<span style="font-size:.65rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">{t('progress.waist')}</div></div>}
@@ -1408,7 +1408,7 @@ const initialPhotos = progressPhotos || [];
                   data-neck={prevMeasurements.neck_cm || ''}
                   data-arm={prevMeasurements.arm_cm || ''}
                   data-thigh={prevMeasurements.thigh_cm || ''}
-                  style="font-size:.68rem;font-weight:800;color:#f97316;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.25);border-radius:7px;padding:.2rem .55rem;cursor:pointer;">✏️ Edit</button>
+                  style="font-size:.68rem;font-weight:800;color:#f97316;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.25);border-radius:7px;padding:.2rem .55rem;cursor:pointer;">âœï¸ Edit</button>
               </div>
               <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;">
                 {prevMeasurements.waist_cm && <div style="text-align:center;padding:.5rem;background:rgba(249,115,22,.04);border:1px solid rgba(249,115,22,.1);border-radius:10px;"><div style="font-size:1rem;font-weight:900;color:#f97316;">{toM(prevMeasurements.waist_cm)}<span style="font-size:.6rem;color:var(--soft);">{mUnit}</span></div><div style="font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.15rem;">{t('progress.waist')}</div></div>}
@@ -1423,7 +1423,7 @@ const initialPhotos = progressPhotos || [];
         </div>
       ) : (
         <div style="text-align:center;padding:1.5rem;color:var(--soft);">
-          <div style="font-size:2rem;margin-bottom:.5rem;">📏</div>
+          <div style="font-size:2rem;margin-bottom:.5rem;">ðŸ“</div>
           <div style="font-weight:700;font-size:.85rem;margin-bottom:.3rem;">No measurements yet</div>
           <div style="font-size:.76rem;margin-bottom:1rem;">Track neck, waist, hips and more to see body changes beyond the scale.</div>
           <button id="openMeasModalEmpty" style="padding:.55rem 1.2rem;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;border:none;border-radius:10px;font-weight:800;font-size:.78rem;cursor:pointer;">+ Log First Measurement</button>
@@ -1435,8 +1435,8 @@ const initialPhotos = progressPhotos || [];
   <!-- KETONE TRACKER -->
   <div class="card" style="animation-delay:.28s;">
     <div class="ch">
-      <div class="ch-ic" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);box-shadow:0 4px 10px rgba(139,92,246,.2);">🩸</div>
-      <div style="flex:1;"><div class="ch-tt">Ketone Tracker</div><div class="ch-sub">{latestKetone ? `Last: ${latestKetone.ketone_mmol} mmol/L · ${new Date(latestKetone.logged_date).toLocaleDateString('en',{month:'short',day:'numeric'})}` : 'No readings yet'}</div></div>
+      <div class="ch-ic" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);box-shadow:0 4px 10px rgba(139,92,246,.2);">ðŸ©¸</div>
+      <div style="flex:1;"><div class="ch-tt">Ketone Tracker</div><div class="ch-sub">{latestKetone ? `Last: ${latestKetone.ketone_mmol} mmol/L Â· ${new Date(latestKetone.logged_date).toLocaleDateString('en',{month:'short',day:'numeric'})}` : 'No readings yet'}</div></div>
       <button id="openKetoneModal" style="font-size:.72rem;font-weight:800;color:var(--rv-accent);background:none;border:none;cursor:pointer;padding:0;">+ Log</button>
     </div>
     <div class="cb">
@@ -1475,7 +1475,7 @@ const initialPhotos = progressPhotos || [];
         </div>
       ) : (
         <div style="text-align:center;padding:1.25rem;color:var(--soft);">
-          <div style="font-size:1.8rem;margin-bottom:.4rem;">🩸</div>
+          <div style="font-size:1.8rem;margin-bottom:.4rem;">ðŸ©¸</div>
           <div style="font-weight:700;font-size:.82rem;margin-bottom:.25rem;">No readings yet</div>
           <div style="font-size:.74rem;margin-bottom:.8rem;">Track blood, urine or breath ketones to monitor your ketosis depth.</div>
           <button id="openKetoneModalEmpty" style="padding:.5rem 1.1rem;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border:none;border-radius:9px;font-weight:800;font-size:.76rem;cursor:pointer;">+ Log First Reading</button>
@@ -1486,9 +1486,9 @@ const initialPhotos = progressPhotos || [];
       <div style="margin-top:1rem;display:flex;gap:.4rem;flex-wrap:wrap;">
         {[
           {range:'< 0.5', label:'No ketosis', color:'#ef4444'},
-          {range:'0.5–1.5', label:'Light', color:'#f59e0b'},
-          {range:'1.5–3.0', label:'Optimal 🔥', color:'#FF5C7A'},
-          {range:'3.0–5.0', label:'Deep', color:'#8b5cf6'},
+          {range:'0.5â€“1.5', label:'Light', color:'#f59e0b'},
+          {range:'1.5â€“3.0', label:'Optimal ðŸ”¥', color:'#FF5C7A'},
+          {range:'3.0â€“5.0', label:'Deep', color:'#8b5cf6'},
         ].map(s => (
           <div style={`font-size:.65rem;font-weight:700;padding:.2rem .5rem;border-radius:6px;background:${s.color}15;color:${s.color};border:1px solid ${s.color}25;`}>{s.range} {s.label}</div>
         ))}
@@ -1500,7 +1500,7 @@ const initialPhotos = progressPhotos || [];
   {bcBMI && (
     <div class="card" style="animation-delay:.32s;">
       <div class="ch">
-        <div class="ch-ic" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(59,130,246,.2);">🧬</div>
+        <div class="ch-ic" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(59,130,246,.2);">ðŸ§¬</div>
         <div style="flex:1;"><div class="ch-tt">Body Composition</div><div class="ch-sub">Based on your current stats</div></div>
       </div>
       <div class="cb">
@@ -1529,7 +1529,7 @@ const initialPhotos = progressPhotos || [];
             <div style="padding:.85rem;background:var(--bg);border:1px solid var(--border);border-radius:12px;text-align:center;">
               <div style={`font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;font-weight:900;color:${bcBodyFat > 30 ? 'var(--red)' : bcBodyFat > 20 ? 'var(--gold)' : 'var(--green)'};`}>{bcBodyFat}%</div>
               <div style="font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);margin-top:.2rem;">Est. Body Fat</div>
-              <div style="font-size:.65rem;color:var(--soft);margin-top:.15rem;">{bcGender === 'male' ? 'Ideal: 10–20%' : 'Ideal: 18–28%'}</div>
+              <div style="font-size:.65rem;color:var(--soft);margin-top:.15rem;">{bcGender === 'male' ? 'Ideal: 10â€“20%' : 'Ideal: 18â€“28%'}</div>
             </div>
           )}
           {bcBodyFat !== null && bcWeight > 0 && (
@@ -1546,10 +1546,10 @@ const initialPhotos = progressPhotos || [];
           <div style="padding:.75rem 1rem;background:rgba(255,92,122,.06);border:1px solid rgba(255,92,122,.15);border-radius:11px;">
             <div style="font-size:.7rem;font-weight:800;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.35rem;">Healthy Weight Range for Your Height</div>
             <div style="display:flex;align-items:center;justify-content:space-between;">
-              <span style="font-weight:800;font-size:.92rem;color:var(--green);">{dispHealthyMin} – {dispHealthyMax} {wUnit}</span>
+              <span style="font-weight:800;font-size:.92rem;color:var(--green);">{dispHealthyMin} â€“ {dispHealthyMax} {wUnit}</span>
               {bcKgToHealthy > 0
                 ? <span style="font-size:.75rem;font-weight:700;color:var(--gold);">{dispToHealthy} {wUnit} to go</span>
-                : <span style="font-size:.75rem;font-weight:700;color:var(--green);">✓ In range</span>
+                : <span style="font-size:.75rem;font-weight:700;color:var(--green);">âœ“ In range</span>
               }
             </div>
           </div>
@@ -1564,7 +1564,7 @@ const initialPhotos = progressPhotos || [];
   {achievements.length > 0 && (
     <div class="card" style="animation-delay:.25s;">
       <div class="ch">
-        <div class="ch-ic" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.2);">🏆</div>
+        <div class="ch-ic" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.2);">ðŸ†</div>
         <div style="flex:1;"><div class="ch-tt">{t('progress.achievements')}</div><div class="ch-sub">{achievements.length} badge{achievements.length !== 1 ? 's' : ''} unlocked</div></div>
       </div>
       <div class="cb">
@@ -1589,7 +1589,7 @@ const initialPhotos = progressPhotos || [];
   <!-- PROGRESS PHOTOS -->
   <div class="card" style="animation-delay:.28s;margin-bottom:1.5rem;">
     <div class="ch">
-      <div class="ch-ic" style="background:linear-gradient(135deg,#ec4899,#db2777);box-shadow:0 4px 10px rgba(236,72,153,.2);">📸</div>
+      <div class="ch-ic" style="background:linear-gradient(135deg,#ec4899,#db2777);box-shadow:0 4px 10px rgba(236,72,153,.2);">ðŸ“¸</div>
       <div style="flex:1;">
         <div class="ch-tt">Progress Photos</div>
         <div class="ch-sub" id="photoCount">{initialPhotos.length > 0 ? `${initialPhotos.length} photo${initialPhotos.length !== 1 ? 's' : ''}` : 'No photos yet'}</div>
@@ -1614,10 +1614,10 @@ const initialPhotos = progressPhotos || [];
           </div>
         ) : (
           <div class="photo-empty">
-            <div class="photo-empty-icon">📷</div>
+            <div class="photo-empty-icon">ðŸ“·</div>
             <div class="photo-empty-msg">No photos yet</div>
             <div class="photo-empty-sub">Capture your transformation! Adding weekly photos is the most motivating way to see your keto progress.</div>
-            <button id="openPhotoModalEmpty" style="margin-top:.9rem;padding:.5rem 1.1rem;background:linear-gradient(135deg,#ec4899,#db2777);color:#fff;border:none;border-radius:9px;font-weight:800;font-size:.76rem;cursor:pointer;">📸 Add First Photo</button>
+            <button id="openPhotoModalEmpty" style="margin-top:.9rem;padding:.5rem 1.1rem;background:linear-gradient(135deg,#ec4899,#db2777);color:#fff;border:none;border-radius:9px;font-weight:800;font-size:.76rem;cursor:pointer;">ðŸ“¸ Add First Photo</button>
           </div>
         )}
       </div>
@@ -1626,13 +1626,13 @@ const initialPhotos = progressPhotos || [];
 
   <!-- BOTTOM CTA -->
   <div style="background:linear-gradient(135deg,rgba(255,92,122,.07),rgba(255,145,77,.05));border:1.5px solid rgba(255,92,122,.2);border-radius:20px;padding:2rem;text-align:center;animation:fadeUp .4s .3s ease both;">
-    <div style="font-size:2.5rem;margin-bottom:.75rem;">🚀</div>
+    <div style="font-size:2.5rem;margin-bottom:.75rem;">ðŸš€</div>
     <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.3rem;font-weight:800;margin-bottom:.4rem;color:var(--rv-ink);">Keep Pushing, {userName}!</div>
     <div style="font-size:.83rem;color:var(--rv-ink-soft);margin-bottom:1.25rem;line-height:1.6;">You're on Day {currentDay} of {maxDays}. {maxDays-currentDay} days left to complete your transformation.</div>
     <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;">
-      <a href="/dashboard/checkin" style="padding:.7rem 1.5rem;background:var(--rv-ink);color:var(--rv-bg);border-radius:12px;font-weight:800;font-size:.82rem;text-decoration:none;box-shadow:0 4px 14px rgba(22,17,15,.15);">📋 Daily Check-in</a>
-      <a href="/dashboard/recipes" style="padding:.7rem 1.5rem;background:var(--rv-card);border:1px solid var(--rv-line);color:var(--rv-ink);border-radius:12px;font-weight:800;font-size:.82rem;text-decoration:none;">🍳 View Recipes</a>
-      <a href="/dashboard" style="padding:.7rem 1.5rem;background:var(--rv-card);border:1px solid var(--rv-line);color:var(--rv-ink);border-radius:12px;font-weight:800;font-size:.82rem;text-decoration:none;">🏠 Dashboard</a>
+      <a href="/dashboard/checkin" style="padding:.7rem 1.5rem;background:var(--rv-ink);color:var(--rv-bg);border-radius:12px;font-weight:800;font-size:.82rem;text-decoration:none;box-shadow:0 4px 14px rgba(22,17,15,.15);">ðŸ“‹ Daily Check-in</a>
+      <a href="/dashboard/recipes" style="padding:.7rem 1.5rem;background:var(--rv-card);border:1px solid var(--rv-line);color:var(--rv-ink);border-radius:12px;font-weight:800;font-size:.82rem;text-decoration:none;">ðŸ³ View Recipes</a>
+      <a href="/dashboard" style="padding:.7rem 1.5rem;background:var(--rv-card);border:1px solid var(--rv-line);color:var(--rv-ink);border-radius:12px;font-weight:800;font-size:.82rem;text-decoration:none;">ðŸ  Dashboard</a>
     </div>
   </div>
 
@@ -1644,8 +1644,8 @@ const initialPhotos = progressPhotos || [];
 <div id="measModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:1rem;">
   <div style="background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:1.75rem;width:100%;max-width:400px;max-height:90vh;overflow-y:auto;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-      <div id="measModalTitle" style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.1rem;font-weight:900;">📏 Log Measurements</div>
-      <button id="closeMeasModal" style="background:none;border:none;color:var(--soft);font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
+      <div id="measModalTitle" style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.1rem;font-weight:900;">ðŸ“ Log Measurements</div>
+      <button id="closeMeasModal" style="background:none;border:none;color:var(--soft);font-size:1.4rem;cursor:pointer;line-height:1;">Ã—</button>
     </div>
     <div id="measModalError" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:.6rem .9rem;font-size:.78rem;color:#ef4444;margin-bottom:1rem;"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem;">
@@ -1665,8 +1665,8 @@ const initialPhotos = progressPhotos || [];
 <div id="weightModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:1rem;">
   <div style="background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:1.75rem;width:100%;max-width:360px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-      <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.1rem;font-weight:900;">⚖️ {t('progress.log_weight')}</div>
-      <button id="closeWeightModal" style="background:none;border:none;color:var(--soft);font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
+      <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.1rem;font-weight:900;">âš–ï¸ {t('progress.log_weight')}</div>
+      <button id="closeWeightModal" style="background:none;border:none;color:var(--soft);font-size:1.4rem;cursor:pointer;line-height:1;">Ã—</button>
     </div>
     <div id="weightModalError" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:.6rem .9rem;font-size:.78rem;color:#ef4444;margin-bottom:1rem;"></div>
     <div style="display:flex;flex-direction:column;gap:.9rem;">
@@ -1728,7 +1728,7 @@ const initialPhotos = progressPhotos || [];
     var wKg = isImperial
       ? Math.round((wVal / 2.20462) * 10) / 10
       : Math.round(wVal * 10) / 10;
-    saveBtn.textContent = 'Saving…';
+    saveBtn.textContent = 'Savingâ€¦';
     saveBtn.disabled = true;
     fetch('/api/profile/add-weight', {
       method: 'POST',
@@ -1768,7 +1768,7 @@ const initialPhotos = progressPhotos || [];
   var isImperial = units === 'imperial';
   if (dateIn) dateIn.value = today;
 
-  // Convert cm → display unit for pre-filling inputs
+  // Convert cm â†’ display unit for pre-filling inputs
   function toDisplay(cm) {
     if (!cm) return '';
     var n = parseFloat(cm);
@@ -1782,7 +1782,7 @@ const initialPhotos = progressPhotos || [];
       if (el) el.value = '';
     });
     if (dateIn) dateIn.value = today;
-    if (titleEl) titleEl.textContent = '📏 Log Measurements';
+    if (titleEl) titleEl.textContent = 'ðŸ“ Log Measurements';
   }
 
   function openModal() {
@@ -1800,7 +1800,7 @@ const initialPhotos = progressPhotos || [];
       var el = document.getElementById(id);
       if (el && map[id]) el.value = toDisplay(map[id]);
     });
-    if (titleEl) titleEl.textContent = '📏 Edit Measurements';
+    if (titleEl) titleEl.textContent = 'ðŸ“ Edit Measurements';
     modal.style.display = 'flex';
     if (errBox) errBox.style.display = 'none';
   };
@@ -1820,7 +1820,7 @@ const initialPhotos = progressPhotos || [];
   if (closeBtn) closeBtn.addEventListener('click', function() { modal.style.display = 'none'; });
   modal.addEventListener('click', function(e) { if (e.target === modal) modal.style.display = 'none'; });
 
-  // Convert input → cm for storage
+  // Convert input â†’ cm for storage
   function toCm(val) {
     if (!val) return null;
     var n = parseFloat(val);
@@ -1846,7 +1846,7 @@ const initialPhotos = progressPhotos || [];
       errBox.style.display = 'block';
       return;
     }
-    saveBtn.textContent = 'Saving…';
+    saveBtn.textContent = 'Savingâ€¦';
     saveBtn.disabled = true;
     fetch('/api/measurements/save', {
       method: 'POST',
@@ -1879,8 +1879,8 @@ const initialPhotos = progressPhotos || [];
 <div id="ketoneModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:1rem;">
   <div style="background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:1.75rem;width:100%;max-width:360px;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-      <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.05rem;font-weight:900;">🩸 Log Ketone Reading</div>
-      <button id="closeKetoneModal" style="background:none;border:none;color:var(--soft);font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
+      <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.05rem;font-weight:900;">ðŸ©¸ Log Ketone Reading</div>
+      <button id="closeKetoneModal" style="background:none;border:none;color:var(--soft);font-size:1.4rem;cursor:pointer;line-height:1;">Ã—</button>
     </div>
     <div id="ketoneModalError" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:.6rem .9rem;font-size:.78rem;color:#ef4444;margin-bottom:1rem;"></div>
     <div style="display:flex;flex-direction:column;gap:.9rem;">
@@ -1893,7 +1893,7 @@ const initialPhotos = progressPhotos || [];
         <label style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);display:block;margin-bottom:.4rem;">Measurement Type</label>
         <div style="display:flex;gap:.5rem;">
           {['blood','urine','breath'].map(t => (
-            <button class="ktype-btn" data-type={t} style="flex:1;padding:.5rem .3rem;border:1.5px solid var(--border);background:var(--bg);border-radius:9px;font-size:.72rem;font-weight:700;color:var(--soft);cursor:pointer;transition:all .15s;text-transform:capitalize;">{t === 'blood' ? '🩸' : t === 'urine' ? '🧪' : '💨'} {t}</button>
+            <button class="ktype-btn" data-type={t} style="flex:1;padding:.5rem .3rem;border:1.5px solid var(--border);background:var(--bg);border-radius:9px;font-size:.72rem;font-weight:700;color:var(--soft);cursor:pointer;transition:all .15s;text-transform:capitalize;">{t === 'blood' ? 'ðŸ©¸' : t === 'urine' ? 'ðŸ§ª' : 'ðŸ’¨'} {t}</button>
           ))}
         </div>
       </div>
@@ -1907,7 +1907,7 @@ const initialPhotos = progressPhotos || [];
         <input id="ketoneNotes" type="text" placeholder="e.g. fasted 16h, after workout"
           style="width:100%;padding:.65rem 1rem;background:var(--bg);border:1.5px solid var(--border2);border-radius:12px;color:var(--text);font-size:.85rem;font-family:'DM Sans',sans-serif;box-sizing:border-box;" />
       </div>
-      <button id="saveKetoneBtn" style="width:100%;padding:.85rem;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border:none;border-radius:12px;font-weight:800;font-size:.9rem;cursor:pointer;margin-top:.1rem;">💾 Save Reading</button>
+      <button id="saveKetoneBtn" style="width:100%;padding:.85rem;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border:none;border-radius:12px;font-weight:800;font-size:.9rem;cursor:pointer;margin-top:.1rem;">ðŸ’¾ Save Reading</button>
     </div>
   </div>
 </div>
@@ -1958,11 +1958,11 @@ const initialPhotos = progressPhotos || [];
   if (saveBtn) saveBtn.addEventListener('click', function() {
     var v = parseFloat(valIn.value);
     if (isNaN(v) || v < 0 || v > 30) {
-      errBox.textContent = 'Please enter a valid ketone level (0–30 mmol/L).';
+      errBox.textContent = 'Please enter a valid ketone level (0â€“30 mmol/L).';
       errBox.style.display = 'block';
       return;
     }
-    saveBtn.textContent = 'Saving…';
+    saveBtn.textContent = 'Savingâ€¦';
     saveBtn.disabled = true;
     fetch('/api/ketones/log', {
       method: 'POST',
@@ -2000,8 +2000,8 @@ const initialPhotos = progressPhotos || [];
 <div id="photoModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:1rem;">
   <div style="background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:1.75rem;width:100%;max-width:400px;max-height:90vh;overflow-y:auto;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
-      <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.05rem;font-weight:900;">📸 Add Progress Photo</div>
-      <button id="closePhotoModal" style="background:none;border:none;color:var(--soft);font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
+      <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.05rem;font-weight:900;">ðŸ“¸ Add Progress Photo</div>
+      <button id="closePhotoModal" style="background:none;border:none;color:var(--soft);font-size:1.4rem;cursor:pointer;line-height:1;">Ã—</button>
     </div>
     <div id="photoModalError" style="display:none;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:.6rem .9rem;font-size:.78rem;color:#ef4444;margin-bottom:1rem;"></div>
     <div id="photoPreviewWrap" style="display:none;margin-bottom:1rem;text-align:center;">
@@ -2120,7 +2120,7 @@ const initialPhotos = progressPhotos || [];
             : 'No photos yet';
         }
         if (photos.length === 0) {
-          grid.innerHTML = '<div class="photo-empty"><div class="photo-empty-icon">📷</div><div class="photo-empty-msg">No photos yet</div><div class="photo-empty-sub">Capture your transformation! Adding weekly photos is the most motivating way to see your keto progress.</div></div>';
+          grid.innerHTML = '<div class="photo-empty"><div class="photo-empty-icon">ðŸ“·</div><div class="photo-empty-msg">No photos yet</div><div class="photo-empty-sub">Capture your transformation! Adding weekly photos is the most motivating way to see your keto progress.</div></div>';
           return;
         }
         var html = '<div class="photo-grid">';
@@ -2152,7 +2152,7 @@ const initialPhotos = progressPhotos || [];
       errBox.style.display = 'block';
       return;
     }
-    saveBtn.textContent = 'Uploading…';
+    saveBtn.textContent = 'Uploadingâ€¦';
     saveBtn.disabled = true;
     fetch('/api/photos/upload', {
       method: 'POST',

@@ -1,4 +1,4 @@
----
+﻿---
 // src/pages/dashboard/weekly.astro
 import { getUserJourney, getMaxJourneyDays, updateCurrentDay, kgToLbs } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
@@ -75,13 +75,13 @@ const { data: prevReports } = await db
 const checkinCount    = weekCheckins?.length || 0;
 const avgEnergy       = checkinCount > 0
   ? (weekCheckins!.reduce((s, c) => s + (c.energy_level || 3), 0) / checkinCount).toFixed(1)
-  : '—';
+  : 'â€”';
 const avgMood         = checkinCount > 0
   ? (weekCheckins!.reduce((s, c) => s + (c.mood_level || 3), 0) / checkinCount).toFixed(1)
-  : '—';
+  : 'â€”';
 const avgWater        = checkinCount > 0
   ? (weekCheckins!.reduce((s, c) => s + (c.water_glasses || 0), 0) / checkinCount).toFixed(1)
-  : '—';
+  : 'â€”';
 const mealsFollowed   = weekCheckins?.filter(c => c.followed_meals).length || 0;
 const complianceRate  = checkinCount > 0 ? Math.round((mealsFollowed / checkinCount) * 100) : 0;
 const weekXP          = weekCheckins?.reduce((s, c) => s + (c.xp_earned || 0), 0) || 0;
@@ -159,7 +159,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{t('weekly.title')} — Keto Journey</title>
+  <title>{t('weekly.title')} â€” Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
@@ -366,7 +366,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
 </head>
 <body>
 <div class="rv-pg-shell">
-<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="weekly" />
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="weekly" />
 <div class="rv-pg-main">
 <div class="page">
 
@@ -374,9 +374,9 @@ const weekStars = Math.round((complianceRate / 100) * 5);
   <div class="hero">
     <div class="hero-inner">
       <div>
-        <div class="hero-badge">📊 Weekly Report · Week {currentWeek}</div>
+        <div class="hero-badge">ðŸ“Š Weekly Report Â· Week {currentWeek}</div>
         <h1 class="hero-title">{userName}'s <em>Week {currentWeek}</em><br/>Performance Report</h1>
-        <p class="hero-sub">Your complete analysis — what worked, what to improve, and your adjusted targets for next week.</p>
+        <p class="hero-sub">Your complete analysis â€” what worked, what to improve, and your adjusted targets for next week.</p>
       </div>
       <div class="hero-rstats">
         <div class="rstat">
@@ -394,7 +394,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
         <div class="rstat">
           <div class="star-row">
             {[1,2,3,4,5].map(n => (
-              <span class={`star${n <= weekStars ? ' lit' : ''}`}>★</span>
+              <span class={`star${n <= weekStars ? ' lit' : ''}`}>â˜…</span>
             ))}
           </div>
           <div class="rstat-lbl">Week Rating</div>
@@ -405,37 +405,37 @@ const weekStars = Math.round((complianceRate / 100) * 5);
 
   <!-- TABS -->
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('overview',this)">📊 Overview</button>
-    <button class="tab" onclick="switchTab('checkin',this)">✅ Check-in</button>
-    <button class="tab" onclick="switchTab('insights',this)">🧠 Insights</button>
-    <button class="tab" onclick="switchTab('history',this)">📅 History</button>
+    <button class="tab active" onclick="switchTab('overview',this)">ðŸ“Š Overview</button>
+    <button class="tab" onclick="switchTab('checkin',this)">âœ… Check-in</button>
+    <button class="tab" onclick="switchTab('insights',this)">ðŸ§  Insights</button>
+    <button class="tab" onclick="switchTab('history',this)">ðŸ“… History</button>
   </div>
 
-  <!-- ════════ TAB: OVERVIEW ════════ -->
+  <!-- â•â•â•â•â•â•â•â• TAB: OVERVIEW â•â•â•â•â•â•â•â• -->
   <div class="tab-panel active" id="tab-overview">
 
     <!-- Stats Grid -->
     <div class="grid4" style="margin-bottom:1.25rem;animation:fadeUp .4s ease both;">
       <div class="stat-box" style="animation:fadeUp .4s ease both;">
-        <div class="sb-icon">📈</div>
-        <div class="sb-val" style="color:var(--green);">{startWeightDisplay && latestWeightDisplay ? (startWeightDisplay - latestWeightDisplay).toFixed(1) + weightUnit : '—'}</div>
+        <div class="sb-icon">ðŸ“ˆ</div>
+        <div class="sb-val" style="color:var(--green);">{startWeightDisplay && latestWeightDisplay ? (startWeightDisplay - latestWeightDisplay).toFixed(1) + weightUnit : 'â€”'}</div>
         <div class="sb-lbl">Weight Lost</div>
-        <div class={`sb-change change-${startWeight > latestWeight ? 'good' : 'warn'}`}>{startWeight > latestWeight ? `▼ ${(startWeightDisplay - latestWeightDisplay).toFixed(1)}${weightUnit}` : 'No change'}</div>
+        <div class={`sb-change change-${startWeight > latestWeight ? 'good' : 'warn'}`}>{startWeight > latestWeight ? `â–¼ ${(startWeightDisplay - latestWeightDisplay).toFixed(1)}${weightUnit}` : 'No change'}</div>
       </div>
       <div class="stat-box" style="animation:fadeUp .4s ease both;">
-        <div class="sb-icon">⚡</div>
+        <div class="sb-icon">âš¡</div>
         <div class="sb-val" style="color:var(--gold);">{avgEnergy}/5</div>
         <div class="sb-lbl">Avg Energy</div>
         <div class="sb-change change-good">{Number(avgEnergy) >= 4 ? 'High' : Number(avgEnergy) >= 3 ? 'Good' : 'Low'}</div>
       </div>
       <div class="stat-box" style="animation:fadeUp .4s ease both;">
-        <div class="sb-icon">💧</div>
+        <div class="sb-icon">ðŸ’§</div>
         <div class="sb-val" style="color:var(--cyan);">{avgWater} gl</div>
         <div class="sb-lbl">Avg Water</div>
         <div class={`sb-change change-${Number(avgWater) >= 8 ? 'good' : 'warn'}`}>{Number(avgWater) >= 8 ? 'On target' : 'Below goal'}</div>
       </div>
       <div class="stat-box" style="animation:fadeUp .4s ease both;">
-        <div class="sb-icon">🎯</div>
+        <div class="sb-icon">ðŸŽ¯</div>
         <div class="sb-val" style="color:var(--blue);">{mealsFollowed}/{checkinCount}</div>
         <div class="sb-lbl">Meals Kept</div>
         <div class={`sb-change change-${complianceRate >= 80 ? 'good' : complianceRate >= 60 ? 'warn' : 'bad'}`}>{complianceRate}%</div>
@@ -448,11 +448,11 @@ const weekStars = Math.round((complianceRate / 100) * 5);
         <div class={`day-slot${slot.done ? ' has-ci' : ''}`}>
           <div class="ds-lbl">{slot.label}</div>
           <div class={`ds-dot${slot.done ? ' done' : ' miss'}`}>
-            {slot.done ? '✓' : '—'}
+            {slot.done ? 'âœ“' : 'â€”'}
           </div>
           {slot.done && (
             <div class="ds-energy">
-              {slot.energy >= 4 ? '⚡' : slot.energy >= 3 ? '✅' : slot.energy >= 1 ? '😴' : '—'}
+              {slot.energy >= 4 ? 'âš¡' : slot.energy >= 3 ? 'âœ…' : slot.energy >= 1 ? 'ðŸ˜´' : 'â€”'}
             </div>
           )}
           <div class="ds-bars">
@@ -468,7 +468,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
       <!-- Energy / Mood Chart -->
       <div class="card" style="animation:fadeUp .4s .05s ease both;">
         <div class="card-head">
-          <div class="ch-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.25);">📈</div>
+          <div class="ch-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 4px 10px rgba(245,158,11,.25);">ðŸ“ˆ</div>
           <div class="ch-title">Energy This Week</div>
         </div>
         <div class="card-body">
@@ -504,7 +504,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
       <!-- Weight Progress -->
       <div class="card" style="animation:fadeUp .4s .1s ease both;">
         <div class="card-head">
-          <div class="ch-icon" style="background:linear-gradient(135deg,#FF5C7A,#E0394F);box-shadow:0 4px 10px rgba(255,92,122,.25);">📈</div>
+          <div class="ch-icon" style="background:linear-gradient(135deg,#FF5C7A,#E0394F);box-shadow:0 4px 10px rgba(255,92,122,.25);">ðŸ“ˆ</div>
           <div class="ch-title">Weight Progress</div>
         </div>
         <div class="card-body">
@@ -513,7 +513,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
               <div style="display:flex;align-items:baseline;gap:.75rem;margin-bottom:1rem;">
                 <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:2.2rem;font-weight:900;color:var(--green);">{latestWeightDisplay}{weightUnit}</div>
                 <div>
-                  <div style="font-size:.72rem;font-weight:800;color:var(--green);">↓ {(startWeightDisplay - latestWeightDisplay).toFixed(1)}{weightUnit} lost</div>
+                  <div style="font-size:.72rem;font-weight:800;color:var(--green);">â†“ {(startWeightDisplay - latestWeightDisplay).toFixed(1)}{weightUnit} lost</div>
                   <div style="font-size:.68rem;color:var(--soft);">from {startWeightDisplay}{weightUnit} start</div>
                 </div>
               </div>
@@ -547,7 +547,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
                 <div style="margin-top:.75rem;">
                   <div class="prog-head">
                     <span style="font-size:.72rem;font-weight:700;color:var(--soft);">To Goal</span>
-                    <span style="font-size:.72rem;font-weight:800;color:var(--green);">{latestWeightDisplay}{weightUnit} → {targetWeightDisplay}{weightUnit}</span>
+                    <span style="font-size:.72rem;font-weight:800;color:var(--green);">{latestWeightDisplay}{weightUnit} â†’ {targetWeightDisplay}{weightUnit}</span>
                   </div>
                   <div class="prog-track">
                     <div class="prog-fill" style={`width:${Math.min(100, Math.round(((startWeight - latestWeight) / Math.max(startWeight - onboarding.target_weight, 1)) * 100))}%;background:linear-gradient(90deg,var(--green),var(--green2));`}></div>
@@ -557,7 +557,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
             </>
           ) : (
             <div style="text-align:center;padding:1.5rem 0;font-size:.82rem;color:var(--soft);">
-              <div style="margin-bottom:.5rem;font-size:2rem;">📈</div>
+              <div style="margin-bottom:.5rem;font-size:2rem;">ðŸ“ˆ</div>
               Log your weight in the check-in to<br/>see your progress chart here.
             </div>
           )}
@@ -569,19 +569,19 @@ const weekStars = Math.round((complianceRate / 100) * 5);
     {macroGoals && (
       <div class="card" style="animation:fadeUp .4s .15s ease both;">
         <div class="card-head">
-          <div class="ch-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 4px 10px rgba(139,92,246,.25);">🎯</div>
+          <div class="ch-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 4px 10px rgba(139,92,246,.25);">ðŸŽ¯</div>
           <div class="ch-title">Your Macro Targets</div>
           <div class="ch-chip" style="background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);color:var(--purple);">Personalized</div>
         </div>
         <div class="card-body">
           <div class="grid3">
             {[
-              { label:'Daily Calories', val:macroGoals.daily_calories, unit:'kcal', color:'var(--green)',  icon:'🔥', pct:100 },
-              { label:'Protein',        val:macroGoals.protein_g,      unit:'g',    color:'var(--blue)',   icon:'🥩', pct:25 },
-              { label:'Fat',            val:macroGoals.fat_g,          unit:'g',    color:'var(--gold)',   icon:'🥑', pct:70 },
-              { label:'Net Carbs',      val:macroGoals.carbs_g,        unit:'g',    color:'var(--red)',    icon:'🥦', pct:5  },
-              { label:'TDEE',           val:macroGoals.tdee,           unit:'kcal', color:'var(--soft)',   icon:'⚡', pct:null },
-              { label:'Deficit',        val:macroGoals.tdee - macroGoals.daily_calories, unit:'kcal', color:'var(--purple)', icon:'📉', pct:null },
+              { label:'Daily Calories', val:macroGoals.daily_calories, unit:'kcal', color:'var(--green)',  icon:'ðŸ”¥', pct:100 },
+              { label:'Protein',        val:macroGoals.protein_g,      unit:'g',    color:'var(--blue)',   icon:'ðŸ¥©', pct:25 },
+              { label:'Fat',            val:macroGoals.fat_g,          unit:'g',    color:'var(--gold)',   icon:'ðŸ¥‘', pct:70 },
+              { label:'Net Carbs',      val:macroGoals.carbs_g,        unit:'g',    color:'var(--red)',    icon:'ðŸ¥¦', pct:5  },
+              { label:'TDEE',           val:macroGoals.tdee,           unit:'kcal', color:'var(--soft)',   icon:'âš¡', pct:null },
+              { label:'Deficit',        val:macroGoals.tdee - macroGoals.daily_calories, unit:'kcal', color:'var(--purple)', icon:'ðŸ“‰', pct:null },
             ].map(m => (
               <div class="stat-box" style="text-align:left;padding:.875rem 1rem;">
                 <div style="font-size:1.1rem;margin-bottom:.35rem;">{m.icon}</div>
@@ -597,10 +597,10 @@ const weekStars = Math.round((complianceRate / 100) * 5);
       </div>
     )}
 
-    {/* ── HABITS WEEK SUMMARY ── */}
+    {/* â”€â”€ HABITS WEEK SUMMARY â”€â”€ */}
     {habitsForWeek.length > 0 && (
       <div class="card" style="animation:fadeUp .4s .1s ease both;margin-top:1.25rem;">
-        <div class="card-title">🎯 Habit Compliance This Week</div>
+        <div class="card-title">ðŸŽ¯ Habit Compliance This Week</div>
         <div style="display:flex;align-items:center;gap:1.25rem;margin-bottom:1rem;">
           <div style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:2.5rem;font-weight:900;color:var(--green);">{habitCompliancePct}%</div>
           <div>
@@ -633,24 +633,24 @@ const weekStars = Math.round((complianceRate / 100) * 5);
 
   </div>
 
-  <!-- ════════ TAB: CHECK-IN ════════ -->
+  <!-- â•â•â•â•â•â•â•â• TAB: CHECK-IN â•â•â•â•â•â•â•â• -->
   <div class="tab-panel" id="tab-checkin">
 
     {existingReport ? (
       <div style="text-align:center;padding:3rem;background:var(--card);border:1px solid var(--border2);border-radius:20px;animation:fadeUp .4s ease both;">
-        <div style="margin-bottom:1rem;font-size:3.5rem;">✅</div>
+        <div style="margin-bottom:1rem;font-size:3.5rem;">âœ…</div>
         <h2 style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.6rem;font-weight:900;margin-bottom:.6rem;">Week {currentWeek} <span style="font-style:italic;background:linear-gradient(135deg,var(--green),var(--green2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">submitted!</span></h2>
         <p style="font-size:.875rem;color:var(--soft);max-width:340px;margin:0 auto .5rem;line-height:1.6;">Your weekly check-in is complete. Check the Insights tab for your personalized analysis.</p>
         <div style="margin-top:1.5rem;display:flex;justify-content:center;gap:.75rem;flex-wrap:wrap;">
-          <button class="btn btn-secondary" onclick="switchTab('insights', document.querySelector('.tab:nth-child(3)'))">🧠 View Insights</button>
-          <a href="/dashboard" class="btn btn-primary" style="text-decoration:none;">🏠 Dashboard</a>
+          <button class="btn btn-secondary" onclick="switchTab('insights', document.querySelector('.tab:nth-child(3)'))">ðŸ§  View Insights</button>
+          <a href="/dashboard" class="btn btn-primary" style="text-decoration:none;">ðŸ  Dashboard</a>
         </div>
       </div>
     ) : (
       <>
       <div class="card" style="animation:fadeUp .4s ease both;">
         <div class="card-head">
-          <div class="ch-icon" style="background:linear-gradient(135deg,#FF5C7A,#E0394F);box-shadow:0 4px 10px rgba(255,92,122,.25);">📈</div>
+          <div class="ch-icon" style="background:linear-gradient(135deg,#FF5C7A,#E0394F);box-shadow:0 4px 10px rgba(255,92,122,.25);">ðŸ“ˆ</div>
           <div class="ch-title">This Week's Weight</div>
         </div>
         <div class="card-body">
@@ -663,10 +663,10 @@ const weekStars = Math.round((complianceRate / 100) * 5);
               <label class="field-label">How you feel about it</label>
               <div class="mood-row">
                 {[
-                  { v:'great',   e:'🤩' },
-                  { v:'good',    e:'😊' },
-                  { v:'ok',      e:'😐' },
-                  { v:'bad',     e:'😞' },
+                  { v:'great',   e:'ðŸ¤©' },
+                  { v:'good',    e:'ðŸ˜Š' },
+                  { v:'ok',      e:'ðŸ˜' },
+                  { v:'bad',     e:'ðŸ˜ž' },
                 ].map(m => (
                   <button class="mood-btn" data-mood={m.v} onclick="selectMood(this)">{m.e}</button>
                 ))}
@@ -678,23 +678,23 @@ const weekStars = Math.round((complianceRate / 100) * 5);
 
       <div class="card" style="animation:fadeUp .4s .06s ease both;">
         <div class="card-head">
-          <div class="ch-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 10px rgba(239,68,68,.25);">⚠️</div>
+          <div class="ch-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 10px rgba(239,68,68,.25);">âš ï¸</div>
           <div class="ch-title">Biggest Challenges This Week</div>
         </div>
         <div class="card-body">
-          <p style="font-size:.78rem;color:var(--soft);margin-bottom:.875rem;">Select all that apply — we'll adjust your plan accordingly.</p>
+          <p style="font-size:.78rem;color:var(--soft);margin-bottom:.875rem;">Select all that apply â€” we'll adjust your plan accordingly.</p>
           <div class="chip-wrap" id="challengeChips">
             {[
-              '🍕 Food cravings',
-              '😴 Low energy',
-              '🎉 Social events',
-              '⏰ No time to cook',
-              '🤢 Keto flu',
-              '😤 Stress eating',
-              '💰 Budget issues',
-              '🤷 Boredom with meals',
-              '💪 Workout fatigue',
-              '😶 Skipped meals',
+              'ðŸ• Food cravings',
+              'ðŸ˜´ Low energy',
+              'ðŸŽ‰ Social events',
+              'â° No time to cook',
+              'ðŸ¤¢ Keto flu',
+              'ðŸ˜¤ Stress eating',
+              'ðŸ’° Budget issues',
+              'ðŸ¤· Boredom with meals',
+              'ðŸ’ª Workout fatigue',
+              'ðŸ˜¶ Skipped meals',
             ].map(c => (
               <div class="chip" onclick="toggleChip(this)">{c}</div>
             ))}
@@ -704,7 +704,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
 
       <div class="card" style="animation:fadeUp .4s .12s ease both;">
         <div class="card-head">
-          <div class="ch-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(59,130,246,.25);">🏆</div>
+          <div class="ch-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 10px rgba(59,130,246,.25);">ðŸ†</div>
           <div class="ch-title">Wins & Notes</div>
         </div>
         <div class="card-body">
@@ -725,12 +725,12 @@ const weekStars = Math.round((complianceRate / 100) * 5);
           <div class="sb-title">Submit Week {currentWeek} Report</div>
           <div class="sb-sub">Generates your personalized next-week plan</div>
         </div>
-        <div class="xp-pill">⭐ +100 XP</div>
+        <div class="xp-pill">â­ +100 XP</div>
         <div class="sb-btns">
           <button class="btn btn-secondary" onclick="window.print()">PDF</button>
           <button class="btn btn-primary" id="saveWeekBtn" onclick="saveWeeklyReport()">
             <div class="btn-spin" id="weekSpin"></div>
-            <span id="weekTxt">Submit Report →</span>
+            <span id="weekTxt">Submit Report â†’</span>
           </button>
         </div>
       </div>
@@ -738,18 +738,18 @@ const weekStars = Math.round((complianceRate / 100) * 5);
     )}
   </div>
 
-  <!-- ════════ TAB: INSIGHTS ════════ -->
+  <!-- â•â•â•â•â•â•â•â• TAB: INSIGHTS â•â•â•â•â•â•â•â• -->
   <div class="tab-panel" id="tab-insights">
     <div id="insightsContent">
       <!-- Populated by JS -->
     </div>
   </div>
 
-  <!-- ════════ TAB: HISTORY ════════ -->
+  <!-- â•â•â•â•â•â•â•â• TAB: HISTORY â•â•â•â•â•â•â•â• -->
   <div class="tab-panel" id="tab-history">
     <div class="card" style="animation:fadeUp .4s ease both;">
       <div class="card-head">
-        <div class="ch-icon" style="background:linear-gradient(135deg,#6366f1,#4f46e5);box-shadow:0 4px 10px rgba(99,102,241,.25);">📅</div>
+        <div class="ch-icon" style="background:linear-gradient(135deg,#6366f1,#4f46e5);box-shadow:0 4px 10px rgba(99,102,241,.25);">ðŸ“…</div>
         <div class="ch-title">Weekly Report History</div>
         <div class="ch-chip" style="background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);color:var(--indigo);">{prevReports?.length || 0} weeks</div>
       </div>
@@ -769,7 +769,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
               {prevReports.map(r => (
                 <tr>
                   <td><strong>Week {r.week_number}</strong><div style="font-size:.68rem;color:var(--soft);">{r.week_start_date}</div></td>
-                  <td style="color:var(--green);font-weight:800;">{r.weight_lost ? '-' + (isImperial ? parseFloat(kgToLbs(r.weight_lost).toFixed(1)) : r.weight_lost) + weightUnit : '—'}</td>
+                  <td style="color:var(--green);font-weight:800;">{r.weight_lost ? '-' + (isImperial ? parseFloat(kgToLbs(r.weight_lost).toFixed(1)) : r.weight_lost) + weightUnit : 'â€”'}</td>
                   <td>
                     <div style="display:flex;align-items:center;gap:.5rem;">
                       <div style="flex:1;height:6px;background:var(--muted);border-radius:99px;overflow:hidden;max-width:60px;">
@@ -778,7 +778,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
                       <span style="font-size:.75rem;font-weight:700;">{Math.round((r.meals_completed / Math.max(r.tasks_completed || 1, 1)) * 100)}%</span>
                     </div>
                   </td>
-                  <td><span style="color:var(--gold);font-weight:800;">{r.avg_energy_level || '—'}</span>/5</td>
+                  <td><span style="color:var(--gold);font-weight:800;">{r.avg_energy_level || 'â€”'}</span>/5</td>
                   <td><span style="color:var(--purple);font-weight:800;">+{r.xp_earned_this_week || 0}</span></td>
                 </tr>
               ))}
@@ -786,7 +786,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
           </table>
         ) : (
           <div style="text-align:center;padding:2.5rem;font-size:.85rem;color:var(--soft);">
-            <div style="margin-bottom:.75rem;font-size:2.5rem;">📊</div>
+            <div style="margin-bottom:.75rem;font-size:2.5rem;">ðŸ“Š</div>
             Complete your first weekly check-in to start<br/>building your history.
           </div>
         )}
@@ -811,7 +811,7 @@ const weekStars = Math.round((complianceRate / 100) * 5);
   journeyStreak: journey?.streak_days || 0,
 }}>
 
-/* ── TABS ── */
+/* â”€â”€ TABS â”€â”€ */
 function switchTab(id, el) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -821,7 +821,7 @@ function switchTab(id, el) {
 }
 window.switchTab = switchTab;
 
-/* ── FORM STATE ── */
+/* â”€â”€ FORM STATE â”€â”€ */
 let selectedMood = null;
 const selectedChallenges = new Set();
 
@@ -838,7 +838,7 @@ function toggleChip(el) {
 window.selectMood = selectMood;
 window.toggleChip = toggleChip;
 
-/* ── SMART INSIGHTS ENGINE ── */
+/* â”€â”€ SMART INSIGHTS ENGINE â”€â”€ */
 function buildInsightsTab() {
   const container = document.getElementById('insightsContent');
   if (!container) return;
@@ -855,7 +855,7 @@ function buildInsightsTab() {
   const wUnit = weightUnit;
   const checkIns = checkinCount;
 
-  /* ── PERFORMANCE SCORE ── */
+  /* â”€â”€ PERFORMANCE SCORE â”€â”€ */
   let score = 0;
   if (comp >= 80)   score += 30;
   else if (comp >= 60) score += 15;
@@ -871,91 +871,91 @@ function buildInsightsTab() {
   const scoreColor = score >= 75 ? '#FF5C7A' : score >= 50 ? '#f59e0b' : '#ef4444';
   const scoreLabel = score >= 80 ? 'Excellent' : score >= 65 ? 'Good' : score >= 45 ? 'Fair' : 'Needs work';
 
-  /* ── GENERATE INSIGHTS ── */
+  /* â”€â”€ GENERATE INSIGHTS â”€â”€ */
 
   // Compliance
   if (comp >= 90 && checkIns >= 6) {
-    insights.push({ type:'🏆 Perfect', color:'#f59e0b', bg:'rgba(245,158,11,.08)', border:'rgba(245,158,11,.25)', text:`<strong>Near-perfect week at ${comp}% compliance with ${checkIns}/7 check-ins.</strong> You're in the top tier of keto practitioners. This level of consistency puts you in fat-burning mode 24/7.`, action:null });
+    insights.push({ type:'ðŸ† Perfect', color:'#f59e0b', bg:'rgba(245,158,11,.08)', border:'rgba(245,158,11,.25)', text:`<strong>Near-perfect week at ${comp}% compliance with ${checkIns}/7 check-ins.</strong> You're in the top tier of keto practitioners. This level of consistency puts you in fat-burning mode 24/7.`, action:null });
   } else if (comp >= 80) {
-    insights.push({ type:'✅ Win', color:'#FF5C7A', bg:'rgba(255,92,122,.08)', border:'rgba(255,92,122,.22)', text:`<strong>Strong compliance at ${comp}%</strong> — you followed your meal plan on most days. This is the single most important factor for ketosis and fat loss.`, action:null });
+    insights.push({ type:'âœ… Win', color:'#FF5C7A', bg:'rgba(255,92,122,.08)', border:'rgba(255,92,122,.22)', text:`<strong>Strong compliance at ${comp}%</strong> â€” you followed your meal plan on most days. This is the single most important factor for ketosis and fat loss.`, action:null });
   } else if (comp >= 60) {
-    insights.push({ type:'⚠️ Moderate', color:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:`Compliance was <strong>${comp}%</strong> — decent, but there's room to improve. Identify which days you fell off and why. Usually it's a lack of prepared food, not willpower.`, action:'Plan problem days' });
+    insights.push({ type:'âš ï¸ Moderate', color:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:`Compliance was <strong>${comp}%</strong> â€” decent, but there's room to improve. Identify which days you fell off and why. Usually it's a lack of prepared food, not willpower.`, action:'Plan problem days' });
   } else {
-    insights.push({ type:'⚠️ Issue', color:'#ef4444', bg:'rgba(239,68,68,.07)', border:'rgba(239,68,68,.2)', text:`Meal compliance was only <strong>${comp}%</strong>. Without consistent nutrition, ketosis cannot be maintained. Prepare 3 meals on Sunday so keto food is always available.`, action:'Plan Sunday meal prep' });
+    insights.push({ type:'âš ï¸ Issue', color:'#ef4444', bg:'rgba(239,68,68,.07)', border:'rgba(239,68,68,.2)', text:`Meal compliance was only <strong>${comp}%</strong>. Without consistent nutrition, ketosis cannot be maintained. Prepare 3 meals on Sunday so keto food is always available.`, action:'Plan Sunday meal prep' });
   }
 
-  // Weight progress — nuanced by compliance
+  // Weight progress â€” nuanced by compliance
   if (wLost >= 1.5) {
-    insights.push({ type:'🔥 Progress', color:'#FF5C7A', bg:'rgba(255,92,122,.08)', border:'rgba(255,92,122,.22)', text:`You lost <strong>${wLostDisp}${wUnit} this week</strong> — excellent progress! You're in active fat-burning mode. Maintain your current plan exactly.`, action:null });
+    insights.push({ type:'ðŸ”¥ Progress', color:'#FF5C7A', bg:'rgba(255,92,122,.08)', border:'rgba(255,92,122,.22)', text:`You lost <strong>${wLostDisp}${wUnit} this week</strong> â€” excellent progress! You're in active fat-burning mode. Maintain your current plan exactly.`, action:null });
   } else if (wLost >= 0.5 && wLost < 1.5) {
-    insights.push({ type:'📈 Progress', color:'#FF5C7A', bg:'rgba(255,92,122,.08)', border:'rgba(255,92,122,.22)', text:`<strong>${wLostDisp}${wUnit} lost</strong> — steady, healthy progress. Sustainable fat loss is ${isImperial ? '1–2 lbs' : '0.5–1kg'}/week. You're right on track.`, action:null });
+    insights.push({ type:'ðŸ“ˆ Progress', color:'#FF5C7A', bg:'rgba(255,92,122,.08)', border:'rgba(255,92,122,.22)', text:`<strong>${wLostDisp}${wUnit} lost</strong> â€” steady, healthy progress. Sustainable fat loss is ${isImperial ? '1â€“2 lbs' : '0.5â€“1kg'}/week. You're right on track.`, action:null });
   } else if (wLost > 0 && wLost < 0.5 && comp >= 75) {
-    insights.push({ type:'📉 Plateau', color:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:`Only <strong>${wLostDisp}${wUnit}</strong> despite good compliance. You may have hit a plateau — try reducing calories by 100 kcal or adding a 24h water fast once this week.`, action:'Break the plateau' });
+    insights.push({ type:'ðŸ“‰ Plateau', color:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:`Only <strong>${wLostDisp}${wUnit}</strong> despite good compliance. You may have hit a plateau â€” try reducing calories by 100 kcal or adding a 24h water fast once this week.`, action:'Break the plateau' });
   } else if (wLost > 0 && wLost < 0.5 && comp < 75) {
-    insights.push({ type:'📉 Slow Progress', color:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:`Only <strong>${wLostDisp}${wUnit} lost</strong>, likely because of ${comp}% compliance. Fix the nutrition first before adjusting anything else — hidden carbs in sauces and condiments add up fast.`, action:'Audit hidden carbs' });
+    insights.push({ type:'ðŸ“‰ Slow Progress', color:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:`Only <strong>${wLostDisp}${wUnit} lost</strong>, likely because of ${comp}% compliance. Fix the nutrition first before adjusting anything else â€” hidden carbs in sauces and condiments add up fast.`, action:'Audit hidden carbs' });
   } else if (wLost <= 0) {
-    insights.push({ type:'⚡ No Loss', color:'#ef4444', bg:'rgba(239,68,68,.07)', border:'rgba(239,68,68,.2)', text:`No weight change this week. This could be water retention (normal, especially in women), or your calories aren't in a deficit. Weigh yourself at the same time each morning for accuracy.`, action:'Check scale timing' });
+    insights.push({ type:'âš¡ No Loss', color:'#ef4444', bg:'rgba(239,68,68,.07)', border:'rgba(239,68,68,.2)', text:`No weight change this week. This could be water retention (normal, especially in women), or your calories aren't in a deficit. Weigh yourself at the same time each morning for accuracy.`, action:'Check scale timing' });
   }
 
-  // Energy — detailed
+  // Energy â€” detailed
   if (energy >= 4.5) {
-    insights.push({ type:'⚡ Peak Energy', color:'#FF5C7A', bg:'rgba(255,92,122,.08)', border:'rgba(255,92,122,.22)', text:`Energy average <strong>${energy}/5</strong> — you're running on ketones at full efficiency. This is the "keto advantage" most people talk about. You're fat-adapted.`, action:null });
+    insights.push({ type:'âš¡ Peak Energy', color:'#FF5C7A', bg:'rgba(255,92,122,.08)', border:'rgba(255,92,122,.22)', text:`Energy average <strong>${energy}/5</strong> â€” you're running on ketones at full efficiency. This is the "keto advantage" most people talk about. You're fat-adapted.`, action:null });
   } else if (energy >= 3.5) {
-    insights.push({ type:'⚡ Good Energy', color:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:`Energy average <strong>${energy}/5</strong> — solid. To push it higher, try adding MCT oil to your morning coffee and ensure you're hitting your fat targets daily.`, action:null });
+    insights.push({ type:'âš¡ Good Energy', color:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:`Energy average <strong>${energy}/5</strong> â€” solid. To push it higher, try adding MCT oil to your morning coffee and ensure you're hitting your fat targets daily.`, action:null });
   } else if (energy <= 2.5 && water < 6) {
-    insights.push({ type:'😴 Energy + Hydration', color:'#ef4444', bg:'rgba(239,68,68,.07)', border:'rgba(239,68,68,.2)', text:`Low energy <strong>${energy}/5</strong> combined with low water intake — this is almost certainly an electrolyte issue. Add salt to food, drink more water, take magnesium at night.`, action:'Fix electrolytes now' });
+    insights.push({ type:'ðŸ˜´ Energy + Hydration', color:'#ef4444', bg:'rgba(239,68,68,.07)', border:'rgba(239,68,68,.2)', text:`Low energy <strong>${energy}/5</strong> combined with low water intake â€” this is almost certainly an electrolyte issue. Add salt to food, drink more water, take magnesium at night.`, action:'Fix electrolytes now' });
   } else if (energy <= 2.5) {
-    insights.push({ type:'😴 Low Energy', color:'#ef4444', bg:'rgba(239,68,68,.07)', border:'rgba(239,68,68,.2)', text:`Low energy average of <strong>${energy}/5</strong>. Most common causes: not enough fat, too little food overall, or electrolyte deficiency. Increase healthy fats (avocado, MCT oil, nuts) immediately.`, action:'Increase fat intake' });
+    insights.push({ type:'ðŸ˜´ Low Energy', color:'#ef4444', bg:'rgba(239,68,68,.07)', border:'rgba(239,68,68,.2)', text:`Low energy average of <strong>${energy}/5</strong>. Most common causes: not enough fat, too little food overall, or electrolyte deficiency. Increase healthy fats (avocado, MCT oil, nuts) immediately.`, action:'Increase fat intake' });
   }
 
   // Hydration
   if (water < 5) {
-    insights.push({ type:'💧 Hydration', color:'#06b6d4', bg:'rgba(6,182,212,.07)', border:'rgba(6,182,212,.2)', text:`Average <strong>${parseFloat(water).toFixed(1)} glasses/day</strong> is dangerously low for keto. Dehydration causes fatigue, headaches, and cravings. Keto flushes water — you need 3L minimum daily.`, action:'Set hourly water alarms' });
+    insights.push({ type:'ðŸ’§ Hydration', color:'#06b6d4', bg:'rgba(6,182,212,.07)', border:'rgba(6,182,212,.2)', text:`Average <strong>${parseFloat(water).toFixed(1)} glasses/day</strong> is dangerously low for keto. Dehydration causes fatigue, headaches, and cravings. Keto flushes water â€” you need 3L minimum daily.`, action:'Set hourly water alarms' });
   } else if (water < 7) {
-    insights.push({ type:'💧 Hydration', color:'#06b6d4', bg:'rgba(6,182,212,.07)', border:'rgba(6,182,212,.2)', text:`Average <strong>${parseFloat(water).toFixed(1)} glasses/day</strong> — slightly below target. Add one glass before each meal and one before bed to hit your daily goal.`, action:'Add pre-meal water habit' });
+    insights.push({ type:'ðŸ’§ Hydration', color:'#06b6d4', bg:'rgba(6,182,212,.07)', border:'rgba(6,182,212,.2)', text:`Average <strong>${parseFloat(water).toFixed(1)} glasses/day</strong> â€” slightly below target. Add one glass before each meal and one before bed to hit your daily goal.`, action:'Add pre-meal water habit' });
   }
 
   // Streak
   if (journeyStreak >= 14) {
-    insights.push({ type:'🔥 Streak', color:'#f59e0b', bg:'rgba(245,158,11,.08)', border:'rgba(245,158,11,.25)', text:`<strong>${journeyStreak}-day streak!</strong> Habit formation research shows 21 days is the tipping point — you're ${21 - journeyStreak > 0 ? 21 - journeyStreak + ' days away from keto becoming automatic.' : 'past the threshold — keto is your lifestyle now.'}`, action:null });
+    insights.push({ type:'ðŸ”¥ Streak', color:'#f59e0b', bg:'rgba(245,158,11,.08)', border:'rgba(245,158,11,.25)', text:`<strong>${journeyStreak}-day streak!</strong> Habit formation research shows 21 days is the tipping point â€” you're ${21 - journeyStreak > 0 ? 21 - journeyStreak + ' days away from keto becoming automatic.' : 'past the threshold â€” keto is your lifestyle now.'}`, action:null });
   } else if (journeyStreak >= 7) {
-    insights.push({ type:'🔥 Streak', color:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:`<strong>${journeyStreak}-day streak</strong> — one full week of consistency. Keep this going to reach the 21-day habit-formation milestone.`, action:null });
+    insights.push({ type:'ðŸ”¥ Streak', color:'#f59e0b', bg:'rgba(245,158,11,.07)', border:'rgba(245,158,11,.2)', text:`<strong>${journeyStreak}-day streak</strong> â€” one full week of consistency. Keep this going to reach the 21-day habit-formation milestone.`, action:null });
   }
 
   // Check-in consistency
   if (checkIns === 7) {
-    insights.push({ type:'📋 Perfect Tracking', color:'#8b5cf6', bg:'rgba(139,92,246,.07)', border:'rgba(139,92,246,.2)', text:`<strong>7/7 check-ins this week</strong> — perfect tracking. Data shows you exactly what's working. This habit alone doubles your success rate.`, action:null });
+    insights.push({ type:'ðŸ“‹ Perfect Tracking', color:'#8b5cf6', bg:'rgba(139,92,246,.07)', border:'rgba(139,92,246,.2)', text:`<strong>7/7 check-ins this week</strong> â€” perfect tracking. Data shows you exactly what's working. This habit alone doubles your success rate.`, action:null });
   } else if (checkIns < 5) {
-    insights.push({ type:'📋 Tracking Gap', color:'#8b5cf6', bg:'rgba(139,92,246,.07)', border:'rgba(139,92,246,.2)', text:`Only <strong>${checkIns}/7 check-ins</strong> this week. Without daily tracking, you lose the data that drives decisions. Set a 9pm phone reminder — it takes under 2 minutes.`, action:'Set 9pm daily reminder' });
+    insights.push({ type:'ðŸ“‹ Tracking Gap', color:'#8b5cf6', bg:'rgba(139,92,246,.07)', border:'rgba(139,92,246,.2)', text:`Only <strong>${checkIns}/7 check-ins</strong> this week. Without daily tracking, you lose the data that drives decisions. Set a 9pm phone reminder â€” it takes under 2 minutes.`, action:'Set 9pm daily reminder' });
   }
 
-  /* ── GENERATE ADJUSTMENTS ── */
+  /* â”€â”€ GENERATE ADJUSTMENTS â”€â”€ */
   if (wLost < 0.3 && comp >= 80) {
-    adjustments.push({ icon:'🔢', text:'<strong>Reduce calories by 100–150 kcal</strong> next week. Your body has adapted to current intake. A small additional deficit should restart fat loss.' });
+    adjustments.push({ icon:'ðŸ”¢', text:'<strong>Reduce calories by 100â€“150 kcal</strong> next week. Your body has adapted to current intake. A small additional deficit should restart fat loss.' });
   }
   if (energy <= 2.5 && water >= 7) {
-    adjustments.push({ icon:'🥑', text:'<strong>Increase daily fat target by 15g.</strong> Add 1 tbsp olive oil to each meal or half an avocado at lunch. Low energy with good hydration = fat deficit.' });
+    adjustments.push({ icon:'ðŸ¥‘', text:'<strong>Increase daily fat target by 15g.</strong> Add 1 tbsp olive oil to each meal or half an avocado at lunch. Low energy with good hydration = fat deficit.' });
   }
   if (energy <= 2.5 && water < 7) {
-    adjustments.push({ icon:'💧', text:'<strong>Fix water + electrolytes first.</strong> Add 1/4 tsp salt to 1L water, drink it in the morning. Take magnesium glycinate (200mg) at night. Most keto "low energy" is this.' });
+    adjustments.push({ icon:'ðŸ’§', text:'<strong>Fix water + electrolytes first.</strong> Add 1/4 tsp salt to 1L water, drink it in the morning. Take magnesium glycinate (200mg) at night. Most keto "low energy" is this.' });
   }
   if (fastingProtocol === 'none' && wLost < 0.5 && comp >= 75) {
-    adjustments.push({ icon:'⏰', text:'<strong>Start 16:8 intermittent fasting next week.</strong> Your compliance is strong enough. Skip breakfast, eat 12pm–8pm. This alone can break a plateau.' });
+    adjustments.push({ icon:'â°', text:'<strong>Start 16:8 intermittent fasting next week.</strong> Your compliance is strong enough. Skip breakfast, eat 12pmâ€“8pm. This alone can break a plateau.' });
   }
   if (water < 7) {
-    adjustments.push({ icon:'💧', text:'<strong>Add a 500ml glass of water before each meal.</strong> This also reduces hunger and prevents overeating.' });
+    adjustments.push({ icon:'ðŸ’§', text:'<strong>Add a 500ml glass of water before each meal.</strong> This also reduces hunger and prevents overeating.' });
   }
   if (comp < 70) {
-    adjustments.push({ icon:'📅', text:'<strong>Meal prep on Sunday — minimum 3 days of food.</strong> Low compliance is a preparation failure, not a willpower failure. Remove the decision entirely.' });
+    adjustments.push({ icon:'ðŸ“…', text:'<strong>Meal prep on Sunday â€” minimum 3 days of food.</strong> Low compliance is a preparation failure, not a willpower failure. Remove the decision entirely.' });
   }
   if (energy <= 2.5 && comp >= 70) {
-    adjustments.push({ icon:'🧂', text:'<strong>Add electrolytes to every meal.</strong> Salt your food generously, eat 1 avocado daily (potassium), and take magnesium at night. This is the most common fix on keto.' });
+    adjustments.push({ icon:'ðŸ§‚', text:'<strong>Add electrolytes to every meal.</strong> Salt your food generously, eat 1 avocado daily (potassium), and take magnesium at night. This is the most common fix on keto.' });
   }
   if (adjustments.length === 0) {
-    adjustments.push({ icon:'🎯', text:'<strong>Your plan is working perfectly.</strong> Stay the course and consider adding 10–15 mins of morning walking to further accelerate fat oxidation.' });
+    adjustments.push({ icon:'ðŸŽ¯', text:'<strong>Your plan is working perfectly.</strong> Stay the course and consider adding 10â€“15 mins of morning walking to further accelerate fat oxidation.' });
   }
 
-  /* ── RENDER ── */
+  /* â”€â”€ RENDER â”€â”€ */
   container.innerHTML = `
     <!-- Score Card -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:20px;padding:1.75rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:1.5rem;animation:fadeUp .4s ease both;flex-wrap:wrap;">
@@ -982,7 +982,7 @@ function buildInsightsTab() {
         <p style="font-size:.82rem;color:var(--soft);line-height:1.6;">
           ${score >= 75 ? `Exceptional week. You're building unstoppable momentum. At this rate, you'll hit your target ${targetWeightDisplay ? `of ${targetWeightDisplay}${weightUnit} ` : ''}ahead of schedule.`
             : score >= 55 ? `Solid week with room to grow. The adjustments below will help you break through to the next level.`
-            : `Tough week — but showing up and tracking it already puts you ahead of 90% of people. Use the adjustments below to restart momentum.`}
+            : `Tough week â€” but showing up and tracking it already puts you ahead of 90% of people. Use the adjustments below to restart momentum.`}
         </p>
         <div style="display:flex;gap:.5rem;margin-top:.75rem;flex-wrap:wrap;">
           ${[
@@ -1011,7 +1011,7 @@ function buildInsightsTab() {
           <div style="flex:1;">
             <div class="ic-type" style="color:${i.color};">${i.type}</div>
             <div class="ic-text">${i.text}</div>
-            ${i.action ? `<div class="ic-action" style="background:${i.color}18;color:${i.color};border:1px solid ${i.color}33;">→ ${i.action}</div>` : ''}
+            ${i.action ? `<div class="ic-action" style="background:${i.color}18;color:${i.color};border:1px solid ${i.color}33;">â†’ ${i.action}</div>` : ''}
           </div>
         </div>
       `).join('') : '<p style="font-size:.82rem;color:var(--soft);padding:1rem 0;">Submit your weekly check-in to generate insights.</p>'}
@@ -1019,7 +1019,7 @@ function buildInsightsTab() {
 
     <!-- Next Week Adjustments -->
     <div class="adj-box" style="animation:fadeUp .4s .1s ease both;">
-      <div class="adj-title">⚡ Adjustments for Week ${currentWeek + 1}</div>
+      <div class="adj-title">âš¡ Adjustments for Week ${currentWeek + 1}</div>
       ${adjustments.map(a => `
         <div class="adj-item">
           <span class="adj-icon">${a.icon}</span>
@@ -1030,10 +1030,10 @@ function buildInsightsTab() {
   `;
 }
 
-/* ── SAVE WEEKLY REPORT ── */
+/* â”€â”€ SAVE WEEKLY REPORT â”€â”€ */
 async function saveWeeklyReport() {
   if (currentWeek > maxWeeks) {
-    showToast('⚠️ Week ' + currentWeek + ' exceeds your plan limit of ' + maxWeeks + ' weeks.', 'e');
+    showToast('âš ï¸ Week ' + currentWeek + ' exceeds your plan limit of ' + maxWeeks + ' weeks.', 'e');
     return;
   }
 
@@ -1049,7 +1049,7 @@ async function saveWeeklyReport() {
   const txt  = document.getElementById('weekTxt');
   btn.disabled = true;
   spin.style.display = 'block';
-  txt.textContent = 'Saving…';
+  txt.textContent = 'Savingâ€¦';
 
   const challenges = [...selectedChallenges];
 
@@ -1076,20 +1076,20 @@ async function saveWeeklyReport() {
     });
     if (!res.ok) throw new Error('Failed');
 
-    showToast('✅ Week ' + currentWeek + ' report saved!', 's');
+    showToast('âœ… Week ' + currentWeek + ' report saved!', 's');
     setTimeout(() => {
       switchTab('insights', document.querySelectorAll('.tab')[2]);
       buildInsightsTab();
     }, 800);
 
   } catch {
-    btn.disabled = false; spin.style.display='none'; txt.textContent='Submit Report →';
-    showToast('❌ Failed to save. Try again.', 'e');
+    btn.disabled = false; spin.style.display='none'; txt.textContent='Submit Report â†’';
+    showToast('âŒ Failed to save. Try again.', 'e');
   }
 }
 window.saveWeeklyReport = saveWeeklyReport;
 
-/* ── TOAST ── */
+/* â”€â”€ TOAST â”€â”€ */
 function showToast(msg, type='s') {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -1097,7 +1097,7 @@ function showToast(msg, type='s') {
   setTimeout(()=>t.classList.remove('show'), 3200);
 }
 
-/* ── AUTO INSIGHTS ON LOAD ── */
+/* â”€â”€ AUTO INSIGHTS ON LOAD â”€â”€ */
 window.addEventListener('load', () => {
   // Pre-populate insights tab silently
   setTimeout(buildInsightsTab, 300);

@@ -1,4 +1,4 @@
----
+﻿---
 // src/pages/dashboard/share.astro
 import { getUserJourney, getMaxJourneyDays, updateCurrentDay } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
@@ -43,7 +43,7 @@ const startWeight  = onboarding?.current_weight || profile.weight_kg || 0;
 const latestWeight = weightLogs?.[weightLogs.length - 1]?.weight || startWeight;
 const weightLost   = Math.max(0, Math.round((startWeight - latestWeight) * 10) / 10);
 
-// Milestone detection — which milestones has the user hit
+// Milestone detection â€” which milestones has the user hit
 const milestones = [7, 14, 21, 30, 60, 90, 180, 365];
 const hitMilestones = milestones.filter(m => currentDay >= m);
 const nextMilestone = milestones.find(m => currentDay < m) || maxDays;
@@ -59,7 +59,7 @@ const milestoneLabel =
   latestMilestone >= 90  ? '90-Day Warrior' :
   latestMilestone >= 60  ? '60-Day Strong' :
   latestMilestone >= 30  ? '30-Day Keto!' :
-  latestMilestone >= 21  ? '21 Days — New Habit' :
+  latestMilestone >= 21  ? '21 Days â€” New Habit' :
   latestMilestone >= 14  ? 'Two Weeks Strong' :
   latestMilestone >= 7   ? 'First Week Done' :
   'Day ' + currentDay;
@@ -78,7 +78,7 @@ const canShare = false; // determined client-side
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{t('share.title')} — Keto Journey</title>
+  <title>{t('share.title')} â€” Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
@@ -107,14 +107,14 @@ const canShare = false; // determined client-side
 <body>
 
 <div class="rv-pg-shell">
-<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="share" />
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="share" />
 <div class="rv-pg-main">
 <main class="page">
 
-  <!-- ── Header ──────────────────────────────────────────── -->
+  <!-- â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
   <header class="page-header fade-up">
     <div class="header-icon">
-      📤
+      ðŸ“¤
     </div>
     <div>
       <h1 class="page-title">Share Your Progress</h1>
@@ -122,16 +122,16 @@ const canShare = false; // determined client-side
     </div>
   </header>
 
-  <!-- ── Next milestone banner ───────────────────────────── -->
+  <!-- â”€â”€ Next milestone banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
   <div class="milestone-banner fade-up" style="animation-delay:.04s">
-    🏆
-    <span>Next milestone: <strong>Day {nextMilestone}</strong> — {nextMilestone - currentDay} days to go</span>
+    ðŸ†
+    <span>Next milestone: <strong>Day {nextMilestone}</strong> â€” {nextMilestone - currentDay} days to go</span>
   </div>
 
-  <!-- ── Layout ──────────────────────────────────────────── -->
+  <!-- â”€â”€ Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
   <div class="layout">
 
-    <!-- LEFT — Options -->
+    <!-- LEFT â€” Options -->
     <section class="card options-card fade-up" style="animation-delay:.08s">
       <h2 class="card-title">Card Style</h2>
 
@@ -140,19 +140,19 @@ const canShare = false; // determined client-side
         <label class="field-label">Template</label>
         <div class="template-grid" id="templateGrid">
           <button class="tpl-btn active" data-tpl="milestone" onclick="setTemplate('milestone')">
-            <span class="tpl-emoji">🏆</span>
+            <span class="tpl-emoji">ðŸ†</span>
             <span class="tpl-name">Milestone</span>
           </button>
           <button class="tpl-btn" data-tpl="weight" onclick="setTemplate('weight')">
-            <span class="tpl-emoji">⚖️</span>
+            <span class="tpl-emoji">âš–ï¸</span>
             <span class="tpl-name">Weight Loss</span>
           </button>
           <button class="tpl-btn" data-tpl="streak" onclick="setTemplate('streak')">
-            <span class="tpl-emoji">🔥</span>
+            <span class="tpl-emoji">ðŸ”¥</span>
             <span class="tpl-name">Streak</span>
           </button>
           <button class="tpl-btn" data-tpl="stats" onclick="setTemplate('stats')">
-            <span class="tpl-emoji">📊</span>
+            <span class="tpl-emoji">ðŸ“Š</span>
             <span class="tpl-name">Full Stats</span>
           </button>
         </div>
@@ -205,21 +205,21 @@ const canShare = false; // determined client-side
       <!-- Action buttons -->
       <div class="action-btns">
         <button class="btn-download" onclick="downloadCard()">
-          ⬇ Download PNG
+          â¬‡ Download PNG
         </button>
         <button class="btn-share" id="shareBtn" onclick="shareCard()" style="display:none">
-          📤 Share
+          ðŸ“¤ Share
         </button>
       </div>
-      <p class="action-note">1080×1080px · Instagram-ready</p>
+      <p class="action-note">1080Ã—1080px Â· Instagram-ready</p>
     </section>
 
-    <!-- RIGHT — Preview -->
+    <!-- RIGHT â€” Preview -->
     <div class="preview-col fade-up" style="animation-delay:.12s">
       <div class="preview-wrap">
         <canvas id="shareCanvas" width="1080" height="1080"></canvas>
       </div>
-      <p class="preview-hint">Live preview — changes update instantly</p>
+      <p class="preview-hint">Live preview â€” changes update instantly</p>
     </div>
 
   </div><!-- /layout -->
@@ -402,7 +402,7 @@ const canShare = false; // determined client-side
   planType
 }}>
 
-/* ══ State ═══════════════════════════════════════════════════ */
+/* â•â• State â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 var cfg = {
   template: 'milestone',
   theme:    'dark',
@@ -443,7 +443,7 @@ var THEMES = {
   },
 };
 
-/* ══ Boot ════════════════════════════════════════════════════ */
+/* â•â• Boot â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 (function () {
   // Show native share button if supported
   if (navigator.share) {
@@ -453,7 +453,7 @@ var THEMES = {
   draw();
 })();
 
-/* ══ Setters ════════════════════════════════════════════════ */
+/* â•â• Setters â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function setTemplate(val) {
   cfg.template = val;
   document.querySelectorAll('#templateGrid .tpl-btn').forEach(function(b) {
@@ -496,7 +496,7 @@ function toggleTag() {
   draw();
 }
 
-/* ══ Canvas Drawing ═════════════════════════════════════════ */
+/* â•â• Canvas Drawing â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function draw() {
   var canvas = document.getElementById('shareCanvas');
   var ctx    = canvas.getContext('2d');
@@ -529,7 +529,7 @@ function draw() {
   drawFooter(ctx, W, H, p);
 }
 
-/* ── Helpers ─────────────────────────────────────────────── */
+/* â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function drawGlow(ctx, x, y, r, color) {
   var g = ctx.createRadialGradient(x, y, 0, x, y, r);
   g.addColorStop(0, color);
@@ -581,7 +581,7 @@ function drawLogo(ctx, cx, y, p) {
   ctx.font = 'bold 22px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('🥑', cx, y + logoSize / 2);
+  ctx.fillText('ðŸ¥‘', cx, y + logoSize / 2);
   ctx.restore();
 }
 
@@ -598,7 +598,7 @@ function drawFooter(ctx, W, H, p) {
   ctx.textBaseline = 'middle';
 
   var footerText = 'ketojourney.fun';
-  if (cfg.showTag) footerText = '#KetoJourney · ' + footerText;
+  if (cfg.showTag) footerText = '#KetoJourney Â· ' + footerText;
 
   ctx.fillText(footerText, W / 2, y + 40);
 }
@@ -617,7 +617,7 @@ function statBox(ctx, x, y, w, h, label, value, p) {
   ctx.fillText(value, x + w / 2, y + h / 2 + 8);
 }
 
-/* ── Template: Milestone ─────────────────────────────────── */
+/* â”€â”€ Template: Milestone â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function drawMilestone(ctx, W, H, p) {
   var cx = W / 2;
 
@@ -667,7 +667,7 @@ function drawMilestone(ctx, W, H, p) {
   }
 }
 
-/* ── Template: Weight Loss ───────────────────────────────── */
+/* â”€â”€ Template: Weight Loss â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function drawWeight(ctx, W, H, p) {
   var cx = W / 2;
   var topY = H > W ? H * 0.14 : H * 0.12;
@@ -725,7 +725,7 @@ function drawWeight(ctx, W, H, p) {
   }
 }
 
-/* ── Template: Streak ────────────────────────────────────── */
+/* â”€â”€ Template: Streak â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function drawStreak(ctx, W, H, p) {
   var cx = W / 2;
   var topY = H > W ? H * 0.1 : H * 0.09;
@@ -733,7 +733,7 @@ function drawStreak(ctx, W, H, p) {
   // Flame emoji big
   ctx.font = H > W ? '160px sans-serif' : '140px sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  ctx.fillText('🔥', cx, topY);
+  ctx.fillText('ðŸ”¥', cx, topY);
 
   // Streak number
   var numY = H > W ? topY + 200 : topY + 180;
@@ -771,11 +771,11 @@ function drawStreak(ctx, W, H, p) {
     ctx.fillStyle = p.soft;
     ctx.font = '600 30px "DM Sans", sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillText(userName + ' · #KetoJourney', cx, statsY + bh + 36);
+    ctx.fillText(userName + ' Â· #KetoJourney', cx, statsY + bh + 36);
   }
 }
 
-/* ── Template: Full Stats ────────────────────────────────── */
+/* â”€â”€ Template: Full Stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function drawStats(ctx, W, H, p) {
   var cx = W / 2;
   var topY = H > W ? H * 0.08 : H * 0.09;
@@ -808,7 +808,7 @@ function drawStats(ctx, W, H, p) {
 
   ctx.fillStyle = p.soft;
   ctx.font = '500 30px "DM Sans", sans-serif';
-  ctx.fillText('of ' + maxDays + ' · ' + journeyPct + '% complete', cx, dayY + 128);
+  ctx.fillText('of ' + maxDays + ' Â· ' + journeyPct + '% complete', cx, dayY + 128);
 
   // Progress bar
   var barY = H > W ? dayY + 196 : dayY + 186;
@@ -829,7 +829,7 @@ function drawStats(ctx, W, H, p) {
   statBox(ctx, 90 + bw + gap, gridY + bh + gap, bw, bh, 'XP',   totalXP.toLocaleString(),    p);
 }
 
-/* ══ Download ═══════════════════════════════════════════════ */
+/* â•â• Download â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function downloadCard() {
   var canvas = document.getElementById('shareCanvas');
   var link   = document.createElement('a');
@@ -838,15 +838,15 @@ function downloadCard() {
   link.click();
 }
 
-/* ══ Share ══════════════════════════════════════════════════ */
+/* â•â• Share â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function shareCard() {
   var canvas = document.getElementById('shareCanvas');
   canvas.toBlob(function(blob) {
     if (!blob) return;
     var file = new File([blob], 'keto-progress.png', { type: 'image/png' });
     navigator.share({
-      title: 'My Keto Progress — Day ' + currentDay,
-      text:  'Check out my keto journey progress! 🥑🔥 #KetoJourney',
+      title: 'My Keto Progress â€” Day ' + currentDay,
+      text:  'Check out my keto journey progress! ðŸ¥‘ðŸ”¥ #KetoJourney',
       files: [file],
     }).catch(function() {
       // Fallback to download if share fails
@@ -858,3 +858,4 @@ function shareCard() {
 
 </body>
 </html>
+

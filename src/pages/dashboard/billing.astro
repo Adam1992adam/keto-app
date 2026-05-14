@@ -1,4 +1,4 @@
----
+﻿---
 import { requireAuth } from '../../lib/auth';
 import { getUserJourney, getMaxJourneyDays, updateCurrentDay } from '../../lib/supabase';
 import Sidebar from '../../components/Sidebar.astro';
@@ -29,7 +29,7 @@ const daysUsed    = currentDay;
 const daysLeft    = Math.max(0, totalDays - currentDay);
 const progressPct = Math.min(100, Math.round((daysUsed / totalDays) * 100));
 
-// Refund eligibility — within 30 days of purchase
+// Refund eligibility â€” within 30 days of purchase
 const daysSincePurchase = startDate ? Math.ceil((now.getTime() - startDate.getTime()) / 86400000) : 999;
 const refundEligible    = daysSincePurchase <= 30;
 
@@ -57,7 +57,7 @@ const isElite     = planType === 'elite_12';
 const isPro       = planType === 'pro_6';
 const isActive    = profile.subscription_status === 'active';
 
-const formatDate  = (d: Date | null) => d ? d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) : '—';
+const formatDate  = (d: Date | null) => d ? d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) : 'â€”';
 const saleId      = (profile as any).payhip_sale_id || (profile as any).sale_id || null;
 
 const CHECKOUT_PRO   = import.meta.env.LEMONSQUEEZY_PRO_URL   || '';
@@ -70,7 +70,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{t('billing.title')} · Keto Journey</title>
+  <title>{t('billing.title')} Â· Keto Journey</title>
   <meta name="robots" content="noindex"/>
   <link rel="icon" type="image/png" sizes="32x32" href="/icon-72.png"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -93,7 +93,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
     h1 { font-weight:800; font-size:clamp(1.6rem,3vw,2.2rem); margin-bottom:.35rem; }
     .sub { font-size:.88rem; color:var(--soft); margin-bottom:2rem; }
 
-    /* ── Plan card ── */
+    /* â”€â”€ Plan card â”€â”€ */
     .plan-card {
       border-radius:24px; padding:2rem;
       border:1.5px solid var(--border2);
@@ -148,7 +148,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
       font-size:.78rem; color:var(--text);
       display:flex; align-items:center; gap:.4rem;
     }
-    .feature-pill::before { content:'✓'; color:var(--green); font-weight:800; font-size:.72rem; }
+    .feature-pill::before { content:'âœ“'; color:var(--green); font-weight:800; font-size:.72rem; }
 
     /* Order info */
     .order-row {
@@ -206,14 +206,14 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
 <body>
 
 <div class="rv-pg-shell">
-<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="billing" />
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="billing" />
 <div class="rv-pg-main">
 
 <div class="page">
   <h1>My Plan</h1>
   <p class="sub">Manage your subscription, view usage, and upgrade anytime.</p>
 
-  <!-- ── Plan card ── -->
+  <!-- â”€â”€ Plan card â”€â”€ -->
   <div class="plan-card" style={`--plan-gradient:${meta.gradient};`}>
     <div class="plan-header">
       <div class="plan-name-row">
@@ -221,7 +221,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
         <span class="plan-title">{meta.price} one-time</span>
       </div>
       <span class={`plan-status ${isActive ? 'active' : 'expired'}`}>
-        {isActive ? '● Active' : '● Expired'}
+        {isActive ? 'â— Active' : 'â— Expired'}
       </span>
     </div>
 
@@ -267,7 +267,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
     )}
   </div>
 
-  <!-- ── Dates ── -->
+  <!-- â”€â”€ Dates â”€â”€ -->
   <div class="info-row">
     <div class="info-card">
       <div class="info-card-label">Started</div>
@@ -279,7 +279,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
     </div>
   </div>
 
-  <!-- ── Actions ── -->
+  <!-- â”€â”€ Actions â”€â”€ -->
   <div class="actions-grid">
 
     <!-- Upgrade (hidden for Elite) -->
@@ -296,11 +296,11 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
         </div>
         {upgradeUrl ? (
           <a href={upgradeUrl} class="action-btn btn-upgrade">
-            Upgrade to {isPro ? 'Elite' : 'Pro'} →
+            Upgrade to {isPro ? 'Elite' : 'Pro'} â†’
           </a>
         ) : (
           <a href="/dashboard/upgrade" class="action-btn btn-upgrade">
-            View Upgrade Options →
+            View Upgrade Options â†’
           </a>
         )}
       </div>
@@ -315,14 +315,14 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
       <div class="action-card-body">
         {refundEligible
           ? `You're within the 30-day refund window (day ${daysSincePurchase} of 30). Email us with your order ID and we'll process it within 5 business days.`
-          : 'Your 30-day refund window has passed. Contact support if you experienced a technical issue — we\'ll always work with you.'}
+          : 'Your 30-day refund window has passed. Contact support if you experienced a technical issue â€” we\'ll always work with you.'}
       </div>
       {refundEligible ? (
         <a
-          href={`mailto:support@ketojourney.fun?subject=Refund Request — Order ${saleId || ''}&body=Hi, I'd like to request a refund.%0A%0AOrder ID: ${saleId || 'N/A'}%0AEmail: ${user.email}%0APlan: ${meta.name}`}
+          href={`mailto:support@ketojourney.fun?subject=Refund Request â€” Order ${saleId || ''}&body=Hi, I'd like to request a refund.%0A%0AOrder ID: ${saleId || 'N/A'}%0AEmail: ${user.email}%0APlan: ${meta.name}`}
           class="action-btn btn-refund"
         >
-          Request Refund →
+          Request Refund â†’
         </a>
       ) : (
         <span class="action-btn btn-disabled">Window closed</span>
@@ -345,7 +345,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
         View your order, download your invoice, or manage your purchase directly through our billing provider.
       </div>
       <button id="portalBtn" class="action-btn btn-portal" onclick="openPortal()">
-        Open Billing Portal →
+        Open Billing Portal â†’
       </button>
       <div id="portalMsg" class="portal-note" style="display:none"></div>
     </div>
@@ -357,10 +357,10 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
       </div>
       <div class="action-card-title">Contact Support</div>
       <div class="action-card-body">
-        Questions about your plan, billing, or the app? Our team typically responds within 1–2 business days.
+        Questions about your plan, billing, or the app? Our team typically responds within 1â€“2 business days.
       </div>
       <a href="mailto:support@ketojourney.fun" class="action-btn btn-support">
-        Email Support →
+        Email Support â†’
       </a>
     </div>
 
@@ -374,7 +374,7 @@ const upgradeUrl     = isPro ? CHECKOUT_ELITE : CHECKOUT_PRO;
         Read the full details of our 30-day money-back guarantee, eligibility criteria, and processing timeline.
       </div>
       <a href="/refund-policy" class="action-btn btn-support">
-        View Policy →
+        View Policy â†’
       </a>
     </div>
 
@@ -386,7 +386,7 @@ async function openPortal() {
   var btn = document.getElementById('portalBtn');
   var msg = document.getElementById('portalMsg');
   btn.disabled = true;
-  btn.textContent = 'Loading…';
+  btn.textContent = 'Loadingâ€¦';
   msg.style.display = 'none';
 
   try {
@@ -410,7 +410,7 @@ async function openPortal() {
     msg.textContent = 'Network error. Please try again.';
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Open Billing Portal →';
+    btn.textContent = 'Open Billing Portal â†’';
   }
 }
 </script>
@@ -419,3 +419,4 @@ async function openPortal() {
 </div>
 </body>
 </html>
+

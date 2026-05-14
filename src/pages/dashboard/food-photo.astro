@@ -1,6 +1,6 @@
----
+﻿---
 // src/pages/dashboard/food-photo.astro
-// AI Food Photo Analyzer — snap or upload a meal photo to get nutritional info
+// AI Food Photo Analyzer â€” snap or upload a meal photo to get nutritional info
 import { requireAuth } from '../../lib/auth';
 import Sidebar from '../../components/Sidebar.astro';
 import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
@@ -27,7 +27,7 @@ const today = new Date().toISOString().split('T')[0];
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Food Photo Analyzer — Keto Journey</title>
+  <title>Food Photo Analyzer â€” Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
   <style>
@@ -55,7 +55,7 @@ const today = new Date().toISOString().split('T')[0];
     .page-title em { font-style:italic; color:var(--green2); }
     .page-sub { color:var(--soft); font-size:.88rem; margin-bottom:2rem; }
 
-    /* ── Upload Zone ── */
+    /* â”€â”€ Upload Zone â”€â”€ */
     .upload-zone {
       background:var(--card); border:2px dashed var(--border2);
       border-radius:var(--radius); padding:2.5rem 1.5rem;
@@ -90,7 +90,7 @@ const today = new Date().toISOString().split('T')[0];
       cursor:pointer; display:flex; align-items:center; gap:.35rem;
     }
 
-    /* ── Action buttons ── */
+    /* â”€â”€ Action buttons â”€â”€ */
     .btn-row { display:flex; gap:.75rem; margin-bottom:1.25rem; flex-wrap:wrap; }
     .btn-primary {
       flex:1; min-width:140px; background:var(--rv-accent,#FF5C7A); color:#fff;
@@ -111,7 +111,7 @@ const today = new Date().toISOString().split('T')[0];
     .btn-secondary:hover { border-color:var(--green); color:var(--green2); }
     .spinner { animation:spin 1s linear infinite; }
 
-    /* ── Camera capture ── */
+    /* â”€â”€ Camera capture â”€â”€ */
     #cameraSection { display:none; margin-bottom:1.25rem; }
     #cameraSection.active { display:block; }
     .cam-wrap {
@@ -132,7 +132,7 @@ const today = new Date().toISOString().split('T')[0];
       cursor:pointer; min-height:48px; font-family:'Bricolage Grotesque',system-ui,sans-serif;
     }
 
-    /* ── Result card ── */
+    /* â”€â”€ Result card â”€â”€ */
     #resultCard { display:none; margin-bottom:1.25rem; }
     #resultCard.show { display:block; }
     .result-card {
@@ -194,7 +194,7 @@ const today = new Date().toISOString().split('T')[0];
     .conf-dot.medium { background:var(--gold); }
     .conf-dot.low    { background:var(--red); }
 
-    /* ── Log section ── */
+    /* â”€â”€ Log section â”€â”€ */
     .log-section {
       display:flex; flex-wrap:wrap; gap:.75rem; align-items:center;
     }
@@ -217,7 +217,7 @@ const today = new Date().toISOString().split('T')[0];
       display:flex; align-items:center; gap:.35rem;
     }
 
-    /* ── Tips card ── */
+    /* â”€â”€ Tips card â”€â”€ */
     .tips-card {
       background:var(--card); border:1px solid var(--border);
       border-radius:var(--radius); padding:1.5rem;
@@ -232,7 +232,7 @@ const today = new Date().toISOString().split('T')[0];
     .tip-row:last-child { margin-bottom:0; }
     .tip-icon { font-size:1rem; flex-shrink:0; margin-top:.05rem; }
 
-    /* ── Toast ── */
+    /* â”€â”€ Toast â”€â”€ */
     #photoToast {
       position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px);
       background:var(--card2); border:1px solid var(--border2); border-radius:12px;
@@ -251,11 +251,11 @@ const today = new Date().toISOString().split('T')[0];
 </head>
 <body>
 <div class="rv-pg-shell">
-<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="food-photo" />
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="food-photo" />
 <div class="rv-pg-main">
   <div class="page">
     <h1 class="page-title fade-up">Food <em>Photo</em> Analyzer</h1>
-    <p class="page-sub fade-up d1">Snap or upload a photo of any meal — AI will estimate the nutritional values instantly.</p>
+    <p class="page-sub fade-up d1">Snap or upload a photo of any meal â€” AI will estimate the nutritional values instantly.</p>
 
     <!-- Upload zone -->
     <div class="upload-zone fade-up d1" id="uploadZone" onclick="document.getElementById('fileInput').click()">
@@ -263,7 +263,7 @@ const today = new Date().toISOString().split('T')[0];
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
       </div>
       <div class="upload-title">Drop a food photo here</div>
-      <div class="upload-sub">or click to browse · JPG, PNG, WEBP up to 10MB</div>
+      <div class="upload-sub">or click to browse Â· JPG, PNG, WEBP up to 10MB</div>
       <img id="previewImg" style="display:none;" alt="Food preview" />
       <div class="preview-overlay" id="previewOverlay">
         <button class="overlay-btn" onclick="event.stopPropagation(); clearImage()">
@@ -310,31 +310,31 @@ const today = new Date().toISOString().split('T')[0];
       <div class="result-card">
         <div class="result-header">
           <div>
-            <div class="result-food-name" id="resFoodName">—</div>
-            <div class="result-serving" id="resServing">—</div>
+            <div class="result-food-name" id="resFoodName">â€”</div>
+            <div class="result-serving" id="resServing">â€”</div>
           </div>
-          <div class="verdict-badge" id="resVerdict">—</div>
+          <div class="verdict-badge" id="resVerdict">â€”</div>
         </div>
 
         <div class="macro-grid">
           <div class="macro-cell">
-            <div class="macro-val calories" id="resCal">—</div>
+            <div class="macro-val calories" id="resCal">â€”</div>
             <div class="macro-lbl">kcal</div>
           </div>
           <div class="macro-cell">
-            <div class="macro-val protein" id="resProt">—</div>
+            <div class="macro-val protein" id="resProt">â€”</div>
             <div class="macro-lbl">Protein g</div>
           </div>
           <div class="macro-cell">
-            <div class="macro-val fat" id="resFat">—</div>
+            <div class="macro-val fat" id="resFat">â€”</div>
             <div class="macro-lbl">Fat g</div>
           </div>
           <div class="macro-cell">
-            <div class="macro-val carbs" id="resCarbs">—</div>
+            <div class="macro-val carbs" id="resCarbs">â€”</div>
             <div class="macro-lbl">Carbs g</div>
           </div>
           <div class="macro-cell">
-            <div class="macro-val net-carbs" id="resNet">—</div>
+            <div class="macro-val net-carbs" id="resNet">â€”</div>
             <div class="macro-lbl">Net Carbs</div>
           </div>
         </div>
@@ -343,7 +343,7 @@ const today = new Date().toISOString().split('T')[0];
           <!-- Notes -->
           <div class="result-notes" id="resNotesWrap">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <span id="resNotes">—</span>
+            <span id="resNotes">â€”</span>
           </div>
 
           <!-- Ingredients -->
@@ -355,7 +355,7 @@ const today = new Date().toISOString().split('T')[0];
           <!-- Confidence -->
           <div class="confidence-row" id="resConfidence">
             <span class="conf-dot" id="confDot"></span>
-            <span id="confText">—</span>
+            <span id="confText">â€”</span>
           </div>
 
           <!-- Log to diary -->
@@ -387,19 +387,19 @@ const today = new Date().toISOString().split('T')[0];
         Tips for best results
       </div>
       <div class="tip-row">
-        <div class="tip-icon">📸</div>
+        <div class="tip-icon">ðŸ“¸</div>
         <div>Take the photo from directly above the plate for the most accurate portion estimate.</div>
       </div>
       <div class="tip-row">
-        <div class="tip-icon">💡</div>
-        <div>Good lighting makes a big difference — avoid dark or heavily shadowed photos.</div>
+        <div class="tip-icon">ðŸ’¡</div>
+        <div>Good lighting makes a big difference â€” avoid dark or heavily shadowed photos.</div>
       </div>
       <div class="tip-row">
-        <div class="tip-icon">🍽️</div>
+        <div class="tip-icon">ðŸ½ï¸</div>
         <div>Include the whole plate in the frame so the AI can judge portion size.</div>
       </div>
       <div class="tip-row">
-        <div class="tip-icon">⚖️</div>
+        <div class="tip-icon">âš–ï¸</div>
         <div>Results are estimates. For precise tracking, weigh your food with a kitchen scale.</div>
       </div>
     </div>
@@ -416,7 +416,7 @@ const today = new Date().toISOString().split('T')[0];
     var currentNutrition = null;
     var stream = null;
 
-    // ── Toast ──────────────────────────────────────────────────
+    // â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function toast(msg) {
       var el = document.getElementById('photoToast');
       el.textContent = msg;
@@ -425,17 +425,17 @@ const today = new Date().toISOString().split('T')[0];
       window._toastTimer = setTimeout(function() { el.classList.remove('show'); }, 3000);
     }
 
-    // ── File select ────────────────────────────────────────────
+    // â”€â”€ File select â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     window.handleFileSelect = function(input) {
       var file = input.files[0];
       if (!file) return;
-      if (file.size > 10 * 1024 * 1024) { toast('Image too large — max 10MB'); return; }
+      if (file.size > 10 * 1024 * 1024) { toast('Image too large â€” max 10MB'); return; }
       imageType = file.type || 'image/jpeg';
       var reader = new FileReader();
       reader.onload = function(e) {
         var dataUrl = e.target.result;
         showPreview(dataUrl);
-        // Strip the data:...;base64, prefix — API wants raw base64
+        // Strip the data:...;base64, prefix â€” API wants raw base64
         imageBase64 = dataUrl.split(',')[1];
         document.getElementById('btnAnalyze').disabled = false;
       };
@@ -468,7 +468,7 @@ const today = new Date().toISOString().split('T')[0];
       document.getElementById('fileInput').value = '';
     };
 
-    // ── Drag & drop ────────────────────────────────────────────
+    // â”€â”€ Drag & drop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     var zone = document.getElementById('uploadZone');
     zone.addEventListener('dragover', function(e) {
       e.preventDefault();
@@ -487,7 +487,7 @@ const today = new Date().toISOString().split('T')[0];
       window.handleFileSelect(input);
     });
 
-    // ── Camera ─────────────────────────────────────────────────
+    // â”€â”€ Camera â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     window.startCamera = function() {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         toast('Camera not available on this device');
@@ -523,14 +523,14 @@ const today = new Date().toISOString().split('T')[0];
       window.stopCamera();
     };
 
-    // ── Analyze ────────────────────────────────────────────────
+    // â”€â”€ Analyze â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     window.analyzePhoto = function() {
       if (!imageBase64) { toast('Please select a photo first'); return; }
 
       var btn   = document.getElementById('btnAnalyze');
       var label = document.getElementById('analyzeLabel');
       btn.disabled = true;
-      label.innerHTML = '<svg class="spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" opacity=".25"/><path d="M21 12a9 9 0 0 1-9 9" /></svg> Analyzing…';
+      label.innerHTML = '<svg class="spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" opacity=".25"/><path d="M21 12a9 9 0 0 1-9 9" /></svg> Analyzingâ€¦';
 
       fetch('/api/food/analyze-photo', {
         method: 'POST',
@@ -543,7 +543,7 @@ const today = new Date().toISOString().split('T')[0];
         currentNutrition = d.nutrition;
         renderResult(d.nutrition);
       })
-      .catch(function() { toast('Network error — please try again'); })
+      .catch(function() { toast('Network error â€” please try again'); })
       .finally(function() {
         btn.disabled = false;
         label.textContent = 'Analyze Food';
@@ -563,14 +563,14 @@ const today = new Date().toISOString().split('T')[0];
       // Verdict badge
       var vb = document.getElementById('resVerdict');
       vb.className = 'verdict-badge ' + n.keto_verdict;
-      var verdictMap = { keto_friendly: '✓ Keto Friendly', caution: '⚠ Caution', not_keto: '✗ Not Keto' };
+      var verdictMap = { keto_friendly: 'âœ“ Keto Friendly', caution: 'âš  Caution', not_keto: 'âœ— Not Keto' };
       vb.textContent = verdictMap[n.keto_verdict] || n.keto_verdict;
 
       // Confidence
       var dot  = document.getElementById('confDot');
       var conf = document.getElementById('confText');
       dot.className = 'conf-dot ' + n.confidence;
-      var confMap = { high: 'High confidence estimate', medium: 'Medium confidence — photo was partially unclear', low: 'Low confidence — photo may be unclear or uncommon food' };
+      var confMap = { high: 'High confidence estimate', medium: 'Medium confidence â€” photo was partially unclear', low: 'Low confidence â€” photo may be unclear or uncommon food' };
       conf.textContent = confMap[n.confidence] || n.confidence;
 
       // Ingredients
@@ -593,13 +593,13 @@ const today = new Date().toISOString().split('T')[0];
       document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    // ── Log to diary ───────────────────────────────────────────
+    // â”€â”€ Log to diary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     window.logFood = function() {
       if (!imageBase64 || !currentNutrition) { toast('Analyze a photo first'); return; }
       var mealType = document.getElementById('mealTypeSelect').value;
       var btn = document.getElementById('btnLog');
       btn.disabled = true;
-      btn.innerHTML = '<svg class="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" opacity=".25"/><path d="M21 12a9 9 0 0 1-9 9" /></svg> Saving…';
+      btn.innerHTML = '<svg class="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" opacity=".25"/><path d="M21 12a9 9 0 0 1-9 9" /></svg> Savingâ€¦';
 
       fetch('/api/food/analyze-photo', {
         method: 'POST',
@@ -619,7 +619,7 @@ const today = new Date().toISOString().split('T')[0];
         document.getElementById('logSuccess').style.display = 'flex';
         toast('Logged to your food diary!');
       })
-      .catch(function() { toast('Could not save — please try again'); })
+      .catch(function() { toast('Could not save â€” please try again'); })
       .finally(function() {
         if (btn.style.display !== 'none') {
           btn.disabled = false;
@@ -632,3 +632,4 @@ const today = new Date().toISOString().split('T')[0];
   </script>
 </body>
 </html>
+

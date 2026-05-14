@@ -1,4 +1,4 @@
----
+﻿---
 // src/pages/dashboard/recipes/[bookId].astro
 // Shows all recipes belonging to a specific recipe book + tier access guard
 import { requireAuth } from '../../../lib/auth';
@@ -10,7 +10,7 @@ if ('redirect' in auth) return Astro.redirect(auth.redirect);
 const { user, profile, db } = auth;
 
 const planType  = profile.subscription_tier || 'basic_30';
-const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const tierLabel = planType === 'elite_12' ? 'ðŸ‘‘ Elite' : planType === 'pro_6' ? 'âš¡ Pro' : 'ðŸ¥‘ Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'Friend';
 await updateCurrentDay(user.id).catch(() => null);
 const journey    = await getUserJourney(user.id, db).catch(() => null);
@@ -18,8 +18,8 @@ const currentDay = journey?.current_day || 1;
 
 const bookId = Astro.params.bookId || '';
 
-// ── Tier access guard ────────────────────────────────────────────────────────
-// Book IDs are prefixed (b, l, d, s, sm, bk, ds) followed by a number 1–12.
+// â”€â”€ Tier access guard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Book IDs are prefixed (b, l, d, s, sm, bk, ds) followed by a number 1â€“12.
 // Books 1-4 = Basic+, 5-8 = Pro+, 9-12 = Elite only.
 const numMatch  = bookId.match(/(\d+)$/);
 const bookNum   = numMatch ? parseInt(numMatch[1]) : 1;
@@ -29,7 +29,7 @@ const userRank  = tierRank[planType as keyof typeof tierRank] ?? 0;
 const reqRank   = tierRank[required as keyof typeof tierRank] ?? 0;
 if (userRank < reqRank) return Astro.redirect('/dashboard/recipes');
 
-// ── Book metadata for all 84 books ──────────────────────────────────────────
+// â”€â”€ Book metadata for all 84 books â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const BK_G = 'linear-gradient(135deg,#f59e0b,#d97706)';
 const LU_G = 'linear-gradient(135deg,#FF5C7A,#E0394F)';
 const DI_G = 'linear-gradient(135deg,#ef4444,#dc2626)';
@@ -39,102 +39,102 @@ const BA_G = 'linear-gradient(135deg,#d97706,#b45309)';
 const DS_G = 'linear-gradient(135deg,#ec4899,#db2777)';
 
 const bookMeta: Record<string, { title:string; emoji:string; desc:string; gradient:string; accent:string; category:string }> = {
-  // ── Breakfast ──────────────────────────────────────────────────────────────
-  b1:  { title:'Keto Eggs Mastery',        emoji:'🥚', desc:'20+ egg-based breakfast recipes with full macro breakdowns',    gradient:BK_G, accent:'#f59e0b', category:'Breakfast' },
-  b2:  { title:'Avocado Mornings',         emoji:'🥑', desc:'Creative avocado dishes to fuel your morning',                 gradient:LU_G, accent:'#FF5C7A', category:'Breakfast' },
-  b3:  { title:'Keto Pancake Bible',       emoji:'🥞', desc:'Fluffy low-carb pancakes, waffles & French toast',             gradient:BK_G, accent:'#f59e0b', category:'Breakfast' },
-  b4:  { title:'Power Breakfast Bowls',    emoji:'🥣', desc:'Filling breakfast bowls packed with healthy fats',             gradient:'linear-gradient(135deg,#6366f1,#8b5cf6)', accent:'#8b5cf6', category:'Breakfast' },
-  b5:  { title:'Bacon & Beyond',           emoji:'🥓', desc:'Savory breakfast meats done the keto way',                    gradient:DI_G, accent:'#ef4444', category:'Breakfast' },
-  b6:  { title:'Keto Smoothie Bowls',      emoji:'🍓', desc:'Thick, creamy bowls under 5g net carbs each',                 gradient:DS_G, accent:'#ec4899', category:'Breakfast' },
-  b7:  { title:'Overnight Keto',           emoji:'⏰', desc:'Prep-ahead breakfasts ready in minutes',                      gradient:SM_G, accent:'#06b6d4', category:'Breakfast' },
-  b8:  { title:"Cheese Lover's Breakfast", emoji:'🧀', desc:'Cheese-forward morning meals full of flavor',                 gradient:BK_G, accent:'#f59e0b', category:'Breakfast' },
-  b9:  { title:'Keto Omelette Art',        emoji:'🍳', desc:'Gourmet omelettes for every taste and mood',                  gradient:LU_G, accent:'#FF5C7A', category:'Breakfast' },
-  b10: { title:'Fat Bomb Breakfasts',      emoji:'💣', desc:'High-fat morning starters to hit ketosis fast',               gradient:SN_G, accent:'#8b5cf6', category:'Breakfast' },
-  b11: { title:'Weekend Keto Brunch',      emoji:'☀️', desc:'Impressive brunch recipes for special mornings',              gradient:'linear-gradient(135deg,#f59e0b,#f97316)', accent:'#f97316', category:'Breakfast' },
-  b12: { title:'Keto Breakfast Meal Prep', emoji:'📦', desc:"Batch-cook a week's worth of breakfasts in 2 hours",          gradient:LU_G, accent:'#FF5C7A', category:'Breakfast' },
-  // ── Lunch ──────────────────────────────────────────────────────────────────
-  l1:  { title:'Keto Salad Bible',         emoji:'🥬', desc:'30+ hearty salads that actually fill you up',                 gradient:LU_G, accent:'#FF5C7A', category:'Lunch' },
-  l2:  { title:'Lettuce Wrap Secrets',     emoji:'🌯', desc:'Fresh, crunchy wraps with bold fillings',                    gradient:LU_G, accent:'#FF5C7A', category:'Lunch' },
-  l3:  { title:'Keto Soups & Stews',       emoji:'🍲', desc:'Warming bowls perfect for meal prep',                        gradient:'linear-gradient(135deg,#3b82f6,#2563eb)', accent:'#3b82f6', category:'Lunch' },
-  l4:  { title:'Power Protein Lunches',    emoji:'💪', desc:'High-protein midday meals under 8g carbs',                   gradient:DI_G, accent:'#ef4444', category:'Lunch' },
-  l5:  { title:'Keto Grain-Free Bowls',    emoji:'🥙', desc:'Buddha-style bowls with keto-friendly bases',                gradient:LU_G, accent:'#FF5C7A', category:'Lunch' },
-  l6:  { title:'Office Lunch Keto',        emoji:'💼', desc:'Pack-and-go lunches that stay fresh all day',               gradient:'linear-gradient(135deg,#6366f1,#8b5cf6)', accent:'#6366f1', category:'Lunch' },
-  l7:  { title:'Keto Chicken Lunches',     emoji:'🍗', desc:'15 ways to make chicken exciting at lunch',                  gradient:BK_G, accent:'#f59e0b', category:'Lunch' },
-  l8:  { title:'Seafood Keto Lunch',       emoji:'🦞', desc:'Light yet satisfying seafood-based lunches',                 gradient:SM_G, accent:'#06b6d4', category:'Lunch' },
-  l9:  { title:'Keto Charcuterie Plates',  emoji:'🧆', desc:'Beautiful boards that double as a full meal',                gradient:SN_G, accent:'#8b5cf6', category:'Lunch' },
-  l10: { title:'Tuna & Salmon Specials',   emoji:'🐟', desc:'Quick canned-fish recipes packed with omega-3',              gradient:SM_G, accent:'#06b6d4', category:'Lunch' },
-  l11: { title:'Keto Cauliflower Lunches', emoji:'🌿', desc:'Cauliflower transformed into 20 lunch ideas',                gradient:LU_G, accent:'#FF5C7A', category:'Lunch' },
-  l12: { title:'30-Min Keto Lunches',      emoji:'⚡', desc:'Fast, delicious lunches ready before hunger strikes',         gradient:'linear-gradient(135deg,#f59e0b,#d97706)', accent:'#f59e0b', category:'Lunch' },
-  // ── Dinner ─────────────────────────────────────────────────────────────────
-  d1:  { title:'Keto Steak Nights',        emoji:'🥩', desc:'Master every cut — ribeye, sirloin, T-bone & more',          gradient:DI_G, accent:'#ef4444', category:'Dinner' },
-  d2:  { title:'Family Keto Dinners',      emoji:'👨‍👩‍👧', desc:'Crowd-pleasing dinners even picky eaters love',             gradient:LU_G, accent:'#FF5C7A', category:'Dinner' },
-  d3:  { title:'Keto Italian Night',       emoji:'🇮🇹', desc:'Pasta-free Italian classics — zoodles, lasagna & more',     gradient:DI_G, accent:'#ef4444', category:'Dinner' },
-  d4:  { title:'Slow Cooker Keto',         emoji:'🍳', desc:'Set it and forget it — 25 crockpot keto meals',             gradient:BK_G, accent:'#f59e0b', category:'Dinner' },
-  d5:  { title:'Keto Seafood Dinner',      emoji:'🦐', desc:'Impressive seafood dishes for special occasions',            gradient:SM_G, accent:'#06b6d4', category:'Dinner' },
-  d6:  { title:'Asian Keto Kitchen',       emoji:'🥢', desc:'Stir-fries, curries & Asian flavors without the carbs',     gradient:'linear-gradient(135deg,#ec4899,#db2777)', accent:'#ec4899', category:'Dinner' },
-  d7:  { title:'Keto BBQ & Grill',         emoji:'🔥', desc:'Smoky grilled meats and sides for summer nights',           gradient:DI_G, accent:'#ef4444', category:'Dinner' },
-  d8:  { title:'Keto Mexican Nights',      emoji:'🌮', desc:'Tacos, enchiladas & burritos — all keto style',             gradient:BK_G, accent:'#f59e0b', category:'Dinner' },
-  d9:  { title:'Ground Beef Keto',         emoji:'🫕', desc:'Budget-friendly ground beef transformed 20 ways',           gradient:'linear-gradient(135deg,#b45309,#92400e)', accent:'#b45309', category:'Dinner' },
-  d10: { title:'Keto Casseroles',          emoji:'🥘', desc:'Comforting baked casseroles for cold evenings',             gradient:'linear-gradient(135deg,#3b82f6,#2563eb)', accent:'#3b82f6', category:'Dinner' },
-  d11: { title:'Sheet Pan Keto Dinners',   emoji:'📋', desc:'One pan, minimal cleanup, maximum flavor',                  gradient:LU_G, accent:'#FF5C7A', category:'Dinner' },
-  d12: { title:'Keto Date Night Dinners',  emoji:'🥂', desc:'Restaurant-quality meals for two, at home',                 gradient:'linear-gradient(135deg,#8b5cf6,#7c3aed)', accent:'#8b5cf6', category:'Dinner' },
-  // ── Snacks ─────────────────────────────────────────────────────────────────
-  s1:  { title:'Keto Cheese Crisps',           emoji:'🧀', desc:'Crunchy cheese-based snacks for any craving',                  gradient:SN_G, accent:'#8b5cf6', category:'Snacks' },
-  s2:  { title:'Fat Bomb Handbook',            emoji:'💣', desc:'50 fat bomb recipes — sweet, savory & everything in between',  gradient:'linear-gradient(135deg,#ec4899,#db2777)', accent:'#ec4899', category:'Snacks' },
-  s3:  { title:'Keto Dips & Spreads',          emoji:'🫙', desc:'Guacamole, hummus alternatives & creamy dips',                gradient:LU_G, accent:'#FF5C7A', category:'Snacks' },
-  s4:  { title:'Nuts & Seeds Snacks',          emoji:'🌰', desc:'Seasoned nut mixes and seed snack recipes',                   gradient:BK_G, accent:'#f59e0b', category:'Snacks' },
-  s5:  { title:'Keto Jerky & Meat Snacks',     emoji:'🥓', desc:'Homemade jerky and protein-packed bites',                    gradient:DI_G, accent:'#ef4444', category:'Snacks' },
-  s6:  { title:'Veggie Keto Snacks',           emoji:'🥦', desc:'Low-carb veggie snacks that satisfy the crunch',              gradient:LU_G, accent:'#FF5C7A', category:'Snacks' },
-  s7:  { title:'Keto Energy Bars',             emoji:'⚡', desc:'Homemade bars better than any store-bought option',           gradient:BK_G, accent:'#f59e0b', category:'Snacks' },
-  s8:  { title:'Keto Deviled Eggs',            emoji:'🥚', desc:'Creative deviled egg recipes for snacking',                   gradient:SN_G, accent:'#8b5cf6', category:'Snacks' },
-  s9:  { title:'Keto Charcuterie',             emoji:'🍖', desc:'Build stunning snack boards for every occasion',              gradient:DI_G, accent:'#ef4444', category:'Snacks' },
-  s10: { title:'Keto Popcorn Alternatives',    emoji:'🍿', desc:'Crunchy movie-night snacks without the carbs',               gradient:'linear-gradient(135deg,#6366f1,#8b5cf6)', accent:'#6366f1', category:'Snacks' },
-  s11: { title:'Keto Dipping Sauces',          emoji:'🥫', desc:'Sauces that make every snack 10× better',                    gradient:LU_G, accent:'#FF5C7A', category:'Snacks' },
-  s12: { title:'5-Min Keto Snacks',            emoji:'⏱️', desc:'Quick snacks you can make before hunger wins',               gradient:SM_G, accent:'#06b6d4', category:'Snacks' },
-  // ── Smoothies ───────────────────────────────────────────────────────────────
-  sm1:  { title:'Keto Green Smoothies',    emoji:'🥬', desc:'Nutrient-dense green blends under 4g net carbs',                 gradient:SM_G, accent:'#06b6d4', category:'Smoothies' },
-  sm2:  { title:'Keto Berry Smoothies',     emoji:'🫐', desc:'Berry-packed low-carb blends bursting with antioxidants',     gradient:DS_G, accent:'#ec4899', category:'Smoothies' },
-  sm3:  { title:'Keto Protein Shakes',     emoji:'💪', desc:'High-protein post-workout shakes to fuel recovery',            gradient:SM_G, accent:'#06b6d4', category:'Smoothies' },
-  sm4:  { title:'Creamy Keto Shakes',      emoji:'🥛', desc:'Rich velvety blended drinks to crush hunger and hit macros',   gradient:SM_G, accent:'#06b6d4', category:'Smoothies' },
-  sm5:  { title:'Keto Coffee Drinks',      emoji:'☕', desc:'Bulletproof coffee and MCT-powered morning drinks',             gradient:'linear-gradient(135deg,#b45309,#92400e)', accent:'#b45309', category:'Smoothies' },
-  sm6:  { title:'Keto Detox Smoothies',    emoji:'✨', desc:'Cleansing blends to support your health journey',               gradient:LU_G, accent:'#FF5C7A', category:'Smoothies' },
-  sm7:  { title:'Chocolate Keto Shakes',   emoji:'🍫', desc:'Rich chocolate smoothies that taste like dessert',              gradient:'linear-gradient(135deg,#b45309,#78350f)', accent:'#b45309', category:'Smoothies' },
-  sm8:  { title:'Keto Tropical Blends',    emoji:'🌴', desc:'Tropical flavors without the sugar spike',                     gradient:'linear-gradient(135deg,#FF5C7A,#06b6d4)', accent:'#06b6d4', category:'Smoothies' },
-  sm9:  { title:'Keto Nut Milk Recipes',   emoji:'🥛', desc:'Make your own almond, coconut & macadamia milks',              gradient:SM_G, accent:'#06b6d4', category:'Smoothies' },
-  sm10: { title:'Keto Collagen Smoothies', emoji:'🌟', desc:'Beauty-boosting blends with collagen peptides',                gradient:DS_G, accent:'#ec4899', category:'Smoothies' },
-  sm11: { title:'Kids Keto Smoothies',     emoji:'🧒', desc:'Family-friendly blends the whole household will enjoy',        gradient:SM_G, accent:'#06b6d4', category:'Smoothies' },
-  sm12: { title:'Keto Smoothie Meal Prep', emoji:'📦', desc:'Batch-prep a week of smoothie packs in 30 minutes',            gradient:LU_G, accent:'#FF5C7A', category:'Smoothies' },
-  // ── Baking ──────────────────────────────────────────────────────────────────
-  bk1:  { title:'Keto Bread Bible',        emoji:'🍞', desc:'20 keto bread recipes from sandwich loaves to rolls',          gradient:BA_G, accent:'#d97706', category:'Keto Baking' },
-  bk2:  { title:'Keto Cookies & Bars',     emoji:'🍪', desc:'20 irresistible cookies, brownies and bars all under 5g carbs', gradient:BA_G, accent:'#d97706', category:'Keto Baking' },
-  bk3:  { title:'Keto Muffins & Cupcakes', emoji:'🧁', desc:'Moist, fluffy muffins that pass the taste test',              gradient:DS_G, accent:'#ec4899', category:'Keto Baking' },
-  bk4:  { title:'Keto Cakes & Tarts',      emoji:'🎂', desc:'Elegant layer cakes, tarts and showpiece desserts done keto', gradient:DS_G, accent:'#ec4899', category:'Keto Baking' },
-  bk5:  { title:'Keto Crackers & Chips',   emoji:'🫓', desc:'Crunchy baked snacks for dipping and munching',               gradient:BA_G, accent:'#d97706', category:'Keto Baking' },
-  bk6:  { title:'Coconut Flour Baking',    emoji:'🥥', desc:'Nut-free baking alternatives using coconut flour',            gradient:'linear-gradient(135deg,#FF5C7A,#E0394F)', accent:'#FF5C7A', category:'Keto Baking' },
-  bk7:  { title:'Keto Bagels & Rolls',     emoji:'🥯', desc:'Fathead dough transformed into bakery favorites',             gradient:BA_G, accent:'#d97706', category:'Keto Baking' },
-  bk8:  { title:'Keto Flatbreads',         emoji:'🫓', desc:'Quick flatbreads and wraps baked in 15 minutes',              gradient:BA_G, accent:'#d97706', category:'Keto Baking' },
-  bk9:  { title:'Keto Savory Bakes',       emoji:'🧆', desc:'Quiches, frittatas and savory baked goods',                   gradient:'linear-gradient(135deg,#f59e0b,#d97706)', accent:'#f59e0b', category:'Keto Baking' },
-  bk10: { title:'Psyllium Husk Baking',    emoji:'🌿', desc:'Gut-healthy fiber-rich keto baking secrets',                  gradient:LU_G, accent:'#FF5C7A', category:'Keto Baking' },
-  bk11: { title:'Keto Tortillas & Wraps',  emoji:'🌯', desc:'Perfect low-carb tortillas for tacos and wraps',              gradient:BA_G, accent:'#d97706', category:'Keto Baking' },
-  bk12: { title:'Advanced Keto Baking',    emoji:'👨‍🍳', desc:'Master-level techniques for serious keto bakers',            gradient:'linear-gradient(135deg,#8b5cf6,#7c3aed)', accent:'#8b5cf6', category:'Keto Baking' },
-  // ── Desserts ────────────────────────────────────────────────────────────────
-  ds1:  { title:'Keto Ice Cream Book',      emoji:'🍦', desc:'20 creamy frozen desserts from scoops to pops to ice cream cakes', gradient:SM_G, accent:'#06b6d4', category:'Desserts' },
-  ds2:  { title:'Keto Puddings & Custards',emoji:'🍮', desc:'Silky smooth puddings, mousses, crème brûlée and custards',  gradient:'linear-gradient(135deg,#b45309,#78350f)', accent:'#b45309', category:'Desserts' },
-  ds3:  { title:'Keto Candy & Confections',emoji:'🍬', desc:'Truffles, fudge, bark and candy — all sugar-free and keto', gradient:BA_G, accent:'#d97706', category:'Desserts' },
-  ds4:  { title:'Keto Pies & Cobblers',    emoji:'🥧', desc:'Buttery keto crusts filled with cobblers, pies and fruit tarts', gradient:DS_G, accent:'#ec4899', category:'Desserts' },
-  ds5:  { title:'Keto Brownies & Bars',    emoji:'🟫', desc:'Fudgy brownies and blondies with zero guilt',                gradient:'linear-gradient(135deg,#b45309,#78350f)', accent:'#b45309', category:'Desserts' },
-  ds6:  { title:'Keto Mousse & Puddings',  emoji:'🍮', desc:'Silky smooth desserts ready in under 10 minutes',            gradient:DS_G, accent:'#ec4899', category:'Desserts' },
-  ds7:  { title:'Keto Pies & Tarts',       emoji:'🥧', desc:'Buttery crusts and creamy fillings — all keto',              gradient:BA_G, accent:'#d97706', category:'Desserts' },
-  ds8:  { title:'Keto Candy Book',         emoji:'🍬', desc:'Homemade keto candy that satisfies every sweet tooth',       gradient:DS_G, accent:'#ec4899', category:'Desserts' },
-  ds9:  { title:'Keto Tiramisu & Classics',emoji:'☕', desc:'Italian and French classics reimagined keto-style',          gradient:'linear-gradient(135deg,#b45309,#92400e)', accent:'#b45309', category:'Desserts' },
-  ds10: { title:'No-Bake Keto Desserts',   emoji:'❄️', desc:'25 desserts that require zero oven time',                   gradient:SM_G, accent:'#06b6d4', category:'Desserts' },
-  ds11: { title:'Keto Birthday Cakes',     emoji:'🎂', desc:'Celebration cakes and frosting recipes to impress',          gradient:DS_G, accent:'#ec4899', category:'Desserts' },
-  ds12: { title:'Keto Dessert Meal Prep',  emoji:'📦', desc:'Make a week of desserts in one Sunday session',              gradient:LU_G, accent:'#FF5C7A', category:'Desserts' },
+  // â”€â”€ Breakfast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  b1:  { title:'Keto Eggs Mastery',        emoji:'ðŸ¥š', desc:'20+ egg-based breakfast recipes with full macro breakdowns',    gradient:BK_G, accent:'#f59e0b', category:'Breakfast' },
+  b2:  { title:'Avocado Mornings',         emoji:'ðŸ¥‘', desc:'Creative avocado dishes to fuel your morning',                 gradient:LU_G, accent:'#FF5C7A', category:'Breakfast' },
+  b3:  { title:'Keto Pancake Bible',       emoji:'ðŸ¥ž', desc:'Fluffy low-carb pancakes, waffles & French toast',             gradient:BK_G, accent:'#f59e0b', category:'Breakfast' },
+  b4:  { title:'Power Breakfast Bowls',    emoji:'ðŸ¥£', desc:'Filling breakfast bowls packed with healthy fats',             gradient:'linear-gradient(135deg,#6366f1,#8b5cf6)', accent:'#8b5cf6', category:'Breakfast' },
+  b5:  { title:'Bacon & Beyond',           emoji:'ðŸ¥“', desc:'Savory breakfast meats done the keto way',                    gradient:DI_G, accent:'#ef4444', category:'Breakfast' },
+  b6:  { title:'Keto Smoothie Bowls',      emoji:'ðŸ“', desc:'Thick, creamy bowls under 5g net carbs each',                 gradient:DS_G, accent:'#ec4899', category:'Breakfast' },
+  b7:  { title:'Overnight Keto',           emoji:'â°', desc:'Prep-ahead breakfasts ready in minutes',                      gradient:SM_G, accent:'#06b6d4', category:'Breakfast' },
+  b8:  { title:"Cheese Lover's Breakfast", emoji:'ðŸ§€', desc:'Cheese-forward morning meals full of flavor',                 gradient:BK_G, accent:'#f59e0b', category:'Breakfast' },
+  b9:  { title:'Keto Omelette Art',        emoji:'ðŸ³', desc:'Gourmet omelettes for every taste and mood',                  gradient:LU_G, accent:'#FF5C7A', category:'Breakfast' },
+  b10: { title:'Fat Bomb Breakfasts',      emoji:'ðŸ’£', desc:'High-fat morning starters to hit ketosis fast',               gradient:SN_G, accent:'#8b5cf6', category:'Breakfast' },
+  b11: { title:'Weekend Keto Brunch',      emoji:'â˜€ï¸', desc:'Impressive brunch recipes for special mornings',              gradient:'linear-gradient(135deg,#f59e0b,#f97316)', accent:'#f97316', category:'Breakfast' },
+  b12: { title:'Keto Breakfast Meal Prep', emoji:'ðŸ“¦', desc:"Batch-cook a week's worth of breakfasts in 2 hours",          gradient:LU_G, accent:'#FF5C7A', category:'Breakfast' },
+  // â”€â”€ Lunch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  l1:  { title:'Keto Salad Bible',         emoji:'ðŸ¥¬', desc:'30+ hearty salads that actually fill you up',                 gradient:LU_G, accent:'#FF5C7A', category:'Lunch' },
+  l2:  { title:'Lettuce Wrap Secrets',     emoji:'ðŸŒ¯', desc:'Fresh, crunchy wraps with bold fillings',                    gradient:LU_G, accent:'#FF5C7A', category:'Lunch' },
+  l3:  { title:'Keto Soups & Stews',       emoji:'ðŸ²', desc:'Warming bowls perfect for meal prep',                        gradient:'linear-gradient(135deg,#3b82f6,#2563eb)', accent:'#3b82f6', category:'Lunch' },
+  l4:  { title:'Power Protein Lunches',    emoji:'ðŸ’ª', desc:'High-protein midday meals under 8g carbs',                   gradient:DI_G, accent:'#ef4444', category:'Lunch' },
+  l5:  { title:'Keto Grain-Free Bowls',    emoji:'ðŸ¥™', desc:'Buddha-style bowls with keto-friendly bases',                gradient:LU_G, accent:'#FF5C7A', category:'Lunch' },
+  l6:  { title:'Office Lunch Keto',        emoji:'ðŸ’¼', desc:'Pack-and-go lunches that stay fresh all day',               gradient:'linear-gradient(135deg,#6366f1,#8b5cf6)', accent:'#6366f1', category:'Lunch' },
+  l7:  { title:'Keto Chicken Lunches',     emoji:'ðŸ—', desc:'15 ways to make chicken exciting at lunch',                  gradient:BK_G, accent:'#f59e0b', category:'Lunch' },
+  l8:  { title:'Seafood Keto Lunch',       emoji:'ðŸ¦ž', desc:'Light yet satisfying seafood-based lunches',                 gradient:SM_G, accent:'#06b6d4', category:'Lunch' },
+  l9:  { title:'Keto Charcuterie Plates',  emoji:'ðŸ§†', desc:'Beautiful boards that double as a full meal',                gradient:SN_G, accent:'#8b5cf6', category:'Lunch' },
+  l10: { title:'Tuna & Salmon Specials',   emoji:'ðŸŸ', desc:'Quick canned-fish recipes packed with omega-3',              gradient:SM_G, accent:'#06b6d4', category:'Lunch' },
+  l11: { title:'Keto Cauliflower Lunches', emoji:'ðŸŒ¿', desc:'Cauliflower transformed into 20 lunch ideas',                gradient:LU_G, accent:'#FF5C7A', category:'Lunch' },
+  l12: { title:'30-Min Keto Lunches',      emoji:'âš¡', desc:'Fast, delicious lunches ready before hunger strikes',         gradient:'linear-gradient(135deg,#f59e0b,#d97706)', accent:'#f59e0b', category:'Lunch' },
+  // â”€â”€ Dinner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  d1:  { title:'Keto Steak Nights',        emoji:'ðŸ¥©', desc:'Master every cut â€” ribeye, sirloin, T-bone & more',          gradient:DI_G, accent:'#ef4444', category:'Dinner' },
+  d2:  { title:'Family Keto Dinners',      emoji:'ðŸ‘¨â€ðŸ‘©â€ðŸ‘§', desc:'Crowd-pleasing dinners even picky eaters love',             gradient:LU_G, accent:'#FF5C7A', category:'Dinner' },
+  d3:  { title:'Keto Italian Night',       emoji:'ðŸ‡®ðŸ‡¹', desc:'Pasta-free Italian classics â€” zoodles, lasagna & more',     gradient:DI_G, accent:'#ef4444', category:'Dinner' },
+  d4:  { title:'Slow Cooker Keto',         emoji:'ðŸ³', desc:'Set it and forget it â€” 25 crockpot keto meals',             gradient:BK_G, accent:'#f59e0b', category:'Dinner' },
+  d5:  { title:'Keto Seafood Dinner',      emoji:'ðŸ¦', desc:'Impressive seafood dishes for special occasions',            gradient:SM_G, accent:'#06b6d4', category:'Dinner' },
+  d6:  { title:'Asian Keto Kitchen',       emoji:'ðŸ¥¢', desc:'Stir-fries, curries & Asian flavors without the carbs',     gradient:'linear-gradient(135deg,#ec4899,#db2777)', accent:'#ec4899', category:'Dinner' },
+  d7:  { title:'Keto BBQ & Grill',         emoji:'ðŸ”¥', desc:'Smoky grilled meats and sides for summer nights',           gradient:DI_G, accent:'#ef4444', category:'Dinner' },
+  d8:  { title:'Keto Mexican Nights',      emoji:'ðŸŒ®', desc:'Tacos, enchiladas & burritos â€” all keto style',             gradient:BK_G, accent:'#f59e0b', category:'Dinner' },
+  d9:  { title:'Ground Beef Keto',         emoji:'ðŸ«•', desc:'Budget-friendly ground beef transformed 20 ways',           gradient:'linear-gradient(135deg,#b45309,#92400e)', accent:'#b45309', category:'Dinner' },
+  d10: { title:'Keto Casseroles',          emoji:'ðŸ¥˜', desc:'Comforting baked casseroles for cold evenings',             gradient:'linear-gradient(135deg,#3b82f6,#2563eb)', accent:'#3b82f6', category:'Dinner' },
+  d11: { title:'Sheet Pan Keto Dinners',   emoji:'ðŸ“‹', desc:'One pan, minimal cleanup, maximum flavor',                  gradient:LU_G, accent:'#FF5C7A', category:'Dinner' },
+  d12: { title:'Keto Date Night Dinners',  emoji:'ðŸ¥‚', desc:'Restaurant-quality meals for two, at home',                 gradient:'linear-gradient(135deg,#8b5cf6,#7c3aed)', accent:'#8b5cf6', category:'Dinner' },
+  // â”€â”€ Snacks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  s1:  { title:'Keto Cheese Crisps',           emoji:'ðŸ§€', desc:'Crunchy cheese-based snacks for any craving',                  gradient:SN_G, accent:'#8b5cf6', category:'Snacks' },
+  s2:  { title:'Fat Bomb Handbook',            emoji:'ðŸ’£', desc:'50 fat bomb recipes â€” sweet, savory & everything in between',  gradient:'linear-gradient(135deg,#ec4899,#db2777)', accent:'#ec4899', category:'Snacks' },
+  s3:  { title:'Keto Dips & Spreads',          emoji:'ðŸ«™', desc:'Guacamole, hummus alternatives & creamy dips',                gradient:LU_G, accent:'#FF5C7A', category:'Snacks' },
+  s4:  { title:'Nuts & Seeds Snacks',          emoji:'ðŸŒ°', desc:'Seasoned nut mixes and seed snack recipes',                   gradient:BK_G, accent:'#f59e0b', category:'Snacks' },
+  s5:  { title:'Keto Jerky & Meat Snacks',     emoji:'ðŸ¥“', desc:'Homemade jerky and protein-packed bites',                    gradient:DI_G, accent:'#ef4444', category:'Snacks' },
+  s6:  { title:'Veggie Keto Snacks',           emoji:'ðŸ¥¦', desc:'Low-carb veggie snacks that satisfy the crunch',              gradient:LU_G, accent:'#FF5C7A', category:'Snacks' },
+  s7:  { title:'Keto Energy Bars',             emoji:'âš¡', desc:'Homemade bars better than any store-bought option',           gradient:BK_G, accent:'#f59e0b', category:'Snacks' },
+  s8:  { title:'Keto Deviled Eggs',            emoji:'ðŸ¥š', desc:'Creative deviled egg recipes for snacking',                   gradient:SN_G, accent:'#8b5cf6', category:'Snacks' },
+  s9:  { title:'Keto Charcuterie',             emoji:'ðŸ–', desc:'Build stunning snack boards for every occasion',              gradient:DI_G, accent:'#ef4444', category:'Snacks' },
+  s10: { title:'Keto Popcorn Alternatives',    emoji:'ðŸ¿', desc:'Crunchy movie-night snacks without the carbs',               gradient:'linear-gradient(135deg,#6366f1,#8b5cf6)', accent:'#6366f1', category:'Snacks' },
+  s11: { title:'Keto Dipping Sauces',          emoji:'ðŸ¥«', desc:'Sauces that make every snack 10Ã— better',                    gradient:LU_G, accent:'#FF5C7A', category:'Snacks' },
+  s12: { title:'5-Min Keto Snacks',            emoji:'â±ï¸', desc:'Quick snacks you can make before hunger wins',               gradient:SM_G, accent:'#06b6d4', category:'Snacks' },
+  // â”€â”€ Smoothies â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  sm1:  { title:'Keto Green Smoothies',    emoji:'ðŸ¥¬', desc:'Nutrient-dense green blends under 4g net carbs',                 gradient:SM_G, accent:'#06b6d4', category:'Smoothies' },
+  sm2:  { title:'Keto Berry Smoothies',     emoji:'ðŸ«', desc:'Berry-packed low-carb blends bursting with antioxidants',     gradient:DS_G, accent:'#ec4899', category:'Smoothies' },
+  sm3:  { title:'Keto Protein Shakes',     emoji:'ðŸ’ª', desc:'High-protein post-workout shakes to fuel recovery',            gradient:SM_G, accent:'#06b6d4', category:'Smoothies' },
+  sm4:  { title:'Creamy Keto Shakes',      emoji:'ðŸ¥›', desc:'Rich velvety blended drinks to crush hunger and hit macros',   gradient:SM_G, accent:'#06b6d4', category:'Smoothies' },
+  sm5:  { title:'Keto Coffee Drinks',      emoji:'â˜•', desc:'Bulletproof coffee and MCT-powered morning drinks',             gradient:'linear-gradient(135deg,#b45309,#92400e)', accent:'#b45309', category:'Smoothies' },
+  sm6:  { title:'Keto Detox Smoothies',    emoji:'âœ¨', desc:'Cleansing blends to support your health journey',               gradient:LU_G, accent:'#FF5C7A', category:'Smoothies' },
+  sm7:  { title:'Chocolate Keto Shakes',   emoji:'ðŸ«', desc:'Rich chocolate smoothies that taste like dessert',              gradient:'linear-gradient(135deg,#b45309,#78350f)', accent:'#b45309', category:'Smoothies' },
+  sm8:  { title:'Keto Tropical Blends',    emoji:'ðŸŒ´', desc:'Tropical flavors without the sugar spike',                     gradient:'linear-gradient(135deg,#FF5C7A,#06b6d4)', accent:'#06b6d4', category:'Smoothies' },
+  sm9:  { title:'Keto Nut Milk Recipes',   emoji:'ðŸ¥›', desc:'Make your own almond, coconut & macadamia milks',              gradient:SM_G, accent:'#06b6d4', category:'Smoothies' },
+  sm10: { title:'Keto Collagen Smoothies', emoji:'ðŸŒŸ', desc:'Beauty-boosting blends with collagen peptides',                gradient:DS_G, accent:'#ec4899', category:'Smoothies' },
+  sm11: { title:'Kids Keto Smoothies',     emoji:'ðŸ§’', desc:'Family-friendly blends the whole household will enjoy',        gradient:SM_G, accent:'#06b6d4', category:'Smoothies' },
+  sm12: { title:'Keto Smoothie Meal Prep', emoji:'ðŸ“¦', desc:'Batch-prep a week of smoothie packs in 30 minutes',            gradient:LU_G, accent:'#FF5C7A', category:'Smoothies' },
+  // â”€â”€ Baking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  bk1:  { title:'Keto Bread Bible',        emoji:'ðŸž', desc:'20 keto bread recipes from sandwich loaves to rolls',          gradient:BA_G, accent:'#d97706', category:'Keto Baking' },
+  bk2:  { title:'Keto Cookies & Bars',     emoji:'ðŸª', desc:'20 irresistible cookies, brownies and bars all under 5g carbs', gradient:BA_G, accent:'#d97706', category:'Keto Baking' },
+  bk3:  { title:'Keto Muffins & Cupcakes', emoji:'ðŸ§', desc:'Moist, fluffy muffins that pass the taste test',              gradient:DS_G, accent:'#ec4899', category:'Keto Baking' },
+  bk4:  { title:'Keto Cakes & Tarts',      emoji:'ðŸŽ‚', desc:'Elegant layer cakes, tarts and showpiece desserts done keto', gradient:DS_G, accent:'#ec4899', category:'Keto Baking' },
+  bk5:  { title:'Keto Crackers & Chips',   emoji:'ðŸ«“', desc:'Crunchy baked snacks for dipping and munching',               gradient:BA_G, accent:'#d97706', category:'Keto Baking' },
+  bk6:  { title:'Coconut Flour Baking',    emoji:'ðŸ¥¥', desc:'Nut-free baking alternatives using coconut flour',            gradient:'linear-gradient(135deg,#FF5C7A,#E0394F)', accent:'#FF5C7A', category:'Keto Baking' },
+  bk7:  { title:'Keto Bagels & Rolls',     emoji:'ðŸ¥¯', desc:'Fathead dough transformed into bakery favorites',             gradient:BA_G, accent:'#d97706', category:'Keto Baking' },
+  bk8:  { title:'Keto Flatbreads',         emoji:'ðŸ«“', desc:'Quick flatbreads and wraps baked in 15 minutes',              gradient:BA_G, accent:'#d97706', category:'Keto Baking' },
+  bk9:  { title:'Keto Savory Bakes',       emoji:'ðŸ§†', desc:'Quiches, frittatas and savory baked goods',                   gradient:'linear-gradient(135deg,#f59e0b,#d97706)', accent:'#f59e0b', category:'Keto Baking' },
+  bk10: { title:'Psyllium Husk Baking',    emoji:'ðŸŒ¿', desc:'Gut-healthy fiber-rich keto baking secrets',                  gradient:LU_G, accent:'#FF5C7A', category:'Keto Baking' },
+  bk11: { title:'Keto Tortillas & Wraps',  emoji:'ðŸŒ¯', desc:'Perfect low-carb tortillas for tacos and wraps',              gradient:BA_G, accent:'#d97706', category:'Keto Baking' },
+  bk12: { title:'Advanced Keto Baking',    emoji:'ðŸ‘¨â€ðŸ³', desc:'Master-level techniques for serious keto bakers',            gradient:'linear-gradient(135deg,#8b5cf6,#7c3aed)', accent:'#8b5cf6', category:'Keto Baking' },
+  // â”€â”€ Desserts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  ds1:  { title:'Keto Ice Cream Book',      emoji:'ðŸ¦', desc:'20 creamy frozen desserts from scoops to pops to ice cream cakes', gradient:SM_G, accent:'#06b6d4', category:'Desserts' },
+  ds2:  { title:'Keto Puddings & Custards',emoji:'ðŸ®', desc:'Silky smooth puddings, mousses, crÃ¨me brÃ»lÃ©e and custards',  gradient:'linear-gradient(135deg,#b45309,#78350f)', accent:'#b45309', category:'Desserts' },
+  ds3:  { title:'Keto Candy & Confections',emoji:'ðŸ¬', desc:'Truffles, fudge, bark and candy â€” all sugar-free and keto', gradient:BA_G, accent:'#d97706', category:'Desserts' },
+  ds4:  { title:'Keto Pies & Cobblers',    emoji:'ðŸ¥§', desc:'Buttery keto crusts filled with cobblers, pies and fruit tarts', gradient:DS_G, accent:'#ec4899', category:'Desserts' },
+  ds5:  { title:'Keto Brownies & Bars',    emoji:'ðŸŸ«', desc:'Fudgy brownies and blondies with zero guilt',                gradient:'linear-gradient(135deg,#b45309,#78350f)', accent:'#b45309', category:'Desserts' },
+  ds6:  { title:'Keto Mousse & Puddings',  emoji:'ðŸ®', desc:'Silky smooth desserts ready in under 10 minutes',            gradient:DS_G, accent:'#ec4899', category:'Desserts' },
+  ds7:  { title:'Keto Pies & Tarts',       emoji:'ðŸ¥§', desc:'Buttery crusts and creamy fillings â€” all keto',              gradient:BA_G, accent:'#d97706', category:'Desserts' },
+  ds8:  { title:'Keto Candy Book',         emoji:'ðŸ¬', desc:'Homemade keto candy that satisfies every sweet tooth',       gradient:DS_G, accent:'#ec4899', category:'Desserts' },
+  ds9:  { title:'Keto Tiramisu & Classics',emoji:'â˜•', desc:'Italian and French classics reimagined keto-style',          gradient:'linear-gradient(135deg,#b45309,#92400e)', accent:'#b45309', category:'Desserts' },
+  ds10: { title:'No-Bake Keto Desserts',   emoji:'â„ï¸', desc:'25 desserts that require zero oven time',                   gradient:SM_G, accent:'#06b6d4', category:'Desserts' },
+  ds11: { title:'Keto Birthday Cakes',     emoji:'ðŸŽ‚', desc:'Celebration cakes and frosting recipes to impress',          gradient:DS_G, accent:'#ec4899', category:'Desserts' },
+  ds12: { title:'Keto Dessert Meal Prep',  emoji:'ðŸ“¦', desc:'Make a week of desserts in one Sunday session',              gradient:LU_G, accent:'#FF5C7A', category:'Desserts' },
 };
 
-const book = bookMeta[bookId] || { title:'Recipe Collection', emoji:'🍽️', desc:'Keto recipes', gradient:LU_G, accent:'#FF5C7A', category:'Recipes' };
+const book = bookMeta[bookId] || { title:'Recipe Collection', emoji:'ðŸ½ï¸', desc:'Keto recipes', gradient:LU_G, accent:'#FF5C7A', category:'Recipes' };
 
-// ── Fetch recipes for this book ──────────────────────────────────────────────
+// â”€â”€ Fetch recipes for this book â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const { data: recipes } = await db
   .from('recipes')
   .select('id, title, calories, protein, fat, net_carbs, prep_time, cook_time, image_url, tags, difficulty, servings')
@@ -145,14 +145,14 @@ const recipeList = recipes || [];
 const diffColor  = (d: string) => d === 'easy' ? '#FF5C7A' : d === 'medium' ? '#f59e0b' : '#ef4444';
 
 // Tier label for access badge
-const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '👑 Elite';
+const accessLabel = bookNum <= 4 ? 'ðŸ¥‘ Basic+' : bookNum <= 8 ? 'âš¡ Pro+' : 'ðŸ‘‘ Elite';
 ---
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{book.title} · Keto Journey</title>
+  <title>{book.title} Â· Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
   <style>
@@ -174,7 +174,7 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
 
     .page { max-width:1200px; margin:0 auto; padding:2rem 1.5rem 6rem; }
 
-    /* ── Hero ───────────────────────────────────────────────── */
+    /* â”€â”€ Hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .book-hero {
       border-radius:24px; padding:2.5rem 3rem; margin-bottom:2rem;
       position:relative; overflow:hidden;
@@ -227,7 +227,7 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
     [data-theme="light"] .hero-pill { background:rgba(0,0,0,.04); border-color:rgba(0,0,0,.08); }
     .hero-pill.accent { background:var(--hero-accent-bg); border-color:var(--hero-accent-border); color:var(--hero-accent); }
 
-    /* ── Toolbar ────────────────────────────────────────────── */
+    /* â”€â”€ Toolbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .toolbar {
       display:flex; align-items:center; gap:.75rem; flex-wrap:wrap;
       background:var(--card); border:1px solid var(--border);
@@ -264,14 +264,14 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
     .diff-btn.medium.active{ background:#f59e0b; border-color:#f59e0b; }
     .diff-btn.hard.active  { background:#ef4444; border-color:#ef4444; }
 
-    /* ── Grid ───────────────────────────────────────────────── */
+    /* â”€â”€ Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .recipes-grid {
       display:grid;
       grid-template-columns:repeat(auto-fill, minmax(270px, 1fr));
       gap:1.25rem;
     }
 
-    /* ── Recipe card ────────────────────────────────────────── */
+    /* â”€â”€ Recipe card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .recipe-card {
       background:var(--card); border:1px solid var(--border);
       border-radius:18px; overflow:hidden;
@@ -325,7 +325,7 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
     .macro-chip-val { font-size:.84rem; font-weight:800; line-height:1; }
     .macro-chip-lbl { font-size:.58rem; color:var(--soft); margin-top:.12rem; text-transform:uppercase; letter-spacing:.04em; }
 
-    /* ── Empty state ────────────────────────────────────────── */
+    /* â”€â”€ Empty state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .empty-state {
       text-align:center; padding:5rem 2rem; color:var(--soft);
       animation:fadeUp .5s ease both;
@@ -342,7 +342,7 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
     }
     .empty-back:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(255,92,122,.4); }
 
-    /* ── No filter results ──────────────────────────────────── */
+    /* â”€â”€ No filter results â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .no-filter-msg {
       display:none; text-align:center;
       padding:3rem 1rem; color:var(--soft); font-size:.9rem;
@@ -365,7 +365,7 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
 </head>
 <body>
 <div class="rv-pg-shell">
-<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="recipes" />
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="recipes" />
 <div class="rv-pg-main">
   <div class="page">
 
@@ -376,9 +376,9 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
       <div class="hero-content">
         <div class="hero-breadcrumb">
           <a href="/dashboard/recipes">Recipe Library</a>
-          <span class="sep">›</span>
+          <span class="sep">â€º</span>
           <span style={`color:${book.accent};`}>{book.category}</span>
-          <span class="sep">›</span>
+          <span class="sep">â€º</span>
           <span>{book.title}</span>
         </div>
         <div class="hero-top">
@@ -393,7 +393,7 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
                 {recipeList.length} {recipeList.length === 1 ? 'recipe' : 'recipes'}
               </span>
               <span class="hero-pill accent">{accessLabel}</span>
-              <span class="hero-pill">✓ Under 10g net carbs</span>
+              <span class="hero-pill">âœ“ Under 10g net carbs</span>
               {recipeList.length > 0 && (
                 <span class="hero-pill">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -411,7 +411,7 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
       <div class="toolbar" id="toolbar">
         <div class="search-wrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="search-inp" id="recipeSearch" type="text" placeholder="Search recipes in this book…" autocomplete="off" />
+          <input class="search-inp" id="recipeSearch" type="text" placeholder="Search recipes in this bookâ€¦" autocomplete="off" />
         </div>
         <div class="tb-divider"></div>
         <div class="diff-group">
@@ -423,10 +423,10 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
         <div class="tb-divider"></div>
         <select class="sort-select" id="sortSelect">
           <option value="default">Default order</option>
-          <option value="cal-asc">Calories ↑</option>
-          <option value="cal-desc">Calories ↓</option>
-          <option value="carb-asc">Net carbs ↑</option>
-          <option value="protein-desc">Protein ↓</option>
+          <option value="cal-asc">Calories â†‘</option>
+          <option value="cal-desc">Calories â†“</option>
+          <option value="carb-asc">Net carbs â†‘</option>
+          <option value="protein-desc">Protein â†“</option>
           <option value="time-asc">Fastest first</option>
         </select>
         <span class="tb-count" id="tbCount">{recipeList.length} recipes</span>
@@ -464,7 +464,7 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 {(r.prep_time||0)+(r.cook_time||0)} min
                 {r.servings && (
-                  <span style="margin-left:.5rem;opacity:.6;">· {r.servings} {r.servings === 1 ? 'serving' : 'servings'}</span>
+                  <span style="margin-left:.5rem;opacity:.6;">Â· {r.servings} {r.servings === 1 ? 'serving' : 'servings'}</span>
                 )}
               </div>
               <div class="recipe-macros">
@@ -496,7 +496,7 @@ const accessLabel = bookNum <= 4 ? '🥑 Basic+' : bookNum <= 8 ? '⚡ Pro+' : '
         <div class="empty-title">Recipes Coming Soon</div>
         <p class="empty-sub">
           We're curating the best keto recipes for <strong>{book.title}</strong>.
-          Check back shortly — new recipes are added weekly.
+          Check back shortly â€” new recipes are added weekly.
         </p>
         <a href="/dashboard/recipes" class="empty-back">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>

@@ -1,4 +1,4 @@
----
+﻿---
 // src/pages/dashboard/index.astro
 import { getUserJourney, getMaxJourneyDays, getMealCycleDays } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
@@ -19,7 +19,7 @@ const planType  = profile.subscription_tier || 'basic_30';
 const maxDays   = getMaxJourneyDays(planType);
 const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 
-// ── Batch 1: onboarding + journey in parallel (critical — graceful error on DB failure) ──
+// â”€â”€ Batch 1: onboarding + journey in parallel (critical â€” graceful error on DB failure) â”€â”€
 let onboarding = null as any;
 let journey = null as any;
 try {
@@ -32,7 +32,7 @@ try {
 } catch (e) {
   console.error('[Dashboard] DB unavailable (batch 1):', e);
   return new Response(
-    `<!DOCTYPE html><html><head><title>Temporarily Unavailable</title><meta http-equiv="refresh" content="15;url=/dashboard"></head><body style="background:#FAF6F1;color:#16110F;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:1.2rem;text-align:center;padding:2rem"><h2 style="font-size:1.6rem;margin:0;color:#FF5C7A">Keto Journey</h2><p style="font-size:1.1rem;margin:0">Dashboard is temporarily unavailable</p><p style="color:#8A8077;margin:0;font-size:.9rem">Retrying automatically in 15 seconds…</p><a href="/dashboard" style="color:#FF5C7A;font-size:.9rem;margin-top:.5rem">Retry now</a></body></html>`,
+    `<!DOCTYPE html><html><head><title>Temporarily Unavailable</title><meta http-equiv="refresh" content="15;url=/dashboard"></head><body style="background:#FAF6F1;color:#16110F;font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:1.2rem;text-align:center;padding:2rem"><h2 style="font-size:1.6rem;margin:0;color:#FF5C7A">Keto Journey</h2><p style="font-size:1.1rem;margin:0">Dashboard is temporarily unavailable</p><p style="color:#8A8077;margin:0;font-size:.9rem">Retrying automatically in 15 secondsâ€¦</p><a href="/dashboard" style="color:#FF5C7A;font-size:.9rem;margin-top:.5rem">Retry now</a></body></html>`,
     { status: 503, headers: { 'Content-Type': 'text/html' } }
   );
 }
@@ -51,7 +51,7 @@ const twoWeeksAgo = new Date(Date.now() - 14 * 86400000).toISOString().split('T'
 const mealCycleDays = getMealCycleDays(planType);
 const mealDayTarget = ((currentDay - 1) % mealCycleDays) + 1;
 
-// ── Batch 2: all remaining queries fire in parallel ──
+// â”€â”€ Batch 2: all remaining queries fire in parallel â”€â”€
 let batch2 = new Array(14).fill({ data: null });
 try {
   batch2 = await Promise.all([
@@ -216,7 +216,7 @@ const fatPct   = Math.min(100, Math.round((totalConsumed.fat       / goalFat)  *
 const carbPct  = Math.min(100, Math.round((totalConsumed.net_carbs / goalCarb) * 100));
 
 // Weights are stored in kg everywhere. If a value looks like lbs (>200kg is unrealistic),
-// it was stored without conversion — divide by 2.20462 to normalize.
+// it was stored without conversion â€” divide by 2.20462 to normalize.
 const _rawStart    = onboarding?.current_weight || profile.weight_kg || 0;
 const startWeight  = _rawStart > 250 ? Math.round((_rawStart / 2.20462) * 10) / 10 : _rawStart;
 const latestWeight = weightLogs?.[0]?.weight    || startWeight;
@@ -280,7 +280,7 @@ const d1GoalLabel = goalLabelMap[onboarding?.goal || ''] || 'Reach your goal';
 const d1PlanLabel = planType === 'elite_12' ? `Elite ${maxDays}-Day Plan` : planType === 'pro_6' ? `Pro 90-Day Plan` : 'Basic 30-Day Plan';
 const d1Meals = todayMeals.slice(0, 3).map((m: any) => ({
   type:     (m.meal_type || '').charAt(0).toUpperCase() + (m.meal_type || '').slice(1),
-  title:    m.recipe?.title || 'Meal plan loading…',
+  title:    m.recipe?.title || 'Meal plan loadingâ€¦',
   calories: m.recipe?.calories || 0,
   protein:  Math.round(parseFloat(m.recipe?.protein || '0')),
 }));
@@ -310,25 +310,25 @@ const recentAvgEnergy = recentCheckins?.length
   ? recentCheckins.reduce((s, c) => s + (c.energy_level || 3), 0) / recentCheckins.length : 3;
 
 const week1Tips = [
-  { icon:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', color:'#f59e0b', title:'Salt is your best friend this week', body:'Your kidneys dump sodium on keto. Add ½ tsp of salt to a glass of water each morning. This alone fixes most keto flu symptoms within hours.' },
-  { icon:'<path d="M12 2C12 2 5 10 5 15a7 7 0 0014 0c0-5-7-13-7-13z"/>', color:'#3b82f6', title:'Drink before you feel thirsty', body:'On keto, thirst response lags behind. Aim for 2.5–3L of water per day. Set phone reminders if needed — dehydration causes false hunger cravings.' },
+  { icon:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', color:'#f59e0b', title:'Salt is your best friend this week', body:'Your kidneys dump sodium on keto. Add Â½ tsp of salt to a glass of water each morning. This alone fixes most keto flu symptoms within hours.' },
+  { icon:'<path d="M12 2C12 2 5 10 5 15a7 7 0 0014 0c0-5-7-13-7-13z"/>', color:'#3b82f6', title:'Drink before you feel thirsty', body:'On keto, thirst response lags behind. Aim for 2.5â€“3L of water per day. Set phone reminders if needed â€” dehydration causes false hunger cravings.' },
   { icon:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>', color:'#FF5C7A', title:'Fat doesn\'t make you fat on keto', body:'The old "dietary fat = body fat" myth is wrong. On keto, dietary fat is your primary fuel. Eating fat turns OFF fat storage hormones and keeps you satiated for hours.' },
-  { icon:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>', color:'#ef4444', title:'Keto flu is temporary — push through', body:'Headaches, fatigue, and brain fog in days 1–5 are normal. Your brain is switching fuel sources. Electrolytes + hydration + sleep will cut this phase short.' },
+  { icon:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>', color:'#ef4444', title:'Keto flu is temporary â€” push through', body:'Headaches, fatigue, and brain fog in days 1â€“5 are normal. Your brain is switching fuel sources. Electrolytes + hydration + sleep will cut this phase short.' },
   { icon:'<path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>', color:'#8b5cf6', title:'Your brain runs on ketones now', body:'The brain is 25% of your energy budget. It\'s learning to use ketones instead of glucose. By week 2, most people report sharper mental clarity than they\'ve had in years.' },
-  { icon:'<path d="M3 11l19-9-9 19-2-8-8-2z"/>', color:'#FF5C7A', title:'Protein protects your muscle', body:'Aim for 1.2–1.7g of protein per kg of bodyweight per day. Too little = muscle loss. Too much = gluconeogenesis. For a 75kg person: 90–130g protein/day.' },
-  { icon:'<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>', color:'#8b5cf6', title:'Sleep is a keto superpower', body:'During sleep, growth hormone surges and fat burning peaks. Poor sleep raises cortisol → raises blood sugar → kicks you out of ketosis. Protect your sleep this week.' },
+  { icon:'<path d="M3 11l19-9-9 19-2-8-8-2z"/>', color:'#FF5C7A', title:'Protein protects your muscle', body:'Aim for 1.2â€“1.7g of protein per kg of bodyweight per day. Too little = muscle loss. Too much = gluconeogenesis. For a 75kg person: 90â€“130g protein/day.' },
+  { icon:'<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>', color:'#8b5cf6', title:'Sleep is a keto superpower', body:'During sleep, growth hormone surges and fat burning peaks. Poor sleep raises cortisol â†’ raises blood sugar â†’ kicks you out of ketosis. Protect your sleep this week.' },
 ];
 
 const week2Tips = [
-  { icon:'<path d="M12 2c0 0-5 4.5-5 9a5 5 0 0010 0c0-4.5-5-9-5-9zm0 14a3 3 0 01-3-3c0-2 2-4.5 3-6 1 1.5 3 4 3 6a3 3 0 01-3 3z"/>', color:'#f97316', title:'You\'re building fat-burning machinery', body:'Week 2 is when your mitochondria start multiplying and fat-oxidation enzymes upregulate. Energy will stabilize. The keto flu is behind you — the real benefits are ahead.' },
-  { icon:'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>', color:'#3b82f6', title:'Scale stall? That\'s normal.', body:'After week 1\'s water loss, the scale often stalls for 3–5 days. Your body is adapting internally. Waist circumference is shrinking even when weight doesn\'t move. Keep going.' },
-  { icon:'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>', color:'#FF5C7A', title:'You can exercise now — but go easy', body:'Light weights and walking are perfect this week. High-intensity training is best saved for week 4+ when fat adaptation is complete. Your muscles are still learning.' },
+  { icon:'<path d="M12 2c0 0-5 4.5-5 9a5 5 0 0010 0c0-4.5-5-9-5-9zm0 14a3 3 0 01-3-3c0-2 2-4.5 3-6 1 1.5 3 4 3 6a3 3 0 01-3 3z"/>', color:'#f97316', title:'You\'re building fat-burning machinery', body:'Week 2 is when your mitochondria start multiplying and fat-oxidation enzymes upregulate. Energy will stabilize. The keto flu is behind you â€” the real benefits are ahead.' },
+  { icon:'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>', color:'#3b82f6', title:'Scale stall? That\'s normal.', body:'After week 1\'s water loss, the scale often stalls for 3â€“5 days. Your body is adapting internally. Waist circumference is shrinking even when weight doesn\'t move. Keep going.' },
+  { icon:'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>', color:'#FF5C7A', title:'You can exercise now â€” but go easy', body:'Light weights and walking are perfect this week. High-intensity training is best saved for week 4+ when fat adaptation is complete. Your muscles are still learning.' },
   { icon:'<path d="M3 11l19-9-9 19-2-8-8-2z"/>', color:'#f59e0b', title:'Meal prep is the #1 habit', body:'People who succeed on keto have one thing in common: they cook in batches. Spend 90 minutes on Sunday preparing proteins and vegetables. It removes daily willpower decisions.' },
 ];
 
 const week3Tips = [
-  { icon:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', color:'#FF5C7A', title:'You\'ve entered fat-adaptation', body:'By week 3, your fat-burning enzymes are maximized. Energy is stable all day. This is why keto feels so different from calorie restriction — you\'re running on a clean, abundant fuel.' },
-  { icon:'<path d="M3 11l19-9-9 19-2-8-8-2z"/>', color:'#f59e0b', title:'Try combining keto + intermittent fasting', body:'Now that you\'re adapted, 16:8 fasting is effortless. Skip breakfast, eat noon–8pm. The synergy between keto and IF burns fat at a rate neither achieves alone.' },
+  { icon:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', color:'#FF5C7A', title:'You\'ve entered fat-adaptation', body:'By week 3, your fat-burning enzymes are maximized. Energy is stable all day. This is why keto feels so different from calorie restriction â€” you\'re running on a clean, abundant fuel.' },
+  { icon:'<path d="M3 11l19-9-9 19-2-8-8-2z"/>', color:'#f59e0b', title:'Try combining keto + intermittent fasting', body:'Now that you\'re adapted, 16:8 fasting is effortless. Skip breakfast, eat noonâ€“8pm. The synergy between keto and IF burns fat at a rate neither achieves alone.' },
   { icon:'<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>', color:'#8b5cf6', title:'Your inflammation is dropping', body:'Ketones are anti-inflammatory. By week 3, many people notice less joint pain, better skin, reduced bloating, and clearer sinuses. This is your body healing systemically.' },
 ];
 
@@ -339,15 +339,15 @@ const habitsDoneCount = dashHabits.filter(h => habitDoneIds.has(h.id)).length;
 
 const dailyTip = (() => {
   if (!checkinDone && currentDay > 1)
-    return { icon:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>', color:'#FF5C7A', title:'Complete your daily check-in', body:'Tracking energy, mood, and water takes 60 seconds but gives you weeks of insight. Your streak depends on it — don\'t break it today!' };
+    return { icon:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>', color:'#FF5C7A', title:'Complete your daily check-in', body:'Tracking energy, mood, and water takes 60 seconds but gives you weeks of insight. Your streak depends on it â€” don\'t break it today!' };
   if (waterGlasses === 0 && currentDay > 1)
     return { icon:'<path d="M12 2C12 2 5 10 5 15a7 7 0 0014 0c0-5-7-13-7-13z"/>', color:'#3b82f6', title:'Start drinking water now', body:'You haven\'t logged any water today. Keto demands more hydration than a standard diet. Low water = false hunger, headaches, and reduced fat burning. Drink a glass right now.' };
   if (recentAvgEnergy < 2.5 && recentCheckins && recentCheckins.length >= 3)
     return { icon:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', color:'#f59e0b', title:'Low energy? Check your electrolytes', body:'3+ days of low energy usually means electrolyte deficiency, not a keto problem. Add sodium, potassium (avocado), and magnesium glycinate at bedtime. Results are felt within 24 hours.' };
   if (streakDays >= 7)
-    return { icon:'<path d="M12 2c0 0-5 4.5-5 9a5 5 0 0010 0c0-4.5-5-9-5-9zm0 14a3 3 0 01-3-3c0-2 2-4.5 3-6 1 1.5 3 4 3 6a3 3 0 01-3 3z"/>', color:'#f97316', title:`${streakDays}-day streak — you're on fire!`, body:'Consistency is the #1 predictor of long-term keto success. Your body is adapting more deeply every day you stay on track. Each day now compounds the results of every day before it.' };
+    return { icon:'<path d="M12 2c0 0-5 4.5-5 9a5 5 0 0010 0c0-4.5-5-9-5-9zm0 14a3 3 0 01-3-3c0-2 2-4.5 3-6 1 1.5 3 4 3 6a3 3 0 01-3 3z"/>', color:'#f97316', title:`${streakDays}-day streak â€” you're on fire!`, body:'Consistency is the #1 predictor of long-term keto success. Your body is adapting more deeply every day you stay on track. Each day now compounds the results of every day before it.' };
   if (fastingActive)
-    return { icon:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', color:'#8b5cf6', title:'Fasting + keto: the ultimate combo', body:'While you fast, your already-low glycogen burns away in hours instead of days. You\'ll reach deep fat-burning mode today faster than any non-keto faster. Stay strong — the hardest part is hour 10–14.' };
+    return { icon:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', color:'#8b5cf6', title:'Fasting + keto: the ultimate combo', body:'While you fast, your already-low glycogen burns away in hours instead of days. You\'ll reach deep fat-burning mode today faster than any non-keto faster. Stay strong â€” the hardest part is hour 10â€“14.' };
   return tipPool[(currentDay - 1) % tipPool.length];
 })();
 
@@ -358,15 +358,15 @@ const daysSinceCheckin = lastCheckinDate
 const isLapsed    = daysSinceCheckin >= 1 && currentDay > 1;
 const lapseLevel  = daysSinceCheckin >= 4 ? 'critical' : daysSinceCheckin >= 2 ? 'warning' : 'gentle';
 const lapseTips: Record<string, { icon: string; title: string; body: string; color: string; bg: string; border: string }> = {
-  gentle:   { icon: '💛', color: '#f59e0b', bg: 'rgba(245,158,11,.09)', border: 'rgba(245,158,11,.28)',
-    title: 'You missed yesterday — no problem!',
+  gentle:   { icon: 'ðŸ’›', color: '#f59e0b', bg: 'rgba(245,158,11,.09)', border: 'rgba(245,158,11,.28)',
+    title: 'You missed yesterday â€” no problem!',
     body: 'Missing one day doesn\'t break your keto progress. Your body is still adapting. Check in today to restart your streak and get back on track.' },
-  warning:  { icon: '🔁', color: '#f87171', bg: 'rgba(239,68,68,.09)', border: 'rgba(239,68,68,.28)',
+  warning:  { icon: 'ðŸ”', color: '#f87171', bg: 'rgba(239,68,68,.09)', border: 'rgba(239,68,68,.28)',
     title: `${daysSinceCheckin} days without a check-in`,
-    body: 'Your streak has reset, but your keto adaptation isn\'t lost — the fat-burning pathways you built remain. A single check-in today gets you back on the board.' },
-  critical: { icon: '🚀', color: '#8b5cf6', bg: 'rgba(139,92,246,.09)', border: 'rgba(139,92,246,.28)',
+    body: 'Your streak has reset, but your keto adaptation isn\'t lost â€” the fat-burning pathways you built remain. A single check-in today gets you back on the board.' },
+  critical: { icon: 'ðŸš€', color: '#8b5cf6', bg: 'rgba(139,92,246,.09)', border: 'rgba(139,92,246,.28)',
     title: 'Welcome back! Let\'s restart strong.',
-    body: `It's been ${daysSinceCheckin} days. Life happens. The best keto journeys aren't perfect — they're persistent. Take 2 minutes to check in today and your streak starts fresh.` },
+    body: `It's been ${daysSinceCheckin} days. Life happens. The best keto journeys aren't perfect â€” they're persistent. Take 2 minutes to check in today and your streak starts fresh.` },
 };
 const lapseBanner = isLapsed ? lapseTips[lapseLevel] : null;
 
@@ -377,18 +377,18 @@ const shieldUsable = lapseLevel === 'gentle' && streakShields > 0 && shieldCoold
 const pendingTasks   = totalTasks - completedTasks;
 const focusIconKey   = !checkinDone ? 'checkin' : (pendingTasks > 0 ? 'tasks' : 'done');
 const focusCTA = checkinDone && pendingTasks === 0 && weeklyDone
-  ? { label: "You're all caught up today!", sub: 'Great consistency — keep the streak alive', href: null,
+  ? { label: "You're all caught up today!", sub: 'Great consistency â€” keep the streak alive', href: null,
       color: '#FF5C7A', bg: 'rgba(255,92,122,.12)', border: 'rgba(255,92,122,.28)', btnLabel: 'View Progress', btnHref: '/dashboard/progress' }
   : !checkinDone
-  ? { label: t('dash.checkin_now') + ' — protect your streak', sub: `${streakDays > 0 ? `${streakDays}-day ${t('dash.streak_at_risk')}` : 'Start your streak today'} · Earn 30 XP`,
-      href: '/dashboard/checkin', color: '#f59e0b', bg: 'rgba(245,158,11,.1)', border: 'rgba(245,158,11,.3)', btnLabel: 'Check In Now →', btnHref: '/dashboard/checkin' }
+  ? { label: t('dash.checkin_now') + ' â€” protect your streak', sub: `${streakDays > 0 ? `${streakDays}-day ${t('dash.streak_at_risk')}` : 'Start your streak today'} Â· Earn 30 XP`,
+      href: '/dashboard/checkin', color: '#f59e0b', bg: 'rgba(245,158,11,.1)', border: 'rgba(245,158,11,.3)', btnLabel: 'Check In Now â†’', btnHref: '/dashboard/checkin' }
   : pendingTasks > 0
-  ? { label: `Complete today's tasks`, sub: `${completedTasks}/${totalTasks} tasks done · ${pendingTasks} remaining`,
-      href: '#tour-tasks', color: '#3b82f6', bg: 'rgba(59,130,246,.1)', border: 'rgba(59,130,246,.28)', btnLabel: 'View Tasks →', btnHref: '#tour-tasks' }
+  ? { label: `Complete today's tasks`, sub: `${completedTasks}/${totalTasks} tasks done Â· ${pendingTasks} remaining`,
+      href: '#tour-tasks', color: '#3b82f6', bg: 'rgba(59,130,246,.1)', border: 'rgba(59,130,246,.28)', btnLabel: 'View Tasks â†’', btnHref: '#tour-tasks' }
   : { label: "Log your weight to track progress", sub: 'Weight tracking shows your true results',
-      href: '#weight-card', color: '#FF5C7A', bg: 'rgba(255,92,122,.1)', border: 'rgba(255,92,122,.25)', btnLabel: 'Log Weight →', btnHref: '#weight-card' };
+      href: '#weight-card', color: '#FF5C7A', bg: 'rgba(255,92,122,.1)', border: 'rgba(255,92,122,.25)', btnLabel: 'Log Weight â†’', btnHref: '#weight-card' };
 
-// ── Rose Vital template data ──────────────────────────────
+// â”€â”€ Rose Vital template data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const wLogsArr = (weightLogs || []).slice(0, 8).reverse();
 const wVals = wLogsArr.map(l => units === 'imperial' ? Math.round((l.weight || 0) * 2.20462 * 10) / 10 : Math.round((l.weight || 0) * 10) / 10);
 const wMin = wVals.length > 1 ? Math.min(...wVals) * 0.99 : 0;
@@ -430,7 +430,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard — Keto Journey</title>
+  <title>Dashboard â€” Keto Journey</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/icon-72.png"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -440,12 +440,12 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
 
 {showUpgradedToast && (
   <div id="upgradeToast" style="position:fixed;top:1.25rem;left:50%;transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:.875rem;background:linear-gradient(135deg,#FF5C7A,#FF914D);color:#fff;padding:1rem 1.5rem;border-radius:16px;box-shadow:0 8px 32px rgba(255,92,122,.45);font-family:'Bricolage Grotesque',sans-serif;font-size:.9rem;font-weight:700;max-width:90vw;animation:toastIn .5s cubic-bezier(.34,1.56,.64,1) both;">
-    <span style="font-size:1.4rem;">🎉</span>
+    <span style="font-size:1.4rem;">ðŸŽ‰</span>
     <div>
       <div style="font-weight:800;margin-bottom:.15rem;">Plan upgraded successfully!</div>
-      <div style="font-size:.78rem;opacity:.88;font-weight:500;">Welcome to your {tierLabel} plan — your full journey continues now.</div>
+      <div style="font-size:.78rem;opacity:.88;font-weight:500;">Welcome to your {tierLabel} plan â€” your full journey continues now.</div>
     </div>
-    <button onclick="document.getElementById('upgradeToast').remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-left:.5rem;">×</button>
+    <button onclick="document.getElementById('upgradeToast').remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-left:.5rem;">Ã—</button>
   </div>
 )}
 
@@ -460,19 +460,19 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
 />
 <AppTour />
 
-<!-- ════════════════════════════ APP SHELL ════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• APP SHELL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="rv-shell">
 
-  <Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="dashboard" />
+  <Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="dashboard" />
 
-  <!-- ── Main content ───────────────────────────────────────────────── -->
+  <!-- â”€â”€ Main content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
   <div class="rv-main">
 
     <!-- TopBar -->
     <header class="rv-topbar">
       <div class="rv-top-l">
         <p class="rv-top-greet">{greeting}, <em>{userName}</em></p>
-        <p class="rv-top-meta">DAY {currentDay} · KETO · {todayDateStr}</p>
+        <p class="rv-top-meta">DAY {currentDay} Â· KETO Â· {todayDateStr}</p>
       </div>
       <div class="rv-top-r">
         <a href="/dashboard/notifications" class="rv-top-icon" aria-label="Notifications">
@@ -494,16 +494,16 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
       </div>
     )}
 
-    <!-- ═══════════════ BENTO GRID ═══════════════ -->
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• BENTO GRID â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div class="rv-grid">
 
-      <!-- 1 · HeroToday ─────────────────────────────────────── span 12 -->
+      <!-- 1 Â· HeroToday â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ span 12 -->
       <div class="rv-card rv-hero">
         <div class="rv-hero-glow"></div>
         <div class="rv-hero-left">
           <div class="rv-hero-eyebrow">
             <span class="rv-pulse"></span>
-            DAY {currentDay} · {progressMsg.toUpperCase()}
+            DAY {currentDay} Â· {progressMsg.toUpperCase()}
           </div>
           <h1 class="rv-hero-h">
             You're <em>crushing</em> today,&nbsp;<span class="rv-hero-pill">{smartTaskPct}%</span>&nbsp;done.
@@ -572,15 +572,15 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
         </div>
       </div>
 
-      <!-- 2 · Meals ──────────────────────────────────────────── span 8 -->
+      <!-- 2 Â· Meals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ span 8 -->
       <div class="rv-card rv-meals">
         <div class="rv-card-head">
           <h2 class="rv-card-title">Today's Meals</h2>
-          <a href="/dashboard/food-log" class="rv-card-link">Food log →</a>
+          <a href="/dashboard/food-log" class="rv-card-link">Food log â†’</a>
         </div>
         <div class="rv-meals-list" id="rvMealsList">
           {todayMeals.length === 0 && (
-            <p class="rv-empty-state">No meals scheduled · <a href="/dashboard/recipes">Browse recipes</a></p>
+            <p class="rv-empty-state">No meals scheduled Â· <a href="/dashboard/recipes">Browse recipes</a></p>
           )}
           {todayMeals.map((meal) => (
             <div class={completedMealSet.has(meal.meal_type) ? 'rv-meal-row rv-meal-done' : 'rv-meal-row'} data-mtype={meal.meal_type || ''}>
@@ -592,9 +592,9 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
                   }
                 </div>
                 <div class="rv-meal-body">
-                  <span class="rv-meal-tag">{meal.meal_type || ''} {((meal.recipe?.prep_time || 0) + (meal.recipe?.cook_time || 0)) > 0 && `· ${(meal.recipe?.prep_time || 0) + (meal.recipe?.cook_time || 0)}min`}</span>
-                  <span class="rv-meal-name">{meal.recipe?.title || 'Meal plan loading…'}</span>
-                  <span class="rv-meal-macros">{meal.recipe?.calories || 0} kcal · {meal.recipe?.protein || 0}g prot · {meal.recipe?.net_carbs || 0}g carbs</span>
+                  <span class="rv-meal-tag">{meal.meal_type || ''} {((meal.recipe?.prep_time || 0) + (meal.recipe?.cook_time || 0)) > 0 && `Â· ${(meal.recipe?.prep_time || 0) + (meal.recipe?.cook_time || 0)}min`}</span>
+                  <span class="rv-meal-name">{meal.recipe?.title || 'Meal plan loadingâ€¦'}</span>
+                  <span class="rv-meal-macros">{meal.recipe?.calories || 0} kcal Â· {meal.recipe?.protein || 0}g prot Â· {meal.recipe?.net_carbs || 0}g carbs</span>
                 </div>
               </a>
               <button class="rv-meal-check" data-mtype={meal.meal_type || ''} aria-label="Toggle complete">
@@ -608,11 +608,11 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
         </div>
       </div>
 
-      <!-- 3 · Habits ─────────────────────────────────────────── span 4 -->
+      <!-- 3 Â· Habits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ span 4 -->
       <div class="rv-card rv-habits">
         <div class="rv-card-head">
           <h2 class="rv-card-title">Habits</h2>
-          <a href="/dashboard/habits" class="rv-card-link">All →</a>
+          <a href="/dashboard/habits" class="rv-card-link">All â†’</a>
         </div>
         <div class="rv-habits-score">
           <span class="rv-hscore-n" id="rvHabitsCount">{habitsDoneCount}</span>
@@ -629,19 +629,19 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
           {dashHabits.map((h) => (
             <button class={habitDoneIds.has(h.id) ? 'rv-habit-row rv-habit-done' : 'rv-habit-row'}
               data-hid={h.id} data-done={habitDoneIds.has(h.id) ? 'true' : 'false'}>
-              <span class="rv-habit-ic">{(h.icon && !/^\d/.test(String(h.icon))) ? h.icon : (h.category === 'water' ? '💧' : h.category === 'exercise' ? '🏃' : h.category === 'sleep' ? '🌙' : h.category === 'nutrition' ? '🥗' : '✓')}</span>
+              <span class="rv-habit-ic">{(h.icon && !/^\d/.test(String(h.icon))) ? h.icon : (h.category === 'water' ? 'ðŸ’§' : h.category === 'exercise' ? 'ðŸƒ' : h.category === 'sleep' ? 'ðŸŒ™' : h.category === 'nutrition' ? 'ðŸ¥—' : 'âœ“')}</span>
               <span class="rv-habit-nm">{h.title}</span>
-              <span class="rv-habit-ck">{habitDoneIds.has(h.id) ? '✓' : ''}</span>
+              <span class="rv-habit-ck">{habitDoneIds.has(h.id) ? 'âœ“' : ''}</span>
             </button>
           ))}
         </div>
       </div>
 
-      <!-- 4 · Fasting ────────────────────────────────────────── span 4 -->
+      <!-- 4 Â· Fasting â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ span 4 -->
       <div class="rv-card rv-fasting">
         <div class="rv-card-head">
           <h2 class="rv-card-title">Fasting</h2>
-          <a href="/dashboard/fasting" class="rv-card-link">Details →</a>
+          <a href="/dashboard/fasting" class="rv-card-link">Details â†’</a>
         </div>
         {fastingData ? (
           <div class="rv-fast-active">
@@ -659,7 +659,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
             </div>
             <div class="rv-fast-meta">
               <span>Goal: {fastingData.target_hours}h</span>
-              <span id="fastRemain">calculating…</span>
+              <span id="fastRemain">calculatingâ€¦</span>
             </div>
           </div>
         ) : (
@@ -673,23 +673,23 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
         )}
       </div>
 
-      <!-- 5 · Weight ──────────────────────────────────────────── span 8 -->
+      <!-- 5 Â· Weight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ span 8 -->
       <div class="rv-card rv-weight" id="weight-card">
         <div class="rv-card-head">
           <h2 class="rv-card-title">Weight</h2>
-          <a href="/dashboard/progress" class="rv-card-link">Progress →</a>
+          <a href="/dashboard/progress" class="rv-card-link">Progress â†’</a>
         </div>
         <div class="rv-weight-stats">
           <div class="rv-ws">
-            <span class="rv-ws-v">{dispLatest ? `${dispLatest} ${wUnit}` : (startWeight ? `${units === 'imperial' ? Math.round(startWeight * 2.20462 * 10)/10 : Math.round(startWeight * 10)/10} ${wUnit}` : '—')}</span>
+            <span class="rv-ws-v">{dispLatest ? `${dispLatest} ${wUnit}` : (startWeight ? `${units === 'imperial' ? Math.round(startWeight * 2.20462 * 10)/10 : Math.round(startWeight * 10)/10} ${wUnit}` : 'â€”')}</span>
             <span class="rv-ws-l">{weightLogs && (weightLogs as any[]).length > 0 ? 'Current' : 'Starting'}</span>
           </div>
           <div class="rv-ws">
-            <span class="rv-ws-v rv-ws-lost">{dispWeightLost > 0 ? `-${dispWeightLost} ${wUnit}` : '—'}</span>
+            <span class="rv-ws-v rv-ws-lost">{dispWeightLost > 0 ? `-${dispWeightLost} ${wUnit}` : 'â€”'}</span>
             <span class="rv-ws-l">Lost</span>
           </div>
           <div class="rv-ws">
-            <span class="rv-ws-v">{targetWeightDisp ? `${targetWeightDisp} ${wUnit}` : '—'}</span>
+            <span class="rv-ws-v">{targetWeightDisp ? `${targetWeightDisp} ${wUnit}` : 'â€”'}</span>
             <span class="rv-ws-l">Goal</span>
           </div>
           <div class="rv-ws">
@@ -711,7 +711,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
         </form>
       </div>
 
-      <!-- 6 · AI Coach ────────────────────────────────────────── span 4 -->
+      <!-- 6 Â· AI Coach â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ span 4 -->
       <div class="rv-card rv-coach">
         <div class="rv-coach-glow"></div>
         <div class="rv-card-head">
@@ -726,17 +726,17 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
               <a href="/dashboard/ai-coach" class="rv-coach-chip">Snack idea</a>
               <a href="/dashboard/ai-coach" class="rv-coach-chip">Why tired?</a>
             </div>
-            <a href="/dashboard/ai-coach" class="rv-coach-cta">Open AI Coach →</a>
+            <a href="/dashboard/ai-coach" class="rv-coach-cta">Open AI Coach â†’</a>
           </div>
         ) : (
           <div class="rv-coach-body">
             <p class="rv-coach-intro rv-coach-muted">Get personalized AI coaching powered by Gemini.</p>
-            <a href="/dashboard/upgrade" class="rv-coach-cta">Upgrade to Elite →</a>
+            <a href="/dashboard/upgrade" class="rv-coach-cta">Upgrade to Elite â†’</a>
           </div>
         )}
       </div>
 
-      <!-- 7 · Water ───────────────────────────────────────────── span 4 -->
+      <!-- 7 Â· Water â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ span 4 -->
       <div class="rv-card rv-water">
         <div class="rv-card-head">
           <h2 class="rv-card-title">Water</h2>
@@ -756,10 +756,10 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
             </button>
           ))}
         </div>
-        <a href="/dashboard/checkin" class="rv-water-log">Log via check-in →</a>
+        <a href="/dashboard/checkin" class="rv-water-log">Log via check-in â†’</a>
       </div>
 
-      <!-- 8 · Recipe of the Day ───────────────────────────────── span 4 -->
+      <!-- 8 Â· Recipe of the Day â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ span 4 -->
       <div class="rv-card rv-rotd">
         <div class="rv-card-head">
           <h2 class="rv-card-title">Recipe of the Day</h2>
@@ -777,18 +777,18 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
                 <span>{rotd.calories} kcal</span>
                 <span>{rotd.net_carbs}g net carbs</span>
               </div>
-              <a href={`/dashboard/recipe/${rotd.id}`} class="rv-rotd-cta">View recipe →</a>
+              <a href={`/dashboard/recipe/${rotd.id}`} class="rv-rotd-cta">View recipe â†’</a>
             </div>
           </div>
         ) : (
           <div class="rv-rotd-empty">
             <p class="rv-empty-state">No recipe today</p>
-            <a href="/dashboard/recipes" class="rv-rotd-cta">Browse recipes →</a>
+            <a href="/dashboard/recipes" class="rv-rotd-cta">Browse recipes â†’</a>
           </div>
         )}
       </div>
 
-      <!-- 10 · Tasks ─────────────────────────────────────────── span 8 -->
+      <!-- 10 Â· Tasks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ span 8 -->
       <div class="rv-card rv-tasks" id="tour-tasks">
         <div class="rv-card-head">
           <h2 class="rv-card-title">Today's Tasks</h2>
@@ -799,7 +799,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
         </div>
         <div class="rv-tasks-list" id="rvTasksList">
           {tasks.length === 0 && (
-            <p class="rv-empty-state">No tasks yet — they'll appear as you progress through your journey.</p>
+            <p class="rv-empty-state">No tasks yet â€” they'll appear as you progress through your journey.</p>
           )}
           {tasks.map((task) => (
             <div class={task.completed ? 'rv-task-row rv-task-done' : 'rv-task-row'}
@@ -819,11 +819,11 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
         </div>
       </div>
 
-      <!-- 11 · Steps ──────────────────────────────────────────── span 4 -->
+      <!-- 11 Â· Steps â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ span 4 -->
       <div class="rv-card rv-steps">
         <div class="rv-card-head">
           <h2 class="rv-card-title">Steps</h2>
-          <a href="/dashboard/steps" class="rv-card-link">Details →</a>
+          <a href="/dashboard/steps" class="rv-card-link">Details â†’</a>
         </div>
         <div class="rv-steps-ring-wrap">
           <svg viewBox="0 0 120 120" class="rv-steps-svg">
@@ -842,15 +842,15 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
           <span>Goal: {stepsGoal.toLocaleString()}</span>
           <span class="rv-steps-pct">{stepsPct}%</span>
         </div>
-        <a href="/dashboard/steps" class="rv-steps-log">Log steps →</a>
+        <a href="/dashboard/steps" class="rv-steps-log">Log steps â†’</a>
       </div>
 
-      <!-- 9 · Daily Insight ───────────────────────────────────── span 4 -->
+      <!-- 9 Â· Daily Insight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ span 4 -->
       <div class="rv-card rv-insight">
         <div class="rv-card-head">
           <h2 class="rv-card-title">Daily Insight</h2>
           {smartInsights && smartInsights.length > 0 && (
-            <a href="/dashboard/notifications" class="rv-card-link">{smartInsights.length} more →</a>
+            <a href="/dashboard/notifications" class="rv-card-link">{smartInsights.length} more â†’</a>
           )}
         </div>
         <div class="rv-insight-body">
@@ -892,9 +892,9 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   </a>
 </nav>
 
-<!-- ═══════════════════════════ STYLES ═══════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• STYLES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <style>
-  /* ── tokens ── */
+  /* â”€â”€ tokens â”€â”€ */
   :root {
     --rv-bg:       #FAF6F1;
     --rv-bg-alt:   #F2EDE5;
@@ -920,7 +920,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
     --rv-card:     #1C1512;
   }
 
-  /* ── shell ── */
+  /* â”€â”€ shell â”€â”€ */
   .rv-shell {
     display: grid;
     grid-template-columns: 232px 1fr;
@@ -930,7 +930,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
     color: var(--rv-ink);
   }
 
-  /* ── sidebar ── */
+  /* â”€â”€ sidebar â”€â”€ */
   .rv-sb {
     width: 232px;
     position: sticky;
@@ -1012,10 +1012,10 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   .rv-sb-name { font-family: var(--rv-display); font-size: 0.83rem; font-weight: 600; color: var(--rv-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .rv-sb-plan { font-size: 0.68rem; letter-spacing: .07em; color: var(--rv-muted); font-family: 'Geist Mono', monospace; margin-top: 1px; }
 
-  /* ── main ── */
+  /* â”€â”€ main â”€â”€ */
   .rv-main { display: flex; flex-direction: column; min-height: 100vh; background: var(--rv-bg); }
 
-  /* ── topbar ── */
+  /* â”€â”€ topbar â”€â”€ */
   .rv-topbar {
     position: sticky; top: 0; z-index: 100;
     display: flex; align-items: center; justify-content: space-between;
@@ -1053,7 +1053,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   }
   .rv-top-cta:hover { opacity: .82; }
 
-  /* ── lapse banner ── */
+  /* â”€â”€ lapse banner â”€â”€ */
   .rv-lapse {
     display: flex; align-items: flex-start; gap: 14px;
     margin: 12px 20px 0;
@@ -1073,7 +1073,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
     align-self: center;
   }
 
-  /* ── grid ── */
+  /* â”€â”€ grid â”€â”€ */
   .rv-grid {
     display: grid;
     grid-template-columns: repeat(12, 1fr);
@@ -1092,7 +1092,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   .rv-steps   { grid-column: span 4; }
   .rv-insight { grid-column: span 4; }
 
-  /* ── base card ── */
+  /* â”€â”€ base card â”€â”€ */
   .rv-card {
     background: var(--rv-card);
     border: 1px solid var(--rv-line);
@@ -1116,7 +1116,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   .rv-card-link:hover { color: var(--rv-accent); }
   .rv-card-meta { font-size: 0.75rem; color: var(--rv-muted); font-family: 'Geist Mono', monospace; }
 
-  /* ── hero card ── */
+  /* â”€â”€ hero card â”€â”€ */
   .rv-hero {
     background: var(--rv-ink);
     border-color: transparent;
@@ -1185,7 +1185,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   .rv-rl { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: rgba(255,255,255,.6); font-family: var(--rv-display); }
   .rv-rl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
-  /* ── meals card ── */
+  /* â”€â”€ meals card â”€â”€ */
   .rv-meals-list { display: flex; flex-direction: column; gap: 6px; }
   .rv-meal-row {
     display: flex; align-items: center; gap: 12px;
@@ -1212,7 +1212,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   .rv-meal-link:hover .rv-meal-name { color: var(--rv-accent); }
   .rv-meal-check { background: none; border: none; cursor: pointer; padding: 4px; flex-shrink: 0; display: flex; }
 
-  /* ── habits card ── */
+  /* â”€â”€ habits card â”€â”€ */
   .rv-habits-score { display: flex; align-items: baseline; gap: 4px; margin-bottom: 10px; }
   .rv-hscore-n { font-family: var(--rv-display); font-size: 2.8rem; font-weight: 800; color: var(--rv-accent); line-height: 1; }
   .rv-hscore-d { font-family: var(--rv-display); font-size: 1.2rem; font-weight: 500; color: var(--rv-muted); }
@@ -1234,7 +1234,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   .rv-habit-ck { font-size: 0.8rem; color: var(--rv-accent-2); font-weight: 700; flex-shrink: 0; }
   .rv-empty-link { font-size: 0.82rem; color: var(--rv-accent); text-decoration: none; font-family: var(--rv-display); }
 
-  /* ── fasting card ── */
+  /* â”€â”€ fasting card â”€â”€ */
   .rv-fast-active { display: flex; flex-direction: column; align-items: center; gap: 14px; }
   .rv-fast-ring-wrap { position: relative; width: 144px; height: 144px; }
   .rv-fast-svg { width: 144px; height: 144px; }
@@ -1255,7 +1255,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
     text-decoration: none;
   }
 
-  /* ── weight card ── */
+  /* â”€â”€ weight card â”€â”€ */
   .rv-weight-stats { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
   .rv-ws { display: flex; flex-direction: column; gap: 2px; background: var(--rv-bg-alt); padding: 10px 12px; border-radius: 12px; }
   .rv-ws-v { font-family: var(--rv-display); font-size: 0.95rem; font-weight: 700; color: var(--rv-ink); }
@@ -1280,7 +1280,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   }
   .rv-weight-btn:hover { opacity: .8; }
 
-  /* ── coach card ── */
+  /* â”€â”€ coach card â”€â”€ */
   .rv-coach { background: var(--rv-ink); border-color: transparent; }
   .rv-coach-glow {
     position: absolute; top: -40px; right: -40px;
@@ -1316,7 +1316,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   }
   .rv-coach-cta:hover { filter: brightness(1.1); }
 
-  /* ── water card ── */
+  /* â”€â”€ water card â”€â”€ */
   .rv-water-score { display: flex; align-items: baseline; gap: 4px; margin-bottom: 12px; }
   .rv-water-n { font-family: var(--rv-display); font-size: 2.8rem; font-weight: 800; color: var(--rv-accent); line-height: 1; }
   .rv-water-d { font-family: var(--rv-display); font-size: 1.2rem; color: var(--rv-muted); }
@@ -1332,7 +1332,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   .rv-water-log { font-size: 0.75rem; color: var(--rv-muted); text-decoration: none; font-family: var(--rv-display); }
   .rv-water-log:hover { color: var(--rv-accent); }
 
-  /* ── recipe of day ── */
+  /* â”€â”€ recipe of day â”€â”€ */
   .rv-rotd-body { display: flex; flex-direction: column; gap: 12px; }
   .rv-rotd-img { width: 100%; height: 120px; object-fit: cover; border-radius: 12px; }
   .rv-rotd-img-fb {
@@ -1355,7 +1355,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   .rv-rotd-cta:hover { opacity: .8; }
   .rv-rotd-empty { display: flex; flex-direction: column; gap: 12px; padding: 16px 0; }
 
-  /* ── insight card ── */
+  /* â”€â”€ insight card â”€â”€ */
   .rv-insight { background: var(--rv-bg-alt); border-color: transparent; }
   .rv-insight-body { display: flex; gap: 14px; }
   .rv-insight-icon {
@@ -1366,7 +1366,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   .rv-insight-title { font-family: var(--rv-display); font-size: 0.88rem; font-weight: 700; margin: 0 0 6px; }
   .rv-insight-desc { font-size: 0.8rem; color: var(--rv-ink-soft); line-height: 1.5; margin: 0; }
 
-  /* ── tasks card ── */
+  /* â”€â”€ tasks card â”€â”€ */
   .rv-tasks-bar-wrap { height: 4px; background: var(--rv-bg-alt); border-radius: 99px; margin-bottom: 14px; overflow: hidden; }
   .rv-tasks-bar { height: 100%; background: linear-gradient(90deg, var(--rv-accent), var(--rv-accent-3)); border-radius: 99px; transition: width .6s ease; }
   .rv-tasks-list { display: flex; flex-direction: column; gap: 4px; }
@@ -1383,7 +1383,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   .rv-task-nm { font-family: var(--rv-display); font-size: 0.85rem; font-weight: 500; color: var(--rv-ink); flex: 1; min-width: 0; }
   .rv-task-xp { font-size: 0.68rem; letter-spacing: .05em; color: var(--rv-accent-3); font-family: 'Geist Mono', monospace; flex-shrink: 0; }
 
-  /* ── steps card ── */
+  /* â”€â”€ steps card â”€â”€ */
   .rv-steps-ring-wrap { position: relative; width: 120px; height: 120px; margin: 0 auto 14px; }
   .rv-steps-svg { width: 120px; height: 120px; }
   .rv-steps-center {
@@ -1397,11 +1397,11 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   .rv-steps-log { font-size: 0.75rem; color: var(--rv-muted); text-decoration: none; font-family: var(--rv-display); }
   .rv-steps-log:hover { color: var(--rv-accent); }
 
-  /* ── misc ── */
+  /* â”€â”€ misc â”€â”€ */
   .rv-empty-state { font-size: 0.82rem; color: var(--rv-muted); text-align: center; padding: 20px 0; margin: 0; font-family: var(--rv-display); }
   .rv-empty-state a { color: var(--rv-accent); text-decoration: none; }
 
-  /* ── mobile bottom nav ── */
+  /* â”€â”€ mobile bottom nav â”€â”€ */
   .rv-mob-nav {
     display: none;
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
@@ -1420,7 +1420,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   .rv-mn--active { color: var(--rv-accent); }
   .rv-mn-ic { width: 20px; height: 20px; flex-shrink: 0; }
 
-  /* ── responsive ── */
+  /* â”€â”€ responsive â”€â”€ */
   @media (max-width: 1100px) {
     .rv-shell { grid-template-columns: 1fr; }
     .rv-sb { display: none; }
@@ -1466,7 +1466,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   }
 </style>
 
-<!-- ═══════════════════════════ SCRIPTS ══════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• SCRIPTS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <script is:inline define:vars={{
   rvFatPct:      fatPct,
   rvProtPct:     protPct,
@@ -1482,7 +1482,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   rvStreak:      streakDays,
 }}>
 (function () {
-  /* ── Ring animation ───────────────────────────────────── */
+  /* â”€â”€ Ring animation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   var C1 = 439.82, C2 = 351.86, C3 = 263.89;
   var r1 = document.getElementById('ring-fat');
   var r2 = document.getElementById('ring-prot');
@@ -1505,7 +1505,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   }
   requestAnimationFrame(ringTick);
 
-  /* ── Fasting timer ───────────────────────────────────── */
+  /* â”€â”€ Fasting timer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   if (rvFasting) {
     var fStart  = new Date(rvFasting.started_at).getTime();
     var fTarget = rvFasting.target_hours * 3600000;
@@ -1533,7 +1533,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
     setInterval(updateFast, 1000);
   }
 
-  /* ── Meal completion ────────────────────────────────── */
+  /* â”€â”€ Meal completion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   var doneMeals = new Set(rvDoneMeals);
   document.addEventListener('click', function(e) {
     var btn = e.target.closest('.rv-meal-check');
@@ -1554,7 +1554,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
     });
   });
 
-  /* ── Habit toggle ────────────────────────────────────── */
+  /* â”€â”€ Habit toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   var doneHabits = new Set(rvDoneHabits);
   document.addEventListener('click', function(e) {
     var btn = e.target.closest('[data-hid]');
@@ -1564,7 +1564,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
     nowD ? doneHabits.add(id) : doneHabits.delete(id);
     btn.classList.toggle('rv-habit-done', nowD);
     var ck = btn.querySelector('.rv-habit-ck');
-    if (ck) ck.textContent = nowD ? '✓' : '';
+    if (ck) ck.textContent = nowD ? 'âœ“' : '';
     var total = document.querySelectorAll('[data-hid].rv-habit-row').length;
     var done  = document.querySelectorAll('[data-hid].rv-habit-done').length;
     var cnt   = document.getElementById('rvHabitsCount');
@@ -1578,7 +1578,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
     });
   });
 
-  /* ── Task toggle ────────────────────────────────────── */
+  /* â”€â”€ Task toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   document.addEventListener('click', function(e) {
     var btn = e.target.closest('.rv-task-ck');
     if (!btn) return;
@@ -1604,7 +1604,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
     });
   });
 
-  /* ── Water glasses ──────────────────────────────────── */
+  /* â”€â”€ Water glasses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   var currentWater = rvWater;
   document.addEventListener('click', function(e) {
     var btn = e.target.closest('.rv-wg');
@@ -1637,7 +1637,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
     });
   });
 
-  /* ── Weight log form ─────────────────────────────────── */
+  /* â”€â”€ Weight log form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   var wForm = document.getElementById('rvWeightForm');
   if (wForm) {
     wForm.addEventListener('submit', function(e) {
@@ -1673,3 +1673,4 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
 )}
 </body>
 </html>
+

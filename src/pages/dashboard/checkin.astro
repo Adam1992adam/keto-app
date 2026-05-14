@@ -1,4 +1,4 @@
----
+﻿---
 // src/pages/dashboard/checkin.astro
 import { getUserJourney, updateCurrentDay, getMaxJourneyDays, kgToLbs } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
@@ -11,7 +11,7 @@ const { user, profile, db } = auth;
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
 const planType  = profile.subscription_tier || 'basic_30';
-const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const tierLabel = planType === 'elite_12' ? 'ðŸ‘‘ Elite' : planType === 'pro_6' ? 'âš¡ Pro' : 'ðŸ¥‘ Basic';
 const maxDays   = getMaxJourneyDays(planType);
 
 await updateCurrentDay(user.id).catch(() => null);
@@ -41,7 +41,7 @@ const startWeight      = Number(onboarding?.current_weight) || 75;
 const prefillWeight    = Number(latestWeightData?.weight) || startWeight;
 const weightLostNum    = startWeight - prefillWeight;
 const weightLostPositive = weightLostNum > 0.05;
-// Display values — converted to preferred unit
+// Display values â€” converted to preferred unit
 const prefillWeightDisplay = isImperial ? parseFloat(kgToLbs(prefillWeight).toFixed(1)) : prefillWeight;
 const weightLostDisplay    = isImperial ? parseFloat(kgToLbs(Math.abs(weightLostNum)).toFixed(1)) : parseFloat(Math.abs(weightLostNum).toFixed(1));
 const weightUnit  = isImperial ? 'lbs' : 'kg';
@@ -52,7 +52,7 @@ const moodLvl     = existingCheckin?.mood_level || 3;
 const moodByLevel = ['rough', 'rough', 'low', 'ok', 'good', 'amazing'];
 const prefillMood = moodByLevel[moodLvl] || 'ok';
 
-// Scale saved 1-5 → 0-10 for design sliders
+// Scale saved 1-5 â†’ 0-10 for design sliders
 const prefillEnergy       = existingCheckin?.energy_level   ? existingCheckin.energy_level * 2   : 6;
 const prefillHunger       = existingCheckin?.hunger_level   ? existingCheckin.hunger_level * 2   : 3;
 const prefillSleepHours   = existingCheckin?.sleep_hours    || 7;
@@ -68,11 +68,11 @@ const todayDate = new Date();
 const dateStr   = todayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
 const moods = [
-  { id: 'amazing', label: 'Amazing', emoji: '◉' },
-  { id: 'good',    label: 'Good',    emoji: '◐' },
-  { id: 'ok',      label: 'OK',      emoji: '◑' },
-  { id: 'low',     label: 'Low',     emoji: '◔' },
-  { id: 'rough',   label: 'Rough',   emoji: '◯' },
+  { id: 'amazing', label: 'Amazing', emoji: 'â—‰' },
+  { id: 'good',    label: 'Good',    emoji: 'â—' },
+  { id: 'ok',      label: 'OK',      emoji: 'â—‘' },
+  { id: 'low',     label: 'Low',     emoji: 'â—”' },
+  { id: 'rough',   label: 'Rough',   emoji: 'â—¯' },
 ];
 
 const digestionOptions = ['great', 'fine', 'bloated', 'sluggish', 'off'];
@@ -88,7 +88,7 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{t('checkin.title')} — Keto Journey</title>
+  <title>{t('checkin.title')} â€” Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -110,14 +110,14 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
     input,textarea{font-family:inherit;}
     ::selection{background:var(--accent);color:#fff;}
 
-    /* ── LAYOUT ── */
+    /* â”€â”€ LAYOUT â”€â”€ */
     .app-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
     .ci-main{display:flex;flex-direction:column;min-width:0;}
     .ci-body{max-width:1100px;margin:0 auto;width:100%;padding:0 32px 100px;}
     @media(max-width:1100px){.app-shell{grid-template-columns:1fr;}.ci-body{padding:0 18px 60px;}}
     @media(max-width:900px){.ci-main{padding-bottom:5.5rem;}}
 
-    /* ── MOOD HERO ── */
+    /* â”€â”€ MOOD HERO â”€â”€ */
     .mh{position:relative;background:var(--ink);color:var(--bg);overflow:hidden;}
     .mh-glow{position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,color-mix(in oklab,var(--accent) 40%,transparent),transparent 65%);filter:blur(70px);bottom:-300px;right:-200px;z-index:0;pointer-events:none;transition:background .35s;}
     .mh-glow.amazing{background:radial-gradient(circle,color-mix(in oklab,var(--accent-2) 50%,transparent),transparent 65%);}
@@ -142,12 +142,12 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
     .mood-label{font-family:var(--display);font-size:14px;font-weight:600;letter-spacing:-0.01em;}
     @media(max-width:700px){.mh-mood-row{gap:6px;}.mood-btn{padding:14px 6px 10px;}.mood-emoji{font-size:26px;}.mood-label{font-size:11px;}.mh-inner{padding:40px 18px 40px;}}
 
-    /* ── ALREADY DONE BANNER ── */
+    /* â”€â”€ ALREADY DONE BANNER â”€â”€ */
     .done-banner{background:color-mix(in oklab,var(--accent-2) 18%,transparent);border:1px solid color-mix(in oklab,var(--accent-2) 40%,transparent);border-radius:14px;padding:14px 20px;display:flex;align-items:center;gap:12px;margin-bottom:28px;font-size:14px;}
     .done-banner strong{color:var(--ink);}
     .done-banner span{color:var(--muted);font-family:var(--serif);font-style:italic;}
 
-    /* ── CARDS ── */
+    /* â”€â”€ CARDS â”€â”€ */
     .cards-head{display:flex;align-items:baseline;justify-content:space-between;margin:60px 0 24px;padding-bottom:14px;border-bottom:1px solid var(--line);}
     .cards-head h2{font-family:var(--display);font-size:32px;font-weight:700;letter-spacing:-0.03em;line-height:1;}
     .cards-head h2 em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--accent);}
@@ -174,7 +174,7 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
     .ci-card.dark .weight-stepper button:hover{background:var(--accent-2);color:var(--ink);}
     .weight-delta{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--accent-2);margin-top:12px;}
 
-    /* ── SLIDER ── */
+    /* â”€â”€ SLIDER â”€â”€ */
     .ci-slider input[type="range"]{width:100%;-webkit-appearance:none;appearance:none;background:transparent;height:32px;cursor:pointer;}
     .ci-slider input[type="range"]::-webkit-slider-runnable-track{height:6px;background:linear-gradient(90deg,var(--c,var(--accent)) 0%,var(--c,var(--accent)) var(--pct,50%),var(--bg-alt) var(--pct,50%),var(--bg-alt) 100%);border-radius:3px;}
     .ci-slider input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--ink);margin-top:-8px;border:3px solid var(--bg);box-shadow:0 2px 6px rgba(0,0,0,0.25);}
@@ -184,19 +184,19 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
     .slider-val{font-family:var(--display);font-size:36px;font-weight:700;letter-spacing:-0.03em;line-height:1;margin:4px 0 12px;}
     .slider-val .max{font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500;margin-left:4px;}
 
-    /* ── SLEEP ── */
+    /* â”€â”€ SLEEP â”€â”€ */
     .sleep-row{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:14px;}
     .sl-l{font-family:var(--mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
     .sl-v{font-family:var(--display);font-size:32px;font-weight:700;letter-spacing:-0.03em;line-height:1;margin-bottom:12px;}
     .sl-unit{font-family:var(--mono);font-size:13px;color:var(--muted);font-weight:500;margin-left:2px;}
 
-    /* ── KETONE BAND ── */
+    /* â”€â”€ KETONE BAND â”€â”€ */
     .ketone-band{display:flex;height:14px;margin:18px 0 8px;border-radius:7px;overflow:hidden;}
     .ketone-marker{position:relative;height:0;}
     .ketone-pin{position:absolute;top:-25px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:4px 8px;border-radius:6px;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:0.08em;pointer-events:none;}
     .ketone-zones{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);}
 
-    /* ── WATER ── */
+    /* â”€â”€ WATER â”€â”€ */
     .water-row{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap;}
     .water-glass{width:28px;height:36px;border:2px solid var(--line);border-radius:4px 4px 8px 8px;cursor:pointer;overflow:hidden;transition:border-color .15s;}
     .water-glass:hover{border-color:var(--accent);}
@@ -204,20 +204,20 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
     .water-counter{font-family:var(--display);font-size:32px;font-weight:700;letter-spacing:-0.03em;margin-top:8px;}
     .water-counter em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--accent);font-size:16px;}
 
-    /* ── WORKOUT ── */
+    /* â”€â”€ WORKOUT â”€â”€ */
     .workout-toggle{display:flex;gap:8px;margin-top:14px;}
     .workout-btn{flex:1;padding:14px 10px;border-radius:14px;background:var(--bg-alt);border:1px solid var(--line);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center;}
     .workout-btn:hover{border-color:var(--accent);}
     .workout-btn.on{background:var(--accent-2);border-color:var(--accent-2);color:var(--ink);}
     .workout-ic{font-size:22px;display:block;margin-bottom:4px;}
 
-    /* ── PILLS ── */
+    /* â”€â”€ PILLS â”€â”€ */
     .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
     .pill{padding:9px 16px;border-radius:999px;background:var(--bg-alt);border:1px solid var(--line);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;}
     .pill:hover{border-color:var(--accent);}
     .pill.on{background:var(--ink);color:var(--bg);border-color:var(--ink);}
 
-    /* ── PHOTO CARD ── */
+    /* â”€â”€ PHOTO CARD â”€â”€ */
     .photo-card{cursor:pointer;background-image:linear-gradient(135deg,var(--bg-alt) 0%,var(--card) 100%);border:2px dashed var(--line);text-align:center;padding:28px 18px;transition:all .15s;border-radius:22px;}
     .photo-card:hover{border-color:var(--accent);}
     .photo-icon{font-family:var(--display);font-size:56px;font-weight:700;line-height:1;color:var(--ink);opacity:0.3;margin-bottom:12px;transition:opacity .2s;}
@@ -229,7 +229,7 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
 
     @media(max-width:1100px){.ci-card.span4,.ci-card.span6{grid-column:span 12;}}
 
-    /* ── REFLECTION ── */
+    /* â”€â”€ REFLECTION â”€â”€ */
     .reflect-section{margin-top:60px;}
     .reflect-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:24px;padding-bottom:14px;border-bottom:1px solid var(--line);}
     .reflect-head h2{font-family:var(--display);font-size:32px;font-weight:700;letter-spacing:-0.03em;line-height:1;}
@@ -245,13 +245,13 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
     .journal-area::placeholder{color:var(--muted);}
     .journal-foot{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);}
 
-    /* ── SUBMIT ── */
+    /* â”€â”€ SUBMIT â”€â”€ */
     .submit-wrap{margin-top:60px;padding-bottom:40px;}
     .submit-row{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;align-items:stretch;}
     .insight-card{background:var(--ink);color:var(--bg);border-radius:24px;padding:28px;position:relative;overflow:hidden;}
     .insight-glow{position:absolute;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,color-mix(in oklab,var(--accent) 50%,transparent),transparent 65%);filter:blur(50px);bottom:-180px;right:-120px;pointer-events:none;}
     .insight-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent-2);display:inline-flex;align-items:center;gap:8px;margin-bottom:18px;position:relative;z-index:1;}
-    .insight-eyebrow::before{content:'✦';color:var(--accent-2);font-size:14px;}
+    .insight-eyebrow::before{content:'âœ¦';color:var(--accent-2);font-size:14px;}
     .insight-body{font-family:var(--serif);font-style:italic;font-size:26px;line-height:1.35;color:var(--bg);max-width:38ch;text-wrap:balance;position:relative;z-index:1;}
     .insight-body em{color:var(--accent);font-style:italic;}
     .insight-foot{margin-top:20px;padding-top:20px;border-top:1px solid color-mix(in oklab,var(--bg) 18%,transparent);display:flex;gap:24px;font-family:var(--mono);font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:color-mix(in oklab,var(--bg) 65%,transparent);position:relative;z-index:1;flex-wrap:wrap;}
@@ -267,12 +267,12 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
     .submit-btn:disabled{opacity:.6;cursor:not-allowed;}
     @media(max-width:1100px){.submit-row{grid-template-columns:1fr;}}
 
-    /* ── TOAST ── */
+    /* â”€â”€ TOAST â”€â”€ */
     .ci-toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:18px 24px;border-radius:999px;font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:-0.01em;z-index:9999;box-shadow:0 20px 50px rgba(0,0,0,0.3);display:flex;align-items:center;gap:14px;opacity:0;pointer-events:none;transition:all .35s cubic-bezier(.4,0,.2,1);}
     .ci-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
     .ci-toast em{color:var(--accent-2);font-family:var(--serif);font-style:italic;font-weight:400;}
 
-    /* ── SUCCESS OVERLAY ── */
+    /* â”€â”€ SUCCESS OVERLAY â”€â”€ */
     .success-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(250,246,241,.97);backdrop-filter:blur(20px);flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;}
     .success-overlay.show{display:flex;animation:fadeIn .4s ease both;}
     @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
@@ -287,24 +287,24 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
 </head>
 <body>
 <div class="app-shell">
-<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="checkin" />
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="checkin" />
 <main class="ci-main">
 
-  <!-- ── MOOD HERO ── -->
+  <!-- â”€â”€ MOOD HERO â”€â”€ -->
   <section class="mh">
     <div class="mh-glow" id="mhGlow"></div>
     <div class="mh-inner">
       {alreadyDone && (
         <div class="done-banner">
-          <span>✅</span>
-          <div><strong>Already checked in today</strong> <span>— tap Save to update your answers</span></div>
+          <span>âœ…</span>
+          <div><strong>Already checked in today</strong> <span>â€” tap Save to update your answers</span></div>
         </div>
       )}
-      <div class="mh-eyebrow">DAY {currentDay} · {timeOfDay} CHECK-IN</div>
+      <div class="mh-eyebrow">DAY {currentDay} Â· {timeOfDay} CHECK-IN</div>
       <h1 class="mh-greet">{greeting},<br/><em>{userName}.</em> How are you<br/>feeling?</h1>
       <p class="mh-date">{dateStr}</p>
       <div class="mh-mood">
-        <div class="mh-mood-label">Pick one — there's no wrong answer</div>
+        <div class="mh-mood-label">Pick one â€” there's no wrong answer</div>
         <div class="mh-mood-row">
           {moods.map(m => (
             <button class="mood-btn" data-id={m.id} onclick="ciSetMood(this.dataset.id)">
@@ -317,13 +317,13 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
     </div>
   </section>
 
-  <!-- ── BODY ── -->
+  <!-- â”€â”€ BODY â”€â”€ -->
   <div class="ci-body">
 
     <!-- Body check -->
     <div class="cards-head">
       <h2>Body <em>check</em></h2>
-      <span class="ch-meta">All optional · skip what doesn't apply</span>
+      <span class="ch-meta">All optional Â· skip what doesn't apply</span>
     </div>
     <div class="cards-grid">
 
@@ -334,10 +334,10 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
         <div class="ci-sub">If it feels right today.</div>
         <div class="ci-bigval" id="weightVal">{prefillWeightDisplay.toFixed(1)}<em>{weightUnit}</em></div>
         <div class="weight-stepper">
-          <button onclick={`ciStepWeight(${-weightStep})`}>−</button>
+          <button onclick={`ciStepWeight(${-weightStep})`}>âˆ’</button>
           <button onclick={`ciStepWeight(${weightStep})`}>+</button>
         </div>
-        {weightLostPositive && <div class="weight-delta">↓ {weightLostDisplay.toFixed(1)}{weightUnit} total lost</div>}
+        {weightLostPositive && <div class="weight-delta">â†“ {weightLostDisplay.toFixed(1)}{weightUnit} total lost</div>}
       </div>
 
       <!-- Energy: span4 -->
@@ -436,17 +436,17 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
           <div style="background:var(--accent);"></div>
         </div>
         <div class="ketone-zones">
-          <span>0–0.5</span><span>0.5–1.5</span><span>1.5–3</span><span>3+</span>
+          <span>0â€“0.5</span><span>0.5â€“1.5</span><span>1.5â€“3</span><span>3+</span>
         </div>
         <div class="weight-stepper" style="margin-top:16px;">
-          <button onclick="ciStepKetones(-0.1)">−</button>
+          <button onclick="ciStepKetones(-0.1)">âˆ’</button>
           <button onclick="ciStepKetones(0.1)">+</button>
         </div>
       </div>
 
       <!-- Water: span6 -->
       <div class="ci-card span6">
-        <div class="ci-label">WATER · SO FAR TODAY</div>
+        <div class="ci-label">WATER Â· SO FAR TODAY</div>
         <div class="ci-q">Glasses down?</div>
         <div class="ci-sub">Tap to add or remove.</div>
         <div class="water-row" id="waterRow">
@@ -464,10 +464,10 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
         <div class="ci-sub">Walk, lift, yoga, anything.</div>
         <div class="workout-toggle">
           <button class="workout-btn on" id="workoutYes" onclick="ciSetWorkout(true)">
-            <span class="workout-ic">✓</span>Yes, moved
+            <span class="workout-ic">âœ“</span>Yes, moved
           </button>
           <button class="workout-btn" id="workoutNo" onclick="ciSetWorkout(false)">
-            <span class="workout-ic">○</span>Rest day
+            <span class="workout-ic">â—‹</span>Rest day
           </button>
         </div>
       </div>
@@ -494,7 +494,7 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
 
     </div><!-- /cards-grid -->
 
-    <!-- ── REFLECTION ── -->
+    <!-- â”€â”€ REFLECTION â”€â”€ -->
     <section class="reflect-section">
       <div class="reflect-head">
         <h2>A few <em>words</em></h2>
@@ -511,12 +511,12 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
         <textarea class="journal-area" id="journalArea" placeholder="Whatever lands. No wrong answers."></textarea>
         <div class="journal-foot">
           <span id="journalSaved">Ready to save</span>
-          <span id="journalCount">0 chars · ~0 words</span>
+          <span id="journalCount">0 chars Â· ~0 words</span>
         </div>
       </div>
     </section>
 
-    <!-- ── SUBMIT ── -->
+    <!-- â”€â”€ SUBMIT â”€â”€ -->
     <div class="submit-wrap">
       <div class="submit-row">
         <div class="insight-card">
@@ -534,10 +534,10 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
           <div>
             <div class="sc-l">Today's reward</div>
             <div class="sc-v">+50<em>XP</em></div>
-            <p class="sc-desc">Showing up beats showing off. Day {currentDay} — keep it going.</p>
+            <p class="sc-desc">Showing up beats showing off. Day {currentDay} â€” keep it going.</p>
           </div>
           <button class="submit-btn" id="submitBtn" onclick="ciSave()">
-            Save check-in →
+            Save check-in â†’
           </button>
         </div>
       </div>
@@ -547,20 +547,20 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
 </main>
 </div><!-- /app-shell -->
 
-<!-- ── SUCCESS OVERLAY ── -->
+<!-- â”€â”€ SUCCESS OVERLAY â”€â”€ -->
 <div class="success-overlay" id="successOverlay">
-  <div class="so-icon">✅</div>
+  <div class="so-icon">âœ…</div>
   <h2 class="so-title">Day <em id="soDay">{currentDay}</em> logged!</h2>
-  <div class="so-xp">⭐ +<span id="soXP">50</span> XP earned</div>
+  <div class="so-xp">â­ +<span id="soXP">50</span> XP earned</div>
   <p class="so-sub" id="soSub">Great work staying consistent. Every check-in brings you closer to your goal.</p>
-  <a href="/dashboard" class="so-back">Back to dashboard →</a>
+  <a href="/dashboard" class="so-back">Back to dashboard â†’</a>
 </div>
 
 <div class="ci-toast" id="ciToast"></div>
 
 <script is:inline define:vars={{ currentDay, alreadyDone, prefillMood, prefillWeight, prefillWeightDisplay, isImperial, weightUnit, weightStep, prefillEnergy, prefillHunger, prefillSleepHours, prefillSleepQuality, prefillWater, prefillNotes }}>
 
-/* ── STATE ── */
+/* â”€â”€ STATE â”€â”€ */
 var state = {
   mood:         prefillMood || 'good',
   weight:       prefillWeightDisplay,  // always in display unit (kg or lbs)
@@ -580,7 +580,7 @@ var state = {
 
 var moodColors = { amazing:'var(--accent-2)', good:'var(--accent-3)', ok:'#E8C547', low:'#9CA3AF', rough:'#D14B5A' };
 
-/* ── MOOD ── */
+/* â”€â”€ MOOD â”€â”€ */
 function ciSetMood(id) {
   state.mood = id;
   document.querySelectorAll('.mood-btn').forEach(function(btn) {
@@ -594,7 +594,7 @@ function ciSetMood(id) {
   updateInsight();
 }
 
-/* ── SLIDER ── */
+/* â”€â”€ SLIDER â”€â”€ */
 function ciSlider(field, el, min, max, color) {
   var val = parseFloat(el.value);
   state[field] = val;
@@ -613,15 +613,15 @@ function ciSlider(field, el, min, max, color) {
   updateInsight();
 }
 
-/* ── WEIGHT ── */
+/* â”€â”€ WEIGHT â”€â”€ */
 function ciStepWeight(delta) {
-  var minVal = isImperial ? 44 : 20;  // 44 lbs ≈ 20 kg
+  var minVal = isImperial ? 44 : 20;  // 44 lbs â‰ˆ 20 kg
   state.weight = Math.max(minVal, +(state.weight + delta).toFixed(1));
   var el = document.getElementById('weightVal');
   if (el) el.innerHTML = state.weight.toFixed(1) + '<em>' + weightUnit + '</em>';
 }
 
-/* ── KETONES ── */
+/* â”€â”€ KETONES â”€â”€ */
 function ciStepKetones(delta) {
   state.ketones = Math.max(0, +(state.ketones + delta).toFixed(1));
   var el = document.getElementById('ketonesVal');
@@ -631,7 +631,7 @@ function ciStepKetones(delta) {
   updateInsight();
 }
 
-/* ── WATER ── */
+/* â”€â”€ WATER â”€â”€ */
 function ciSetWater(i) {
   var newVal = i < state.water ? i : i + 1;
   state.water = newVal;
@@ -642,7 +642,7 @@ function ciSetWater(i) {
   if (el) el.innerHTML = newVal + '<em> / 10 glasses</em>';
 }
 
-/* ── WORKOUT ── */
+/* â”€â”€ WORKOUT â”€â”€ */
 function ciSetWorkout(yes) {
   state.workout = yes;
   var y = document.getElementById('workoutYes');
@@ -651,7 +651,7 @@ function ciSetWorkout(yes) {
   if (n) n.classList.toggle('on', !yes);
 }
 
-/* ── DIGESTION ── */
+/* â”€â”€ DIGESTION â”€â”€ */
 function ciSetDigestion(val) {
   state.digestion = val;
   document.querySelectorAll('#digestionPills .pill').forEach(function(p) {
@@ -659,7 +659,7 @@ function ciSetDigestion(val) {
   });
 }
 
-/* ── PHOTO ── */
+/* â”€â”€ PHOTO â”€â”€ */
 function ciTogglePhoto() {
   state.photoTaken = !state.photoTaken;
   var card  = document.getElementById('photoCard');
@@ -667,12 +667,12 @@ function ciTogglePhoto() {
   var title = document.getElementById('photoTitle');
   var sub   = document.getElementById('photoSub');
   if (card)  card.classList.toggle('taken', state.photoTaken);
-  if (icon)  icon.textContent = state.photoTaken ? '✓' : '+';
-  if (title) title.textContent = state.photoTaken ? 'Photo added — looking strong' : 'Weekly progress photo';
+  if (icon)  icon.textContent = state.photoTaken ? 'âœ“' : '+';
+  if (title) title.textContent = state.photoTaken ? 'Photo added â€” looking strong' : 'Weekly progress photo';
   if (sub)   sub.textContent   = state.photoTaken ? 'Tap to remove' : 'Optional. Same lighting, same time, same outfit.';
 }
 
-/* ── REFLECTION ── */
+/* â”€â”€ REFLECTION â”€â”€ */
 var prompts = [
   "What's one thing you're proud of today?",
   "What surprised you about yesterday?",
@@ -694,26 +694,26 @@ if (journalArea) {
     state.notes = this.value;
     var words = this.value.trim().split(/\s+/).filter(Boolean).length;
     var cnt = document.getElementById('journalCount');
-    if (cnt) cnt.textContent = this.value.length + ' chars · ~' + (this.value.length ? words : 0) + ' words';
+    if (cnt) cnt.textContent = this.value.length + ' chars Â· ~' + (this.value.length ? words : 0) + ' words';
     var sav = document.getElementById('journalSaved');
     if (sav) sav.textContent = 'Saved just now';
   });
 }
 
-/* ── INSIGHT ── */
+/* â”€â”€ INSIGHT â”€â”€ */
 function updateInsight() {
   var el = document.getElementById('insightBody');
   if (!el) return;
   var energyWord  = state.energy >= 8 ? 'high' : state.energy >= 5 ? 'solid' : 'low';
   var sleepWord   = state.sleepHours >= 7 ? 'paying off' : state.sleepHours >= 6 ? 'decent' : 'worth improving';
   var ketoLabel   = state.ketones >= 1.5 ? 'deep ketosis' : state.ketones >= 0.5 ? 'light ketosis' : 'below threshold';
-  el.innerHTML = 'Your <em>energy</em> is ' + energyWord + ' today — ketones at ' + state.ketones.toFixed(1) + ' (' + ketoLabel + '). The ' + state.sleepHours + 'h of sleep is <em>' + sleepWord + '.</em> Keep the momentum going.';
+  el.innerHTML = 'Your <em>energy</em> is ' + energyWord + ' today â€” ketones at ' + state.ketones.toFixed(1) + ' (' + ketoLabel + '). The ' + state.sleepHours + 'h of sleep is <em>' + sleepWord + '.</em> Keep the momentum going.';
 }
 
-/* ── SAVE ── */
+/* â”€â”€ SAVE â”€â”€ */
 function ciSave() {
   var btn = document.getElementById('submitBtn');
-  if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+  if (btn) { btn.textContent = 'Savingâ€¦'; btn.disabled = true; }
 
   var moodMap = { amazing:5, good:4, ok:3, low:2, rough:1 };
   var mood_level    = moodMap[state.mood] || 3;
@@ -764,7 +764,7 @@ function ciSave() {
     var overlay = document.getElementById('successOverlay');
     if (overlay) overlay.classList.add('show');
 
-    if (btn) { btn.classList.add('done'); btn.textContent = '✓ Check-in saved'; btn.disabled = false; }
+    if (btn) { btn.classList.add('done'); btn.textContent = 'âœ“ Check-in saved'; btn.disabled = false; }
 
     // Check achievements
     fetch('/api/achievements/check', { method: 'POST' })
@@ -775,12 +775,12 @@ function ciSave() {
         }
       }).catch(function() {});
   }).catch(function() {
-    if (btn) { btn.disabled = false; btn.textContent = 'Save check-in →'; }
-    ciShowToast('❌ Failed to save. Please try again.');
+    if (btn) { btn.disabled = false; btn.textContent = 'Save check-in â†’'; }
+    ciShowToast('âŒ Failed to save. Please try again.');
   });
 }
 
-/* ── TOAST ── */
+/* â”€â”€ TOAST â”€â”€ */
 function ciShowToast(msg) {
   var t = document.getElementById('ciToast');
   if (!t) return;
@@ -789,7 +789,7 @@ function ciShowToast(msg) {
   setTimeout(function() { t.classList.remove('show'); }, 3500);
 }
 
-/* ── ACHIEVEMENT TOAST ── */
+/* â”€â”€ ACHIEVEMENT TOAST â”€â”€ */
 function showAchievementToast(icon, name, desc) {
   var el = document.createElement('div');
   el.style.cssText = 'position:fixed;bottom:5rem;right:1.25rem;z-index:9999;background:linear-gradient(135deg,rgba(182,255,60,.18),rgba(255,145,77,.12));border:1.5px solid rgba(182,255,60,.45);border-radius:16px;padding:.875rem 1.1rem;max-width:280px;box-shadow:0 12px 40px rgba(0,0,0,.25);backdrop-filter:blur(16px);';
@@ -803,7 +803,7 @@ function showAchievementToast(icon, name, desc) {
   }, 4000);
 }
 
-/* ── INIT ── */
+/* â”€â”€ INIT â”€â”€ */
 (function() {
   ciSetMood(state.mood);
 
@@ -824,7 +824,7 @@ function showAchievementToast(icon, name, desc) {
     journalArea.value = state.notes;
     var cnt = document.getElementById('journalCount');
     var words = state.notes.trim().split(/\s+/).filter(Boolean).length;
-    if (cnt) cnt.textContent = state.notes.length + ' chars · ~' + words + ' words';
+    if (cnt) cnt.textContent = state.notes.length + ' chars Â· ~' + words + ' words';
   }
 
   updateInsight();
@@ -833,3 +833,4 @@ function showAchievementToast(icon, name, desc) {
 
 </body>
 </html>
+

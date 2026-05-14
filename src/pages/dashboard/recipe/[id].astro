@@ -1,4 +1,4 @@
----
+﻿---
 import { getUserJourney } from '../../../lib/supabase';
 import { requireAuth } from '../../../lib/auth';
 import Sidebar from '../../../components/Sidebar.astro';
@@ -9,7 +9,7 @@ const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
 const { user, profile, db } = auth;
 const planType  = profile.subscription_tier || 'basic_30';
-const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
+const tierLabel = planType === 'elite_12' ? 'ðŸ‘‘ Elite' : planType === 'pro_6' ? 'âš¡ Pro' : 'ðŸ¥‘ Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
 
 const journey = await getUserJourney(user.id, db);
@@ -94,13 +94,13 @@ const clientData = {
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{recipe.title} — Keto Journey</title>
+  <title>{recipe.title} â€” Keto Journey</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/icon-72.png"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
-    /* ── Recipe-page extra tokens ── */
+    /* â”€â”€ Recipe-page extra tokens â”€â”€ */
     :root {
       --bg-alt:   #F2EDE5;
       --ink:      #16110F;
@@ -134,7 +134,7 @@ const clientData = {
     img { display: block; max-width: 100%; }
     ::selection { background: var(--accent-r); color: #fff; }
 
-    /* ── Hero ────────────────────────────────────────────────── */
+    /* â”€â”€ Hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .rh { position: relative; background: var(--ink); color: var(--bg, #FAF6F1); overflow: hidden; }
     .rh-img { position: absolute; inset: 0; z-index: 0; }
     .rh-img img { width: 100%; height: 100%; object-fit: cover; filter: saturate(1.05); }
@@ -177,20 +177,20 @@ const clientData = {
     .rh-stars { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; letter-spacing: .14em; color: rgba(255,255,255,.55); }
     .rh-stars b { color: #fff; font-family: var(--display); font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
 
-    /* ── Main body layout ────────────────────────────────────── */
+    /* â”€â”€ Main body layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .recipe-wrap { max-width: 1240px; margin: 0 auto; padding: 0 32px 100px; }
     .two-col { display: grid; grid-template-columns: 1fr 360px; gap: 60px; margin-top: 52px; align-items: start; }
     .left-col { min-width: 0; display: flex; flex-direction: column; gap: 60px; }
     .right-col { position: sticky; top: 80px; }
 
-    /* ── Section headers ────────────────────────────────────── */
+    /* â”€â”€ Section headers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 22px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
     .section-num { font-family: var(--serif); font-style: italic; font-size: 22px; color: var(--accent-r); margin-right: 12px; }
     .section-title { font-family: var(--display); font-size: 34px; font-weight: 700; letter-spacing: -.03em; line-height: 1; }
     .section-title em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent-r); }
     .section-meta { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted-r); white-space: nowrap; }
 
-    /* ── Cook Rail ───────────────────────────────────────────── */
+    /* â”€â”€ Cook Rail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .rail { background: var(--card-r); border: 1px solid var(--line); border-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
     .rail-label { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted-r); margin-bottom: 8px; }
     .rail-intro { font-family: var(--serif); font-style: italic; font-size: 16px; line-height: 1.55; color: var(--ink-soft); }
@@ -221,7 +221,7 @@ const clientData = {
     .rail-btn.secondary:hover { background: var(--ink); color: var(--bg, #FAF6F1); }
     .rail-btn.done-btn { background: var(--acc2); color: var(--ink); border: none; }
 
-    /* ── Ingredients ─────────────────────────────────────────── */
+    /* â”€â”€ Ingredients â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .ing-group { margin-top: 24px; }
     .ing-group:first-child { margin-top: 0; }
     .ing-group-title { font-family: var(--mono); font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--accent-r); margin-bottom: 10px; }
@@ -231,13 +231,13 @@ const clientData = {
     .ing-check { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--line); flex-shrink: 0; position: relative; transition: all .15s; }
     .ing-row:hover .ing-check { border-color: var(--accent-r); }
     .ing-check.on { background: var(--ink); border-color: var(--ink); }
-    .ing-check.on::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: var(--acc2); font-size: 11px; font-weight: 700; }
+    .ing-check.on::after { content: 'âœ“'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: var(--acc2); font-size: 11px; font-weight: 700; }
     .ing-qty { font-family: var(--display); font-size: 17px; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
     .ing-name { font-size: 15px; line-height: 1.4; }
     .ing-note { color: var(--muted-r); font-style: italic; font-family: var(--serif); font-size: 13px; margin-left: 5px; }
     .ing-row.checked .ing-qty, .ing-row.checked .ing-name { text-decoration: line-through; color: var(--muted-r); }
 
-    /* ── Method steps ────────────────────────────────────────── */
+    /* â”€â”€ Method steps â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .step-row { display: grid; grid-template-columns: 88px 1fr; gap: 24px; padding: 28px 0; border-top: 1px dashed var(--line); position: relative; }
     .step-row:first-of-type { border-top: none; padding-top: 8px; }
     .step-num-wrap { cursor: pointer; }
@@ -255,7 +255,7 @@ const clientData = {
     .step-btn.timer-btn.running { background: var(--accent-r); animation: timerPulse 1.6s ease-in-out infinite; }
     @keyframes timerPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,92,122,.35); } 50% { box-shadow: 0 0 0 8px rgba(255,92,122,0); } }
 
-    /* ── Nutrition ───────────────────────────────────────────── */
+    /* â”€â”€ Nutrition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .nut-card { background: var(--card-r); border: 1px solid var(--line); border-radius: 24px; padding: 28px; }
     .nut-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 36px; }
     .nut-kcal .l { font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted-r); }
@@ -276,7 +276,7 @@ const clientData = {
     .micro-row .mdv { font-family: var(--mono); font-size: 10px; color: var(--muted-r); margin-left: 4px; }
     .micro-row.highlight .mv { color: var(--accent-r); }
 
-    /* ── Coach Tips ──────────────────────────────────────────── */
+    /* â”€â”€ Coach Tips â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .tips-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .tip { background: var(--bg-alt); border-radius: 18px; padding: 22px; border: 1px solid var(--line); }
     .tip:nth-child(1) { background: var(--ink); color: var(--bg, #FAF6F1); border-color: var(--ink); }
@@ -287,14 +287,14 @@ const clientData = {
     .tip-title { font-family: var(--display); font-size: 17px; font-weight: 600; letter-spacing: -.01em; margin-bottom: 8px; }
     .tip-body { font-size: 14px; line-height: 1.5; color: var(--ink-soft); font-family: var(--serif); }
 
-    /* ── Notes ───────────────────────────────────────────────── */
+    /* â”€â”€ Notes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .notes-card { background: var(--bg-alt); border: 1px solid var(--line); border-radius: 18px; padding: 24px; position: relative; }
     .notes-mark { position: absolute; top: -13px; left: 24px; font-family: var(--serif); font-style: italic; font-size: 13px; background: var(--bg, #FAF6F1); color: var(--muted-r); padding: 0 10px; }
     .notes-area { width: 100%; min-height: 90px; background: transparent; border: none; outline: none; resize: vertical; font-family: var(--serif); font-style: italic; font-size: 18px; line-height: 1.5; color: var(--ink); }
     .notes-area::placeholder { color: var(--muted-r); }
     .notes-foot { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); display: flex; justify-content: space-between; align-items: center; font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted-r); }
 
-    /* ── Reviews ─────────────────────────────────────────────── */
+    /* â”€â”€ Reviews â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .review { padding: 20px 0; border-top: 1px dashed var(--line); display: grid; grid-template-columns: 52px 1fr auto; gap: 16px; align-items: start; }
     .review:first-child { border-top: none; padding-top: 6px; }
     .review-avatar { width: 52px; height: 52px; border-radius: 50%; overflow: hidden; background: var(--bg-alt); }
@@ -309,7 +309,7 @@ const clientData = {
     .review-cta-btn { padding: 11px 18px; background: var(--ink); color: var(--bg, #FAF6F1); border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; }
     .review-cta-btn:hover { background: var(--accent-r); color: #fff; }
 
-    /* ── Related ─────────────────────────────────────────────── */
+    /* â”€â”€ Related â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .related-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
     .rel-card { position: relative; aspect-ratio: 4/5; border-radius: 18px; overflow: hidden; cursor: pointer; transition: transform .25s; }
     .rel-card:hover { transform: translateY(-3px); }
@@ -320,7 +320,7 @@ const clientData = {
     .rel-meta .rl { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; opacity: .85; margin-bottom: 4px; }
     .rel-meta .rt { font-family: var(--display); font-size: 20px; font-weight: 600; letter-spacing: -.02em; line-height: 1.05; }
 
-    /* ── Modals ──────────────────────────────────────────────── */
+    /* â”€â”€ Modals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .rv-modal { position: fixed; inset: 0; z-index: 9200; background: rgba(22,17,15,.8); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 1rem; opacity: 0; pointer-events: none; transition: opacity .2s; }
     .rv-modal.open { opacity: 1; pointer-events: all; }
     .rv-modal-box { background: var(--card-r); border: 1px solid var(--line); border-radius: 22px; padding: 24px; width: min(400px, 95vw); box-shadow: 0 24px 60px rgba(0,0,0,.2); }
@@ -340,11 +340,11 @@ const clientData = {
     .rv-save-btn { width: 100%; margin-top: 16px; padding: 13px; border-radius: 999px; background: var(--ink); color: var(--bg, #FAF6F1); font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .15s; }
     .rv-save-btn:hover { background: var(--accent-r); color: #fff; }
 
-    /* ── Toast ───────────────────────────────────────────────── */
+    /* â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .rv-toast { position: fixed; bottom: 5.5rem; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--bg, #FAF6F1); font-family: var(--mono); font-size: 12px; letter-spacing: .1em; padding: 10px 20px; border-radius: 999px; z-index: 9999; opacity: 0; transition: all .3s; pointer-events: none; white-space: nowrap; }
     .rv-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-    /* ── Jump-to nav strip ───────────────────────────────────── */
+    /* â”€â”€ Jump-to nav strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .jump-strip { position: sticky; top: 0; z-index: 80; background: var(--bg, #FAF6F1); border-bottom: 1px solid var(--line); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
     .jump-inner { max-width: 1240px; margin: 0 auto; padding: 0 32px; display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none; }
     .jump-inner::-webkit-scrollbar { display: none; }
@@ -354,7 +354,7 @@ const clientData = {
     .jump-print { margin-left: auto; font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted-r); padding: 12px 14px; white-space: nowrap; display: flex; align-items: center; gap: 6px; cursor: pointer; background: none; border: none; transition: color .15s; }
     .jump-print:hover { color: var(--ink); }
 
-    /* ── Print styles ────────────────────────────────────────── */
+    /* â”€â”€ Print styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     @media print {
       .rv-recipe-shell > :first-child,  /* sidebar */
       .jump-strip,
@@ -407,7 +407,7 @@ const clientData = {
       @page { margin: 1.5cm; }
     }
 
-    /* ── Responsive ──────────────────────────────────────────── */
+    /* â”€â”€ Responsive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     @media (max-width: 1100px) {
       .rh-inner { grid-template-columns: 1fr; padding: 40px 18px 36px; gap: 28px; min-height: auto; }
       .recipe-wrap { padding: 0 18px 60px; }
@@ -437,10 +437,10 @@ const clientData = {
 </style>
 
 <div class="rv-recipe-shell">
-  <Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="recipe" />
+  <Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="recipe" />
   <div class="rv-recipe-main">
 
-<!-- ════ HERO ════════════════════════════════════════════════════ -->
+<!-- â•â•â•â• HERO â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <section class="rh">
   {recipe.image_url && (
     <div class="rh-img">
@@ -458,7 +458,7 @@ const clientData = {
         <span style="opacity:.75">{recipe.title}</span>
       </div>
       <div class="rh-eyebrow">
-        {[recipe.difficulty, totalTime ? `${totalTime} min` : null].filter(Boolean).join(' · ')}
+        {[recipe.difficulty, totalTime ? `${totalTime} min` : null].filter(Boolean).join(' Â· ')}
       </div>
       <h1 class="rh-title">
         {recipe.title}
@@ -472,8 +472,8 @@ const clientData = {
       )}
       <div class="rh-cta-row">
         <button class="rh-btn" id="heroAddBtn">+ Add to today</button>
-        <button class="rh-btn ghost" id="heroFavBtn">{isFavorited ? '★ Saved' : '☆ Save'}</button>
-        <button class="rh-btn ghost" id="heroShareBtn">↗ Share</button>
+        <button class="rh-btn ghost" id="heroFavBtn">{isFavorited ? 'â˜… Saved' : 'â˜† Save'}</button>
+        <button class="rh-btn ghost" id="heroShareBtn">â†— Share</button>
       </div>
     </div>
     <div>
@@ -513,7 +513,7 @@ const clientData = {
   </div>
 </section>
 
-<!-- ════ JUMP-TO NAV STRIP ═══════════════════════════════════════ -->
+<!-- â•â•â•â• JUMP-TO NAV STRIP â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <nav class="jump-strip" id="jumpStrip" aria-label="Recipe sections">
   <div class="jump-inner">
     <button class="jump-link active" data-target="ing-section">Ingredients</button>
@@ -527,11 +527,11 @@ const clientData = {
   </div>
 </nav>
 
-<!-- ════ BODY ════════════════════════════════════════════════════ -->
+<!-- â•â•â•â• BODY â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="recipe-wrap">
   <div class="two-col">
 
-    <!-- ── LEFT COLUMN ─────────────────────────────────────── -->
+    <!-- â”€â”€ LEFT COLUMN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div class="left-col">
 
       <!-- 01 INGREDIENTS -->
@@ -547,7 +547,7 @@ const clientData = {
           {ingredients.map((ing: any, i: number) => (
             <div class="ing-row" data-idx={i} onclick="window.toggleIng(this)">
               <div class="ing-check"></div>
-              <div class="ing-qty" id={`iqty-${i}`}>{ing.amount || '—'}{ing.unit ? ` ${ing.unit}` : ''}</div>
+              <div class="ing-qty" id={`iqty-${i}`}>{ing.amount || 'â€”'}{ing.unit ? ` ${ing.unit}` : ''}</div>
               <div class="ing-name">
                 {ing.item}
               </div>
@@ -578,7 +578,7 @@ const clientData = {
                   <div class="step-actions">
                     {s.timer && (
                       <button class="step-btn timer-btn" id={`timer-${i}`} onclick={`window.toggleTimer(${i}, ${s.timer}, '${s.timerLabel}')`}>
-                        ▶ {s.timerLabel || 'Timer'} {s.timer}:00
+                        â–¶ {s.timerLabel || 'Timer'} {s.timer}:00
                       </button>
                     )}
                     <button class="step-btn" onclick={`window.toggleStep(${i})`} id={`sdone-${i}`}>Mark done</button>
@@ -635,7 +635,7 @@ const clientData = {
                   { name: 'Potassium', val: 820,  unit: 'mg', dv: 18 },
                   { name: 'Calcium',   val: 140,  unit: 'mg', dv: 11 },
                   { name: 'Iron',      val: 1.6,  unit: 'mg', dv: 9  },
-                  { name: 'Vit D',     val: 10,   unit: 'µg', dv: 50 },
+                  { name: 'Vit D',     val: 10,   unit: 'Âµg', dv: 50 },
                   { name: 'Omega-3',   val: 2.1,  unit: 'g',  dv: null, highlight: true },
                 ].map((mi: any) => (
                   <div class={`micro-row ${mi.highlight ? 'highlight' : ''}`}>
@@ -665,7 +665,7 @@ const clientData = {
           <div class="tips-grid">
             {tips.map((tip: any, i: number) => (
               <div class="tip">
-                <span class="tip-mark">— tip {String(i + 1).padStart(2, '0')}</span>
+                <span class="tip-mark">â€” tip {String(i + 1).padStart(2, '0')}</span>
                 <h4 class="tip-title">{tip.title}</h4>
                 <p class="tip-body">{tip.body}</p>
               </div>
@@ -678,14 +678,14 @@ const clientData = {
       <section>
         <div class="section-head">
           <div style="display:flex;align-items:baseline">
-            <span class="section-num" style="font-style:normal">⌖</span>
+            <span class="section-num" style="font-style:normal">âŒ–</span>
             <h2 class="section-title">Your <em>notes</em></h2>
           </div>
           <span class="section-meta">Private to you</span>
         </div>
         <div class="notes-card">
-          <span class="notes-mark">— from last time</span>
-          <textarea class="notes-area" id="recipeNotes" placeholder="Write what worked, what didn't, what you'd change next time…"></textarea>
+          <span class="notes-mark">â€” from last time</span>
+          <textarea class="notes-area" id="recipeNotes" placeholder="Write what worked, what didn't, what you'd change next timeâ€¦"></textarea>
           <div class="notes-foot">
             <span id="notesSaved">Auto-saved locally</span>
             <span id="notesLen">0 chars</span>
@@ -703,26 +703,26 @@ const clientData = {
           <span class="section-meta">Community</span>
         </div>
         <div class="review">
-          <div class="review-avatar" style="background:var(--bg-alt);display:flex;align-items:center;justify-content:center;font-size:22px;">🧑</div>
+          <div class="review-avatar" style="background:var(--bg-alt);display:flex;align-items:center;justify-content:center;font-size:22px;">ðŸ§‘</div>
           <div>
             <div class="review-name">KetoFan_Pro</div>
-            <div class="review-stars"><span class="on">★★★★★</span></div>
-            <p class="review-body">"Made this three nights in a row. The sear technique is exactly what I needed — couldn't believe how simple it was."</p>
+            <div class="review-stars"><span class="on">â˜…â˜…â˜…â˜…â˜…</span></div>
+            <p class="review-body">"Made this three nights in a row. The sear technique is exactly what I needed â€” couldn't believe how simple it was."</p>
           </div>
           <div class="review-when">3 days ago</div>
         </div>
         <div class="review">
-          <div class="review-avatar" style="background:var(--bg-alt);display:flex;align-items:center;justify-content:center;font-size:22px;">👩</div>
+          <div class="review-avatar" style="background:var(--bg-alt);display:flex;align-items:center;justify-content:center;font-size:22px;">ðŸ‘©</div>
           <div>
             <div class="review-name">Maria_K</div>
-            <div class="review-stars"><span class="on">★★★★</span><span style="opacity:.3">★</span></div>
+            <div class="review-stars"><span class="on">â˜…â˜…â˜…â˜…</span><span style="opacity:.3">â˜…</span></div>
             <p class="review-body">"My husband who hates "diet food" had two portions. Says it all."</p>
           </div>
           <div class="review-when">1 week ago</div>
         </div>
         <div class="review-cta">
           <span class="review-cta-note">Cooked this yourself?</span>
-          <button class="review-cta-btn" onclick="window.showToast('Reviews coming soon!')">Leave a review →</button>
+          <button class="review-cta-btn" onclick="window.showToast('Reviews coming soon!')">Leave a review â†’</button>
         </div>
       </section>
 
@@ -744,7 +744,7 @@ const clientData = {
                   : <div style="width:100%;height:100%;background:var(--bg-alt)"></div>
                 }
                 <div class="rel-meta">
-                  <div class="rl">{(r.prep_time || 0) + (r.cook_time || 0)} min · {r.net_carbs}g net</div>
+                  <div class="rl">{(r.prep_time || 0) + (r.cook_time || 0)} min Â· {r.net_carbs}g net</div>
                   <div class="rt">{r.title}</div>
                 </div>
               </a>
@@ -755,7 +755,7 @@ const clientData = {
 
     </div><!-- /left-col -->
 
-    <!-- ── RIGHT COLUMN (sticky cook rail) ───────────────────── -->
+    <!-- â”€â”€ RIGHT COLUMN (sticky cook rail) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div class="right-col">
       <div class="rail">
 
@@ -771,7 +771,7 @@ const clientData = {
           <div class="servings-row">
             <span class="rail-label" style="margin:0">Servings</span>
             <div class="servings-pill">
-              <button onclick="window.adjServings(-1)">−</button>
+              <button onclick="window.adjServings(-1)">âˆ’</button>
               <span class="sv" id="srvVal">{baseServings}</span>
               <button onclick="window.adjServings(1)">+</button>
             </div>
@@ -803,14 +803,14 @@ const clientData = {
         <!-- Actions -->
         <div class="rail-actions">
           {canComplete
-            ? <button class="rail-btn primary" id="railCompleteBtn">✓ Mark meal complete</button>
+            ? <button class="rail-btn primary" id="railCompleteBtn">âœ“ Mark meal complete</button>
             : <button class="rail-btn primary" onclick="window.openMealPlan()">+ Add to meal plan</button>
           }
-          {isCompleted && <button class="rail-btn done-btn" disabled>✓ Completed today!</button>}
-          <button class="rail-btn secondary" onclick="window.logToFoodLog()">📋 Log to food diary</button>
-          <button class="rail-btn secondary" onclick="window.openColPicker()">📚 Save to collection</button>
+          {isCompleted && <button class="rail-btn done-btn" disabled>âœ“ Completed today!</button>}
+          <button class="rail-btn secondary" onclick="window.logToFoodLog()">ðŸ“‹ Log to food diary</button>
+          <button class="rail-btn secondary" onclick="window.openColPicker()">ðŸ“š Save to collection</button>
           {planType === 'elite_12' && (
-            <a href="/dashboard/ai-coach" class="rail-btn secondary" style="text-align:center">✦ Ask the coach</a>
+            <a href="/dashboard/ai-coach" class="rail-btn secondary" style="text-align:center">âœ¦ Ask the coach</a>
           )}
         </div>
 
@@ -820,12 +820,12 @@ const clientData = {
   </div>
 </div>
 
-<!-- ════ MEAL PLAN MODAL ══════════════════════════════════════════ -->
+<!-- â•â•â•â• MEAL PLAN MODAL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div id="mealPlanModal" class="rv-modal" onclick="if(event.target===this)window.closeMealPlan()">
   <div class="rv-modal-box">
     <div class="rv-modal-head">
       <span class="rv-modal-title">Add to Meal Plan</span>
-      <button class="rv-modal-close" onclick="window.closeMealPlan()">✕</button>
+      <button class="rv-modal-close" onclick="window.closeMealPlan()">âœ•</button>
     </div>
     <div style="display:flex;flex-direction:column;gap:14px">
       <div>
@@ -835,10 +835,10 @@ const clientData = {
       <div>
         <label class="rv-form-label">Meal</label>
         <div class="rv-meal-grid" id="mpMealBtns">
-          <button class="rv-meal-btn active" data-meal="breakfast">🍳 Breakfast</button>
-          <button class="rv-meal-btn" data-meal="lunch">🥗 Lunch</button>
-          <button class="rv-meal-btn" data-meal="dinner">🍽️ Dinner</button>
-          <button class="rv-meal-btn" data-meal="snack">🥑 Snack</button>
+          <button class="rv-meal-btn active" data-meal="breakfast">ðŸ³ Breakfast</button>
+          <button class="rv-meal-btn" data-meal="lunch">ðŸ¥— Lunch</button>
+          <button class="rv-meal-btn" data-meal="dinner">ðŸ½ï¸ Dinner</button>
+          <button class="rv-meal-btn" data-meal="snack">ðŸ¥‘ Snack</button>
         </div>
       </div>
       <button class="rv-save-btn" onclick="window.saveMealPlan()">Add to Plan</button>
@@ -846,26 +846,26 @@ const clientData = {
   </div>
 </div>
 
-<!-- ════ COLLECTION MODAL ════════════════════════════════════════ -->
+<!-- â•â•â•â• COLLECTION MODAL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div id="colPickerModal" class="rv-modal" onclick="if(event.target===this)window.closeColPicker()">
   <div class="rv-modal-box">
     <div class="rv-modal-head">
       <span class="rv-modal-title">Save to Collection</span>
-      <button class="rv-modal-close" onclick="window.closeColPicker()">✕</button>
+      <button class="rv-modal-close" onclick="window.closeColPicker()">âœ•</button>
     </div>
     <div id="colPickerList" style="max-height:260px;overflow-y:auto"></div>
     <a href="/dashboard/collections" style="display:block;margin-top:14px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-r)">+ New Collection</a>
   </div>
 </div>
 
-<!-- ════ TOAST ═══════════════════════════════════════════════════ -->
+<!-- â•â•â•â• TOAST â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div id="rv-toast" class="rv-toast"></div>
 
 <script is:inline define:vars={{ clientData }}>
 (function() {
   var cd = clientData;
 
-  /* ── Toast ───────────────────────────────────────────── */
+  /* â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   var _toastT;
   window.showToast = function(msg, type) {
     var el = document.getElementById('rv-toast');
@@ -876,25 +876,25 @@ const clientData = {
     _toastT = setTimeout(function() { el.className = 'rv-toast'; }, 2800);
   };
 
-  /* ── Favorites ───────────────────────────────────────── */
+  /* â”€â”€ Favorites â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   var favBtn = document.getElementById('heroFavBtn');
   var _faved = cd.isFavorited;
   if (favBtn) {
     favBtn.addEventListener('click', function() {
       _faved = !_faved;
-      favBtn.textContent = _faved ? '★ Saved' : '☆ Save';
+      favBtn.textContent = _faved ? 'â˜… Saved' : 'â˜† Save';
       favBtn.className = _faved ? 'rh-btn ghost saved' : 'rh-btn ghost';
       fetch('/api/recipes/favorite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recipeId: cd.recipeId, favorited: _faved }),
       }).then(function(r) { return r.json(); }).then(function(d) {
-        window.showToast(_faved ? '★ Saved to favorites' : 'Removed from favorites');
+        window.showToast(_faved ? 'â˜… Saved to favorites' : 'Removed from favorites');
       });
     });
   }
 
-  /* ── Share ───────────────────────────────────────────── */
+  /* â”€â”€ Share â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   var shareBtn = document.getElementById('heroShareBtn');
   if (shareBtn) {
     shareBtn.addEventListener('click', function() {
@@ -908,7 +908,7 @@ const clientData = {
     });
   }
 
-  /* ── Hero Add / Complete task ────────────────────────── */
+  /* â”€â”€ Hero Add / Complete task â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   var heroAddBtn = document.getElementById('heroAddBtn');
   if (heroAddBtn) {
     heroAddBtn.addEventListener('click', function() {
@@ -920,7 +920,7 @@ const clientData = {
     });
   }
 
-  /* ── Ingredients checklist ───────────────────────────── */
+  /* â”€â”€ Ingredients checklist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   var _ingChecked = {};
   window.toggleIng = function(row) {
     var idx = row.getAttribute('data-idx');
@@ -934,7 +934,7 @@ const clientData = {
     if (counter) counter.textContent = done + '/' + total + ' ready';
   };
 
-  /* ── Step timers ─────────────────────────────────────── */
+  /* â”€â”€ Step timers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   var _timers = {};
   var _remaining = {};
   window.toggleTimer = function(idx, mins, label) {
@@ -952,18 +952,18 @@ const clientData = {
       _remaining[idx]--;
       var m = Math.floor(_remaining[idx] / 60);
       var s = _remaining[idx] % 60;
-      btn.textContent = '⏸ ' + (label || 'Timer') + ' ' + m + ':' + (s < 10 ? '0' : '') + s;
+      btn.textContent = 'â¸ ' + (label || 'Timer') + ' ' + m + ':' + (s < 10 ? '0' : '') + s;
       if (_remaining[idx] <= 0) {
         clearInterval(_timers[idx]);
         _timers[idx] = null;
         btn.classList.remove('running');
-        btn.textContent = '▶ ' + (label || 'Timer') + ' 0:00';
-        window.showToast('⏱ Timer done!');
+        btn.textContent = 'â–¶ ' + (label || 'Timer') + ' 0:00';
+        window.showToast('â± Timer done!');
       }
     }, 1000);
   };
 
-  /* ── Step done toggle ────────────────────────────────── */
+  /* â”€â”€ Step done toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   var _doneSt = {};
   var _totalSteps = cd.stepsCount;
   window.toggleStep = function(idx) {
@@ -971,7 +971,7 @@ const clientData = {
     var row = document.getElementById('step-' + idx);
     if (row) row.classList.toggle('done', !!_doneSt[idx]);
     var doneBtn = document.getElementById('sdone-' + idx);
-    if (doneBtn) doneBtn.textContent = _doneSt[idx] ? '✓ Done' : 'Mark done';
+    if (doneBtn) doneBtn.textContent = _doneSt[idx] ? 'âœ“ Done' : 'Mark done';
     var done = Object.values(_doneSt).filter(Boolean).length;
     var pv = document.getElementById('progVal');
     var pf = document.getElementById('progFill');
@@ -979,7 +979,7 @@ const clientData = {
     if (pf) pf.style.width = (_totalSteps > 0 ? Math.round((done / _totalSteps) * 100) : 0) + '%';
   };
 
-  /* ── Servings adjuster ───────────────────────────────── */
+  /* â”€â”€ Servings adjuster â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   var _servings = cd.baseServings;
   var _baseMacros = cd.macros;
   function fmt(v) { return Math.round(v * 10) / 10; }
@@ -1009,10 +1009,10 @@ const clientData = {
     // Update section meta
     var counter = document.getElementById('ing-counter');
     var checked = Object.values(_ingChecked).filter(Boolean).length;
-    if (counter) counter.textContent = checked + '/' + (cd.ingredientsFlat || []).length + ' ready · ' + _servings + ' srv';
+    if (counter) counter.textContent = checked + '/' + (cd.ingredientsFlat || []).length + ' ready Â· ' + _servings + ' srv';
   };
 
-  /* ── Notes (localStorage) ───────────────────────────── */
+  /* â”€â”€ Notes (localStorage) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   var _noteKey = 'keto-note-' + cd.recipeId;
   var notesArea = document.getElementById('recipeNotes');
   var notesLen  = document.getElementById('notesLen');
@@ -1026,13 +1026,13 @@ const clientData = {
       clearTimeout(_saveT);
       _saveT = setTimeout(function() {
         localStorage.setItem(_noteKey, notesArea.value);
-        if (notesSaved) notesSaved.textContent = 'Saved ✓';
+        if (notesSaved) notesSaved.textContent = 'Saved âœ“';
         setTimeout(function() { if (notesSaved) notesSaved.textContent = 'Auto-saved locally'; }, 1500);
       }, 600);
     });
   }
 
-  /* ── Complete today's meal task ──────────────────────── */
+  /* â”€â”€ Complete today's meal task â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   var railCompleteBtn = document.getElementById('railCompleteBtn');
   window.completeTask = function() {
     if (!cd.taskId) return;
@@ -1041,15 +1041,15 @@ const clientData = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ taskId: cd.taskId, completed: true }),
     }).then(function(r) { return r.json(); }).then(function(d) {
-      window.showToast('✓ Meal completed! +' + (d.xp_earned || 25) + ' XP');
-      if (railCompleteBtn) { railCompleteBtn.textContent = '✓ Completed!'; railCompleteBtn.disabled = true; railCompleteBtn.className = 'rail-btn done-btn'; }
+      window.showToast('âœ“ Meal completed! +' + (d.xp_earned || 25) + ' XP');
+      if (railCompleteBtn) { railCompleteBtn.textContent = 'âœ“ Completed!'; railCompleteBtn.disabled = true; railCompleteBtn.className = 'rail-btn done-btn'; }
       var heroAdd = document.getElementById('heroAddBtn');
-      if (heroAdd) { heroAdd.textContent = '✓ Done'; heroAdd.disabled = true; }
+      if (heroAdd) { heroAdd.textContent = 'âœ“ Done'; heroAdd.disabled = true; }
     });
   };
   if (railCompleteBtn) railCompleteBtn.addEventListener('click', window.completeTask);
 
-  /* ── Log to food diary ───────────────────────────────── */
+  /* â”€â”€ Log to food diary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   window.logToFoodLog = function() {
     fetch('/api/food-log/add', {
       method: 'POST',
@@ -1063,12 +1063,12 @@ const clientData = {
         meal_type: cd.mealType || 'other',
       }),
     }).then(function(r) { return r.json(); }).then(function(d) {
-      if (d.error) { window.showToast('❌ ' + d.error); return; }
-      window.showToast('📋 Added to food diary!');
+      if (d.error) { window.showToast('âŒ ' + d.error); return; }
+      window.showToast('ðŸ“‹ Added to food diary!');
     });
   };
 
-  /* ── Meal planner modal ──────────────────────────────── */
+  /* â”€â”€ Meal planner modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   var _mpMeal = 'breakfast';
   window.openMealPlan = function() {
     var modal = document.getElementById('mealPlanModal');
@@ -1097,17 +1097,17 @@ const clientData = {
       body: JSON.stringify({ recipeId: cd.recipeId, planDate: date, mealType: _mpMeal }),
     }).then(function(r) { return r.json(); }).then(function(d) {
       window.closeMealPlan();
-      if (d.error) { window.showToast('❌ ' + d.error); return; }
-      window.showToast('📅 Added to meal plan!');
+      if (d.error) { window.showToast('âŒ ' + d.error); return; }
+      window.showToast('ðŸ“… Added to meal plan!');
     });
   };
 
-  /* ── Collection picker modal ─────────────────────────── */
+  /* â”€â”€ Collection picker modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   window.openColPicker = function() {
     var modal = document.getElementById('colPickerModal');
     if (modal) modal.classList.add('open');
     var list = document.getElementById('colPickerList');
-    if (list) list.innerHTML = '<div style="color:var(--muted-r);font-size:13px;padding:.5rem 0">Loading…</div>';
+    if (list) list.innerHTML = '<div style="color:var(--muted-r);font-size:13px;padding:.5rem 0">Loadingâ€¦</div>';
     fetch('/api/collections')
       .then(function(r) { return r.json(); })
       .then(function(data) {
@@ -1141,12 +1141,12 @@ const clientData = {
       body: JSON.stringify({ collectionId: colId, recipeId: cd.recipeId }),
     }).then(function(r) { return r.json(); }).then(function(data) {
       window.closeColPicker();
-      if (data.error) { window.showToast('❌ ' + data.error); return; }
-      window.showToast('📚 Saved to "' + colName + '"');
+      if (data.error) { window.showToast('âŒ ' + data.error); return; }
+      window.showToast('ðŸ“š Saved to "' + colName + '"');
     });
   };
 
-  /* ── Jump-to nav ─────────────────────────────────────── */
+  /* â”€â”€ Jump-to nav â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   document.querySelectorAll('.jump-link[data-target]').forEach(function(btn) {
     btn.addEventListener('click', function() {
       var target = document.getElementById(this.getAttribute('data-target'));

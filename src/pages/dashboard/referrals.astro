@@ -1,4 +1,4 @@
----
+﻿---
 // src/pages/dashboard/referrals.astro
 import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
@@ -39,7 +39,7 @@ const hasCode   = !!codeRow?.code;
 // Pre-compute for template
 const xpPerReferral     = 150;
 const xpBonusReferred   = 50;
-const previewCode    = codeRow?.code || '—';
+const previewCode    = codeRow?.code || 'â€”';
 const previewUses    = codeRow?.uses_count || 0;
 ---
 
@@ -48,7 +48,7 @@ const previewUses    = codeRow?.uses_count || 0;
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{t('referrals.title')} — Keto Journey</title>
+  <title>{t('referrals.title')} â€” Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
   <style>
@@ -74,39 +74,39 @@ const previewUses    = codeRow?.uses_count || 0;
 </head>
 <body>
 <div class="rv-pg-shell">
-<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="referrals" />
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="referrals" />
 <div class="rv-pg-main">
 <main class="page">
 
-  <!-- ── Header ─────────────────────────────────────────── -->
+  <!-- â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
   <header class="page-header fade-up">
-    <div class="header-icon">🎁</div>
+    <div class="header-icon">ðŸŽ</div>
     <div>
       <h1 class="page-title">Refer Friends</h1>
-      <p class="page-sub">You earn <strong>{xpPerReferral} XP</strong> · your friend gets <strong>{xpBonusReferred} XP</strong> welcome bonus</p>
+      <p class="page-sub">You earn <strong>{xpPerReferral} XP</strong> Â· your friend gets <strong>{xpBonusReferred} XP</strong> welcome bonus</p>
     </div>
   </header>
 
-  <!-- ── Stats row ──────────────────────────────────────── -->
+  <!-- â”€â”€ Stats row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
   <div class="stats-row fade-up" style="animation-delay:.04s">
     <div class="stat-card">
-      <div class="stat-icon blue">👥</div>
+      <div class="stat-icon blue">ðŸ‘¥</div>
       <div class="stat-val" id="statTotal">{refList.length}</div>
       <div class="stat-label">Referred</div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon green">🏆</div>
+      <div class="stat-icon green">ðŸ†</div>
       <div class="stat-val" id="statCompleted">{completed}</div>
       <div class="stat-label">Joined</div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon amber">⚡</div>
+      <div class="stat-icon amber">âš¡</div>
       <div class="stat-val" id="statXP">{totalXP}</div>
       <div class="stat-label">XP Earned</div>
     </div>
   </div>
 
-  <!-- ── Main layout ────────────────────────────────────── -->
+  <!-- â”€â”€ Main layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
   <div class="layout">
 
     <!-- LEFT: Code + share -->
@@ -115,53 +115,53 @@ const previewUses    = codeRow?.uses_count || 0;
       <!-- Code card -->
       <div class="card code-card fade-up" style="animation-delay:.08s">
         <div class="card-header">
-          <span class="card-header-icon">🔗</span>
+          <span class="card-header-icon">ðŸ”—</span>
           <h2 class="card-title">Your Referral Code</h2>
         </div>
 
         <div class="code-display" id="codeDisplay">
-          {hasCode ? previewCode : '—'}
+          {hasCode ? previewCode : 'â€”'}
         </div>
 
         <div class="code-actions">
           <button class="btn-copy" id="copyCodeBtn" onclick="copyCode()" title="Copy code">
-            📋 Copy Code
+            ðŸ“‹ Copy Code
           </button>
           <button class="btn-copy btn-link" id="copyLinkBtn" onclick="copyLink()" title="Copy link">
-            🔗 Copy Link
+            ðŸ”— Copy Link
           </button>
         </div>
 
         {!hasCode && (
           <button class="btn-generate" id="generateBtn" onclick="generateCode()">
-            🎁 Generate My Code
+            ðŸŽ Generate My Code
           </button>
         )}
 
         <p class="code-note">
-          You earn <strong>{xpPerReferral} XP</strong> · your friend gets <strong>{xpBonusReferred} XP</strong> welcome bonus.
+          You earn <strong>{xpPerReferral} XP</strong> Â· your friend gets <strong>{xpBonusReferred} XP</strong> welcome bonus.
         </p>
       </div>
 
       <!-- Share card -->
       <div class="card share-card fade-up" style="animation-delay:.12s">
         <div class="card-header">
-          <span class="card-header-icon">📤</span>
+          <span class="card-header-icon">ðŸ“¤</span>
           <h2 class="card-title">Share</h2>
         </div>
 
         <div class="share-btns">
-          <button class="share-btn whatsapp" onclick="shareWhatsApp()">💬 WhatsApp</button>
-          <button class="share-btn twitter" onclick="shareTwitter()">𝕏 Twitter</button>
-          <button class="share-btn email-btn" onclick="shareEmail()">✉️ Email</button>
-          <button class="share-btn native" id="nativeShareBtn" onclick="nativeShare()" style="display:none">📤 Share</button>
+          <button class="share-btn whatsapp" onclick="shareWhatsApp()">ðŸ’¬ WhatsApp</button>
+          <button class="share-btn twitter" onclick="shareTwitter()">ð• Twitter</button>
+          <button class="share-btn email-btn" onclick="shareEmail()">âœ‰ï¸ Email</button>
+          <button class="share-btn native" id="nativeShareBtn" onclick="nativeShare()" style="display:none">ðŸ“¤ Share</button>
         </div>
       </div>
 
       <!-- How it works -->
       <div class="card how-card fade-up" style="animation-delay:.16s">
         <div class="card-header">
-          <span class="card-header-icon">🏆</span>
+          <span class="card-header-icon">ðŸ†</span>
           <h2 class="card-title">How It Works</h2>
         </div>
         <ol class="how-list">
@@ -183,7 +183,7 @@ const previewUses    = codeRow?.uses_count || 0;
             <span class="how-num">3</span>
             <div>
               <strong>Both earn XP</strong>
-              <span>You get <strong>{xpPerReferral} XP</strong> instantly · your friend gets a <strong>{xpBonusReferred} XP</strong> welcome bonus</span>
+              <span>You get <strong>{xpPerReferral} XP</strong> instantly Â· your friend gets a <strong>{xpBonusReferred} XP</strong> welcome bonus</span>
             </div>
           </li>
         </ol>
@@ -194,7 +194,7 @@ const previewUses    = codeRow?.uses_count || 0;
     <div class="right-col">
       <div class="card history-card fade-up" style="animation-delay:.1s">
         <div class="card-header">
-          <span class="card-header-icon">👥</span>
+          <span class="card-header-icon">ðŸ‘¥</span>
           <h2 class="card-title">Referral History</h2>
           <span class="history-count" id="historyCount">{refList.length}</span>
         </div>
@@ -202,7 +202,7 @@ const previewUses    = codeRow?.uses_count || 0;
         <div id="historyList">
           {refList.length === 0 && (
             <div class="empty-state">
-              <div class="empty-icon">🔗</div>
+              <div class="empty-icon">ðŸ”—</div>
               <p class="empty-title">No referrals yet</p>
               <p class="empty-sub">Share your code above and your referrals will appear here.</p>
             </div>
@@ -219,7 +219,7 @@ const previewUses    = codeRow?.uses_count || 0;
                 </div>
                 <div class="ref-status-wrap">
                   {isComplete && (
-                    <span class="ref-badge complete">✓ Joined</span>
+                    <span class="ref-badge complete">âœ“ Joined</span>
                   )}
                   {!isComplete && (
                     <span class="ref-badge pending">Pending</span>
@@ -235,7 +235,7 @@ const previewUses    = codeRow?.uses_count || 0;
       <!-- XP breakdown -->
       <div class="card xp-card fade-up" style="animation-delay:.14s">
         <div class="card-header">
-          <span class="card-header-icon amber">⚡</span>
+          <span class="card-header-icon amber">âš¡</span>
           <h2 class="card-title">XP Breakdown</h2>
         </div>
         <div class="xp-row">
@@ -257,10 +257,10 @@ const previewUses    = codeRow?.uses_count || 0;
 
   </div><!-- /layout -->
 
-  <!-- ── Apply a referral code (for users who haven't used one) -->
+  <!-- â”€â”€ Apply a referral code (for users who haven't used one) -->
   <div class="card apply-card fade-up" style="animation-delay:.2s">
     <div class="card-header">
-      <span class="card-header-icon">🎁</span>
+      <span class="card-header-icon">ðŸŽ</span>
       <h2 class="card-title">Have a Referral Code?</h2>
     </div>
     <p class="apply-sub">If a friend invited you, enter their code below to credit them with XP.</p>
@@ -275,7 +275,7 @@ const previewUses    = codeRow?.uses_count || 0;
 </main>
 </div></div>
 
-<!-- ── Toast ─────────────────────────────────────────────── -->
+<!-- â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
 <div id="toast" class="toast" aria-live="polite"></div>
 
 <style>
@@ -496,7 +496,7 @@ const previewUses    = codeRow?.uses_count || 0;
 
 var currentCode = hasCode ? previewCode : null;
 
-/* ── Boot ─────────────────────────────────────────────── */
+/* â”€â”€ Boot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 (function () {
   if (navigator.share) {
     var nb = document.getElementById('nativeShareBtn');
@@ -512,15 +512,15 @@ var currentCode = hasCode ? previewCode : null;
   }
 })();
 
-/* ── Referral URL ─────────────────────────────────────── */
+/* â”€â”€ Referral URL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function getReferralUrl() {
   return window.location.origin + '/start?ref=' + (currentCode || '');
 }
 
-/* ── Generate code ────────────────────────────────────── */
+/* â”€â”€ Generate code â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function generateCode() {
   var btn = document.getElementById('generateBtn');
-  if (btn) { btn.textContent = 'Generating…'; btn.disabled = true; }
+  if (btn) { btn.textContent = 'Generatingâ€¦'; btn.disabled = true; }
 
   fetch('/api/referrals/generate', { method: 'POST' })
     .then(function(r) { return r.json(); })
@@ -537,17 +537,17 @@ function generateCode() {
         display.style.fontStyle = 'italic';
       }
       if (btn) btn.style.display = 'none';
-      showToast('✓ Code generated!');
+      showToast('âœ“ Code generated!');
     })
     .catch(function() { showToast('Failed to generate code'); });
 }
 
-/* ── Copy helpers ─────────────────────────────────────── */
+/* â”€â”€ Copy helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function copyCode() {
   if (!currentCode) { showToast('Generate your code first'); return; }
   navigator.clipboard.writeText(currentCode).then(function() {
     var btn = document.getElementById('copyCodeBtn');
-    if (btn) { btn.innerHTML = '<span>✓ Copied!</span>'; btn.classList.add('copied'); }
+    if (btn) { btn.innerHTML = '<span>âœ“ Copied!</span>'; btn.classList.add('copied'); }
     showToast('Code copied!');
     setTimeout(function() {
       if (btn) { btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy Code'; btn.classList.remove('copied'); }
@@ -562,9 +562,9 @@ function copyLink() {
   });
 }
 
-/* ── Share helpers ────────────────────────────────────── */
+/* â”€â”€ Share helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function getShareText() {
-  return 'I\'ve been crushing my keto goals with KetoJourney! Join me and let\'s do this together 🥑🔥 Use my referral link:';
+  return 'I\'ve been crushing my keto goals with KetoJourney! Join me and let\'s do this together ðŸ¥‘ðŸ”¥ Use my referral link:';
 }
 
 function shareWhatsApp() {
@@ -595,7 +595,7 @@ function nativeShare() {
   }).catch(function() {});
 }
 
-/* ── Apply a referral code ────────────────────────────── */
+/* â”€â”€ Apply a referral code â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function applyCode() {
   var input = document.getElementById('applyInput');
   var msg   = document.getElementById('applyMsg');
@@ -609,7 +609,7 @@ function applyCode() {
     return;
   }
 
-  if (btn) { btn.textContent = 'Applying…'; btn.disabled = true; }
+  if (btn) { btn.textContent = 'Applyingâ€¦'; btn.disabled = true; }
   msg.textContent = ''; msg.className = 'apply-msg';
 
   fetch('/api/referrals/apply', {
@@ -625,7 +625,7 @@ function applyCode() {
         msg.className   = 'apply-msg err';
         return;
       }
-      msg.textContent = '✓ Applied! Your friend earned ' + (data.xp_awarded || xpPerReferral) + ' XP.';
+      msg.textContent = 'âœ“ Applied! Your friend earned ' + (data.xp_awarded || xpPerReferral) + ' XP.';
       msg.className   = 'apply-msg ok';
       input.value     = '';
       input.disabled  = true;
@@ -638,7 +638,7 @@ function applyCode() {
     });
 }
 
-/* ── Toast ────────────────────────────────────────────── */
+/* â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function showToast(msg) {
   var t = document.getElementById('toast');
   if (!t) return;
@@ -650,3 +650,4 @@ function showToast(msg) {
 
 </body>
 </html>
+

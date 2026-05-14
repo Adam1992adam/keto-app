@@ -1,4 +1,4 @@
----
+﻿---
 import { requireAuth } from '../../lib/auth';
 import Sidebar from '../../components/Sidebar.astro';
 import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
@@ -55,7 +55,7 @@ const presentTags = Array.from(new Set(
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{t('favorites.title')} — Keto Journey</title>
+  <title>{t('favorites.title')} â€” Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
   <style>
@@ -85,7 +85,7 @@ const presentTags = Array.from(new Set(
       padding: 32px 20px 80px;
     }
 
-    /* ── Header ── */
+    /* â”€â”€ Header â”€â”€ */
     .page-header {
       margin-bottom: 28px;
       animation: fadeUp .5s ease both;
@@ -106,7 +106,7 @@ const presentTags = Array.from(new Set(
       color: var(--green, #FF5C7A);
     }
 
-    /* ── Toolbar ── */
+    /* â”€â”€ Toolbar â”€â”€ */
     .toolbar {
       display: flex;
       flex-wrap: wrap;
@@ -156,7 +156,7 @@ const presentTags = Array.from(new Set(
     }
     .sort-select:focus { border-color: var(--green, #FF5C7A); }
 
-    /* ── Tag filter chips ── */
+    /* â”€â”€ Tag filter chips â”€â”€ */
     .tag-filters {
       display: flex;
       flex-wrap: wrap;
@@ -179,7 +179,7 @@ const presentTags = Array.from(new Set(
     .tf-chip:hover { border-color: var(--border2, rgba(255,92,122,.22)); color: var(--text, #dfeedd); }
     .tf-chip.active { background: var(--green, #FF5C7A); border-color: var(--green, #FF5C7A); color: #fff; }
 
-    /* ── Grid ── */
+    /* â”€â”€ Grid â”€â”€ */
     .recipe-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -188,7 +188,7 @@ const presentTags = Array.from(new Set(
     @media (max-width: 800px) { .recipe-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 480px) { .recipe-grid { grid-template-columns: 1fr; } }
 
-    /* ── Card ── */
+    /* â”€â”€ Card â”€â”€ */
     .recipe-card {
       background: var(--card, #0d1a0f);
       border: 1px solid var(--border, rgba(255,92,122,.1));
@@ -330,7 +330,7 @@ const presentTags = Array.from(new Set(
     .diff-badge.medium { background: rgba(245,158,11,.15);  color: #fbbf24; }
     .diff-badge.hard   { background: rgba(239,68,68,.15);   color: #f87171; }
 
-    /* ── Empty state ── */
+    /* â”€â”€ Empty state â”€â”€ */
     .empty-state {
       text-align: center;
       padding: 60px 20px;
@@ -357,7 +357,7 @@ const presentTags = Array.from(new Set(
     }
     .btn-browse:hover { background: var(--green2, #B6FF3C); transform: translateY(-2px); }
 
-    /* ── No results ── */
+    /* â”€â”€ No results â”€â”€ */
     .no-results {
       display: none;
       text-align: center;
@@ -374,11 +374,11 @@ const presentTags = Array.from(new Set(
 </head>
 <body>
 <div class="rv-pg-shell">
-<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="favorites" />
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="favorites" />
 <div class="rv-pg-main">
   <div class="page-wrap">
     <div class="page-header">
-      <h1>❤️ Favourite Recipes</h1>
+      <h1>â¤ï¸ Favourite Recipes</h1>
       {favCount > 0 && (
         <p class="subtitle">
           You have <strong>{favCount}</strong> saved recipe{favCount === 1 ? '' : 's'}
@@ -390,8 +390,8 @@ const presentTags = Array.from(new Set(
       <>
         <div class="toolbar">
           <div class="search-box">
-            <span class="search-icon">🔍</span>
-            <input type="text" id="searchInput" placeholder="Search your favourites…" autocomplete="off" />
+            <span class="search-icon">ðŸ”</span>
+            <input type="text" id="searchInput" placeholder="Search your favouritesâ€¦" autocomplete="off" />
           </div>
           <select class="sort-select" id="sortSelect">
             <option value="newest">Newest saved</option>
@@ -413,7 +413,7 @@ const presentTags = Array.from(new Set(
 
     {favCount === 0 ? (
       <div class="empty-state">
-        <div class="empty-icon">❤️</div>
+        <div class="empty-icon">â¤ï¸</div>
         <h2>No favourites yet</h2>
         <p>Heart a recipe to save it here for quick access.</p>
         <a href="/dashboard/recipes" class="btn-browse">Browse Recipes</a>
@@ -444,21 +444,21 @@ const presentTags = Array.from(new Set(
                   {recipe.image_url ? (
                     <img src={recipe.image_url} alt={recipe.title} loading="lazy" width="400" height="160" />
                   ) : (
-                    <div class="card-image-placeholder">🍽️</div>
+                    <div class="card-image-placeholder">ðŸ½ï¸</div>
                   )}
                   <button
                     class="unfav-btn"
                     aria-label="Remove from favourites"
                     onclick={`window.removeFav(event, '${recipe.id}')`}
-                  >❤️</button>
+                  >â¤ï¸</button>
                 </div>
                 <div class="card-body">
                   <a href={`/dashboard/recipe/${recipe.id}`} class="card-title-link">
                     <div class="card-title">{recipe.title}</div>
                   </a>
                   <div class="card-meta">
-                    {recipe.prep_time && <span>⏱ {recipe.prep_time}m prep</span>}
-                    {recipe.cook_time && <span>🔥 {recipe.cook_time}m cook</span>}
+                    {recipe.prep_time && <span>â± {recipe.prep_time}m prep</span>}
+                    {recipe.cook_time && <span>ðŸ”¥ {recipe.cook_time}m cook</span>}
                   </div>
                   <div class="macro-row">
                     {recipe.calories  && <span class="macro-pill pill-cal">{recipe.calories} kcal</span>}
@@ -467,7 +467,7 @@ const presentTags = Array.from(new Set(
                     {recipe.net_carbs && <span class="macro-pill pill-carb">{recipe.net_carbs}g C</span>}
                   </div>
                   <div class="tags-row">
-                    {bookCat && <span class="book-badge">📖 {bookCat}</span>}
+                    {bookCat && <span class="book-badge">ðŸ“– {bookCat}</span>}
                     {diff && <span class={`diff-badge ${diff}`}>{diff}</span>}
                     {displayTags.map((tag: string) => (
                       <span class="tag-chip">{tag}</span>
@@ -557,7 +557,7 @@ const presentTags = Array.from(new Set(
       event.preventDefault();
       event.stopPropagation();
       var btn = event.currentTarget;
-      btn.textContent = '🤍';
+      btn.textContent = 'ðŸ¤';
       btn.style.pointerEvents = 'none';
 
       fetch('/api/recipes/favorite', {
@@ -584,10 +584,11 @@ const presentTags = Array.from(new Set(
         }
       })
       .catch(function() {
-        btn.textContent = '❤️';
+        btn.textContent = 'â¤ï¸';
         btn.style.pointerEvents = '';
       });
     };
   </script>
 </body>
 </html>
+

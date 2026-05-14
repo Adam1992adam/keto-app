@@ -6,10 +6,15 @@ interface Props {
   planType:   string;
   tierLabel:  string;   // accepted from pages; not used in template
   currentDay: number;
+  avatarUrl?: string;
   activePage?: string;
 }
 
-const { userName, planType, currentDay, activePage = '' } = Astro.props;
+const { userName, planType, currentDay, avatarUrl = '', activePage = '' } = Astro.props;
+
+const isEmojiAvatar = avatarUrl.startsWith('emoji:');
+const emojiChar     = isEmojiAvatar ? avatarUrl.replace('emoji:', '') : '';
+const hasImageAvatar = !isEmojiAvatar && avatarUrl.length > 0;
 const isElite  = planType === 'elite_12';
 const initial  = (userName[0] || 'U').toUpperCase();
 const tierMono = planType === 'elite_12' ? 'ELITE' : planType === 'pro_6' ? 'PRO' : 'BASIC';
@@ -480,7 +485,11 @@ const activeId = activeMap[activePage] || activePage;
   <div class="rv-sb-fill"></div>
 
   <a href="/dashboard/profile" class="rv-sb-user">
-    <div class="rv-sb-avatar">{initial}</div>
+    <div class="rv-sb-avatar">
+      {isEmojiAvatar && emojiChar}
+      {hasImageAvatar && <img src={avatarUrl} alt={userName} style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />}
+      {!isEmojiAvatar && !hasImageAvatar && initial}
+    </div>
     <div class="rv-sb-info">
       <span class="rv-sb-name">{userName}</span>
       <span class="rv-sb-plan">{tierMono} · DAY {currentDay}</span>

@@ -1,6 +1,6 @@
----
+﻿---
 // src/pages/dashboard/notification-preferences.astro
-// Notification Preferences — toggle notification types on/off
+// Notification Preferences â€” toggle notification types on/off
 
 import { requireAuth } from '../../lib/auth';
 import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
@@ -41,56 +41,56 @@ const prefs = existingPrefs || {
 const toggleItems = [
   {
     key:   'checkin_reminder',
-    icon:  '📋',
+    icon:  'ðŸ“‹',
     label: 'Daily Check-in Reminder',
     desc:  'Get reminded to complete your daily check-in',
     value: prefs.checkin_reminder !== false,
   },
   {
     key:   'streak_warning',
-    icon:  '🔥',
+    icon:  'ðŸ”¥',
     label: 'Streak at Risk Warning',
     desc:  'Alert when your streak is about to break',
     value: prefs.streak_warning !== false,
   },
   {
     key:   'incomplete_tasks',
-    icon:  '✅',
+    icon:  'âœ…',
     label: 'Incomplete Tasks Reminder',
     desc:  "Nudge when you have tasks left for the day",
     value: prefs.incomplete_tasks !== false,
   },
   {
     key:   'weight_reminder',
-    icon:  '⚖️',
+    icon:  'âš–ï¸',
     label: 'Weight Log Reminder',
     desc:  "Prompt to log your weight if it has been a few days",
     value: prefs.weight_reminder !== false,
   },
   {
     key:   'fasting_active',
-    icon:  '⏱️',
+    icon:  'â±ï¸',
     label: 'Fasting Tips',
     desc:  'Receive tips and encouragement during active fasts',
     value: prefs.fasting_active !== false,
   },
   {
     key:   'weekly_review',
-    icon:  '📊',
+    icon:  'ðŸ“Š',
     label: 'Weekly Review Prompt',
     desc:  'Reminder to complete your weekly reflection',
     value: prefs.weekly_review !== false,
   },
   {
     key:   'milestone',
-    icon:  '🏅',
+    icon:  'ðŸ…',
     label: 'Day Milestones',
     desc:  'Celebrate reaching key journey milestones',
     value: prefs.milestone !== false,
   },
   {
     key:   'level_up',
-    icon:  '⭐',
+    icon:  'â­',
     label: 'Level Up Celebrations',
     desc:  'Notification when you gain a new XP level',
     value: prefs.level_up !== false,
@@ -105,7 +105,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{t('notif_prefs.title')} — Keto Journey</title>
+  <title>{t('notif_prefs.title')} â€” Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet"/>
@@ -129,14 +129,14 @@ const enabledCount = toggleItems.filter(t => t.value).length;
     .rv-pg-main{overflow-y:auto;}
     @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}}
 
-    /* ── Layout ── */
+    /* â”€â”€ Layout â”€â”€ */
     .page-wrap {
       max-width:720px; margin:0 auto;
       padding: 2rem 1.25rem 6rem;
       display:flex; flex-direction:column; gap:1.5rem;
     }
 
-    /* ── Header ── */
+    /* â”€â”€ Header â”€â”€ */
     .page-header { display:flex; flex-direction:column; gap:.4rem; }
     .page-header h1 {
       font-size:1.9rem; font-weight:800;
@@ -145,7 +145,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
     .page-header h1 em { color:var(--green); font-style:italic; }
     .page-header p { color:var(--soft); font-size:.92rem; }
 
-    /* ── Summary badge ── */
+    /* â”€â”€ Summary badge â”€â”€ */
     .summary-badge {
       display:inline-flex; align-items:center; gap:.4rem;
       background:rgba(255,92,122,.1); border:1px solid var(--border2);
@@ -154,7 +154,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
       width:fit-content;
     }
 
-    /* ── Card shell ── */
+    /* â”€â”€ Card shell â”€â”€ */
     .pref-card {
       background:var(--card); border:1px solid var(--border);
       border-radius:20px; overflow:hidden;
@@ -162,7 +162,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
     }
     .pref-card:focus-within { border-color:var(--border2); }
 
-    /* ── Toggle row ── */
+    /* â”€â”€ Toggle row â”€â”€ */
     .toggle-row {
       display:flex; align-items:center; gap:1rem;
       padding:1rem 1.25rem;
@@ -184,7 +184,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
     }
     .row-desc { font-size:.78rem; color:var(--soft); line-height:1.4; }
 
-    /* ── Toggle switch ── */
+    /* â”€â”€ Toggle switch â”€â”€ */
     .toggle-wrap { flex-shrink:0; }
     .toggle-input { display:none; }
     .toggle-track {
@@ -211,7 +211,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
       box-shadow:0 1px 6px rgba(255,92,122,.45);
     }
 
-    /* ── Actions ── */
+    /* â”€â”€ Actions â”€â”€ */
     .actions { display:flex; gap:.75rem; flex-wrap:wrap; }
     .btn-save {
       flex:1; min-width:140px;
@@ -234,7 +234,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
     }
     .btn-all:hover { color:var(--text); border-color:var(--green); background:rgba(255,92,122,.07); }
 
-    /* ── Back link ── */
+    /* â”€â”€ Back link â”€â”€ */
     .back-link {
       display:inline-flex; align-items:center; gap:.4rem;
       color:var(--soft); font-size:.85rem; font-weight:600;
@@ -242,7 +242,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
     }
     .back-link:hover { color:var(--green); }
 
-    /* ── Toast ── */
+    /* â”€â”€ Toast â”€â”€ */
     .toast {
       position:fixed; bottom:5rem; left:50%; transform:translateX(-50%) translateY(20px);
       background:var(--card); border:1px solid var(--border2);
@@ -259,7 +259,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
     .toast.success { border-color:var(--green); color:var(--green); }
     .toast.error   { border-color:var(--red);   color:var(--red);   }
 
-    /* ── Fade-up animation ── */
+    /* â”€â”€ Fade-up animation â”€â”€ */
     @keyframes fadeUp {
       from { opacity:0; transform:translateY(18px); }
       to   { opacity:1; transform:translateY(0); }
@@ -279,13 +279,13 @@ const enabledCount = toggleItems.filter(t => t.value).length;
 <body>
 
 <div class="rv-pg-shell">
-<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} activePage="notifications" />
+<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="notifications" />
 <div class="rv-pg-main">
 <div class="page-wrap">
 
   <!-- Back -->
   <a href="/dashboard/notifications" class="back-link fade-up">
-    ← Back to Notifications
+    â† Back to Notifications
   </a>
 
   <!-- Header -->
@@ -293,7 +293,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
     <h1>Notification <em>Preferences</em></h1>
     <p>Choose which alerts you want to receive on your keto journey.</p>
     <div class="summary-badge" id="summaryBadge">
-      🔔 {enabledCount} of {toggleItems.length} types enabled
+      ðŸ”” {enabledCount} of {toggleItems.length} types enabled
     </div>
   </div>
 
@@ -339,7 +339,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
 
 <script is:inline>
 (function () {
-  /* ── helpers ──────────────────────────────────────── */
+  /* â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   function getAllToggles() {
     return document.querySelectorAll('.pref-toggle');
   }
@@ -354,17 +354,17 @@ const enabledCount = toggleItems.filter(t => t.value).length;
     var badge = document.getElementById('summaryBadge');
     var total = getAllToggles().length;
     var enabled = getEnabledCount();
-    if (badge) badge.textContent = '🔔 ' + enabled + ' of ' + total + ' types enabled';
+    if (badge) badge.textContent = 'ðŸ”” ' + enabled + ' of ' + total + ' types enabled';
   }
 
-  /* ── listen to toggles ───────────────────────────── */
+  /* â”€â”€ listen to toggles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   getAllToggles().forEach(function(t) {
     t.addEventListener('change', function() {
       updateBadge();
     });
   });
 
-  /* ── enable / disable all ─────────────────────────── */
+  /* â”€â”€ enable / disable all â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   window.enableAll = function() {
     getAllToggles().forEach(function(t) { t.checked = true; });
     updateBadge();
@@ -375,7 +375,7 @@ const enabledCount = toggleItems.filter(t => t.value).length;
     updateBadge();
   };
 
-  /* ── toast ─────────────────────────────────────────── */
+  /* â”€â”€ toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   window.showToast = function(msg, type) {
     var el = document.getElementById('toast');
     if (!el) return;
@@ -389,10 +389,10 @@ const enabledCount = toggleItems.filter(t => t.value).length;
     }, 3000);
   };
 
-  /* ── save ──────────────────────────────────────────── */
+  /* â”€â”€ save â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   window.savePrefs = function() {
     var btn = document.getElementById('btnSave');
-    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    if (btn) { btn.disabled = true; btn.textContent = 'Savingâ€¦'; }
 
     var payload = {};
     getAllToggles().forEach(function(t) {
@@ -407,13 +407,13 @@ const enabledCount = toggleItems.filter(t => t.value).length;
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.success) {
-          window.showToast('✅ Preferences saved!', 'success');
+          window.showToast('âœ… Preferences saved!', 'success');
         } else {
-          window.showToast('❌ ' + (data.error || 'Failed to save'), 'error');
+          window.showToast('âŒ ' + (data.error || 'Failed to save'), 'error');
         }
       })
       .catch(function() {
-        window.showToast('❌ Network error — please retry', 'error');
+        window.showToast('âŒ Network error â€” please retry', 'error');
       })
       .finally(function() {
         if (btn) { btn.disabled = false; btn.textContent = 'Save Preferences'; }
@@ -427,3 +427,4 @@ const enabledCount = toggleItems.filter(t => t.value).length;
 </div>
 </body>
 </html>
+
