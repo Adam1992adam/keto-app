@@ -307,7 +307,6 @@ if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
 </div>
 
 <script src="https://unpkg.com/grapesjs@0.21.12/dist/grapes.min.js"></script>
-<script src="https://unpkg.com/grapesjs-preset-webpage@1.0.3/dist/grapesjs-preset-webpage.min.js"></script>
 
 <script is:inline>
 var editor = null;
@@ -361,6 +360,22 @@ var STARTERS = {
 
 /* ── Custom keto blocks ── */
 var KETO_BLOCKS = [
+  /* Basic utility blocks */
+  { id: 'basic-text',   label: '¶ Text Block',   category: 'Basic',
+    content: '<div style="padding:20px;"><p style="font-size:1rem;color:#16110F;line-height:1.7;">Your text here. Click to edit.</p></div>' },
+  { id: 'basic-heading', label: 'H Heading',      category: 'Basic',
+    content: '<h2 style="font-family:Bricolage Grotesque,sans-serif;font-size:2rem;font-weight:800;color:#16110F;padding:20px;">Your Heading</h2>' },
+  { id: 'basic-image',  label: '🖼 Image',         category: 'Basic',
+    content: '<img src="https://placehold.co/800x400/F2EDE5/4A4340?text=Your+Image" style="width:100%;height:auto;display:block;" />' },
+  { id: 'basic-button', label: '⬛ Button',         category: 'Basic',
+    content: '<div style="padding:20px;text-align:center;"><a href="#" style="display:inline-block;background:#FF5C7A;color:#fff;padding:14px 32px;border-radius:999px;font-weight:800;text-decoration:none;font-size:.95rem;">Click Me</a></div>' },
+  { id: 'basic-col2',   label: '▌▐ 2 Columns',    category: 'Basic',
+    content: '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:20px;"><div style="background:#F2EDE5;border-radius:12px;padding:24px;min-height:100px;"><p style="color:#4A4340;">Column 1</p></div><div style="background:#F2EDE5;border-radius:12px;padding:24px;min-height:100px;"><p style="color:#4A4340;">Column 2</p></div></div>' },
+  { id: 'basic-col3',   label: '▌▐▌ 3 Columns',   category: 'Basic',
+    content: '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;padding:20px;"><div style="background:#F2EDE5;border-radius:12px;padding:24px;min-height:80px;"><p style="color:#4A4340;">Column 1</p></div><div style="background:#F2EDE5;border-radius:12px;padding:24px;min-height:80px;"><p style="color:#4A4340;">Column 2</p></div><div style="background:#F2EDE5;border-radius:12px;padding:24px;min-height:80px;"><p style="color:#4A4340;">Column 3</p></div></div>' },
+  { id: 'basic-video',  label: '▶ Video Embed',    category: 'Basic',
+    content: '<div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;"><iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" allowfullscreen></iframe></div>' },
+  /* Keto-branded blocks */
   {
     id: 'keto-hero', label: '🥑 Keto Hero', category: 'Keto',
     content: '<section style="background:linear-gradient(135deg,#FAF6F1,#F2EDE5);padding:80px 40px;text-align:center;">' +
@@ -461,15 +476,6 @@ function initEditor(initialHtml) {
         { name: 'Tablet',  width: '768px',  widthMedia: '992px' },
         { name: 'Mobile',  width: '320px',  widthMedia: '480px' },
       ]
-    },
-    plugins: ['gjs-preset-webpage'],
-    pluginsOpts: {
-      'gjs-preset-webpage': {
-        blocks: ['column1','column2','column3','column3-7','text','link','image','video','map'],
-        navbarOpts: false,
-        countdownOpts: false,
-        formsOpts: false,
-      }
     },
     blockManager: { blocks: KETO_BLOCKS },
     styleManager: {
