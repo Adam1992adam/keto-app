@@ -9,7 +9,7 @@ if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Page Builder — Keto Journey Admin</title>
-  <link rel="stylesheet" href="https://unpkg.com/grapesjs@0.21.12/dist/css/grapes.min.css" />
+  <link rel="stylesheet" href="/grapesjs.min.css" />
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
@@ -306,7 +306,7 @@ if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
   </div>
 </div>
 
-<script src="https://unpkg.com/grapesjs@0.21.12/dist/grapes.min.js"></script>
+<script src="/grapesjs.min.js"></script>
 
 <script is:inline>
 var editor = null;
