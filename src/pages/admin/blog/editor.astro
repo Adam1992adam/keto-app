@@ -19,280 +19,335 @@ if (postId) {
 
 const isEdit = !!post;
 const CATEGORIES = ['General','Nutrition','Recipes','Success Stories','Tips & Tricks','Science','Meal Prep','Lifestyle'];
+
+// Pass existing content to client — detect markdown vs HTML
+const existingContent = isEdit ? (post.content || '') : '';
 ---
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>{isEdit ? `Edit: ${post.title}` : 'New Article'} · Admin</title>
   <meta name="robots" content="noindex,nofollow"/>
-  <!-- Marked.js for markdown preview -->
+  <!-- marked CDN is in the CSP allowlist (cdn.jsdelivr.net) -->
   <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
   <style>
     :root {
-      --bg:#060d09;--card:#0d1a0f;--card2:#111f13;
-      --border:rgba(255,92,122,.12);--border2:rgba(255,92,122,.25);
-      --text:#dfeedd;--soft:#4d7055;--muted:#233328;
-      --green:#FF5C7A;--green2:#B6FF3C;--gold:#f59e0b;--red:#ef4444;
+      --bg:#060d09; --card:#0d1a0f; --card2:#111f13;
+      --border:rgba(255,92,122,.13); --border2:rgba(255,92,122,.28);
+      --text:#dfeedd; --soft:#4d7055; --muted:#1a2b1d;
+      --accent:#FF5C7A; --accent2:#B6FF3C; --gold:#f59e0b; --red:#ef4444;
+      --prose-bg:#FEFEFE; --prose-ink:#16110F; --prose-soft:#4A4340; --prose-line:#E5DED2;
     }
-    *{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
-    a{color:var(--green);text-decoration:none;}
-    .nav{background:var(--card);border-bottom:1px solid var(--border);padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
-    .nav-brand{display:flex;align-items:center;gap:.6rem;font-size:1rem;font-weight:800;color:var(--text);}
-    .nav-links{display:flex;align-items:center;gap:.5rem;}
-    .nav-link{font-size:.82rem;font-weight:600;color:var(--soft);padding:.4rem .8rem;border-radius:8px;transition:all .2s;}
-    .nav-link:hover{color:var(--text);background:var(--muted);text-decoration:none;}
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    a { color:var(--accent); text-decoration:none; }
 
-    .editor-layout{display:grid;grid-template-columns:1fr 300px;gap:1.5rem;max-width:1300px;margin:0 auto;padding:1.5rem;}
-    @media(max-width:900px){.editor-layout{grid-template-columns:1fr;}}
+    /* ── Nav ── */
+    .nav { background:var(--card); border-bottom:1px solid var(--border); padding:.75rem 1.5rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:200; }
+    .nav-brand { display:flex; align-items:center; gap:.5rem; font-size:.95rem; font-weight:800; color:var(--text); }
+    .nav-crumb { color:var(--soft); font-weight:400; font-size:.85rem; margin-left:.35rem; }
+    .nav-links { display:flex; align-items:center; gap:.4rem; }
+    .nav-link { font-size:.82rem; font-weight:600; color:var(--soft); padding:.38rem .75rem; border-radius:8px; transition:all .15s; }
+    .nav-link:hover { color:var(--text); background:var(--muted); text-decoration:none; }
 
-    /* Left — main editor */
-    .editor-main{display:flex;flex-direction:column;gap:1rem;}
-    .title-input{width:100%;background:transparent;border:none;border-bottom:2px solid var(--border);padding:.5rem 0;font-size:1.8rem;font-weight:800;color:var(--text);outline:none;transition:border-color .2s;}
-    .title-input:focus{border-bottom-color:var(--green);}
-    .title-input::placeholder{color:var(--muted);}
-    .slug-row{display:flex;align-items:center;gap:.5rem;padding:.4rem 0;}
-    .slug-prefix{font-size:.8rem;color:var(--soft);}
-    .slug-input{flex:1;background:transparent;border:none;border-bottom:1px solid var(--border);padding:.2rem .3rem;font-size:.8rem;color:var(--soft);outline:none;font-family:monospace;}
-    .slug-input:focus{border-bottom-color:var(--green);color:var(--text);}
+    /* ── Title area ── */
+    .title-area { max-width:1300px; margin:0 auto; padding:1.5rem 1.5rem .5rem; }
+    .title-input { width:100%; background:transparent; border:none; outline:none; font-size:2rem; font-weight:800; color:var(--text); line-height:1.2; padding:.25rem 0; }
+    .title-input::placeholder { color:var(--muted); }
+    .slug-row { display:flex; align-items:center; gap:.4rem; padding:.35rem 0; }
+    .slug-prefix { font-size:.78rem; color:var(--soft); font-family:monospace; }
+    .slug-input { flex:1; background:transparent; border:none; border-bottom:1px solid var(--border); padding:.15rem .3rem; font-size:.78rem; color:var(--soft); outline:none; font-family:monospace; max-width:400px; }
+    .slug-input:focus { border-color:var(--accent); color:var(--text); }
 
-    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.25rem;}
-    .card-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin-bottom:.5rem;}
+    /* ── Sticky toolbar ── */
+    .editor-toolbar {
+      position:sticky; top:49px; z-index:100;
+      background:var(--card); border-bottom:1px solid var(--border);
+      display:flex; align-items:center; gap:2px; padding:.45rem 1rem;
+      flex-wrap:wrap; gap:3px;
+    }
+    .tb-sep { width:1px; height:22px; background:var(--border); margin:0 4px; flex-shrink:0; }
+    .tb-select {
+      background:var(--card2); border:1px solid var(--border); border-radius:8px;
+      color:var(--text); font-size:.82rem; font-weight:600; padding:.35rem .6rem;
+      outline:none; cursor:pointer; min-width:150px;
+    }
+    .tb-select:focus { border-color:var(--accent); }
+    .tb-select option { background:var(--card); }
+    .tb-btn {
+      padding:.3rem .55rem; border-radius:7px; font-size:.82rem; font-weight:700;
+      cursor:pointer; border:1px solid transparent; background:transparent;
+      color:var(--soft); transition:all .12s; white-space:nowrap; line-height:1;
+    }
+    .tb-btn:hover { background:var(--muted); color:var(--text); border-color:var(--border); }
+    .tb-btn.active { background:rgba(255,92,122,.15); color:var(--accent); border-color:rgba(255,92,122,.3); }
+    .tb-spacer { flex:1; }
+    .tb-wordcount { font-size:.72rem; color:var(--soft); white-space:nowrap; }
 
-    .excerpt-input{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.7rem;font-size:.85rem;color:var(--text);outline:none;resize:vertical;min-height:60px;font-family:inherit;}
-    .excerpt-input:focus{border-color:var(--green);}
+    /* ── Main layout ── */
+    .editor-layout { display:grid; grid-template-columns:1fr 290px; gap:1.25rem; max-width:1300px; margin:0 auto; padding:1.25rem 1.5rem 5rem; }
+    @media(max-width:960px) { .editor-layout { grid-template-columns:1fr; } }
 
-    /* Content editor tabs */
-    .editor-tabs{display:flex;gap:.25rem;margin-bottom:.5rem;}
-    .tab-btn{padding:.35rem .8rem;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--soft);transition:all .15s;}
-    .tab-btn.active{background:var(--green);color:#fff;border-color:var(--green);}
-    .content-area{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:.85rem;font-size:.9rem;color:var(--text);outline:none;resize:vertical;min-height:420px;font-family:'Courier New',monospace;line-height:1.65;}
-    .content-area:focus{border-color:var(--green);}
-    /* Preview — styled to match the public blog light theme */
-    .preview-area{background:#FAF6F1;border:1px solid #E5DED2;border-radius:12px;padding:1.8rem 2rem;min-height:420px;font-size:1rem;line-height:1.82;overflow-y:auto;color:#4A4340;font-family:'Georgia',serif;}
-    .preview-area h1{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:1.8rem;font-weight:800;color:#16110F;margin:1.5rem 0 .7rem;line-height:1.2;}
-    .preview-area h2{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:1.4rem;font-weight:800;color:#16110F;margin:2rem 0 .6rem;border-left:4px solid #FF5C7A;padding-left:16px;line-height:1.25;}
-    .preview-area h3{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:1.1rem;font-weight:700;color:#FF5C7A;margin:1.6rem 0 .45rem;line-height:1.25;}
-    .preview-area h4{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:.95rem;font-weight:700;color:#16110F;margin:1.2rem 0 .35rem;text-transform:uppercase;letter-spacing:.06em;}
-    .preview-area p{margin:0 0 1.25em;color:#4A4340;}
-    .preview-area p:first-of-type{font-size:1.08rem;color:#16110F;}
-    .preview-area ul,.preview-area ol{padding-left:1.5rem;margin:0 0 1.2em;color:#4A4340;}
-    .preview-area li{margin-bottom:.35em;}
-    .preview-area li::marker{color:#FF5C7A;}
-    .preview-area strong{color:#16110F;font-weight:700;}
-    .preview-area em{font-style:italic;color:#16110F;}
-    .preview-area code{background:#F2EDE5;padding:.15rem .4rem;border-radius:5px;font-size:.88em;color:#16110F;font-family:monospace;}
-    .preview-area blockquote{border-left:4px solid #FF5C7A;padding:14px 20px;margin:1.8rem 0;background:rgba(255,92,122,.05);border-radius:0 12px 12px 0;}
-    .preview-area blockquote p{margin:0;color:#16110F;font-style:italic;font-size:1.05em;}
-    .preview-area a{color:#FF5C7A;text-decoration:underline;}
-    .preview-area hr{border:none;border-top:1px solid #E5DED2;margin:2rem 0;}
-    .preview-area img{border-radius:12px;max-width:100%;margin:1.2rem auto;display:block;}
-    .preview-area table{width:100%;border-collapse:separate;border-spacing:0;border-radius:14px;overflow:hidden;margin:1.5rem 0;font-size:.9rem;}
-    .preview-area table thead tr{background:#16110F;}
-    .preview-area table thead th{padding:.55rem 1rem;font-weight:700;color:#fff;text-align:left;border:none;}
-    .preview-area table tbody tr:nth-child(even){background:rgba(22,17,15,.05);}
-    .preview-area table tbody td{padding:.5rem 1rem;color:#4A4340;border-top:1px solid #E5DED2;}
-    .preview-area .callout{padding:14px 20px;margin:1.8rem 0;border-radius:12px;border-left:4px solid;font-style:normal;}
-    .preview-area .callout.note{background:rgba(59,130,246,.07);border-color:#3b82f6;}
-    .preview-area .callout.tip{background:rgba(132,204,22,.08);border-color:#84cc16;}
-    .preview-area .callout.warning{background:rgba(245,158,11,.08);border-color:#f59e0b;}
-    .preview-area .callout p{margin:0;font-style:normal;color:#16110F;}
-    .preview-label{font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);padding:.35rem .8rem;background:var(--card2);border-radius:6px 6px 0 0;border:1px solid var(--border);border-bottom:none;display:inline-block;margin-bottom:-1px;}
+    /* ── Editor content area (WYSIWYG) ── */
+    .editor-wrap { display:flex; flex-direction:column; gap:1rem; }
+    .editor-content-outer { background:var(--prose-bg); border:1px solid #E5DED2; border-radius:16px; overflow:hidden; }
 
-    /* Toolbar */
-    .toolbar{display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:.4rem;}
-    .tool-btn{padding:.3rem .55rem;border-radius:6px;font-size:.78rem;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--card2);color:var(--soft);transition:all .15s;}
-    .tool-btn:hover{background:var(--muted);color:var(--text);}
+    /* Actual contenteditable */
+    #editor {
+      min-height:520px; padding:2.5rem 3rem; outline:none;
+      font-family:'Georgia', 'Times New Roman', serif;
+      font-size:1.05rem; line-height:1.82; color:var(--prose-soft);
+      position:relative;
+    }
+    #editor:empty::before {
+      content: attr(data-placeholder);
+      color:#BDBDBD; pointer-events:none; display:block;
+    }
+    /* Match published article prose styles exactly */
+    #editor h1 { font-family:-apple-system,BlinkMacSystemFont,'Bricolage Grotesque',sans-serif; font-size:2rem; font-weight:800; color:var(--prose-ink); line-height:1.2; margin:2em 0 .7em; }
+    #editor h2 { font-family:-apple-system,BlinkMacSystemFont,'Bricolage Grotesque',sans-serif; font-size:1.6rem; font-weight:800; color:var(--prose-ink); line-height:1.2; margin:2.2em 0 .65em; padding-left:16px; border-left:4px solid #FF5C7A; }
+    #editor h3 { font-family:-apple-system,BlinkMacSystemFont,'Bricolage Grotesque',sans-serif; font-size:1.15rem; font-weight:700; color:#FF5C7A; line-height:1.2; margin:1.8em 0 .5em; }
+    #editor h4 { font-family:-apple-system,BlinkMacSystemFont,'Bricolage Grotesque',sans-serif; font-size:.9rem; font-weight:700; color:var(--prose-ink); margin:1.4em 0 .4em; text-transform:uppercase; letter-spacing:.04em; }
+    #editor p { margin:0 0 1.25em; }
+    #editor p:first-child { font-size:1.1rem; color:var(--prose-ink); }
+    #editor ul, #editor ol { padding-left:1.6em; margin:0 0 1.3em; }
+    #editor li { margin-bottom:.45em; }
+    #editor li::marker { color:#FF5C7A; font-weight:700; }
+    #editor strong { color:var(--prose-ink); font-weight:700; }
+    #editor em { font-style:italic; }
+    #editor a { color:#FF5C7A; text-decoration:underline; text-underline-offset:3px; }
+    #editor blockquote { border-left:4px solid #FF5C7A; padding:16px 22px; margin:1.8em 0; background:rgba(255,92,122,.05); border-radius:0 14px 14px 0; }
+    #editor blockquote p { margin:0; color:var(--prose-ink); font-style:italic; font-size:1.08em; }
+    #editor hr { border:none; border-top:1px solid var(--prose-line); margin:2.5em 0; }
+    #editor img { border-radius:12px; max-width:100%; margin:1.5em auto; display:block; box-shadow:0 4px 20px rgba(22,17,15,.1); }
+    #editor table { width:100%; border-collapse:collapse; margin:1.5em 0; font-size:.92em; }
+    #editor th { background:var(--prose-ink); color:#fff; padding:10px 14px; text-align:left; font-size:.8rem; text-transform:uppercase; letter-spacing:.04em; }
+    #editor td { padding:10px 14px; border-bottom:1px solid var(--prose-line); color:var(--prose-soft); }
+    #editor tbody tr:nth-child(even) td { background:rgba(22,17,15,.03); }
 
-    /* Right — sidebar settings */
-    .editor-sidebar{display:flex;flex-direction:column;gap:1rem;}
-    .sidebar-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.2rem;display:flex;flex-direction:column;gap:.9rem;}
-    .field-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin-bottom:.35rem;display:block;}
-    .field-input{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:.55rem .7rem;font-size:.84rem;color:var(--text);outline:none;font-family:inherit;}
-    .field-input:focus{border-color:var(--green);}
-    select.field-input option{background:var(--card);}
-    .field-textarea{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:.55rem .7rem;font-size:.82rem;color:var(--text);outline:none;resize:vertical;font-family:inherit;}
-    .field-textarea:focus{border-color:var(--green);}
+    /* Drag-over highlight */
+    #editor.drag-over { background:rgba(255,92,122,.04); }
 
-    /* Cover image */
-    .cover-preview{width:100%;height:140px;border-radius:10px;object-fit:cover;margin-bottom:.5rem;display:none;}
-    .cover-preview.show{display:block;}
-    .upload-btn{display:flex;align-items:center;gap:.5rem;padding:.55rem .8rem;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;border:1px dashed var(--border);background:transparent;color:var(--soft);width:100%;justify-content:center;transition:all .15s;}
-    .upload-btn:hover{border-color:var(--green);color:var(--green);}
+    /* ── Excerpt ── */
+    .excerpt-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1rem 1.2rem; }
+    .card-label { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--soft); margin-bottom:.45rem; display:block; }
+    .excerpt-input { width:100%; background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:.65rem .8rem; font-size:.85rem; color:var(--text); outline:none; resize:vertical; min-height:56px; font-family:inherit; }
+    .excerpt-input:focus { border-color:var(--accent); }
+    .char-count { font-size:.68rem; color:var(--muted); text-align:right; margin-top:.3rem; }
 
-    /* Status */
-    .status-pill{display:flex;align-items:center;justify-content:space-between;padding:.6rem .8rem;border-radius:10px;background:var(--card2);border:1px solid var(--border);}
-    .status-dot{width:8px;height:8px;border-radius:50%;margin-right:.4rem;}
-    .status-dot.pub{background:var(--green);}
-    .status-dot.draft{background:var(--gold);}
-    .status-text{font-size:.82rem;font-weight:600;}
+    /* ── Sidebar ── */
+    .editor-sidebar { display:flex; flex-direction:column; gap:1rem; }
+    .sidebar-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:1.1rem; display:flex; flex-direction:column; gap:.8rem; }
+    .field-label { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--soft); margin-bottom:.3rem; display:block; }
+    .field-input { width:100%; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:.5rem .65rem; font-size:.84rem; color:var(--text); outline:none; font-family:inherit; }
+    .field-input:focus { border-color:var(--accent); }
+    select.field-input option { background:var(--card); }
+    .field-textarea { width:100%; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:.5rem .65rem; font-size:.82rem; color:var(--text); outline:none; resize:vertical; font-family:inherit; }
+    .field-textarea:focus { border-color:var(--accent); }
 
-    /* Buttons */
-    .btn{display:inline-flex;align-items:center;gap:.4rem;padding:.6rem 1rem;border-radius:10px;font-size:.85rem;font-weight:700;cursor:pointer;border:none;transition:all .15s;width:100%;justify-content:center;}
-    .btn-publish{background:var(--green);color:#fff;}
-    .btn-publish:hover{background:var(--green2);}
-    .btn-draft{background:var(--card2);color:var(--soft);border:1px solid var(--border);}
-    .btn-draft:hover{border-color:var(--border2);color:var(--text);}
-    .btn-danger{background:rgba(239,68,68,.1);color:#ef9494;border:1px solid rgba(239,68,68,.2);}
-    .btn-danger:hover{background:rgba(239,68,68,.2);}
+    .cover-preview { width:100%; border-radius:10px; aspect-ratio:16/9; object-fit:cover; margin-bottom:.5rem; display:none; }
+    .cover-preview.show { display:block; }
+    .upload-btn { display:flex; align-items:center; justify-content:center; gap:.4rem; padding:.5rem .7rem; border-radius:8px; font-size:.8rem; font-weight:600; cursor:pointer; border:1.5px dashed var(--border); background:transparent; color:var(--soft); width:100%; transition:all .15s; }
+    .upload-btn:hover { border-color:var(--accent); color:var(--accent); }
 
-    .divider{height:1px;background:var(--border);margin:.2rem 0;}
-    .save-status{font-size:.75rem;color:var(--soft);text-align:center;min-height:18px;margin-top:.2rem;}
-    .save-status.ok{color:var(--green2);}
-    .save-status.err{color:#ef9494;}
+    .status-pill { display:flex; align-items:center; justify-content:space-between; padding:.55rem .75rem; border-radius:10px; background:var(--card2); border:1px solid var(--border); }
+    .status-dot { width:8px; height:8px; border-radius:50%; margin-right:.4rem; }
+    .status-dot.pub { background:var(--accent2); }
+    .status-dot.draft { background:var(--gold); }
+    .status-text { font-size:.82rem; font-weight:600; }
 
-    .char-count{font-size:.7rem;color:var(--muted);text-align:right;margin-top:.2rem;}
+    .btn { display:flex; align-items:center; justify-content:center; gap:.4rem; padding:.6rem 1rem; border-radius:10px; font-size:.85rem; font-weight:700; cursor:pointer; border:none; transition:all .15s; width:100%; }
+    .btn-publish { background:var(--accent); color:#fff; }
+    .btn-publish:hover { opacity:.88; }
+    .btn-draft { background:var(--card2); color:var(--soft); border:1px solid var(--border); }
+    .btn-draft:hover { border-color:var(--border2); color:var(--text); }
+    .btn-preview { background:transparent; color:var(--soft); border:1px solid var(--border); }
+    .btn-preview:hover { border-color:var(--border2); color:var(--text); }
+    .btn-danger { background:rgba(239,68,68,.1); color:#ef9494; border:1px solid rgba(239,68,68,.2); margin-top:.25rem; }
+    .btn-danger:hover { background:rgba(239,68,68,.2); }
+    .divider { height:1px; background:var(--border); }
+    .save-status { font-size:.75rem; color:var(--soft); text-align:center; min-height:16px; }
+    .save-status.ok { color:var(--accent2); }
+    .save-status.err { color:#ef9494; }
 
-    /* Full-page article preview overlay */
-    .fp-overlay{position:fixed;inset:0;background:#FAF6F1;z-index:1000;display:none;overflow-y:auto;}
-    .fp-overlay.open{display:block;}
-    .fp-bar{position:sticky;top:0;background:#FAF6F1;border-bottom:1px solid #E5DED2;padding:.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;z-index:10;}
-    .fp-bar-title{font-size:.82rem;font-weight:700;color:#8B7B74;text-transform:uppercase;letter-spacing:.06em;}
-    .fp-close-btn{padding:.42rem .9rem;background:#16110F;color:#fff;border:none;border-radius:8px;font-size:.8rem;font-weight:700;cursor:pointer;}
-    .fp-inner{max-width:760px;margin:0 auto;padding:2.5rem 1.5rem 6rem;}
-    .fp-cover-img{width:100%;height:340px;object-fit:cover;border-radius:20px;margin-bottom:2rem;}
-    .fp-meta-row{display:flex;align-items:center;gap:.75rem;margin-bottom:.9rem;flex-wrap:wrap;}
-    .fp-cat{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#FF5C7A;background:rgba(255,92,122,.1);padding:.25rem .65rem;border-radius:6px;}
-    .fp-rt{font-size:.8rem;color:#8B7B74;}
-    .fp-title{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:2.5rem;font-weight:800;color:#16110F;line-height:1.12;margin-bottom:.65rem;}
-    .fp-excerpt{font-size:1.05rem;color:#8B7B74;line-height:1.65;padding-bottom:1.5rem;border-bottom:1px solid #E5DED2;margin-bottom:2rem;}
-    .fp-prose{font-size:1rem;line-height:1.82;color:#4A4340;font-family:'Georgia',serif;}
-    .fp-prose h1{font-family:-apple-system,sans-serif;font-size:1.8rem;font-weight:800;color:#16110F;margin:1.5rem 0 .7rem;}
-    .fp-prose h2{font-family:-apple-system,sans-serif;font-size:1.4rem;font-weight:800;color:#16110F;margin:2rem 0 .6rem;border-left:4px solid #FF5C7A;padding-left:16px;}
-    .fp-prose h3{font-family:-apple-system,sans-serif;font-size:1.1rem;font-weight:700;color:#FF5C7A;margin:1.6rem 0 .45rem;}
-    .fp-prose h4{font-family:-apple-system,sans-serif;font-size:.95rem;font-weight:700;color:#16110F;margin:1.2rem 0 .35rem;text-transform:uppercase;letter-spacing:.06em;}
-    .fp-prose p{margin:0 0 1.25em;color:#4A4340;}
-    .fp-prose p:first-of-type{font-size:1.08rem;color:#16110F;}
-    .fp-prose ul,.fp-prose ol{padding-left:1.5rem;margin:0 0 1.2em;color:#4A4340;}
-    .fp-prose li{margin-bottom:.35em;}
-    .fp-prose li::marker{color:#FF5C7A;}
-    .fp-prose strong{color:#16110F;font-weight:700;}
-    .fp-prose em{font-style:italic;color:#16110F;}
-    .fp-prose code{background:#F2EDE5;padding:.15rem .4rem;border-radius:5px;font-size:.88em;color:#16110F;font-family:monospace;}
-    .fp-prose blockquote{border-left:4px solid #FF5C7A;padding:14px 20px;margin:1.8rem 0;background:rgba(255,92,122,.05);border-radius:0 12px 12px 0;}
-    .fp-prose blockquote p{margin:0;color:#16110F;font-style:italic;font-size:1.05em;}
-    .fp-prose a{color:#FF5C7A;text-decoration:underline;}
-    .fp-prose hr{border:none;border-top:1px solid #E5DED2;margin:2rem 0;}
-    .fp-prose img{border-radius:12px;max-width:100%;margin:1.2rem auto;display:block;}
-    .fp-prose table{width:100%;border-collapse:separate;border-spacing:0;border-radius:14px;overflow:hidden;margin:1.5rem 0;font-size:.9rem;}
-    .fp-prose table thead tr{background:#16110F;}
-    .fp-prose table thead th{padding:.55rem 1rem;font-weight:700;color:#fff;text-align:left;border:none;}
-    .fp-prose table tbody tr:nth-child(even){background:rgba(22,17,15,.05);}
-    .fp-prose table tbody td{padding:.5rem 1rem;color:#4A4340;border-top:1px solid #E5DED2;}
-    .fp-prose .callout{padding:14px 20px;margin:1.8rem 0;border-radius:12px;border-left:4px solid;}
-    .fp-prose .callout.note{background:rgba(59,130,246,.07);border-color:#3b82f6;}
-    .fp-prose .callout.tip{background:rgba(132,204,22,.08);border-color:#84cc16;}
-    .fp-prose .callout.warning{background:rgba(245,158,11,.08);border-color:#f59e0b;}
-    .fp-prose .callout p{margin:0;font-style:normal;color:#16110F;}
+    /* ── Link dialog ── */
+    .dialog-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:500; align-items:center; justify-content:center; }
+    .dialog-backdrop.open { display:flex; }
+    .dialog-box { background:var(--card); border:1px solid var(--border2); border-radius:16px; padding:1.5rem; width:360px; display:flex; flex-direction:column; gap:.9rem; }
+    .dialog-title { font-size:1rem; font-weight:800; color:var(--text); }
+    .dialog-input { width:100%; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:.55rem .75rem; font-size:.88rem; color:var(--text); outline:none; font-family:inherit; }
+    .dialog-input:focus { border-color:var(--accent); }
+    .dialog-btns { display:flex; gap:.5rem; }
+    .dialog-btns button { flex:1; padding:.55rem; border-radius:8px; font-size:.85rem; font-weight:700; cursor:pointer; border:1px solid var(--border); }
+    .dialog-btn-ok { background:var(--accent); color:#fff; border-color:var(--accent) !important; }
+    .dialog-btn-ok:hover { opacity:.88; }
+    .dialog-btn-cancel { background:transparent; color:var(--soft); }
+    .dialog-btn-cancel:hover { color:var(--text); background:var(--muted); }
+
+    /* ── Full-page preview overlay ── */
+    .fp-overlay { position:fixed; inset:0; background:#FAF6F1; z-index:400; display:none; overflow-y:auto; }
+    .fp-overlay.open { display:block; }
+    .fp-bar { position:sticky; top:0; background:#FAF6F1; border-bottom:1px solid #E5DED2; padding:.75rem 1.5rem; display:flex; align-items:center; justify-content:space-between; z-index:10; }
+    .fp-bar-title { font-size:.78rem; font-weight:700; color:#8B7B74; text-transform:uppercase; letter-spacing:.06em; }
+    .fp-close-btn { padding:.4rem .9rem; background:#16110F; color:#fff; border:none; border-radius:8px; font-size:.8rem; font-weight:700; cursor:pointer; }
+    .fp-inner { max-width:740px; margin:0 auto; padding:2.5rem 1.5rem 6rem; }
+    .fp-cover-img { width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:20px; margin-bottom:2rem; display:none; }
+    .fp-meta { display:flex; gap:.75rem; margin-bottom:.9rem; flex-wrap:wrap; align-items:center; }
+    .fp-cat { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#FF5C7A; background:rgba(255,92,122,.1); padding:.25rem .65rem; border-radius:6px; }
+    .fp-rt { font-size:.8rem; color:#8B7B74; }
+    .fp-title { font-family:-apple-system,BlinkMacSystemFont,'Bricolage Grotesque',sans-serif; font-size:2.4rem; font-weight:800; color:#16110F; line-height:1.12; margin-bottom:.6rem; }
+    .fp-excerpt { font-size:1rem; color:#8B7B74; line-height:1.65; padding-bottom:1.5rem; border-bottom:1px solid #E5DED2; margin-bottom:2rem; }
+    .fp-prose { font-family:'Georgia',serif; font-size:1.05rem; line-height:1.82; color:#4A4340; }
+    .fp-prose h1 { font-family:-apple-system,sans-serif; font-size:2rem; font-weight:800; color:#16110F; margin:1.5rem 0 .7rem; }
+    .fp-prose h2 { font-family:-apple-system,sans-serif; font-size:1.6rem; font-weight:800; color:#16110F; margin:2rem 0 .6rem; border-left:4px solid #FF5C7A; padding-left:16px; }
+    .fp-prose h3 { font-family:-apple-system,sans-serif; font-size:1.15rem; font-weight:700; color:#FF5C7A; margin:1.6rem 0 .45rem; }
+    .fp-prose h4 { font-family:-apple-system,sans-serif; font-size:.9rem; font-weight:700; color:#16110F; margin:1.2rem 0 .35rem; text-transform:uppercase; letter-spacing:.06em; }
+    .fp-prose p { margin:0 0 1.25em; }
+    .fp-prose p:first-of-type { font-size:1.1rem; color:#16110F; }
+    .fp-prose ul,.fp-prose ol { padding-left:1.5em; margin:0 0 1.2em; }
+    .fp-prose li { margin-bottom:.4em; }
+    .fp-prose li::marker { color:#FF5C7A; font-weight:700; }
+    .fp-prose strong { color:#16110F; font-weight:700; }
+    .fp-prose em { font-style:italic; }
+    .fp-prose blockquote { border-left:4px solid #FF5C7A; padding:14px 20px; margin:1.8rem 0; background:rgba(255,92,122,.05); border-radius:0 12px 12px 0; }
+    .fp-prose blockquote p { margin:0; color:#16110F; font-style:italic; }
+    .fp-prose a { color:#FF5C7A; text-decoration:underline; }
+    .fp-prose hr { border:none; border-top:1px solid #E5DED2; margin:2.5rem 0; }
+    .fp-prose img { border-radius:12px; max-width:100%; margin:1.5rem auto; display:block; }
+    .fp-prose table { width:100%; border-collapse:collapse; margin:1.5em 0; font-size:.92em; }
+    .fp-prose th { background:#16110F; color:#fff; padding:10px 14px; text-align:left; font-size:.8rem; text-transform:uppercase; letter-spacing:.04em; }
+    .fp-prose td { padding:10px 14px; border-bottom:1px solid #E5DED2; color:#4A4340; }
+    .fp-prose tbody tr:nth-child(even) td { background:rgba(22,17,15,.04); }
   </style>
 </head>
 <body>
+
+<!-- Nav -->
 <nav class="nav">
   <div class="nav-brand">
-    <span>⚙️</span>&nbsp; KetoJourney Admin
-    <span style="color:var(--soft);font-weight:400;font-size:.85rem;margin-left:.5rem">
+    ✏️ Admin Editor
+    <span class="nav-crumb">
       / <a href="/admin/blog" style="color:var(--soft)">Articles</a>
-      / {isEdit ? post.title.slice(0, 40) + (post.title.length > 40 ? '…' : '') : 'New Article'}
+      / {isEdit ? post.title.slice(0, 36) + (post.title.length > 36 ? '…' : '') : 'New Article'}
     </span>
   </div>
   <div class="nav-links">
     <a href="/admin/blog" class="nav-link">← All Articles</a>
-    <a href="/admin/blog-recipes" class="nav-link">Recipes</a>
+    <a href="/admin" class="nav-link">Dashboard</a>
   </div>
 </nav>
 
+<!-- Title + slug -->
+<div class="title-area">
+  <input id="titleInput" class="title-input" type="text" placeholder="Article title…" value={isEdit ? post.title : ''} maxlength="200"/>
+  <div class="slug-row">
+    <span class="slug-prefix">ketojourney.fun/blog/</span>
+    <input id="slugInput" class="slug-input" type="text" value={isEdit ? post.slug : ''} placeholder="auto-generated-slug" maxlength="120"/>
+  </div>
+</div>
+
+<!-- Sticky WYSIWYG toolbar -->
+<div class="editor-toolbar" id="editorToolbar">
+  <!-- Block type selector -->
+  <select class="tb-select" id="blockType" title="Block type">
+    <option value="p">¶  Paragraph</option>
+    <option value="h1">H1  Heading 1</option>
+    <option value="h2">H2  Heading 2</option>
+    <option value="h3">H3  Heading 3</option>
+    <option value="h4">H4  Heading 4</option>
+    <option value="blockquote">"  Blockquote</option>
+  </select>
+
+  <div class="tb-sep"></div>
+
+  <!-- Inline formatting -->
+  <button class="tb-btn" id="boldBtn"   onclick="fmt('bold')"          title="Bold (Ctrl+B)"><strong>B</strong></button>
+  <button class="tb-btn" id="italicBtn" onclick="fmt('italic')"        title="Italic (Ctrl+I)"><em>I</em></button>
+  <button class="tb-btn"                onclick="fmt('strikeThrough')" title="Strikethrough"><s>S</s></button>
+  <button class="tb-btn"                onclick="fmt('underline')"     title="Underline"><u>U</u></button>
+
+  <div class="tb-sep"></div>
+
+  <!-- Lists -->
+  <button class="tb-btn" onclick="fmt('insertUnorderedList')" title="Bullet list">• List</button>
+  <button class="tb-btn" onclick="fmt('insertOrderedList')"   title="Numbered list">1. List</button>
+
+  <div class="tb-sep"></div>
+
+  <!-- Insert -->
+  <button class="tb-btn" onclick="openLinkDialog()"              title="Insert link">🔗 Link</button>
+  <button class="tb-btn" onclick="document.getElementById('inlineImgFile').click()" title="Insert image">🖼 Image</button>
+  <button class="tb-btn" onclick="fmt('insertHorizontalRule')"   title="Horizontal rule">— Rule</button>
+
+  <div class="tb-sep"></div>
+
+  <!-- Alignment -->
+  <button class="tb-btn" onclick="fmt('justifyLeft')"   title="Align left">⬛L</button>
+  <button class="tb-btn" onclick="fmt('justifyCenter')" title="Centre">⬛C</button>
+
+  <div class="tb-spacer"></div>
+
+  <span class="tb-wordcount" id="wordCount">0 words</span>
+</div>
+
+<!-- Hidden image file input for inline images -->
+<input type="file" id="inlineImgFile" accept="image/jpeg,image/png,image/webp" style="display:none"/>
+
+<!-- Main layout -->
 <div class="editor-layout">
 
-  <!-- ── Left: Main editor ── -->
-  <div class="editor-main">
+  <!-- Left: editor -->
+  <div class="editor-wrap">
 
-    <input
-      id="titleInput"
-      class="title-input"
-      type="text"
-      placeholder="Article title…"
-      value={isEdit ? post.title : ''}
-      maxlength="200"
-    />
-
-    <div class="slug-row">
-      <span class="slug-prefix">ketojourney.fun/blog/</span>
-      <input id="slugInput" class="slug-input" type="text" value={isEdit ? post.slug : ''} placeholder="auto-generated-slug" maxlength="120" />
+    <!-- WYSIWYG area -->
+    <div class="editor-content-outer">
+      <div
+        id="editor"
+        contenteditable="true"
+        data-placeholder="Start writing your article… Select text to format it, or choose a block type from the toolbar above."
+        spellcheck="true"
+      ></div>
     </div>
 
-    <div class="card">
-      <div class="card-label">Excerpt (shown on blog listing)</div>
-      <textarea id="excerptInput" class="excerpt-input" maxlength="500" placeholder="Short description that appears in search results and the blog card…">{isEdit ? post.excerpt : ''}</textarea>
+    <!-- Excerpt below editor -->
+    <div class="excerpt-card">
+      <label class="card-label" for="excerptInput">Excerpt <span style="font-weight:400;text-transform:none;letter-spacing:0">(shown on blog listing &amp; search results)</span></label>
+      <textarea id="excerptInput" class="excerpt-input" maxlength="500" rows="2" placeholder="Short description…">{isEdit ? post.excerpt : ''}</textarea>
       <div class="char-count"><span id="excerptCount">{isEdit ? (post.excerpt || '').length : 0}</span>/500</div>
-    </div>
-
-    <div class="card">
-      <div class="card-label">Content</div>
-      <div class="toolbar" id="toolbar">
-        <button class="tool-btn" data-action="bold" title="Bold"><strong>B</strong></button>
-        <button class="tool-btn" data-action="italic" title="Italic"><em>I</em></button>
-        <button class="tool-btn" data-action="h2" title="Heading 2">H2</button>
-        <button class="tool-btn" data-action="h3" title="Heading 3">H3</button>
-        <button class="tool-btn" data-action="h4" title="Heading 4">H4</button>
-        <button class="tool-btn" data-action="ul" title="Bullet list">• List</button>
-        <button class="tool-btn" data-action="ol" title="Numbered list">1. List</button>
-        <button class="tool-btn" data-action="blockquote" title="Blockquote">" Quote</button>
-        <button class="tool-btn" data-action="callout-note" title="Note callout">📌 Note</button>
-        <button class="tool-btn" data-action="callout-tip" title="Tip callout">💡 Tip</button>
-        <button class="tool-btn" data-action="callout-warn" title="Warning callout">⚠️ Warn</button>
-        <button class="tool-btn" data-action="table" title="Insert table">⊞ Table</button>
-        <button class="tool-btn" data-action="code" title="Code">`Code`</button>
-        <button class="tool-btn" data-action="link" title="Link">🔗 Link</button>
-        <button class="tool-btn" data-action="image" title="Image">🖼 Image</button>
-        <button class="tool-btn" data-action="hr" title="Divider">— HR</button>
-      </div>
-      <div class="editor-tabs">
-        <button class="tab-btn active" id="tabWrite" onclick="switchTab('write')">✏️ Write</button>
-        <button class="tab-btn" id="tabPreview" onclick="switchTab('preview')">👁 Preview</button>
-      </div>
-      <textarea id="contentArea" class="content-area" placeholder="Write your article in Markdown…&#10;&#10;## Section heading&#10;&#10;Your content here…">{isEdit ? post.content : ''}</textarea>
-      <div style="display:none" id="previewWrap">
-        <div class="preview-label">Preview — matches published article layout</div>
-        <div id="previewArea" class="preview-area"></div>
-      </div>
     </div>
 
   </div>
 
-  <!-- ── Right: Sidebar settings ── -->
-  <div class="editor-sidebar">
+  <!-- Right: sidebar -->
+  <aside class="editor-sidebar">
 
-    <!-- Publish controls -->
+    <!-- Publish -->
     <div class="sidebar-card">
-      <div>
-        <div class="status-pill">
-          <div style="display:flex;align-items:center">
-            <div class="status-dot" id="statusDot" class:list={[isEdit && post.published ? 'pub' : 'draft']}></div>
-            <span class="status-text" id="statusText">{isEdit && post.published ? 'Published' : 'Draft'}</span>
-          </div>
-          {isEdit && post.published && post.published_at && (
-            <span style="font-size:.72rem;color:var(--soft)">{new Date(post.published_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</span>
-          )}
+      <div class="status-pill">
+        <div style="display:flex;align-items:center;">
+          <div class="status-dot" id="statusDot" style={isEdit && post.published ? 'background:var(--accent2)' : 'background:var(--gold)'}></div>
+          <span class="status-text" id="statusText">{isEdit && post.published ? 'Published' : 'Draft'}</span>
         </div>
+        {isEdit && post.published && post.published_at && (
+          <span style="font-size:.7rem;color:var(--soft)">
+            {new Date(post.published_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}
+          </span>
+        )}
       </div>
+
       <button class="btn btn-publish" onclick="savePost(true)">
         {isEdit && post.published ? '✓ Update & Publish' : '🚀 Publish'}
       </button>
-      <button class="btn btn-draft" onclick="savePost(false)">
-        💾 Save Draft
-      </button>
-      <button class="btn btn-draft" onclick="openFullPreview()" style="margin-top:.2rem">
-        🔍 Full Preview
-      </button>
+      <button class="btn btn-draft" onclick="savePost(false)">💾 Save Draft</button>
+      <button class="btn btn-preview" onclick="openFullPreview()">👁 Full Preview</button>
       <div class="save-status" id="saveStatus"></div>
+
       {isEdit && (
         <div>
           <div class="divider"></div>
-          <button class="btn btn-danger" style="margin-top:.5rem" onclick={`confirmDelete('${post.id}')`}>
-            🗑 Delete Article
-          </button>
+          <button class="btn btn-danger" onclick={`confirmDelete('${post.id}')`}>🗑 Delete Article</button>
         </div>
       )}
     </div>
@@ -300,17 +355,15 @@ const CATEGORIES = ['General','Nutrition','Recipes','Success Stories','Tips & Tr
     <!-- Cover image -->
     <div class="sidebar-card">
       <label class="field-label">Cover Image</label>
-      <img id="coverPreview" class={`cover-preview ${isEdit && post.cover_image_url ? 'show' : ''}`} src={isEdit ? post.cover_image_url : ''} alt="Cover" />
-      <input id="coverInput" class="field-input" type="url" placeholder="https://…image.jpg" value={isEdit ? post.cover_image_url : ''} />
-      <div class="divider" style="margin:.5rem 0"></div>
-      <button class="upload-btn" onclick="document.getElementById('imgFile').click()">
-        📷 Upload image
-      </button>
-      <input type="file" id="imgFile" accept="image/jpeg,image/png,image/webp" style="display:none" />
-      <div id="uploadStatus" style="font-size:.72rem;color:var(--soft);text-align:center;min-height:16px"></div>
+      <img id="coverPreview" class={`cover-preview${isEdit && post.cover_image_url ? ' show' : ''}`} src={isEdit ? (post.cover_image_url || '') : ''} alt="Cover"/>
+      <input id="coverInput" class="field-input" type="url" placeholder="https://…image.jpg" value={isEdit ? (post.cover_image_url || '') : ''}/>
+      <div class="divider" style="margin:.25rem 0"></div>
+      <button class="upload-btn" onclick="document.getElementById('coverImgFile').click()">📷 Upload cover image</button>
+      <input type="file" id="coverImgFile" accept="image/jpeg,image/png,image/webp" style="display:none"/>
+      <div id="uploadStatus" style="font-size:.72rem;color:var(--soft);text-align:center;min-height:14px;margin-top:.2rem"></div>
     </div>
 
-    <!-- Category + Tags -->
+    <!-- Category / Tags / Author -->
     <div class="sidebar-card">
       <div>
         <label class="field-label">Category</label>
@@ -321,16 +374,16 @@ const CATEGORIES = ['General','Nutrition','Recipes','Success Stories','Tips & Tr
         </select>
       </div>
       <div>
-        <label class="field-label">Tags (comma separated)</label>
-        <input id="tagsInput" class="field-input" type="text" placeholder="keto, weight-loss, recipes" value={isEdit && post.tags ? post.tags.join(', ') : ''} />
+        <label class="field-label">Tags <span style="font-weight:400;text-transform:none;letter-spacing:0">(comma separated)</span></label>
+        <input id="tagsInput" class="field-input" type="text" placeholder="keto, weight-loss, recipes" value={isEdit && post.tags ? post.tags.join(', ') : ''}/>
       </div>
       <div>
         <label class="field-label">Author</label>
-        <input id="authorInput" class="field-input" type="text" value={isEdit ? post.author_name : 'KetoJourney Team'} maxlength="100" />
+        <input id="authorInput" class="field-input" type="text" value={isEdit ? post.author_name : 'KetoJourney Team'} maxlength="100"/>
       </div>
       <div>
-        <label class="field-label">Read time (minutes)</label>
-        <input id="readTimeInput" class="field-input" type="number" min="1" max="60" value={isEdit ? post.read_time_min : 5} />
+        <label class="field-label">Read time (min)</label>
+        <input id="readTimeInput" class="field-input" type="number" min="1" max="60" value={isEdit ? post.read_time_min : 5}/>
       </div>
     </div>
 
@@ -338,27 +391,49 @@ const CATEGORIES = ['General','Nutrition','Recipes','Success Stories','Tips & Tr
     <div class="sidebar-card">
       <label class="field-label">🔍 SEO</label>
       <div>
-        <label class="field-label" style="margin-top:.2rem">Meta Title</label>
-        <input id="seoTitleInput" class="field-input" type="text" maxlength="160" placeholder="Leave blank to use article title" value={isEdit ? post.seo_title : ''} />
+        <label class="field-label" style="margin-top:.15rem">Meta Title</label>
+        <input id="seoTitleInput" class="field-input" type="text" maxlength="160" placeholder="Leave blank to use article title" value={isEdit ? (post.seo_title || '') : ''}/>
       </div>
       <div>
         <label class="field-label">Meta Description</label>
-        <textarea id="seoDescInput" class="field-textarea" maxlength="300" rows="3" placeholder="Leave blank to use excerpt">{isEdit ? post.seo_description : ''}</textarea>
+        <textarea id="seoDescInput" class="field-textarea" maxlength="300" rows="3" placeholder="Leave blank to use excerpt">{isEdit ? (post.seo_description || '') : ''}</textarea>
       </div>
     </div>
 
+  </aside>
+</div>
+
+<!-- Link dialog -->
+<div class="dialog-backdrop" id="linkDialog">
+  <div class="dialog-box">
+    <div class="dialog-title">🔗 Insert Link</div>
+    <div>
+      <label class="field-label">URL</label>
+      <input id="linkUrl" class="dialog-input" type="url" placeholder="https://…"/>
+    </div>
+    <div>
+      <label class="field-label">Link text <span style="font-weight:400;text-transform:none;letter-spacing:0">(leave blank to use selection)</span></label>
+      <input id="linkText" class="dialog-input" type="text" placeholder="Optional"/>
+    </div>
+    <div style="display:flex;align-items:center;gap:.5rem;">
+      <input type="checkbox" id="linkNewTab" checked/><label for="linkNewTab" style="font-size:.82rem;color:var(--soft)">Open in new tab</label>
+    </div>
+    <div class="dialog-btns">
+      <button class="dialog-btn-ok" onclick="applyLink()">Insert Link</button>
+      <button class="dialog-btn-cancel" onclick="closeLinkDialog()">Cancel</button>
+    </div>
   </div>
 </div>
 
-<!-- Full-page preview modal -->
+<!-- Full-page preview overlay -->
 <div class="fp-overlay" id="fpOverlay">
   <div class="fp-bar">
     <span class="fp-bar-title">Article Preview</span>
     <button class="fp-close-btn" onclick="document.getElementById('fpOverlay').classList.remove('open')">✕ Close Preview</button>
   </div>
   <div class="fp-inner">
-    <img id="fpCoverImg" class="fp-cover-img" src="" alt="" style="display:none" onerror="this.style.display='none'" />
-    <div class="fp-meta-row">
+    <img id="fpCoverImg" class="fp-cover-img" src="" alt="" onerror="this.style.display='none'"/>
+    <div class="fp-meta">
       <span class="fp-cat" id="fpCategory"></span>
       <span class="fp-rt" id="fpReadTime"></span>
     </div>
@@ -368,13 +443,293 @@ const CATEGORIES = ['General','Nutrition','Recipes','Success Stories','Tips & Tr
   </div>
 </div>
 
-<script is:inline define:vars={{ postId: isEdit ? post.id : null }}>
+<script is:inline define:vars={{ postId: isEdit ? post.id : null, existingContent, isEdit }}>
 var currentId = postId;
+var editor    = document.getElementById('editor');
+var blockSel  = document.getElementById('blockType');
+var savedRange = null; // remember cursor before link dialog
 
-/* ── Slug auto-generation ── */
+/* ═══════════════════════════════════════════
+   LOAD EXISTING CONTENT
+═══════════════════════════════════════════ */
+(function loadContent() {
+  if (!existingContent) return;
+  var content = existingContent.trim();
+  if (content.startsWith('<')) {
+    // Already HTML — load directly
+    editor.innerHTML = content;
+  } else {
+    // Markdown — convert to HTML via marked CDN
+    var tryParse = function() {
+      if (typeof marked !== 'undefined') {
+        editor.innerHTML = marked.parse(content);
+        updateWordCount();
+      } else {
+        setTimeout(tryParse, 100);
+      }
+    };
+    tryParse();
+  }
+  updateWordCount();
+})();
+
+/* ═══════════════════════════════════════════
+   BLOCK TYPE DROPDOWN
+═══════════════════════════════════════════ */
+blockSel.addEventListener('change', function() {
+  applyBlock(blockSel.value);
+});
+
+window.applyBlock = function(tag) {
+  editor.focus();
+  if (savedRange) {
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedRange);
+    savedRange = null;
+  }
+  document.execCommand('formatBlock', false, tag === 'p' ? 'p' : tag);
+  updateToolbarState();
+};
+
+/* Update dropdown + button states when cursor moves */
+document.addEventListener('selectionchange', function() {
+  if (!document.activeElement || !editor.contains(document.activeElement) && document.activeElement !== editor) return;
+  updateToolbarState();
+});
+editor.addEventListener('keyup', updateToolbarState);
+editor.addEventListener('mouseup', updateToolbarState);
+
+function updateToolbarState() {
+  /* Block type */
+  var sel = window.getSelection();
+  if (sel && sel.rangeCount) {
+    var node = sel.anchorNode;
+    while (node && node !== editor) {
+      var t = node.nodeName.toLowerCase();
+      if (t === 'h1' || t === 'h2' || t === 'h3' || t === 'h4' || t === 'blockquote') {
+        blockSel.value = t; break;
+      }
+      if (t === 'p' || t === 'div') { blockSel.value = 'p'; break; }
+      node = node.parentNode;
+    }
+  }
+  /* Bold / italic active states */
+  try {
+    document.getElementById('boldBtn').classList.toggle('active', document.queryCommandState('bold'));
+    document.getElementById('italicBtn').classList.toggle('active', document.queryCommandState('italic'));
+  } catch(e) {}
+}
+
+/* ═══════════════════════════════════════════
+   FORMATTING COMMANDS
+═══════════════════════════════════════════ */
+window.fmt = function(cmd) {
+  editor.focus();
+  document.execCommand(cmd, false, null);
+  updateToolbarState();
+};
+
+/* ═══════════════════════════════════════════
+   KEYBOARD SHORTCUTS + ENTER KEY IN HEADINGS
+═══════════════════════════════════════════ */
+editor.addEventListener('keydown', function(e) {
+  /* Ctrl+B / Ctrl+I / Ctrl+S */
+  if ((e.ctrlKey || e.metaKey) && e.key === 'b') { e.preventDefault(); fmt('bold'); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'i') { e.preventDefault(); fmt('italic'); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); savePost(false); return; }
+
+  /* Enter in heading → new paragraph */
+  if (e.key === 'Enter' && !e.shiftKey) {
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    var node = sel.anchorNode;
+    while (node && node !== editor) {
+      if (/^H[1-4]$/.test(node.nodeName)) {
+        e.preventDefault();
+        /* Insert paragraph after the heading */
+        var p = document.createElement('p');
+        p.innerHTML = '​'; /* zero-width space so it's not empty */
+        if (node.nextSibling) {
+          node.parentNode.insertBefore(p, node.nextSibling);
+        } else {
+          node.parentNode.appendChild(p);
+        }
+        var range = document.createRange();
+        range.setStart(p.firstChild, 0);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        blockSel.value = 'p';
+        return;
+      }
+      node = node.parentNode;
+    }
+  }
+});
+
+/* Global shortcuts */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    document.getElementById('fpOverlay').classList.remove('open');
+    closeLinkDialog();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); savePost(false); }
+});
+
+/* ═══════════════════════════════════════════
+   PASTE — strip styles, keep semantics
+═══════════════════════════════════════════ */
+editor.addEventListener('paste', function(e) {
+  e.preventDefault();
+  var html  = e.clipboardData.getData('text/html');
+  var plain = e.clipboardData.getData('text/plain');
+
+  if (html) {
+    var tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    /* Strip all style/class/id/data-* but keep semantic structure */
+    tmp.querySelectorAll('*').forEach(function(el) {
+      el.removeAttribute('style');
+      el.removeAttribute('class');
+      el.removeAttribute('id');
+      /* Remove non-semantic wrappers (span, font, etc.) keeping children */
+      var nonSemantic = ['span','font','div'];
+      if (nonSemantic.indexOf(el.nodeName.toLowerCase()) !== -1 && !el.closest('table')) {
+        /* unwrap: move children before el, then remove */
+        while (el.firstChild) el.parentNode.insertBefore(el.firstChild, el);
+        el.parentNode && el.parentNode.removeChild(el);
+      }
+    });
+    tmp.querySelectorAll('meta,style,script,link').forEach(function(el) { el.remove(); });
+    document.execCommand('insertHTML', false, tmp.innerHTML);
+  } else {
+    /* Plain text — split on double newlines into paragraphs */
+    var paras = plain.split(/\n{2,}/);
+    var htmlOut = paras.map(function(p) {
+      return '<p>' + p.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') + '</p>';
+    }).join('');
+    document.execCommand('insertHTML', false, htmlOut);
+  }
+  updateWordCount();
+});
+
+/* ═══════════════════════════════════════════
+   INLINE IMAGE UPLOAD (toolbar image button)
+═══════════════════════════════════════════ */
+document.getElementById('inlineImgFile').addEventListener('change', function() {
+  var file = this.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    fetch('/api/admin/blog-upload', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ imageBase64: ev.target.result, imageType: file.type }),
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.url) {
+        editor.focus();
+        document.execCommand('insertHTML', false, '<img src="' + d.url + '" alt="" style="max-width:100%;border-radius:12px;margin:1em auto;display:block;"/>');
+        updateWordCount();
+      }
+    });
+  };
+  reader.readAsDataURL(file);
+  this.value = '';
+});
+
+/* ═══════════════════════════════════════════
+   COVER IMAGE UPLOAD
+═══════════════════════════════════════════ */
+var coverInput   = document.getElementById('coverInput');
+var coverPreview = document.getElementById('coverPreview');
+var uploadStatus = document.getElementById('uploadStatus');
+
+coverInput.addEventListener('input', function() {
+  if (coverInput.value) { coverPreview.src = coverInput.value; coverPreview.classList.add('show'); }
+  else { coverPreview.classList.remove('show'); }
+});
+coverPreview.addEventListener('error', function() { coverPreview.classList.remove('show'); });
+
+document.getElementById('coverImgFile').addEventListener('change', function() {
+  var file = this.files[0];
+  if (!file) return;
+  uploadStatus.textContent = 'Uploading…';
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    fetch('/api/admin/blog-upload', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ imageBase64: ev.target.result, imageType: file.type }),
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.url) {
+        coverInput.value = d.url;
+        coverPreview.src = d.url;
+        coverPreview.classList.add('show');
+        uploadStatus.textContent = '✓ Uploaded';
+        setTimeout(function() { uploadStatus.textContent = ''; }, 2000);
+      } else {
+        uploadStatus.textContent = 'Error: ' + (d.error || 'upload failed');
+      }
+    }).catch(function() { uploadStatus.textContent = 'Upload failed'; });
+  };
+  reader.readAsDataURL(file);
+  this.value = '';
+});
+
+/* ═══════════════════════════════════════════
+   LINK DIALOG
+═══════════════════════════════════════════ */
+window.openLinkDialog = function() {
+  /* Save current selection so we can restore it after dialog interaction */
+  var sel = window.getSelection();
+  if (sel && sel.rangeCount) savedRange = sel.getRangeAt(0).cloneRange();
+  document.getElementById('linkUrl').value = '';
+  document.getElementById('linkText').value = sel && sel.toString() ? sel.toString() : '';
+  document.getElementById('linkDialog').classList.add('open');
+  setTimeout(function() { document.getElementById('linkUrl').focus(); }, 50);
+};
+
+window.closeLinkDialog = function() {
+  document.getElementById('linkDialog').classList.remove('open');
+  savedRange = null;
+};
+
+window.applyLink = function() {
+  var url  = document.getElementById('linkUrl').value.trim();
+  var text = document.getElementById('linkText').value.trim();
+  var newTab = document.getElementById('linkNewTab').checked;
+  if (!url) { closeLinkDialog(); return; }
+
+  closeLinkDialog();
+  editor.focus();
+
+  if (savedRange) {
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedRange);
+    savedRange = null;
+  }
+
+  var linkHtml = '<a href="' + url + '"' + (newTab ? ' target="_blank" rel="noopener"' : '') + '>'
+    + (text || url) + '</a>';
+  document.execCommand('insertHTML', false, linkHtml);
+};
+
+/* ═══════════════════════════════════════════
+   WORD COUNT
+═══════════════════════════════════════════ */
+function updateWordCount() {
+  var text = editor.textContent || '';
+  var words = text.trim().split(/\s+/).filter(Boolean).length;
+  document.getElementById('wordCount').textContent = words + ' word' + (words !== 1 ? 's' : '');
+}
+editor.addEventListener('input', updateWordCount);
+
+/* ═══════════════════════════════════════════
+   SLUG AUTO-GENERATION
+═══════════════════════════════════════════ */
 var titleInput = document.getElementById('titleInput');
 var slugInput  = document.getElementById('slugInput');
-var slugEdited = !!(currentId); // don't auto-update slug on edit
+var slugEdited = isEdit; /* don't overwrite slug on edit */
 
 titleInput.addEventListener('input', function() {
   if (!slugEdited) {
@@ -388,176 +743,56 @@ titleInput.addEventListener('input', function() {
 });
 slugInput.addEventListener('input', function() { slugEdited = true; });
 
-/* ── Excerpt char count ── */
+/* ═══════════════════════════════════════════
+   EXCERPT CHAR COUNT
+═══════════════════════════════════════════ */
 var excerptInput = document.getElementById('excerptInput');
 var excerptCount = document.getElementById('excerptCount');
-excerptInput.addEventListener('input', function() {
-  excerptCount.textContent = excerptInput.value.length;
-});
+excerptInput.addEventListener('input', function() { excerptCount.textContent = excerptInput.value.length; });
 
-/* ── Cover image preview ── */
-var coverInput   = document.getElementById('coverInput');
-var coverPreview = document.getElementById('coverPreview');
-coverInput.addEventListener('input', function() {
-  if (coverInput.value) {
-    coverPreview.src = coverInput.value;
-    coverPreview.classList.add('show');
-  } else {
-    coverPreview.classList.remove('show');
-  }
-});
-coverPreview.addEventListener('error', function() { coverPreview.classList.remove('show'); });
-
-/* ── Image upload ── */
-var imgFile      = document.getElementById('imgFile');
-var uploadStatus = document.getElementById('uploadStatus');
-imgFile.addEventListener('change', function() {
-  var file = imgFile.files[0];
-  if (!file) return;
-  uploadStatus.textContent = 'Uploading…';
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    fetch('/api/admin/blog-upload', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageBase64: e.target.result, imageType: file.type }),
-    }).then(function(r) { return r.json(); }).then(function(d) {
-      if (d.url) {
-        coverInput.value = d.url;
-        coverPreview.src = d.url;
-        coverPreview.classList.add('show');
-        uploadStatus.textContent = '✓ Uploaded';
-        setTimeout(function() { uploadStatus.textContent = ''; }, 2000);
-      } else {
-        uploadStatus.textContent = 'Error: ' + d.error;
-      }
-    }).catch(function() { uploadStatus.textContent = 'Upload failed'; });
-  };
-  reader.readAsDataURL(file);
-  imgFile.value = '';
-});
-
-/* ── Markdown toolbar ── */
-var contentArea = document.getElementById('contentArea');
-document.getElementById('toolbar').addEventListener('click', function(e) {
-  var btn = e.target.closest('[data-action]');
-  if (!btn) return;
-  var action = btn.getAttribute('data-action');
-  var start = contentArea.selectionStart;
-  var end   = contentArea.selectionEnd;
-  var sel   = contentArea.value.substring(start, end);
-  /* Image action handled separately with prompt */
-  if (action === 'image') {
-    var imgUrl = prompt('Image URL:', 'https://');
-    if (!imgUrl || imgUrl === 'https://') { contentArea.focus(); return; }
-    var altText = sel || prompt('Alt text (optional):', '') || 'image';
-    var imgMd = '![' + altText + '](' + imgUrl + ')';
-    contentArea.value = contentArea.value.substring(0, start) + imgMd + contentArea.value.substring(end);
-    var cur = start + imgMd.length;
-    contentArea.setSelectionRange(cur, cur);
-    contentArea.focus();
-    return;
-  }
-  var map = {
-    bold:         ['**', '**', sel || 'bold text'],
-    italic:       ['_', '_', sel || 'italic text'],
-    h2:           ['## ', '', sel || 'Heading'],
-    h3:           ['### ', '', sel || 'Heading'],
-    h4:           ['#### ', '', sel || 'Heading'],
-    ul:           ['- ', '', sel || 'List item'],
-    ol:           ['1. ', '', sel || 'List item'],
-    blockquote:   ['> ', '', sel || 'Quote text'],
-    'callout-note': ['> 📌 **Note:** ', '', sel || 'Your note here'],
-    'callout-tip':  ['> 💡 **Tip:** ', '', sel || 'Your tip here'],
-    'callout-warn': ['> ⚠️ **Warning:** ', '', sel || 'Your warning here'],
-    table:        ['\n| Header | Header | Header |\n|--------|--------|--------|\n| Cell   | Cell   | Cell   |\n| Cell   | Cell   | Cell   |\n', '', ''],
-    code:         ['`', '`', sel || 'code'],
-    hr:           ['\n---\n', '', ''],
-    link:         ['[', '](url)', sel || 'link text'],
-  };
-  var parts = map[action];
-  if (!parts) return;
-  var replacement = parts[0] + parts[2] + parts[1];
-  contentArea.value = contentArea.value.substring(0, start) + replacement + contentArea.value.substring(end);
-  var cursor = start + parts[0].length + parts[2].length;
-  contentArea.setSelectionRange(cursor, cursor);
-  contentArea.focus();
-});
-
-/* ── Markdown → HTML with callout support ── */
-function renderMarkdown(content) {
-  if (typeof marked === 'undefined') return '<pre>' + (content || '') + '</pre>';
-  var html = marked.parse(content || '*Nothing to preview yet.*');
-  // Promote emoji-prefixed blockquotes to styled callouts
-  html = html.replace(/<blockquote>\n?<p>(📌[\s\S]*?)<\/p>\n?<\/blockquote>/g, '<div class="callout note"><p>$1</p></div>');
-  html = html.replace(/<blockquote>\n?<p>(💡[\s\S]*?)<\/p>\n?<\/blockquote>/g, '<div class="callout tip"><p>$1</p></div>');
-  html = html.replace(/<blockquote>\n?<p>(⚠️[\s\S]*?)<\/p>\n?<\/blockquote>/g, '<div class="callout warning"><p>$1</p></div>');
-  return html;
-}
-
-/* ── Write / Preview tabs ── */
-function switchTab(tab) {
-  var writeTab    = document.getElementById('tabWrite');
-  var previewTab  = document.getElementById('tabPreview');
-  var area        = document.getElementById('contentArea');
-  var previewWrap = document.getElementById('previewWrap');
-  var preview     = document.getElementById('previewArea');
-  if (tab === 'write') {
-    writeTab.classList.add('active'); previewTab.classList.remove('active');
-    area.style.display = 'block'; previewWrap.style.display = 'none';
-  } else {
-    previewTab.classList.add('active'); writeTab.classList.remove('active');
-    area.style.display = 'none'; previewWrap.style.display = 'block';
-    preview.innerHTML = renderMarkdown(area.value);
-  }
-}
-
-/* ── Status indicator ── */
+/* ═══════════════════════════════════════════
+   SAVE / PUBLISH
+═══════════════════════════════════════════ */
 function setStatus(pub) {
-  var dot  = document.getElementById('statusDot');
-  var text = document.getElementById('statusText');
-  if (pub) {
-    dot.className  = 'status-dot pub';
-    text.textContent = 'Published';
-  } else {
-    dot.className  = 'status-dot draft';
-    text.textContent = 'Draft';
-  }
+  document.getElementById('statusDot').style.background = pub ? 'var(--accent2)' : 'var(--gold)';
+  document.getElementById('statusText').textContent = pub ? 'Published' : 'Draft';
 }
 
-/* ── Save ── */
-window.savePost = function savePost(publish) {
+window.savePost = function(publish) {
   var saveStatus = document.getElementById('saveStatus');
-  var title = document.getElementById('titleInput').value.trim();
-  var slug  = document.getElementById('slugInput').value.trim();
+  var title = titleInput.value.trim();
+  var slug  = slugInput.value.trim();
   if (!title) { saveStatus.textContent = 'Title is required'; saveStatus.className = 'save-status err'; return; }
   if (!slug)  { saveStatus.textContent = 'Slug is required';  saveStatus.className = 'save-status err'; return; }
 
   saveStatus.textContent = 'Saving…'; saveStatus.className = 'save-status';
 
-  var tagsRaw = document.getElementById('tagsInput').value;
-  var tags = tagsRaw.split(',').map(function(t) { return t.trim(); }).filter(Boolean);
+  var tags = document.getElementById('tagsInput').value
+    .split(',').map(function(t) { return t.trim(); }).filter(Boolean);
 
-  var payload = {
-    id:              currentId,
-    title:           title,
-    slug:            slug,
-    excerpt:         document.getElementById('excerptInput').value,
-    content:         document.getElementById('contentArea').value,
-    cover_image_url: document.getElementById('coverInput').value,
-    category:        document.getElementById('categoryInput').value,
-    tags:            tags,
-    author_name:     document.getElementById('authorInput').value,
-    read_time_min:   parseInt(document.getElementById('readTimeInput').value) || 5,
-    seo_title:       document.getElementById('seoTitleInput').value,
-    seo_description: document.getElementById('seoDescInput').value,
-    published:       publish,
-  };
+  /* Get HTML content from the contenteditable div */
+  var content = editor.innerHTML
+    .replace(/​/g, '') /* strip zero-width spaces used for heading-enter trick */
+    .trim();
 
   fetch('/api/admin/blog-save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      id:              currentId,
+      title:           title,
+      slug:            slug,
+      excerpt:         excerptInput.value,
+      content:         content,
+      cover_image_url: coverInput.value,
+      category:        document.getElementById('categoryInput').value,
+      tags:            tags,
+      author_name:     document.getElementById('authorInput').value,
+      read_time_min:   parseInt(document.getElementById('readTimeInput').value) || 5,
+      seo_title:       document.getElementById('seoTitleInput').value,
+      seo_description: document.getElementById('seoDescInput').value,
+      published:       publish,
+    }),
   }).then(function(r) { return r.json(); }).then(function(d) {
     if (d.success) {
       currentId = d.id;
@@ -574,55 +809,71 @@ window.savePost = function savePost(publish) {
     saveStatus.textContent = 'Save failed — check connection';
     saveStatus.className = 'save-status err';
   });
-}
+};
 
-/* ── Delete ── */
-window.confirmDelete = function confirmDelete(id) {
-  if (!confirm('Delete this article permanently?')) return;
+/* ═══════════════════════════════════════════
+   DELETE
+═══════════════════════════════════════════ */
+window.confirmDelete = function(id) {
+  if (!confirm('Delete this article permanently? This cannot be undone.')) return;
   fetch('/api/admin/blog-delete', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id }),
   }).then(function(r) { return r.json(); }).then(function(d) {
     if (d.success) window.location.href = '/admin/blog';
     else alert('Delete failed: ' + d.error);
   });
-}
+};
 
-/* ── Full-page preview ── */
-window.openFullPreview = function openFullPreview() {
-  var overlay   = document.getElementById('fpOverlay');
-  var coverUrl  = document.getElementById('coverInput').value.trim();
-  var title     = document.getElementById('titleInput').value.trim() || 'Untitled Article';
-  var excerpt   = document.getElementById('excerptInput').value.trim();
-  var category  = document.getElementById('categoryInput').value;
-  var readTime  = document.getElementById('readTimeInput').value;
-  var content   = document.getElementById('contentArea').value;
+/* ═══════════════════════════════════════════
+   FULL-PAGE PREVIEW
+═══════════════════════════════════════════ */
+window.openFullPreview = function() {
+  var coverUrl = coverInput.value.trim();
+  var fpCover  = document.getElementById('fpCoverImg');
+  if (coverUrl) { fpCover.src = coverUrl; fpCover.style.display = 'block'; }
+  else { fpCover.style.display = 'none'; }
 
-  var coverImg = document.getElementById('fpCoverImg');
-  if (coverUrl) { coverImg.src = coverUrl; coverImg.style.display = 'block'; }
-  else { coverImg.style.display = 'none'; }
+  document.getElementById('fpTitle').textContent    = titleInput.value.trim() || 'Untitled Article';
+  document.getElementById('fpExcerpt').textContent  = excerptInput.value.trim();
+  document.getElementById('fpCategory').textContent = document.getElementById('categoryInput').value;
+  document.getElementById('fpReadTime').textContent = (document.getElementById('readTimeInput').value || 5) + ' min read';
+  document.getElementById('fpProse').innerHTML      = editor.innerHTML;
 
-  document.getElementById('fpTitle').textContent = title;
-  document.getElementById('fpExcerpt').textContent = excerpt || '';
-  document.getElementById('fpCategory').textContent = category;
-  document.getElementById('fpReadTime').textContent = (readTime || 5) + ' min read';
-  document.getElementById('fpProse').innerHTML = renderMarkdown(content);
-
+  var overlay = document.getElementById('fpOverlay');
   overlay.classList.add('open');
   overlay.scrollTop = 0;
 };
 
-/* Close full preview on Escape */
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    document.getElementById('fpOverlay').classList.remove('open');
-  }
-});
-
-/* ── Keyboard shortcut: Ctrl+S = Save Draft ── */
-document.addEventListener('keydown', function(e) {
-  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); savePost(false); }
+/* ═══════════════════════════════════════════
+   DRAG-AND-DROP IMAGE INTO EDITOR
+═══════════════════════════════════════════ */
+editor.addEventListener('dragover', function(e) { e.preventDefault(); editor.classList.add('drag-over'); });
+editor.addEventListener('dragleave', function() { editor.classList.remove('drag-over'); });
+editor.addEventListener('drop', function(e) {
+  e.preventDefault();
+  editor.classList.remove('drag-over');
+  var file = e.dataTransfer.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    fetch('/api/admin/blog-upload', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ imageBase64: ev.target.result, imageType: file.type }),
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.url) {
+        /* Insert at drop position */
+        var range = document.caretRangeFromPoint ? document.caretRangeFromPoint(e.clientX, e.clientY) : null;
+        if (range) {
+          var sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        document.execCommand('insertHTML', false, '<img src="' + d.url + '" alt="" style="max-width:100%;border-radius:12px;margin:1em auto;display:block;"/>');
+      }
+    });
+  };
+  reader.readAsDataURL(file);
 });
 </script>
 </body>

@@ -29,8 +29,9 @@ const { data: relatedRaw } = await db
   .limit(3);
 const related = relatedRaw || [];
 
-const rawContent = (post.content || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-const contentHtml = await marked.parse(rawContent);
+const rawContent = (post.content || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+const isHtml = rawContent.startsWith('<');
+const contentHtml = isHtml ? rawContent : await marked.parse(rawContent);
 
 const pageTitle = post.seo_title || post.title;
 const pageDesc  = post.seo_description || post.excerpt || '';
