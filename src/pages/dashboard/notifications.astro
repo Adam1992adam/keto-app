@@ -47,12 +47,12 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{t('notif.title')} â€” Keto Journey</title>
+  <title>{t('notif.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet"/>
   <style>
-    /* â”€â”€â”€ TOKENS â”€â”€â”€ */
+    /* ─── TOKENS ─── */
     :root {
       --bg:#FAF6F1; --surface:#F2EDE5; --card:#FFFFFF; --card2:#F2EDE5;
       --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
@@ -63,7 +63,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
       --radius:20px;
     }
 
-    /* â”€â”€â”€ RESET â”€â”€â”€ */
+    /* ─── RESET ─── */
     *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
     html { scroll-behavior:smooth; }
     body {
@@ -75,13 +75,13 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
     .rv-pg-main  { overflow-y:auto; }
     @media(max-width:900px){ .rv-pg-shell { grid-template-columns:1fr; } }
 
-    /* â”€â”€â”€ PAGE â”€â”€â”€ */
+    /* ─── PAGE ─── */
     .page {
       max-width:860px; margin:0 auto;
       padding:2.5rem 1.5rem 6rem;
     }
 
-    /* â”€â”€â”€ HERO CARD â”€â”€â”€ */
+    /* ─── HERO CARD ─── */
     .hero-card {
       border-radius:var(--radius);
       background:linear-gradient(135deg,rgba(255,92,122,.08),rgba(255,92,122,.04),rgba(245,158,11,.05));
@@ -129,7 +129,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
     .hstat-val { font-size:1.9rem; font-weight:800; line-height:1; margin-bottom:.2rem; }
     .hstat-lbl { font-size:.65rem; font-weight:800; color:var(--soft); text-transform:uppercase; letter-spacing:.06em; }
 
-    /* â”€â”€â”€ PERMISSION BANNER â”€â”€â”€ */
+    /* ─── PERMISSION BANNER ─── */
     .perm-banner {
       display:flex; align-items:center; justify-content:space-between; gap:1rem;
       padding:1rem 1.4rem; border-radius:14px;
@@ -155,7 +155,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
     }
     .pb-btn:hover { transform:scale(1.04); }
 
-    /* â”€â”€â”€ LIVE TIMELINE â”€â”€â”€ */
+    /* ─── LIVE TIMELINE ─── */
     .timeline-card {
       background:var(--card); border:1px solid var(--border);
       border-radius:var(--radius); overflow:hidden;
@@ -212,7 +212,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
     }
     @keyframes nowPulse { 0%,100%{opacity:1;}50%{opacity:.4;} }
 
-    /* â”€â”€â”€ SECTION HEADER â”€â”€â”€ */
+    /* ─── SECTION HEADER ─── */
     .section-head {
       display:flex; align-items:center; gap:.875rem;
       padding:1.15rem 1.5rem; border-bottom:1px solid var(--border);
@@ -228,7 +228,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
       border:1px solid rgba(255,92,122,.2); color:var(--green);
     }
 
-    /* â”€â”€â”€ SECTION CARD â”€â”€â”€ */
+    /* ─── SECTION CARD ─── */
     .section-card {
       background:var(--card); border:1px solid var(--border);
       border-radius:var(--radius); overflow:hidden;
@@ -238,7 +238,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
     .section-card:hover { border-color:var(--border2); }
     .section-body { padding:1.25rem 1.5rem; display:flex; flex-direction:column; gap:.75rem; }
 
-    /* â”€â”€â”€ REMINDER ROW â”€â”€â”€ */
+    /* ─── REMINDER ROW ─── */
     .r-row {
       display:flex; align-items:center; gap:.875rem;
       padding:1rem 1.1rem; border-radius:14px;
@@ -264,7 +264,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
     .r-spacer { flex:1; }
     .r-time-wrap { display:flex; align-items:center; gap:.6rem; }
 
-    /* â”€â”€â”€ TIME INPUT â”€â”€â”€ */
+    /* ─── TIME INPUT ─── */
     .t-input {
       background:var(--card); border:1.5px solid var(--border);
       border-radius:10px; padding:.42rem .7rem;
@@ -276,7 +276,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
     .t-input:focus { border-color:var(--rv-accent); box-shadow:0 0 0 3px rgba(255,92,122,.12); }
     .t-input:disabled { opacity:.3; cursor:not-allowed; pointer-events:none; }
 
-    /* â”€â”€â”€ TOGGLE â”€â”€â”€ */
+    /* ─── TOGGLE ─── */
     .tog {
       position:relative; width:46px; height:25px; flex-shrink:0;
       background:var(--muted); border-radius:99px;
@@ -292,7 +292,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
     }
     .tog.on .tog-thumb { transform:translateX(21px); }
 
-    /* â”€â”€â”€ WATER CARD EXTRA â”€â”€â”€ */
+    /* ─── WATER CARD EXTRA ─── */
     .sub-grid {
       display:grid; grid-template-columns:repeat(3,1fr); gap:.7rem;
       padding:.875rem 1.1rem; border-top:1px solid var(--border);
@@ -313,7 +313,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
     .sg-select:focus { border-color:var(--rv-accent); box-shadow:0 0 0 3px rgba(255,92,122,.1); }
     .sg-select:disabled { opacity:.3; }
 
-    /* â”€â”€â”€ SAVE BAR (sticky) â”€â”€â”€ */
+    /* ─── SAVE BAR (sticky) ─── */
     .save-bar {
       position:sticky; bottom:1.5rem; z-index:50;
       display:flex; align-items:center; gap:.875rem; flex-wrap:wrap;
@@ -353,7 +353,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
     .btn-reset { background:rgba(239,68,68,.07); border:1.5px solid rgba(239,68,68,.2); color:var(--red); }
     .btn-reset:hover { background:rgba(239,68,68,.14); }
 
-    /* â”€â”€â”€ TOAST â”€â”€â”€ */
+    /* ─── TOAST ─── */
     .toast {
       position:fixed; top:5.25rem; right:1.5rem; z-index:9999;
       padding:.8rem 1.4rem; border-radius:12px; font-weight:800; font-size:.82rem;
@@ -367,7 +367,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
     .toast-info    { background:linear-gradient(135deg,var(--blue),var(--indigo));   color:#fff; }
     .toast-error   { background:linear-gradient(135deg,var(--red),#dc2626);          color:#fff; }
 
-    /* â”€â”€â”€ NEXT ALARM BADGE â”€â”€â”€ */
+    /* ─── NEXT ALARM BADGE ─── */
     .next-alarm {
       display:flex; align-items:center; gap:.5rem;
       padding:.35rem .85rem; border-radius:99px;
@@ -375,7 +375,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
       font-size:.72rem; font-weight:800; color:var(--gold);
     }
 
-    /* â”€â”€â”€ UTILITIES â”€â”€â”€ */
+    /* ─── UTILITIES ─── */
     @keyframes fadeUp { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
 
     @media(max-width:640px) {
@@ -392,14 +392,14 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
 <div class="rv-pg-shell">
 <Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="notifications" />
 <div class="rv-pg-main">
-<!-- â”€â”€â”€ PAGE â”€â”€â”€ -->
+<!-- ─── PAGE ─── -->
 <div class="page">
 
   <!-- HERO -->
   <div class="hero-card">
     <div class="hero-inner">
       <div>
-        <div class="hero-badge">ðŸ”” Smart Reminders</div>
+        <div class="hero-badge">🔔 Smart Reminders</div>
         <h1 class="hero-title">
           Never miss a <span class="hl">meal</span>,<br/>{userName}
         </h1>
@@ -417,7 +417,7 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
           <div class="hstat-lbl">Total</div>
         </div>
         <div class="hstat" id="heroNext">
-          <div class="hstat-val" style="color:var(--gold);" id="heroNextVal">â€”</div>
+          <div class="hstat-val" style="color:var(--gold);" id="heroNextVal">—</div>
           <div class="hstat-lbl">Next in</div>
         </div>
       </div>
@@ -427,14 +427,14 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
   <!-- PERMISSION BANNER -->
   <div class="perm-banner" id="permBanner">
     <div class="pb-left">
-      <div class="pb-icon" id="permIcon" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 12px rgba(59,130,246,.3);display:flex;align-items:center;justify-content:center;">ðŸ””</div>
+      <div class="pb-icon" id="permIcon" style="background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 4px 12px rgba(59,130,246,.3);display:flex;align-items:center;justify-content:center;">🔔</div>
       <div>
         <div class="pb-title" id="permTitle">Enable Browser Notifications</div>
         <div class="pb-sub" id="permSub">Grant permission so your keto reminders arrive on time</div>
       </div>
     </div>
     <button class="pb-btn" id="permBtn" style="background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.3);color:var(--blue2);">
-      <span id="permBtnIcon">ðŸ””</span>
+      <span id="permBtnIcon">🔔</span>
       <span id="permBtnLabel">Enable Now</span>
     </button>
   </div>
@@ -443,9 +443,9 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
   <div class="timeline-card">
     <div class="tc-head">
       <div class="tc-title">
-        ðŸ“… Today's Schedule
+        📅 Today's Schedule
       </div>
-      <div class="tc-sub" id="tlNextLabel">Loadingâ€¦</div>
+      <div class="tc-sub" id="tlNextLabel">Loading…</div>
     </div>
     <div class="tc-scroll">
       <div class="tc-row" id="tlRow">
@@ -457,20 +457,20 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
   <!-- FORM -->
   <form id="rForm" autocomplete="off">
 
-    <!-- â”€â”€ MEALS â”€â”€ -->
+    <!-- ── MEALS ── -->
     <div class="section-card" style="animation-delay:.05s;">
       <div class="section-head">
-        <div class="sh-icon" style="background:linear-gradient(135deg,#FF5C7A,#E0394F);box-shadow:0 4px 10px rgba(255,92,122,.28);display:flex;align-items:center;justify-content:center;">ðŸ½ï¸</div>
+        <div class="sh-icon" style="background:linear-gradient(135deg,#FF5C7A,#E0394F);box-shadow:0 4px 10px rgba(255,92,122,.28);display:flex;align-items:center;justify-content:center;">🍽️</div>
         <div class="sh-title">Meal Reminders</div>
         <span class="sh-chip">4 reminders</span>
       </div>
       <div class="section-body">
 
         {[
-          { key:'breakfast', label:'Breakfast',  icon:'ðŸ³', desc:'Morning fuel Â· Daily',  g:'linear-gradient(135deg,#f59e0b,#d97706)', glow:'rgba(245,158,11,.28)', enabled: p.breakfast_enabled, time: p.breakfast_time, accent:'#f59e0b' },
-          { key:'lunch',     label:'Lunch',       icon:'ðŸ¥—', desc:'Midday meal Â· Daily',   g:'linear-gradient(135deg,#FF5C7A,#E0394F)', glow:'rgba(255,92,122,.28)',  enabled: p.lunch_enabled,     time: p.lunch_time,     accent:'#FF5C7A' },
-          { key:'dinner',    label:'Dinner',      icon:'ðŸ½ï¸', desc:'Evening meal Â· Daily', g:'linear-gradient(135deg,#3b82f6,#2563eb)', glow:'rgba(59,130,246,.28)',  enabled: p.dinner_enabled,    time: p.dinner_time,    accent:'#3b82f6' },
-          { key:'snack',     label:'Snack',       icon:'ðŸŽ', desc:'Healthy bite Â· Daily', g:'linear-gradient(135deg,#8b5cf6,#7c3aed)', glow:'rgba(139,92,246,.28)', enabled: p.snack_enabled,     time: p.snack_time,     accent:'#8b5cf6' },
+          { key:'breakfast', label:'Breakfast',  icon:'🍳', desc:'Morning fuel · Daily',  g:'linear-gradient(135deg,#f59e0b,#d97706)', glow:'rgba(245,158,11,.28)', enabled: p.breakfast_enabled, time: p.breakfast_time, accent:'#f59e0b' },
+          { key:'lunch',     label:'Lunch',       icon:'🥗', desc:'Midday meal · Daily',   g:'linear-gradient(135deg,#FF5C7A,#E0394F)', glow:'rgba(255,92,122,.28)',  enabled: p.lunch_enabled,     time: p.lunch_time,     accent:'#FF5C7A' },
+          { key:'dinner',    label:'Dinner',      icon:'🍽️', desc:'Evening meal · Daily', g:'linear-gradient(135deg,#3b82f6,#2563eb)', glow:'rgba(59,130,246,.28)',  enabled: p.dinner_enabled,    time: p.dinner_time,    accent:'#3b82f6' },
+          { key:'snack',     label:'Snack',       icon:'🍎', desc:'Healthy bite · Daily', g:'linear-gradient(135deg,#8b5cf6,#7c3aed)', glow:'rgba(139,92,246,.28)', enabled: p.snack_enabled,     time: p.snack_time,     accent:'#8b5cf6' },
         ].map(row => (
           <div class={`r-row ${!row.enabled ? 'off' : ''}`} id={`row-${row.key}`} style={`--rc:${row.accent};`}>
             <div class="r-icon" style={`background:${row.g};box-shadow:0 4px 12px ${row.glow};`}>{row.icon}</div>
@@ -496,16 +496,16 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
       </div>
     </div>
 
-    <!-- â”€â”€ WATER â”€â”€ -->
+    <!-- ── WATER ── -->
     <div class="section-card" style="animation-delay:.1s;">
       <div class="section-head">
-        <div class="sh-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2);box-shadow:0 4px 10px rgba(6,182,212,.28);display:flex;align-items:center;justify-content:center;">ðŸ’§</div>
+        <div class="sh-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2);box-shadow:0 4px 10px rgba(6,182,212,.28);display:flex;align-items:center;justify-content:center;">💧</div>
         <div class="sh-title">Hydration Reminders</div>
         <span class="sh-chip" style="background:rgba(6,182,212,.1);border-color:rgba(6,182,212,.2);color:var(--cyan);">Interval</span>
       </div>
       <div class="section-body" style="padding-bottom:0;">
         <div class={`r-row ${!p.water_enabled ? 'off' : ''}`} id="row-water" style="--rc:#06b6d4;">
-          <div class="r-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2);box-shadow:0 4px 12px rgba(6,182,212,.28);display:flex;align-items:center;justify-content:center;">ðŸ’§</div>
+          <div class="r-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2);box-shadow:0 4px 12px rgba(6,182,212,.28);display:flex;align-items:center;justify-content:center;">💧</div>
           <div>
             <div class="r-label">Drink Water</div>
             <div class="r-desc">Stay hydrated throughout the day</div>
@@ -541,10 +541,10 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
       <div style="height:1.25rem;"></div>
     </div>
 
-    <!-- â”€â”€ OTHER â”€â”€ -->
+    <!-- ── OTHER ── -->
     <div class="section-card" style="animation-delay:.15s;">
       <div class="section-head">
-        <div class="sh-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 4px 10px rgba(139,92,246,.28);display:flex;align-items:center;justify-content:center;">âš¡</div>
+        <div class="sh-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 4px 10px rgba(139,92,246,.28);display:flex;align-items:center;justify-content:center;">⚡</div>
         <div class="sh-title">Other Reminders</div>
         <span class="sh-chip" style="background:rgba(139,92,246,.1);border-color:rgba(139,92,246,.2);color:var(--purple);">2 reminders</span>
       </div>
@@ -552,10 +552,10 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
 
         <!-- STREAK -->
         <div class={`r-row ${!p.streak_enabled ? 'off' : ''}`} id="row-streak" style="--rc:#ef4444;">
-          <div class="r-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 12px rgba(239,68,68,.28);display:flex;align-items:center;justify-content:center;">ðŸ”¥</div>
+          <div class="r-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 4px 12px rgba(239,68,68,.28);display:flex;align-items:center;justify-content:center;">🔥</div>
           <div>
             <div class="r-label">Streak Guard</div>
-            <div class="r-desc">Keep your streak alive Â· Daily</div>
+            <div class="r-desc">Keep your streak alive · Daily</div>
           </div>
           <div class="r-spacer"></div>
           <div class="r-time-wrap">
@@ -571,10 +571,10 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
         <!-- WEIGHT -->
         <div class={`r-row ${!p.weight_enabled ? 'off' : ''}`} id="row-weight" style="--rc:#6366f1;flex-direction:column;align-items:stretch;gap:.75rem;">
           <div style="display:flex;align-items:center;gap:.875rem;">
-            <div class="r-icon" style="background:linear-gradient(135deg,#6366f1,#4f46e5);box-shadow:0 4px 12px rgba(99,102,241,.28);display:flex;align-items:center;justify-content:center;">ðŸ“ˆ</div>
+            <div class="r-icon" style="background:linear-gradient(135deg,#6366f1,#4f46e5);box-shadow:0 4px 12px rgba(99,102,241,.28);display:flex;align-items:center;justify-content:center;">📈</div>
             <div>
               <div class="r-label">Weekly Weigh-In</div>
-              <div class="r-desc">Track your progress Â· Weekly</div>
+              <div class="r-desc">Track your progress · Weekly</div>
             </div>
             <div class="r-spacer"></div>
             <button type="button" class={`tog ${p.weight_enabled ? 'on' : ''}`}
@@ -609,9 +609,9 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
         <div class="sb-sub" id="saveBarSub">Unsaved changes will be lost</div>
       </div>
       <div class="sb-btns">
-        <button type="button" class="btn btn-reset" id="resetBtn">â†º Reset</button>
-        <button type="button" class="btn btn-test"  id="testBtn">âš¡ Test</button>
-        <button type="submit" class="btn btn-save"  id="saveBtn">âœ“ Save Settings</button>
+        <button type="button" class="btn btn-reset" id="resetBtn">↺ Reset</button>
+        <button type="button" class="btn btn-test"  id="testBtn">⚡ Test</button>
+        <button type="submit" class="btn btn-save"  id="saveBtn">✓ Save Settings</button>
       </div>
     </div>
 
@@ -623,10 +623,10 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
 
 <div class="toast" id="toast"></div>
 
-<!-- â”€â”€â”€ SCRIPT â”€â”€â”€ -->
+<!-- ─── SCRIPT ─── -->
 <script is:inline define:vars={{ savedPrefs: p, weekDays }}>
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• TOGGLE STATE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════ TOGGLE STATE ══════════════════ */
 const state = {
   breakfast: savedPrefs.breakfast_enabled,
   lunch:     savedPrefs.lunch_enabled,
@@ -675,27 +675,27 @@ document.querySelectorAll('.tog').forEach(btn => {
   });
 });
 
-// Also update time inputs on change â†’ re-render timeline
+// Also update time inputs on change → re-render timeline
 document.querySelectorAll('.t-input, .sg-select').forEach(el => {
   el.addEventListener('change', () => { renderTimeline(); markDirty(); });
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• HERO ACTIVE COUNT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════ HERO ACTIVE COUNT ══════════════════ */
 function updateHeroActive() {
   const count = Object.values(state).filter(Boolean).length;
   const el = document.getElementById('heroActive');
   if (el) el.textContent = count;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• LIVE TIMELINE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════ LIVE TIMELINE ══════════════════ */
 const tlDefs = [
-  { key:'breakfast', label:'Breakfast', icon:'ðŸ³', color:'#f59e0b' },
-  { key:'snack',     label:'Snack',     icon:'ðŸŽ', color:'#8b5cf6' },
-  { key:'lunch',     label:'Lunch',     icon:'ðŸ¥—', color:'#FF5C7A' },
-  { key:'dinner',    label:'Dinner',    icon:'ðŸ½ï¸', color:'#3b82f6' },
-  { key:'streak',    label:'Streak',    icon:'ðŸ”¥', color:'#ef4444' },
-  { key:'water',     label:'Water',     icon:'ðŸ’§', color:'#06b6d4' },
-  { key:'weight',    label:'Weigh-In',  icon:'âš–ï¸', color:'#6366f1' },
+  { key:'breakfast', label:'Breakfast', icon:'🍳', color:'#f59e0b' },
+  { key:'snack',     label:'Snack',     icon:'🍎', color:'#8b5cf6' },
+  { key:'lunch',     label:'Lunch',     icon:'🥗', color:'#FF5C7A' },
+  { key:'dinner',    label:'Dinner',    icon:'🍽️', color:'#3b82f6' },
+  { key:'streak',    label:'Streak',    icon:'🔥', color:'#ef4444' },
+  { key:'water',     label:'Water',     icon:'💧', color:'#06b6d4' },
+  { key:'weight',    label:'Weigh-In',  icon:'⚖️', color:'#6366f1' },
 ];
 
 function getTimeVal(key) {
@@ -730,8 +730,8 @@ function renderTimeline() {
     if (nextLabel) nextLabel.textContent = `Next: ${next.icon} ${next.label} in ${txt}`;
     if (heroNextVal) heroNextVal.textContent = txt;
   } else {
-    if (nextLabel) nextLabel.textContent = 'All done for today ðŸŽ‰';
-    if (heroNextVal) heroNextVal.textContent = 'â€”';
+    if (nextLabel) nextLabel.textContent = 'All done for today 🎉';
+    if (heroNextVal) heroNextVal.textContent = '—';
   }
 
   tlRow.innerHTML = items.map(d => {
@@ -741,7 +741,7 @@ function renderTimeline() {
     return `
       <div class="tc-item ${cls}">
         <div class="tc-bubble" style="${active ? `border-color:${d.color};box-shadow:0 0 0 4px ${d.color}22;` : past ? `background:${d.color}18;border-color:${d.color}44;` : ''}">
-          ${past && d.on ? 'âœ“' : d.icon}
+          ${past && d.on ? '✓' : d.icon}
         </div>
         <div class="tc-time" style="color:${d.on ? (active ? d.color : past ? d.color : 'var(--text)') : 'var(--muted)'};">
           ${d.time}
@@ -752,7 +752,7 @@ function renderTimeline() {
   }).join('');
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PERMISSION â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════ PERMISSION ══════════════════ */
 const permBanner   = document.getElementById('permBanner');
 const permIcon     = document.getElementById('permIcon');
 const permTitle    = document.getElementById('permTitle');
@@ -770,18 +770,18 @@ function refreshPermUI() {
   permBanner?.classList.remove('granted','blocked');
   if (perm === 'granted') {
     permBanner?.classList.add('granted');
-    if (permIcon)  { permIcon.style.background = 'linear-gradient(135deg,#FF5C7A,#E0394F)'; permIcon.textContent = 'âœ…'; }
+    if (permIcon)  { permIcon.style.background = 'linear-gradient(135deg,#FF5C7A,#E0394F)'; permIcon.textContent = '✅'; }
     if (permTitle) permTitle.textContent = 'Notifications Enabled';
     if (permSub)   permSub.textContent   = 'Your reminders will arrive on time';
-    if (permBtnIcon)  permBtnIcon.textContent = 'âœ“';
+    if (permBtnIcon)  permBtnIcon.textContent = '✓';
     if (permBtnLabel) permBtnLabel.textContent = 'Enabled';
     if (permBtn) { permBtn.style.cssText = 'background:rgba(255,92,122,.1);border-color:rgba(255,92,122,.3);color:var(--green);cursor:default;'; }
   } else if (perm === 'denied') {
     permBanner?.classList.add('blocked');
-    if (permIcon)  { permIcon.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'; permIcon.textContent = 'ðŸš«'; }
+    if (permIcon)  { permIcon.style.background = 'linear-gradient(135deg,#ef4444,#dc2626)'; permIcon.textContent = '🚫'; }
     if (permTitle) permTitle.textContent = 'Notifications Blocked';
     if (permSub)   permSub.textContent   = 'Go to browser settings to re-enable notifications';
-    if (permBtnIcon)  permBtnIcon.textContent = 'âš ï¸';
+    if (permBtnIcon)  permBtnIcon.textContent = '⚠️';
     if (permBtnLabel) permBtnLabel.textContent = 'Blocked';
     if (permBtn) { permBtn.style.cssText = 'background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.2);color:var(--red);cursor:default;'; }
   }
@@ -792,11 +792,11 @@ permBtn?.addEventListener('click', async () => {
   if (Notification.permission !== 'default') return;
   const result = await Notification.requestPermission();
   refreshPermUI();
-  if (result === 'granted') showToast('âœ… Notifications enabled!', 'success');
-  else                      showToast('âš ï¸ Blocked in browser settings', 'error');
+  if (result === 'granted') showToast('✅ Notifications enabled!', 'success');
+  else                      showToast('⚠️ Blocked in browser settings', 'error');
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• DIRTY STATE (save bar) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════ DIRTY STATE (save bar) ══════════════════ */
 let isDirty = false;
 function markDirty() {
   isDirty = true;
@@ -809,11 +809,11 @@ function markClean() {
   isDirty = false;
   const t = document.getElementById('saveBarTitle');
   const s = document.getElementById('saveBarSub');
-  if (t) t.textContent = 'All settings saved âœ“';
+  if (t) t.textContent = 'All settings saved ✓';
   if (s) s.textContent = 'Notifications scheduled successfully';
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• SCHEDULE ENGINE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════ SCHEDULE ENGINE ══════════════════ */
 let _timers = [];
 function clearAllTimers() { _timers.forEach(id => { clearTimeout(id); clearInterval(id); }); _timers = []; }
 
@@ -840,11 +840,11 @@ function scheduleAll(prefs) {
     _timers.push(id);
   };
 
-  scheduleOnce(prefs.breakfast_time, 'ðŸ³ Breakfast Time!',   'Time for your keto breakfast!',     prefs.breakfast_enabled);
-  scheduleOnce(prefs.lunch_time,     'ðŸ¥— Lunch Time!',       "Don't forget your keto lunch!",      prefs.lunch_enabled);
-  scheduleOnce(prefs.dinner_time,    'ðŸ½ï¸ Dinner Time!',      'Time for your keto dinner!',         prefs.dinner_enabled);
-  scheduleOnce(prefs.snack_time,     'ðŸŽ Snack Time!',       'Grab your healthy keto snack!',      prefs.snack_enabled);
-  scheduleOnce(prefs.streak_time,    'ðŸ”¥ Keep Your Streak!', "Complete today's tasks now!",        prefs.streak_enabled);
+  scheduleOnce(prefs.breakfast_time, '🍳 Breakfast Time!',   'Time for your keto breakfast!',     prefs.breakfast_enabled);
+  scheduleOnce(prefs.lunch_time,     '🥗 Lunch Time!',       "Don't forget your keto lunch!",      prefs.lunch_enabled);
+  scheduleOnce(prefs.dinner_time,    '🍽️ Dinner Time!',      'Time for your keto dinner!',         prefs.dinner_enabled);
+  scheduleOnce(prefs.snack_time,     '🍎 Snack Time!',       'Grab your healthy keto snack!',      prefs.snack_enabled);
+  scheduleOnce(prefs.streak_time,    '🔥 Keep Your Streak!', "Complete today's tasks now!",        prefs.streak_enabled);
 
   if (prefs.water_enabled) {
     const [sh] = (prefs.water_start_time || '08:00').split(':').map(Number);
@@ -852,7 +852,7 @@ function scheduleAll(prefs) {
     const id = setInterval(() => {
       const ch = new Date().getHours();
       if (ch >= sh && ch < eh)
-        new Notification('ðŸ’§ Hydration Check!', { body: 'Drink a glass of water!', icon: '/favicon.ico', tag: 'water', renotify: true });
+        new Notification('💧 Hydration Check!', { body: 'Drink a glass of water!', icon: '/favicon.ico', tag: 'water', renotify: true });
     }, (prefs.water_interval || 120) * 60000);
     _timers.push(id);
   }
@@ -865,7 +865,7 @@ function scheduleAll(prefs) {
     if (days === 0 && target <= now) days = 7;
     target.setDate(target.getDate() + days);
     const id = setTimeout(function fire() {
-      new Notification('âš–ï¸ Weekly Weigh-In!', { body: 'Time to log your weight!', icon: '/favicon.ico', tag: 'weight' });
+      new Notification('⚖️ Weekly Weigh-In!', { body: 'Time to log your weight!', icon: '/favicon.ico', tag: 'weight' });
       const nxt = new Date(); nxt.setDate(nxt.getDate() + 7);
       const nid = setTimeout(fire, nxt - new Date());
       _timers.push(nid);
@@ -874,11 +874,11 @@ function scheduleAll(prefs) {
   }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• SAVE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════ SAVE ══════════════════ */
 document.getElementById('rForm')?.addEventListener('submit', async e => {
   e.preventDefault();
   const btn = document.getElementById('saveBtn');
-  btn.disabled = true; btn.innerHTML = 'â³ Savingâ€¦';
+  btn.disabled = true; btn.innerHTML = '⏳ Saving…';
 
   const fd = new FormData(e.target);
   const data = {
@@ -912,29 +912,29 @@ document.getElementById('rForm')?.addEventListener('submit', async e => {
     }
 
     markClean();
-    showToast('âœ… Settings saved!', 'success');
+    showToast('✅ Settings saved!', 'success');
   } catch {
-    showToast('âŒ Failed to save. Try again.', 'error');
+    showToast('❌ Failed to save. Try again.', 'error');
   } finally {
-    btn.disabled = false; btn.innerHTML = 'ðŸ’¾ Save Settings';
+    btn.disabled = false; btn.innerHTML = '💾 Save Settings';
   }
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• TEST â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════ TEST ══════════════════ */
 document.getElementById('testBtn')?.addEventListener('click', async () => {
   if (Notification.permission !== 'granted') {
     const p = await Notification.requestPermission();
     refreshPermUI();
-    if (p !== 'granted') { showToast('âš ï¸ Enable notifications first', 'error'); return; }
+    if (p !== 'granted') { showToast('⚠️ Enable notifications first', 'error'); return; }
   }
-  new Notification('ðŸ¥‘ Keto Journey', {
-    body: `Everything's working! Your ${Object.values(state).filter(Boolean).length} reminders are set. ðŸŽ‰`,
+  new Notification('🥑 Keto Journey', {
+    body: `Everything's working! Your ${Object.values(state).filter(Boolean).length} reminders are set. 🎉`,
     icon: '/favicon.ico', tag: 'test',
   });
-  showToast('ðŸ§ª Test notification sent!', 'info');
+  showToast('🧪 Test notification sent!', 'info');
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• RESET â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════ RESET ══════════════════ */
 document.getElementById('resetBtn')?.addEventListener('click', () => {
   if (!confirm('Reset all settings to defaults?')) return;
   const defaults = { breakfast:'08:00', lunch:'13:00', dinner:'19:00', snack:'16:00', streak:'21:00' };
@@ -949,10 +949,10 @@ document.getElementById('resetBtn')?.addEventListener('click', () => {
   updateHeroActive();
   renderTimeline();
   markDirty();
-  showToast('â†º Reset to defaults', 'info');
+  showToast('↺ Reset to defaults', 'info');
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• TOAST â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════ TOAST ══════════════════ */
 function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
   if (!t) return;
@@ -961,13 +961,13 @@ function showToast(msg, type = 'success') {
   setTimeout(() => t.classList.remove('show'), 3400);
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• CLOCK (live "Next in" counter) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════ CLOCK (live "Next in" counter) ══════════════════ */
 function tickClock() {
   renderTimeline();
 }
 const clockInterval = setInterval(tickClock, 30000); // refresh every 30s
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• BOOT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════ BOOT ══════════════════ */
 (function boot() {
   renderTimeline();
 

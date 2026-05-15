@@ -18,7 +18,7 @@ await updateCurrentDay(user.id).catch(() => null);
 const journey    = await getUserJourney(user.id, db).catch(() => null);
 const currentDay = journey?.current_day || 1;
 
-// â”€â”€ Quick-start progress (server-side checks) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Quick-start progress (server-side checks) ────────────────
 const { data: weightLogCheck }  = await db.from('weight_logs').select('id').eq('user_id', user.id).limit(1);
 const { data: checkinCheck }    = await db.from('daily_checkins').select('id').eq('user_id', user.id).limit(1);
 const { data: taskCheck }       = await db.from('daily_tasks').select('id').eq('user_id', user.id).eq('completed', true).limit(1);
@@ -42,298 +42,298 @@ const quickStart = [
 
 const doneCount = quickStart.filter(i => i.done).length; // client items counted separately
 
-// â”€â”€ Tab definitions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Tab definitions ──────────────────────────────────────────
 const tabs = [
   { key: 'guide',  label: 'App Guide', color: '#FF5C7A' },
   { key: 'basics',  label: 'Basics',  color: '#FF5C7A' },
   { key: 'science', label: 'Science', color: '#3b82f6' },
   { key: 'faq',     label: 'FAQ',     color: '#f59e0b' },
-  { key: 'tips',    label: 'ðŸ’¡ Tips',    color: '#8b5cf6' },
+  { key: 'tips',    label: '💡 Tips',    color: '#8b5cf6' },
 ];
 
-// â”€â”€ Article content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Article content ──────────────────────────────────────────
 const articles = [
-  // â”€â”€ BASICS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── BASICS ──────────────────────────────────────────────
   {
-    id: 'b1', tab: 'basics', icon: 'ðŸ”¥', color: '#FF5C7A',
+    id: 'b1', tab: 'basics', icon: '🔥', color: '#FF5C7A',
     title: 'What is Ketosis?',
     summary: 'How your body switches from glucose to fat as its primary fuel source.',
     body: [
-      'Ketosis is a natural metabolic state in which your body burns fat for fuel instead of carbohydrates. When you drastically reduce carb intake â€” typically below 20â€“50g of net carbs per day â€” your liver begins converting fatty acids into molecules called ketones: beta-hydroxybutyrate (BHB), acetoacetate, and acetone.',
-      'These ketones become the primary energy source for your brain, muscles, and organs. Most people enter nutritional ketosis within 2â€“7 days of strict carb restriction, though this varies based on activity level, metabolism, and prior diet.',
-      'Signs you may be in ketosis: reduced appetite, increased mental clarity, a slight fruity smell on your breath (from acetone), and steady energy without blood-sugar crashes. Blood ketone levels of 0.5â€“3.0 mmol/L are considered nutritional ketosis.',
+      'Ketosis is a natural metabolic state in which your body burns fat for fuel instead of carbohydrates. When you drastically reduce carb intake — typically below 20–50g of net carbs per day — your liver begins converting fatty acids into molecules called ketones: beta-hydroxybutyrate (BHB), acetoacetate, and acetone.',
+      'These ketones become the primary energy source for your brain, muscles, and organs. Most people enter nutritional ketosis within 2–7 days of strict carb restriction, though this varies based on activity level, metabolism, and prior diet.',
+      'Signs you may be in ketosis: reduced appetite, increased mental clarity, a slight fruity smell on your breath (from acetone), and steady energy without blood-sugar crashes. Blood ketone levels of 0.5–3.0 mmol/L are considered nutritional ketosis.',
     ]
   },
   {
-    id: 'b2', tab: 'basics', icon: 'âš–ï¸', color: '#FF5C7A',
+    id: 'b2', tab: 'basics', icon: '⚖️', color: '#FF5C7A',
     title: 'Macros on Keto',
     summary: 'The ideal fat, protein, and carb ratios to stay in ketosis and feel great.',
     body: [
       'The ketogenic diet follows a specific macronutrient ratio that keeps carbohydrates low enough to maintain ketosis while providing adequate protein and plenty of healthy fats.',
-      'Standard keto macro split: Fat 70â€“75% of daily calories Â· Protein 20â€“25% Â· Carbohydrates 5â€“10% (net carbs typically 20â€“50g/day).',
-      'Net carbs = Total Carbs âˆ’ Fiber âˆ’ Sugar Alcohols. Fiber is subtracted because it passes through the gut without raising blood sugar.',
-      'Protein matters: too little causes muscle loss; too much triggers gluconeogenesis, which can kick you out of ketosis. A good target is 0.7â€“1.0g per pound of lean body mass.',
+      'Standard keto macro split: Fat 70–75% of daily calories · Protein 20–25% · Carbohydrates 5–10% (net carbs typically 20–50g/day).',
+      'Net carbs = Total Carbs − Fiber − Sugar Alcohols. Fiber is subtracted because it passes through the gut without raising blood sugar.',
+      'Protein matters: too little causes muscle loss; too much triggers gluconeogenesis, which can kick you out of ketosis. A good target is 0.7–1.0g per pound of lean body mass.',
       'Track your macros with a food app for the first few weeks until you develop an intuitive sense of what you are eating.',
     ]
   },
   {
-    id: 'b3', tab: 'basics', icon: 'âœ…', color: '#FF5C7A',
+    id: 'b3', tab: 'basics', icon: '✅', color: '#FF5C7A',
     title: 'Foods to Eat',
-    summary: 'Your go-to keto staples â€” fats, proteins, and low-carb vegetables.',
+    summary: 'Your go-to keto staples — fats, proteins, and low-carb vegetables.',
     body: [
-      'FATS & OILS â€” Avocados, avocado oil, olive oil, coconut oil, butter, ghee, MCT oil, heavy cream, full-fat cheese.',
-      'PROTEINS â€” Beef, pork, chicken, turkey, lamb, fatty fish (salmon, mackerel, sardines), eggs, shellfish.',
-      'LOW-CARB VEGETABLES â€” Leafy greens, broccoli, cauliflower, zucchini, asparagus, bell peppers, cucumber, celery, mushrooms.',
-      'DAIRY â€” Full-fat Greek yogurt (in moderation), hard cheeses, cream cheese, sour cream.',
-      'NUTS & SEEDS â€” Macadamia nuts, pecans, walnuts, almonds, flaxseeds, chia seeds. Avoid cashews and most peanuts.',
-      'BEVERAGES â€” Water, sparkling water, black coffee, unsweetened tea, bone broth.',
+      'FATS & OILS — Avocados, avocado oil, olive oil, coconut oil, butter, ghee, MCT oil, heavy cream, full-fat cheese.',
+      'PROTEINS — Beef, pork, chicken, turkey, lamb, fatty fish (salmon, mackerel, sardines), eggs, shellfish.',
+      'LOW-CARB VEGETABLES — Leafy greens, broccoli, cauliflower, zucchini, asparagus, bell peppers, cucumber, celery, mushrooms.',
+      'DAIRY — Full-fat Greek yogurt (in moderation), hard cheeses, cream cheese, sour cream.',
+      'NUTS & SEEDS — Macadamia nuts, pecans, walnuts, almonds, flaxseeds, chia seeds. Avoid cashews and most peanuts.',
+      'BEVERAGES — Water, sparkling water, black coffee, unsweetened tea, bone broth.',
     ]
   },
   {
-    id: 'b4', tab: 'basics', icon: 'âŒ', color: '#FF5C7A',
+    id: 'b4', tab: 'basics', icon: '❌', color: '#FF5C7A',
     title: 'Foods to Avoid',
     summary: 'What to cut out completely to enter and stay in ketosis.',
     body: [
-      'GRAINS & STARCHES â€” Bread, pasta, rice, oats, cereal, crackers, tortillas, quinoa, corn.',
-      'SUGARY FOODS â€” Candy, chocolate (unless 85%+ dark), ice cream, cakes, pastries, cookies, honey, maple syrup, agave.',
-      'MOST FRUIT â€” Bananas, apples, oranges, grapes, mangoes, pineapple. Berries in small amounts are the exception.',
-      'LEGUMES â€” Beans, lentils, chickpeas, peas â€” surprisingly high in net carbs.',
-      'ROOT VEGETABLES â€” Potatoes, sweet potatoes, parsnips, yams, beets.',
-      'SUGARY DRINKS â€” Soda, juice, sports drinks, sweetened coffee, most alcohol (beer, sweet cocktails, dessert wines).',
-      'PROCESSED "LOW-FAT" FOODS â€” Often loaded with sugar to compensate for flavor. Always read the label.',
+      'GRAINS & STARCHES — Bread, pasta, rice, oats, cereal, crackers, tortillas, quinoa, corn.',
+      'SUGARY FOODS — Candy, chocolate (unless 85%+ dark), ice cream, cakes, pastries, cookies, honey, maple syrup, agave.',
+      'MOST FRUIT — Bananas, apples, oranges, grapes, mangoes, pineapple. Berries in small amounts are the exception.',
+      'LEGUMES — Beans, lentils, chickpeas, peas — surprisingly high in net carbs.',
+      'ROOT VEGETABLES — Potatoes, sweet potatoes, parsnips, yams, beets.',
+      'SUGARY DRINKS — Soda, juice, sports drinks, sweetened coffee, most alcohol (beer, sweet cocktails, dessert wines).',
+      'PROCESSED "LOW-FAT" FOODS — Often loaded with sugar to compensate for flavor. Always read the label.',
     ]
   },
   {
-    id: 'b5', tab: 'basics', icon: 'âš¡', color: '#FF5C7A',
+    id: 'b5', tab: 'basics', icon: '⚡', color: '#FF5C7A',
     title: 'Electrolytes',
-    summary: 'Why sodium, potassium, and magnesium are critical â€” and how to get enough.',
+    summary: 'Why sodium, potassium, and magnesium are critical — and how to get enough.',
     body: [
-      'When carb intake drops, insulin levels fall. Lower insulin signals the kidneys to excrete more sodium â€” and other electrolytes follow. This is why electrolyte management is essential on keto.',
-      'SODIUM (2,000â€“4,000mg/day) â€” Your most important electrolyte. Salt your food generously. Drink bouillon or bone broth. Do not fear salt on keto.',
-      'POTASSIUM (3,500â€“4,700mg/day) â€” Found in avocados, leafy greens, salmon, and nuts. Deficiency causes muscle cramps and heart palpitations.',
-      'MAGNESIUM (300â€“500mg/day) â€” Often depleted on keto. Supports sleep, muscle relaxation, and hundreds of enzymes. Magnesium glycinate is well-tolerated.',
+      'When carb intake drops, insulin levels fall. Lower insulin signals the kidneys to excrete more sodium — and other electrolytes follow. This is why electrolyte management is essential on keto.',
+      'SODIUM (2,000–4,000mg/day) — Your most important electrolyte. Salt your food generously. Drink bouillon or bone broth. Do not fear salt on keto.',
+      'POTASSIUM (3,500–4,700mg/day) — Found in avocados, leafy greens, salmon, and nuts. Deficiency causes muscle cramps and heart palpitations.',
+      'MAGNESIUM (300–500mg/day) — Often depleted on keto. Supports sleep, muscle relaxation, and hundreds of enzymes. Magnesium glycinate is well-tolerated.',
       'Signs of imbalance: fatigue, headaches, muscle cramps, brain fog, heart palpitations. Many people mistake keto flu for carb withdrawal when it is actually electrolyte depletion.',
     ]
   },
   {
-    id: 'b6', tab: 'basics', icon: 'ðŸ¤’', color: '#FF5C7A',
+    id: 'b6', tab: 'basics', icon: '🤒', color: '#FF5C7A',
     title: 'Keto Flu',
-    summary: 'The temporary symptoms that hit in week one â€” and how to power through them.',
+    summary: 'The temporary symptoms that hit in week one — and how to power through them.',
     body: [
-      'Keto flu refers to a cluster of symptoms many people experience during the first 1â€“2 weeks of starting keto. It happens as your body transitions from burning glucose to fat, and is almost entirely caused by electrolyte depletion.',
-      'Common symptoms: headaches, fatigue, brain fog, irritability, nausea, muscle cramps, dizziness, sugar cravings. Usually peaks days 2â€“4 and resolves by day 7â€“10.',
-      'Beat it step 1: Aggressively replenish electrolytes â€” salt food heavily, drink bouillon, supplement magnesium and potassium.',
-      'Beat it step 2: Stay hydrated â€” aim for 2â€“3+ litres of water daily. Eat enough fat â€” do not restrict calories in week one.',
-      'Beat it step 3: Avoid intense exercise for the first week. Rest â€” your body is adapting to a major metabolic shift. The discomfort is temporary and worth it.',
+      'Keto flu refers to a cluster of symptoms many people experience during the first 1–2 weeks of starting keto. It happens as your body transitions from burning glucose to fat, and is almost entirely caused by electrolyte depletion.',
+      'Common symptoms: headaches, fatigue, brain fog, irritability, nausea, muscle cramps, dizziness, sugar cravings. Usually peaks days 2–4 and resolves by day 7–10.',
+      'Beat it step 1: Aggressively replenish electrolytes — salt food heavily, drink bouillon, supplement magnesium and potassium.',
+      'Beat it step 2: Stay hydrated — aim for 2–3+ litres of water daily. Eat enough fat — do not restrict calories in week one.',
+      'Beat it step 3: Avoid intense exercise for the first week. Rest — your body is adapting to a major metabolic shift. The discomfort is temporary and worth it.',
     ]
   },
 
-  // â”€â”€ SCIENCE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── SCIENCE ─────────────────────────────────────────────
   {
-    id: 's1', tab: 'science', icon: 'ðŸ§¬', color: '#3b82f6',
+    id: 's1', tab: 'science', icon: '🧬', color: '#3b82f6',
     title: 'How Fat Burning Works',
     summary: 'The biochemistry of lipolysis and beta-oxidation explained simply.',
     body: [
       'When your body needs energy and glucose is scarce, it turns to stored fat through lipolysis. Triglycerides are broken down into glycerol and fatty acid chains by lipase, triggered by low insulin and high glucagon.',
       'Free fatty acids travel through the bloodstream to cells that need energy. Inside the mitochondria, they are broken down via beta-oxidation into two-carbon units called acetyl-CoA.',
       'In the liver, excess acetyl-CoA is converted into ketone bodies (BHB, acetoacetate) when more is produced than the Krebs cycle can handle. Ketones then travel to the brain and muscles as fuel.',
-      'Fat contains 9 calories per gram versus 4 for carbs â€” making it an incredibly energy-dense fuel. When fully adapted, you have access to tens of thousands of stored calories without ever hitting an energy wall.',
+      'Fat contains 9 calories per gram versus 4 for carbs — making it an incredibly energy-dense fuel. When fully adapted, you have access to tens of thousands of stored calories without ever hitting an energy wall.',
     ]
   },
   {
-    id: 's2', tab: 'science', icon: 'ðŸ’‰', color: '#3b82f6',
+    id: 's2', tab: 'science', icon: '💉', color: '#3b82f6',
     title: 'Insulin & Fat Storage',
     summary: 'Why insulin is the master switch between fat storage and fat burning.',
     body: [
-      'Insulin is a hormone produced by the pancreas in response to rising blood sugar. It acts as a key that lets glucose enter cells â€” but it is also the primary fat-storage signal in the body.',
+      'Insulin is a hormone produced by the pancreas in response to rising blood sugar. It acts as a key that lets glucose enter cells — but it is also the primary fat-storage signal in the body.',
       'When insulin is elevated: lipolysis is suppressed (your body cannot access stored fat), the liver prioritises glucose metabolism, and excess glucose is converted to fat.',
       'When insulin is low (as on keto): lipolysis proceeds freely, the liver produces ketones, and fat burning is unlocked.',
       'The carb-insulin cycle: Eating carbs raises blood sugar, which spikes insulin, which stops fat burning, which causes blood sugar to drop, which triggers hunger. Keto breaks this cycle by keeping insulin chronically low.',
     ]
   },
   {
-    id: 's3', tab: 'science', icon: 'ðŸ§ ', color: '#3b82f6',
+    id: 's3', tab: 'science', icon: '🧠', color: '#3b82f6',
     title: 'Ketones as Brain Fuel',
-    summary: 'Why your brain actually prefers ketones â€” and the cognitive benefits this brings.',
+    summary: 'Why your brain actually prefers ketones — and the cognitive benefits this brings.',
     body: [
-      'It was long thought that the brain could only run on glucose. We now know that is not true. The brain is very efficient at using ketones â€” particularly beta-hydroxybutyrate (BHB) â€” and may actually prefer them under certain conditions.',
+      'It was long thought that the brain could only run on glucose. We now know that is not true. The brain is very efficient at using ketones — particularly beta-hydroxybutyrate (BHB) — and may actually prefer them under certain conditions.',
       'BHB produces more ATP per unit than glucose, meaning the brain can do more with less oxygen. Ketone metabolism also produces fewer reactive oxygen species compared to glucose metabolism.',
-      'BHB enhances GABA â€” an inhibitory neurotransmitter linked to calm and focus â€” and may increase BDNF (Brain-Derived Neurotrophic Factor), which supports neuron growth and plasticity.',
-      'Many keto veterans describe a keto clarity â€” a state of sharp, calm mental focus without the afternoon energy crashes. This typically emerges around week 2â€“3 once the brain has fully adapted.',
+      'BHB enhances GABA — an inhibitory neurotransmitter linked to calm and focus — and may increase BDNF (Brain-Derived Neurotrophic Factor), which supports neuron growth and plasticity.',
+      'Many keto veterans describe a keto clarity — a state of sharp, calm mental focus without the afternoon energy crashes. This typically emerges around week 2–3 once the brain has fully adapted.',
     ]
   },
   {
-    id: 's4', tab: 'science', icon: 'ðŸ”„', color: '#3b82f6',
+    id: 's4', tab: 'science', icon: '🔄', color: '#3b82f6',
     title: 'Metabolic Adaptation',
     summary: 'What happens to your metabolism over weeks and months on keto.',
     body: [
-      'Days 1â€“3: Glycogen depletion. Liver and muscle glycogen are exhausted. You lose water weight rapidly (glycogen binds water 3:1). This is not fat loss.',
-      'Days 3â€“7: Ketosis onset. The liver ramps up ketone production. Brain and organs begin switching to ketone use. This is the keto flu window.',
-      'Weeks 2â€“4: Fat adaptation begins. Mitochondrial density increases. Muscles become better at directly burning fatty acids.',
-      'Months 2â€“6: Full fat adaptation. Exercise performance returns to or exceeds baseline. Appetite is regulated. Energy is stable throughout the day.',
+      'Days 1–3: Glycogen depletion. Liver and muscle glycogen are exhausted. You lose water weight rapidly (glycogen binds water 3:1). This is not fat loss.',
+      'Days 3–7: Ketosis onset. The liver ramps up ketone production. Brain and organs begin switching to ketone use. This is the keto flu window.',
+      'Weeks 2–4: Fat adaptation begins. Mitochondrial density increases. Muscles become better at directly burning fatty acids.',
+      'Months 2–6: Full fat adaptation. Exercise performance returns to or exceeds baseline. Appetite is regulated. Energy is stable throughout the day.',
       'Long-term adaptations include increased mitochondrial biogenesis, enhanced lipolytic enzyme activity, and greater capacity to oxidise fat at high exercise intensities. The magic happens for those who push through week three.',
     ]
   },
   {
-    id: 's5', tab: 'science', icon: 'â°', color: '#3b82f6',
+    id: 's5', tab: 'science', icon: '⏰', color: '#3b82f6',
     title: 'Intermittent Fasting Synergy',
     summary: 'Why keto and fasting are a powerful combination for fat loss and metabolic health.',
     body: [
-      'Keto and intermittent fasting (IF) both lower insulin and increase ketone production â€” which is why they work so powerfully together.',
+      'Keto and intermittent fasting (IF) both lower insulin and increase ketone production — which is why they work so powerfully together.',
       'Faster ketosis entry: Fasting depletes glycogen quickly. Combining an 18-hour fast with keto means you can enter deep ketosis within hours instead of days.',
       'Appetite suppression: Ketones blunt ghrelin (the hunger hormone). Keto-adapted people find fasting dramatically easier because they simply are not hungry.',
       'Autophagy: Extended fasting (16+ hours) triggers autophagy, a cellular self-cleaning process that removes damaged proteins and organelles.',
-      'Common IF protocols on keto: 16:8 (fast 16 hours, eat in 8-hour window), 18:6 (more aggressive, preferred by advanced practitioners), OMAD (one meal a day â€” powerful for fat loss but requires careful nutrition attention).',
+      'Common IF protocols on keto: 16:8 (fast 16 hours, eat in 8-hour window), 18:6 (more aggressive, preferred by advanced practitioners), OMAD (one meal a day — powerful for fat loss but requires careful nutrition attention).',
     ]
   },
 
-  // â”€â”€ FAQ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── FAQ ──────────────────────────────────────────────────
   {
-    id: 'f1', tab: 'faq', icon: 'â±ï¸', color: '#f59e0b',
+    id: 'f1', tab: 'faq', icon: '⏱️', color: '#f59e0b',
     title: 'How Long to Ketosis?',
     summary: 'How quickly can you get into ketosis, and what affects the timeline?',
     body: [
-      'Most people enter nutritional ketosis within 2â€“7 days of strict carbohydrate restriction. However, the exact timeline varies significantly between individuals.',
+      'Most people enter nutritional ketosis within 2–7 days of strict carbohydrate restriction. However, the exact timeline varies significantly between individuals.',
       'Factors that speed it up: starting with exercise (depletes glycogen faster), intermittent fasting alongside keto, keeping net carbs under 20g.',
       'Factors that slow it down: higher body weight (more glycogen storage capacity), hidden carbs in sauces or processed foods, stress and poor sleep (cortisol raises blood sugar).',
-      'How to measure: Blood ketone meter (0.5â€“3.0 mmol/L = nutritional ketosis) is most accurate. Urine strips are cheap but less accurate long-term. Breath meters measure acetone non-invasively.',
+      'How to measure: Blood ketone meter (0.5–3.0 mmol/L = nutritional ketosis) is most accurate. Urine strips are cheap but less accurate long-term. Breath meters measure acetone non-invasively.',
       'Best approach: keep net carbs under 20g for the first two weeks and trust the process. Add daily exercise to accelerate glycogen depletion.',
     ]
   },
   {
-    id: 'f2', tab: 'faq', icon: 'ðŸ“', color: '#f59e0b',
+    id: 'f2', tab: 'faq', icon: '🍓', color: '#f59e0b',
     title: 'Can I Eat Fruit?',
-    summary: 'The truth about fruit on keto â€” what to avoid and what is allowed.',
+    summary: 'The truth about fruit on keto — what to avoid and what is allowed.',
     body: [
       'Most fruit is off-limits on strict keto due to high fructose content. High-carb fruits to avoid: bananas (23g net carbs), grapes (26g per cup), mangoes (22g per cup), apples (21g), oranges (15g).',
-      'Fruits you can eat in moderation: raspberries (5g per 100g), blackberries (5g per 100g), strawberries (6g per 100g) â€” all excellent antioxidant sources with low carb impact.',
-      'Blueberries at 12g per 100g are moderate â€” small servings only.',
+      'Fruits you can eat in moderation: raspberries (5g per 100g), blackberries (5g per 100g), strawberries (6g per 100g) — all excellent antioxidant sources with low carb impact.',
+      'Blueberries at 12g per 100g are moderate — small servings only.',
       'Always-fine options: avocado (2g net carbs, high in healthy fat), lemon or lime juice (trace carbs, use freely for flavor), olives (near zero net carbs).',
-      'Pro tip: A small handful of berries (50â€“80g) satisfies sweet cravings without derailing ketosis. Pair with whipped cream or full-fat Greek yogurt for a satisfying keto dessert.',
+      'Pro tip: A small handful of berries (50–80g) satisfies sweet cravings without derailing ketosis. Pair with whipped cream or full-fat Greek yogurt for a satisfying keto dessert.',
     ]
   },
   {
-    id: 'f3', tab: 'faq', icon: 'ðŸ›¡ï¸', color: '#f59e0b',
+    id: 'f3', tab: 'faq', icon: '🛡️', color: '#f59e0b',
     title: 'Is Keto Safe Long Term?',
     summary: 'What the research says about years of ketogenic eating.',
     body: [
       'For most healthy adults, well-formulated keto appears safe for years. Research supports sustained improvements in blood sugar, insulin sensitivity, reduced triglycerides, increased HDL cholesterol, and reduced blood pressure.',
       'Keto has decades of clinical use in epilepsy patients with a good safety profile, and emerging evidence supports its role in type 2 diabetes remission.',
-      'LDL cholesterol rises in some people â€” often as large, fluffy particles associated with lower cardiovascular risk rather than small, dense particles. Individual response varies and is worth monitoring.',
-      'Common concerns addressed: kidney damage â€” no evidence in healthy people; heart disease â€” emerging evidence suggests keto is beneficial for most cardiovascular markers; nutrient deficiencies â€” a varied whole-food keto diet is nutritionally complete with attention to electrolytes.',
+      'LDL cholesterol rises in some people — often as large, fluffy particles associated with lower cardiovascular risk rather than small, dense particles. Individual response varies and is worth monitoring.',
+      'Common concerns addressed: kidney damage — no evidence in healthy people; heart disease — emerging evidence suggests keto is beneficial for most cardiovascular markers; nutrient deficiencies — a varied whole-food keto diet is nutritionally complete with attention to electrolytes.',
       'Consult your doctor, especially with existing conditions. For healthy people there is growing evidence supporting long-term keto as a viable and beneficial lifestyle.',
     ]
   },
   {
-    id: 'f4', tab: 'faq', icon: 'ðŸš«', color: '#f59e0b',
+    id: 'f4', tab: 'faq', icon: '🚫', color: '#f59e0b',
     title: 'What Breaks a Fast?',
-    summary: 'Which foods and drinks end your fast â€” and which are safe to consume.',
+    summary: 'Which foods and drinks end your fast — and which are safe to consume.',
     body: [
       'Definitely breaks a fast: any food with calories, carbs, or protein; fruit juice, smoothies, or milk in coffee; sugar or sweeteners (debated but many raise insulin); BCAAs and most protein supplements.',
       'Generally safe during a fast: black coffee (may actually enhance fat burning), plain herbal tea, still or sparkling water, calorie-free electrolytes (pure sodium, potassium, magnesium without sweeteners).',
-      'MCT oil in very small amounts has minimal insulin response but technically has calories â€” this is called a "dirty fast," acceptable for weight loss but not for maximum autophagy.',
-      'Keto + fasting note: Black coffee with under 1 tbsp of heavy cream has negligible effect on most people\'s fast â€” acceptable for weight loss, but not for maximum autophagy benefit.',
+      'MCT oil in very small amounts has minimal insulin response but technically has calories — this is called a "dirty fast," acceptable for weight loss but not for maximum autophagy.',
+      'Keto + fasting note: Black coffee with under 1 tbsp of heavy cream has negligible effect on most people\'s fast — acceptable for weight loss, but not for maximum autophagy benefit.',
     ]
   },
   {
-    id: 'f5', tab: 'faq', icon: 'ðŸƒ', color: '#f59e0b',
+    id: 'f5', tab: 'faq', icon: '🏃', color: '#f59e0b',
     title: 'Keto and Exercise',
     summary: 'How to train effectively on keto and what to expect during the adaptation period.',
     body: [
-      'The adaptation window (weeks 1â€“4): Expect reduced performance, especially in high-intensity exercise. Your body is still learning to mobilise fat efficiently. Be patient â€” do not judge keto by week-one gym performance.',
-      'After adaptation (month 2+): Many keto athletes return to or exceed pre-keto performance. Endurance sports especially benefit â€” you have access to far more stored fat energy than glycogen can ever provide.',
+      'The adaptation window (weeks 1–4): Expect reduced performance, especially in high-intensity exercise. Your body is still learning to mobilise fat efficiently. Be patient — do not judge keto by week-one gym performance.',
+      'After adaptation (month 2+): Many keto athletes return to or exceed pre-keto performance. Endurance sports especially benefit — you have access to far more stored fat energy than glycogen can ever provide.',
       'Low intensity exercise (walking, yoga, light cycling): Works great from day one. Fat is the primary fuel for these activities anyway.',
       'Moderate intensity (strength training, recreational sports): Works well after adaptation. Performance returns to baseline.',
-      'High intensity (sprinting, CrossFit, HIIT): These rely on glycogen. A targeted keto diet â€” a small carb serving pre-workout only â€” works well for athletes who need explosive power.',
+      'High intensity (sprinting, CrossFit, HIIT): These rely on glycogen. A targeted keto diet — a small carb serving pre-workout only — works well for athletes who need explosive power.',
       'Pro tips: Train fasted in the morning to maximise fat oxidation. Salt your pre-workout water to prevent cramps. Do not chase performance metrics in the first four weeks.',
     ]
   },
   {
-    id: 'f6', tab: 'faq', icon: 'ðŸ˜®', color: '#f59e0b',
+    id: 'f6', tab: 'faq', icon: '😮', color: '#f59e0b',
     title: 'Keto Breath',
     summary: 'Why keto causes a distinctive breath odour and what you can do about it.',
     body: [
-      'Keto breath is caused by acetone â€” one of the three ketone bodies â€” which is expelled through the lungs as a metabolic by-product. It is distinct from regular bad breath (halitosis).',
+      'Keto breath is caused by acetone — one of the three ketone bodies — which is expelled through the lungs as a metabolic by-product. It is distinct from regular bad breath (halitosis).',
       'What it smells like: Most describe it as fruity, slightly sweet, or similar to nail polish remover or overripe fruit.',
-      'Does it go away? Yes, for most people. As your body becomes more efficient at using ketones, less acetone is produced and exhaled. Keto breath typically fades by weeks 4â€“8.',
+      'Does it go away? Yes, for most people. As your body becomes more efficient at using ketones, less acetone is produced and exhaled. Keto breath typically fades by weeks 4–8.',
       'What to do in the meantime: stay well hydrated (helps clear acetone via urine), maintain good oral hygiene, use sugar-free gum or mints, or slightly increase protein intake to reduce acetone production.',
       'Know this: keto breath is a sign that ketosis is actively working. It is your body exhaling evidence of fat metabolism in progress.',
     ]
   },
 
-  // â”€â”€ TIPS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── TIPS ────────────────────────────────────────────────
   {
-    id: 't1', tab: 'tips', icon: 'ðŸ¥¡', color: '#8b5cf6',
+    id: 't1', tab: 'tips', icon: '🥡', color: '#8b5cf6',
     title: 'Meal Prep Tips',
     summary: 'How to set yourself up for a successful week in just a few hours on Sunday.',
     body: [
       'Meal prep is the single most effective strategy for staying consistent on keto. Without it, you are one busy day away from a bad food decision.',
-      'Sunday prep session (2â€“3 hours): Bake 8â€“10 chicken thighs (400F, 35 min, olive oil + salt + spices); hard boil a dozen eggs; cook a large batch of ground beef with onion and garlic.',
+      'Sunday prep session (2–3 hours): Bake 8–10 chicken thighs (400F, 35 min, olive oil + salt + spices); hard boil a dozen eggs; cook a large batch of ground beef with onion and garlic.',
       'Roast two sheet pans of vegetables (broccoli, zucchini, bell peppers, asparagus) at 425F for 20 minutes. Make a large batch of cauliflower rice.',
-      'Storage tips: Use glass containers so you can see what you have and microwave directly. Label with the prep date. Always stock 2â€“3 emergency keto snacks: cheese, nuts, deli meat, hard-boiled eggs.',
-      'Weekly template: Monâ€“Wed = protein A + roasted veg; Thuâ€“Fri = protein B + cauliflower rice; Saturday = wild card; Sunday = prep again.',
+      'Storage tips: Use glass containers so you can see what you have and microwave directly. Label with the prep date. Always stock 2–3 emergency keto snacks: cheese, nuts, deli meat, hard-boiled eggs.',
+      'Weekly template: Mon–Wed = protein A + roasted veg; Thu–Fri = protein B + cauliflower rice; Saturday = wild card; Sunday = prep again.',
     ]
   },
   {
-    id: 't2', tab: 'tips', icon: 'ðŸ”', color: '#8b5cf6',
+    id: 't2', tab: 'tips', icon: '🔍', color: '#8b5cf6',
     title: 'Reading Food Labels',
     summary: 'How to spot hidden carbs, sugars, and keto-unfriendly ingredients on any package.',
     body: [
       '"Low carb," "sugar-free," and "keto-friendly" on the front of a package mean nothing. Always flip it and read the nutrition facts panel.',
       'Net carbs formula: Total Carbs minus Dietary Fiber minus (Sugar Alcohols x 0.5). Erythritol is fully subtracted; other sugar alcohols get a 50% discount.',
-      'What to check first: serving size (many are unrealistically small), total carbohydrates, dietary fiber, sugar (target 0â€“2g), added sugars (target zero).',
-      'Hidden carb culprits: maltodextrin (higher glycemic index than sugar â€” common in protein powders and sauces), dextrose, modified food starch, fruit juice concentrate.',
-      'Sugar alcohol reality check: erythritol is safe with no blood sugar impact; xylitol has low impact; maltitol has significant glycemic impact and is common in "sugar-free" chocolates â€” do not count it as zero.',
+      'What to check first: serving size (many are unrealistically small), total carbohydrates, dietary fiber, sugar (target 0–2g), added sugars (target zero).',
+      'Hidden carb culprits: maltodextrin (higher glycemic index than sugar — common in protein powders and sauces), dextrose, modified food starch, fruit juice concentrate.',
+      'Sugar alcohol reality check: erythritol is safe with no blood sugar impact; xylitol has low impact; maltitol has significant glycemic impact and is common in "sugar-free" chocolates — do not count it as zero.',
     ]
   },
   {
-    id: 't3', tab: 'tips', icon: 'ðŸ½ï¸', color: '#8b5cf6',
+    id: 't3', tab: 'tips', icon: '🍽️', color: '#8b5cf6',
     title: 'Eating Out on Keto',
     summary: 'How to navigate restaurants, fast food, and social dining without derailing your progress.',
     body: [
       'The universal keto order: protein + salad or non-starchy vegetable + healthy fat. Any restaurant works with this formula.',
       'Burger joints: order protein style (lettuce wrap instead of bun) or as a bowl. Skip fries, add avocado or a side salad.',
       'Steakhouses: your easiest option. Steak or salmon with a side salad (olive oil + vinegar dressing) and buttered vegetables.',
-      'Mexican: fajitas without tortillas, rice, or beans â€” just the meat and peppers with guacamole, cheese, and sour cream.',
+      'Mexican: fajitas without tortillas, rice, or beans — just the meat and peppers with guacamole, cheese, and sour cream.',
       'Fast food: bunless burgers, grilled chicken, side salads, egg-based breakfast items. Avoid anything breaded or with sweet sauces.',
       'Questions to ask your server: "What is in this sauce?", "Can I substitute the starchy side for extra vegetables?", "Is the protein grilled or breaded?"',
     ]
   },
   {
-    id: 't4', tab: 'tips', icon: 'ðŸ‘¥', color: '#8b5cf6',
+    id: 't4', tab: 'tips', icon: '👥', color: '#8b5cf6',
     title: 'Social Situations',
     summary: 'How to handle parties, family dinners, and peer pressure while staying on track.',
     body: [
-      'At parties: Eat before you go â€” arriving hungry sets you up to fail. Scan the food spread first and fill your plate with protein, cheese, vegetables, and dips.',
-      'Drink sparkling water with lime and hold it â€” people assume it is a cocktail. You do not owe anyone an explanation.',
+      'At parties: Eat before you go — arriving hungry sets you up to fail. Scan the food spread first and fill your plate with protein, cheese, vegetables, and dips.',
+      'Drink sparkling water with lime and hold it — people assume it is a cocktail. You do not owe anyone an explanation.',
       'At family dinners: Bring a keto dish to share. Load up on meat and vegetables; skip bread, pasta, and dessert. Do not announce you are keto unless asked.',
-      'Handling comments â€” "Just have a little": say "I am good, thanks" and repeat as needed. "Is that even healthy?": say "It is working great for me, actually."',
-      'If you choose to drink at social events: dry wines (under 2g carbs per 5oz) are the best option; spirits (vodka, whiskey, tequila, gin) are carb-free â€” use soda water as a mixer. Beer is almost always off-limits.',
+      'Handling comments — "Just have a little": say "I am good, thanks" and repeat as needed. "Is that even healthy?": say "It is working great for me, actually."',
+      'If you choose to drink at social events: dry wines (under 2g carbs per 5oz) are the best option; spirits (vodka, whiskey, tequila, gin) are carb-free — use soda water as a mixer. Beer is almost always off-limits.',
     ]
   },
   {
-    id: 't5', tab: 'tips', icon: 'ðŸ“‰', color: '#8b5cf6',
+    id: 't5', tab: 'tips', icon: '📉', color: '#8b5cf6',
     title: 'Breaking a Stall',
     summary: 'Why fat loss stalls happen and exactly what to do when the scale stops moving.',
     body: [
-      'A stall is when the scale does not move for 2â€“4+ weeks despite following keto. It is completely normal. Common causes: caloric adaptation, water retention masking fat loss, hidden carbs, or too much dietary fat preventing stored fat mobilisation.',
+      'A stall is when the scale does not move for 2–4+ weeks despite following keto. It is completely normal. Common causes: caloric adaptation, water retention masking fat loss, hidden carbs, or too much dietary fat preventing stored fat mobilisation.',
       'Track everything for one week: hidden carbs are the number-one cause. You may discover you are eating 60g net carbs thinking it is 20g.',
       'Try intermittent fasting: add an 18:6 or 20:4 window to create additional caloric deficit without conscious restriction.',
       'Counterintuitively, reduce dietary fat: eating less added fat (butter, oil, cream) forces your body to burn more stored body fat for fuel.',
-      'Other strategies: increase protein (boosts metabolism through the thermic effect of food), add strength training, or take a 1â€“2 week diet break at maintenance calories to reset leptin and thyroid hormones.',
+      'Other strategies: increase protein (boosts metabolism through the thermic effect of food), add strength training, or take a 1–2 week diet break at maintenance calories to reset leptin and thyroid hormones.',
     ]
   },
   {
-    id: 't6', tab: 'tips', icon: 'ðŸ’ª', color: '#8b5cf6',
+    id: 't6', tab: 'tips', icon: '💪', color: '#8b5cf6',
     title: 'Staying Motivated',
     summary: 'Evidence-based strategies to stay consistent when willpower and motivation fade.',
     body: [
       'Motivation is unreliable. Systems, habits, and identity are what actually carry you through a 30, 180, or 365-day journey.',
       'Reframe your identity: Do not say "I am trying keto." Say "I am someone who eats keto." Identity-based goals are stickier than outcome-based goals. Act as the person you want to become.',
       'Track what matters beyond the scale: energy levels, mental clarity, sleep quality, mood stability, clothes fitting differently, blood work improvements. The scale is a lagging, noisy indicator.',
-      'Build a streak: Each day you stay keto, your streak grows. Missing one day breaks momentum. Use the app streak tracker as a game â€” it works.',
+      'Build a streak: Each day you stay keto, your streak grows. Missing one day breaks momentum. Use the app streak tracker as a game — it works.',
       'Find your why and revisit it daily: Write down why you started. Read it every morning. When willpower fades, your why carries you.',
-      'Handle slips without shame: If you eat off-plan, the meal is over. One meal does not undo weeks of progress. Get back to it at your next meal â€” not tomorrow, not Monday. Now.',
+      'Handle slips without shame: If you eat off-plan, the meal is over. One meal does not undo weeks of progress. Get back to it at your next meal — not tomorrow, not Monday. Now.',
     ]
   },
 ];
@@ -370,7 +370,7 @@ const articles = [
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* â”€â”€ Page Hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Page Hero ─────────────────────────────────────── */
     .learn-hero {
       background: linear-gradient(135deg, rgba(255,92,122,.08) 0%, rgba(99,102,241,.04) 100%);
       border-bottom: 1px solid var(--border);
@@ -407,7 +407,7 @@ const articles = [
     }
     .tour-launch-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(255,92,122,.45); }
 
-    /* â”€â”€ App Guide Tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── App Guide Tab ──────────────────────────────────── */
     .guide-section { margin-bottom: 2rem; }
     .guide-section-title {
       font-weight: 800; font-size: 1.1rem;
@@ -516,7 +516,7 @@ const articles = [
       pointer-events: none;
     }
 
-    /* â”€â”€ Sticky Tab Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Sticky Tab Bar ────────────────────────────────── */
     .tab-bar-wrap {
       position: sticky;
       top: 64px;
@@ -559,7 +559,7 @@ const articles = [
       border-color: color-mix(in srgb, var(--tc, var(--green)) 32%, transparent);
     }
 
-    /* â”€â”€ Content Area â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Content Area ──────────────────────────────────── */
     .learn-content {
       max-width: 960px;
       margin: 0 auto;
@@ -571,7 +571,7 @@ const articles = [
       animation: fadeUp .3s ease both;
     }
 
-    /* â”€â”€ Article Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Article Grid ───────────────────────────────────── */
     .article-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -579,7 +579,7 @@ const articles = [
     }
     @media (max-width: 660px) { .article-grid { grid-template-columns: 1fr; } }
 
-    /* â”€â”€ Article Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Article Card ───────────────────────────────────── */
     .article-card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -606,7 +606,7 @@ const articles = [
     .article-grid .article-card:nth-child(5) { animation-delay: .25s; }
     .article-grid .article-card:nth-child(6) { animation-delay: .30s; }
 
-    /* â”€â”€ Card Top â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Card Top ───────────────────────────────────────── */
     .ac-top {
       display: flex;
       align-items: flex-start;
@@ -646,7 +646,7 @@ const articles = [
       color: var(--ac, var(--green));
     }
 
-    /* â”€â”€ Accordion Body â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Accordion Body ─────────────────────────────────── */
     .ac-body {
       max-height: 0;
       overflow: hidden;
@@ -665,7 +665,7 @@ const articles = [
     }
     .ac-content p:last-child { margin-bottom: 0; }
 
-    /* â”€â”€ Mobile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Mobile ─────────────────────────────────────────── */
     @media (max-width: 900px) {
       .learn-hero { padding: 1.5rem 1rem 1.25rem; }
       .tab-bar-wrap { padding: 0 1rem; }
@@ -683,14 +683,14 @@ const articles = [
   <div class="learn-hero-inner">
     <div class="lh-row">
       <div>
-        <div class="lh-eyebrow">ðŸ—º Help &amp; Learn</div>
+        <div class="lh-eyebrow">🗺 Help &amp; Learn</div>
         <h1 class="learn-title">Your Keto Journey<br/><em>Guide &amp; Hub</em></h1>
         <p class="learn-sub">
-          Master the app, understand the science, and get answers â€” all in one place.
+          Master the app, understand the science, and get answers — all in one place.
         </p>
       </div>
       <a href="/dashboard?tour=1" class="tour-launch-btn">
-        â–¶ Take the Tour
+        ▶ Take the Tour
       </a>
     </div>
   </div>
@@ -715,13 +715,13 @@ const articles = [
 <!-- Tab Panels -->
 <div class="learn-content">
 
-  <!-- â•â• APP GUIDE PANEL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <!-- ══ APP GUIDE PANEL ═════════════════════════════════════ -->
   <div class="tab-panel active" data-panel="guide">
 
     <!-- Quick Start Checklist -->
     <div class="guide-section">
       <h2 class="guide-section-title">
-        ðŸŽ¯
+        🎯
         Quick Start Checklist
       </h2>
 
@@ -742,7 +742,7 @@ const articles = [
             style={`animation-delay:${idx * .06}s`}
           >
             <div class="qs-check">
-              {item.done && <span>âœ“</span>}
+              {item.done && <span>✓</span>}
             </div>
             <div class="qs-body">
               <div class="qs-label">{item.label}</div>
@@ -750,7 +750,7 @@ const articles = [
             </div>
             {!item.done && (
               <a href={item.href} class="qs-cta">
-                Go â€º
+                Go ›
               </a>
             )}
           </div>
@@ -761,7 +761,7 @@ const articles = [
     <!-- Feature Guide Cards -->
     <div class="guide-section">
       <h2 class="guide-section-title">
-        â“
+        ❓
         Feature Guide
       </h2>
       <div class="feat-grid">
@@ -769,33 +769,33 @@ const articles = [
         <!-- Daily Check-In -->
         <div class="feat-card" style="--fc:#FF5C7A;--fi-bg:rgba(255,92,122,.1)" onclick="toggleFeat('fc-checkin')">
           <div class="fc-top">
-            <div class="fc-icon">ðŸ“‹</div>
+            <div class="fc-icon">📋</div>
             <div class="fc-info">
               <div class="fc-title">Daily Check-In</div>
               <div class="fc-desc">Log your vitals, mood, energy, and water intake every morning.</div>
             </div>
-            <span class="fc-caret">â€º</span>
+            <span class="fc-caret">›</span>
           </div>
           <div class="fc-body" id="fc-checkin">
             <div class="fc-steps">
               <div class="fc-step"><span class="fc-step-num">1</span>Open Check-In every morning before breakfast</div>
-              <div class="fc-step"><span class="fc-step-num">2</span>Rate energy (1â€“5), mood, hunger, brain fog, and sleep</div>
+              <div class="fc-step"><span class="fc-step-num">2</span>Rate energy (1–5), mood, hunger, brain fog, and sleep</div>
               <div class="fc-step"><span class="fc-step-num">3</span>Log water glasses and whether you followed your meal plan</div>
               <div class="fc-step"><span class="fc-step-num">4</span>Submit to earn 30 XP and keep your streak alive</div>
             </div>
-            <a href="/dashboard/checkin" class="fc-goto">Open Check-In â€º</a>
+            <a href="/dashboard/checkin" class="fc-goto">Open Check-In ›</a>
           </div>
         </div>
 
         <!-- Meal Planning -->
         <div class="feat-card" style="--fc:#f59e0b;--fi-bg:rgba(245,158,11,.1)" onclick="toggleFeat('fc-meals')">
           <div class="fc-top">
-            <div class="fc-icon">ðŸ½ï¸</div>
+            <div class="fc-icon">🍽️</div>
             <div class="fc-info">
               <div class="fc-title">Meal Planning</div>
               <div class="fc-desc">Personalized keto meals and a full recipe library at your fingertips.</div>
             </div>
-            <span class="fc-caret">â€º</span>
+            <span class="fc-caret">›</span>
           </div>
           <div class="fc-body" id="fc-meals">
             <div class="fc-steps">
@@ -804,61 +804,61 @@ const articles = [
               <div class="fc-step"><span class="fc-step-num">3</span>Use the Swap button if a meal doesn't suit you today</div>
               <div class="fc-step"><span class="fc-step-num">4</span>Browse the full recipe library for {planType === 'basic_30' ? '30+' : planType === 'pro_6' ? '87+' : '150+'} keto recipes</div>
             </div>
-            <a href="/dashboard/recipes" class="fc-goto">Browse Recipes â€º</a>
+            <a href="/dashboard/recipes" class="fc-goto">Browse Recipes ›</a>
           </div>
         </div>
 
         <!-- Progress Tracking -->
         <div class="feat-card" style="--fc:#3b82f6;--fi-bg:rgba(59,130,246,.1)" onclick="toggleFeat('fc-progress')">
           <div class="fc-top">
-            <div class="fc-icon">ðŸ“Š</div>
+            <div class="fc-icon">📊</div>
             <div class="fc-info">
               <div class="fc-title">Progress Tracking</div>
               <div class="fc-desc">Charts, weight log, body measurements, and achievement tracking.</div>
             </div>
-            <span class="fc-caret">â€º</span>
+            <span class="fc-caret">›</span>
           </div>
           <div class="fc-body" id="fc-progress">
             <div class="fc-steps">
-              <div class="fc-step"><span class="fc-step-num">1</span>Log your weight regularly â€” aim for every 3â€“4 days</div>
+              <div class="fc-step"><span class="fc-step-num">1</span>Log your weight regularly — aim for every 3–4 days</div>
               <div class="fc-step"><span class="fc-step-num">2</span>Add body measurements (waist, hips, arms) monthly</div>
               <div class="fc-step"><span class="fc-step-num">3</span>Review energy and compliance trends in the charts</div>
               <div class="fc-step"><span class="fc-step-num">4</span>Check achievements to see badges you've unlocked</div>
             </div>
-            <a href="/dashboard/progress" class="fc-goto">View Progress â€º</a>
+            <a href="/dashboard/progress" class="fc-goto">View Progress ›</a>
           </div>
         </div>
 
         <!-- Fasting Timer -->
         <div class="feat-card" style="--fc:#8b5cf6;--fi-bg:rgba(139,92,246,.1)" onclick="toggleFeat('fc-fasting')">
           <div class="fc-top">
-            <div class="fc-icon">â±</div>
+            <div class="fc-icon">⏱</div>
             <div class="fc-info">
               <div class="fc-title">Fasting Timer</div>
               <div class="fc-desc">Track intermittent fasting windows with a live countdown timer.</div>
             </div>
-            <span class="fc-caret">â€º</span>
+            <span class="fc-caret">›</span>
           </div>
           <div class="fc-body" id="fc-fasting">
             <div class="fc-steps">
               <div class="fc-step"><span class="fc-step-num">1</span>Choose your protocol: 12:12, 16:8, 18:6, or 20:4</div>
               <div class="fc-step"><span class="fc-step-num">2</span>Tap "Start Fast" when your eating window closes</div>
-              <div class="fc-step"><span class="fc-step-num">3</span>The timer counts down â€” the app tracks your progress</div>
+              <div class="fc-step"><span class="fc-step-num">3</span>The timer counts down — the app tracks your progress</div>
               <div class="fc-step"><span class="fc-step-num">4</span>End the fast when your window opens to earn XP</div>
             </div>
-            <a href="/dashboard/fasting" class="fc-goto">Open Fasting â€º</a>
+            <a href="/dashboard/fasting" class="fc-goto">Open Fasting ›</a>
           </div>
         </div>
 
         <!-- Habits & Streaks -->
         <div class="feat-card" style="--fc:#FF5C7A;--fi-bg:rgba(255,92,122,.1)" onclick="toggleFeat('fc-habits')">
           <div class="fc-top">
-            <div class="fc-icon">ðŸ”„</div>
+            <div class="fc-icon">🔄</div>
             <div class="fc-info">
               <div class="fc-title">Habits &amp; Streaks</div>
               <div class="fc-desc">Build powerful keto habits with daily tracking and streak rewards.</div>
             </div>
-            <span class="fc-caret">â€º</span>
+            <span class="fc-caret">›</span>
           </div>
           <div class="fc-body" id="fc-habits">
             <div class="fc-steps">
@@ -867,66 +867,66 @@ const articles = [
               <div class="fc-step"><span class="fc-step-num">3</span>Your overall streak is protected by daily check-ins</div>
               <div class="fc-step"><span class="fc-step-num">4</span>Milestone streaks (7, 14, 30 days) unlock achievements</div>
             </div>
-            <a href="/dashboard/habits" class="fc-goto">Open Habits â€º</a>
+            <a href="/dashboard/habits" class="fc-goto">Open Habits ›</a>
           </div>
         </div>
 
         <!-- XP & Leveling -->
         <div class="feat-card" style="--fc:#f59e0b;--fi-bg:rgba(245,158,11,.1)" onclick="toggleFeat('fc-xp')">
           <div class="fc-top">
-            <div class="fc-icon">ðŸ†</div>
+            <div class="fc-icon">🏆</div>
             <div class="fc-info">
               <div class="fc-title">XP &amp; Leveling System</div>
-              <div class="fc-desc">Earn XP for every healthy action â€” level up and unlock achievements.</div>
+              <div class="fc-desc">Earn XP for every healthy action — level up and unlock achievements.</div>
             </div>
-            <span class="fc-caret">â€º</span>
+            <span class="fc-caret">›</span>
           </div>
           <div class="fc-body" id="fc-xp">
             <div class="fc-steps">
-              <div class="fc-step"><span class="fc-step-num">1</span>Check-in = 30 XP Â· Task = 10â€“25 XP Â· Fasting = 50 XP</div>
+              <div class="fc-step"><span class="fc-step-num">1</span>Check-in = 30 XP · Task = 10–25 XP · Fasting = 50 XP</div>
               <div class="fc-step"><span class="fc-step-num">2</span>Every 500 XP = 1 level up (shown on your dashboard)</div>
-              <div class="fc-step"><span class="fc-step-num">3</span>Streak bonuses multiply XP â€” never break the chain</div>
+              <div class="fc-step"><span class="fc-step-num">3</span>Streak bonuses multiply XP — never break the chain</div>
               <div class="fc-step"><span class="fc-step-num">4</span>View all earned achievements on your Profile page</div>
             </div>
-            <a href="/dashboard/profile" class="fc-goto">View Profile â€º</a>
+            <a href="/dashboard/profile" class="fc-goto">View Profile ›</a>
           </div>
         </div>
 
         <!-- Shopping List -->
         <div class="feat-card" style="--fc:#3b82f6;--fi-bg:rgba(59,130,246,.1)" onclick="toggleFeat('fc-shopping')">
           <div class="fc-top">
-            <div class="fc-icon">ðŸ›’</div>
+            <div class="fc-icon">🛒</div>
             <div class="fc-info">
               <div class="fc-title">Shopping List</div>
               <div class="fc-desc">Week-by-week keto shopping lists tailored to your meal plan.</div>
             </div>
-            <span class="fc-caret">â€º</span>
+            <span class="fc-caret">›</span>
           </div>
           <div class="fc-body" id="fc-shopping">
             <div class="fc-steps">
               <div class="fc-step"><span class="fc-step-num">1</span>Open Shopping to see this week's ingredient list</div>
               <div class="fc-step"><span class="fc-step-num">2</span>Switch between weeks using the week tabs at the top</div>
-              <div class="fc-step"><span class="fc-step-num">3</span>Check off items as you shop â€” the list updates instantly</div>
+              <div class="fc-step"><span class="fc-step-num">3</span>Check off items as you shop — the list updates instantly</div>
               <div class="fc-step"><span class="fc-step-num">4</span>Items are grouped by category for easy navigation</div>
             </div>
-            <a href="/dashboard/shopping" class="fc-goto">View Shopping List â€º</a>
+            <a href="/dashboard/shopping" class="fc-goto">View Shopping List ›</a>
           </div>
         </div>
 
         <!-- AI Coach -->
         <div class={`feat-card${planType !== 'elite_12' ? ' fc-locked' : ''}`} style="--fc:#f59e0b;--fi-bg:rgba(245,158,11,.1)" onclick={planType === 'elite_12' ? "toggleFeat('fc-ai')" : ''}>
           <div class="fc-top">
-            <div class="fc-icon">âœ¨</div>
+            <div class="fc-icon">✨</div>
             <div class="fc-info">
               <div class="fc-title">
                 AI Coach
                 {planType === 'elite_12'
                   ? <span class="fc-badge elite">ELITE</span>
-                  : <span class="fc-badge pro">ðŸ”’ Upgrade</span>}
+                  : <span class="fc-badge pro">🔒 Upgrade</span>}
               </div>
-              <div class="fc-desc">Your personal keto AI coach â€” ask anything, get personalized advice.</div>
+              <div class="fc-desc">Your personal keto AI coach — ask anything, get personalized advice.</div>
             </div>
-            <span class="fc-caret">â€º</span>
+            <span class="fc-caret">›</span>
           </div>
           {planType === 'elite_12' && (
             <div class="fc-body" id="fc-ai">
@@ -936,7 +936,7 @@ const articles = [
                 <div class="fc-step"><span class="fc-step-num">3</span>Use quick suggestions for common topics</div>
                 <div class="fc-step"><span class="fc-step-num">4</span>Chat history is saved so you can review past advice</div>
               </div>
-              <a href="/dashboard/ai-coach" class="fc-goto">Open AI Coach â€º</a>
+              <a href="/dashboard/ai-coach" class="fc-goto">Open AI Coach ›</a>
             </div>
           )}
           {planType !== 'elite_12' && (
@@ -950,9 +950,9 @@ const articles = [
     </div>
 
   </div>
-  <!-- â•â• END APP GUIDE PANEL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <!-- ══ END APP GUIDE PANEL ══════════════════════════════════ -->
 
-  <!-- â•â• KETO SCIENCE PANELS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <!-- ══ KETO SCIENCE PANELS ══════════════════════════════════ -->
   {tabs.filter(tab => tab.key !== 'guide').map((tab) => (
     <div class="tab-panel" data-panel={tab.key}>
       <div class="article-grid">
@@ -986,7 +986,7 @@ const articles = [
 </div>
 
 <script is:inline>
-  /* â”€â”€ Tab switching â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Tab switching ───────────────────────────────────── */
   window.showLearnTab = function(tabKey) {
     var panels = document.querySelectorAll('.tab-panel');
     var buttons = document.querySelectorAll('.tab-btn');
@@ -1002,7 +1002,7 @@ const articles = [
     if (btn)   btn.classList.add('active');
   };
 
-  /* â”€â”€ Article accordion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Article accordion ───────────────────────────────── */
   window.toggleLearn = function(id) {
     var card = document.querySelector('[data-id="' + id + '"]');
     if (!card) return;
@@ -1022,7 +1022,7 @@ const articles = [
     }
   };
 
-  /* â”€â”€ Feature card accordion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Feature card accordion ──────────────────────────── */
   function toggleFeat(bodyId) {
     var body = document.getElementById(bodyId);
     if (!body) return;
@@ -1039,7 +1039,7 @@ const articles = [
     card.classList.toggle('open');
   }
 
-  /* â”€â”€ Client-side quickstart checklist updates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Client-side quickstart checklist updates ────────── */
   (function() {
     // qs6: recipe viewed
     var qs6Done = !!localStorage.getItem('keto-recipe-viewed');

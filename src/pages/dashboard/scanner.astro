@@ -1,5 +1,5 @@
 ﻿---
-// src/pages/dashboard/scanner.astro â€” Keto Product Scanner
+// src/pages/dashboard/scanner.astro — Keto Product Scanner
 import { requireAuth } from '../../lib/auth';
 import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
 import Sidebar from '../../components/Sidebar.astro';
@@ -23,7 +23,7 @@ const currentDay = journey?.current_day || 1;
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{t('scanner.title')} Â· Keto Journey</title>
+  <title>{t('scanner.title')} · Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
   <style>
@@ -46,13 +46,13 @@ const currentDay = journey?.current_day || 1;
     .delay-2 { animation-delay:.16s; }
     .delay-3 { animation-delay:.24s; }
 
-    /* â”€â”€ Layout â”€â”€ */
+    /* ── Layout ── */
     .page { max-width:700px; margin:0 auto; padding:2rem 1.25rem 5rem; }
     .page-title { font-size:2rem; font-weight:800; margin-bottom:.35rem; }
     .page-title em { font-style:normal; color:var(--rv-accent); }
     .page-sub { color:var(--soft); font-size:.9rem; margin-bottom:2rem; }
 
-    /* â”€â”€ Scanner card â”€â”€ */
+    /* ── Scanner card ── */
     .scan-card {
       background:var(--card); border:1px solid var(--border);
       border-radius:var(--radius); padding:1.75rem; margin-bottom:1.25rem;
@@ -63,7 +63,7 @@ const currentDay = journey?.current_day || 1;
     }
     .scan-card-title svg { color:var(--green); flex-shrink:0; }
 
-    /* â”€â”€ Camera view â”€â”€ */
+    /* ── Camera view ── */
     #cameraWrap {
       position:relative; background:#000; border-radius:14px;
       overflow:hidden; aspect-ratio:4/3; margin-bottom:1rem;
@@ -87,7 +87,7 @@ const currentDay = journey?.current_day || 1;
     @keyframes laser { 0%,100%{top:20%} 50%{top:80%} }
     .cam-hint { color:#fff; font-size:.78rem; opacity:.8; text-align:center; }
 
-    /* â”€â”€ Scan buttons â”€â”€ */
+    /* ── Scan buttons ── */
     .scan-actions { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; }
     .btn-camera {
       display:flex; align-items:center; justify-content:center; gap:.5rem;
@@ -99,7 +99,7 @@ const currentDay = journey?.current_day || 1;
     .btn-camera.secondary { background:var(--card2); color:var(--text); border:1px solid var(--border2); }
     .btn-camera.secondary:hover { border-color:var(--green); transform:translateY(-1px); }
 
-    /* â”€â”€ Manual entry â”€â”€ */
+    /* ── Manual entry ── */
     .manual-row { display:flex; gap:.5rem; margin-top:1rem; }
     .manual-input {
       flex:1; background:var(--card2); border:1px solid var(--border2);
@@ -115,7 +115,7 @@ const currentDay = journey?.current_day || 1;
     }
     .btn-lookup:hover { background:var(--green2); }
 
-    /* â”€â”€ Result card â”€â”€ */
+    /* ── Result card ── */
     #resultCard {
       display:none; background:var(--card); border:1px solid var(--border2);
       border-radius:var(--radius); overflow:hidden; margin-bottom:1.25rem;
@@ -135,7 +135,7 @@ const currentDay = journey?.current_day || 1;
     .result-name  { font-weight:700; font-size:1.15rem; line-height:1.3; }
     .result-brand { color:var(--soft); font-size:.82rem; margin-top:.2rem; }
 
-    /* â”€â”€ Macro grid â”€â”€ */
+    /* ── Macro grid ── */
     .macro-grid {
       display:grid; grid-template-columns:repeat(5,1fr);
       gap:0; border-top:1px solid var(--border);
@@ -153,14 +153,14 @@ const currentDay = journey?.current_day || 1;
     .macro-val.carbs    { color:#fb923c; }
     .macro-val.net-carbs{ color:var(--green2); }
 
-    /* â”€â”€ Serving note â”€â”€ */
+    /* ── Serving note ── */
     .result-serving {
       padding:.65rem 1.5rem;
       font-size:.75rem; color:var(--soft);
       background:var(--card2); border-top:1px solid var(--border);
     }
 
-    /* â”€â”€ Keto guide â”€â”€ */
+    /* ── Keto guide ── */
     .guide-card {
       background:var(--card2); border:1px solid var(--border);
       border-radius:14px; padding:1.25rem 1.5rem;
@@ -177,7 +177,7 @@ const currentDay = journey?.current_day || 1;
     .guide-text { font-size:.82rem; color:var(--text); }
     .guide-text strong { color:var(--green2); }
 
-    /* â”€â”€ History â”€â”€ */
+    /* ── History ── */
     .history-list { margin-top:1rem; display:flex; flex-direction:column; gap:.5rem; }
     .history-item {
       display:flex; align-items:center; gap:.75rem;
@@ -190,7 +190,7 @@ const currentDay = journey?.current_day || 1;
     .history-name { font-size:.85rem; font-weight:600; flex:1; }
     .history-carbs { font-size:.78rem; color:var(--soft); }
 
-    /* â”€â”€ Toast â”€â”€ */
+    /* ── Toast ── */
     #scanToast {
       position:fixed; bottom:5.5rem; left:50%; transform:translateX(-50%) translateY(20px);
       background:#1a2e20; color:var(--green2); padding:.6rem 1.2rem;
@@ -217,7 +217,7 @@ const currentDay = journey?.current_day || 1;
     <h1 class="page-title fade-up">Keto <em>Scanner</em></h1>
     <p class="page-sub fade-up delay-1">Scan any product barcode to instantly check if it's keto-friendly.</p>
 
-    <!-- â”€â”€ SCANNER CARD â”€â”€ -->
+    <!-- ── SCANNER CARD ── -->
     <div class="scan-card fade-up delay-1">
       <div class="scan-card-title">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="14" y1="17" x2="21" y2="17"/><line x1="14" y1="20" x2="21" y2="20"/></svg>
@@ -262,7 +262,7 @@ const currentDay = journey?.current_day || 1;
       </div>
     </div>
 
-    <!-- â”€â”€ RESULT CARD â”€â”€ -->
+    <!-- ── RESULT CARD ── -->
     <div id="resultCard">
       <div class="result-header">
         <div id="resultVerdict" class="result-verdict"></div>
@@ -271,30 +271,30 @@ const currentDay = journey?.current_day || 1;
       </div>
       <div class="macro-grid">
         <div class="macro-cell">
-          <div id="rCal" class="macro-val calories">â€”</div>
+          <div id="rCal" class="macro-val calories">—</div>
           <div class="macro-lbl">kcal</div>
         </div>
         <div class="macro-cell">
-          <div id="rProt" class="macro-val protein">â€”</div>
+          <div id="rProt" class="macro-val protein">—</div>
           <div class="macro-lbl">Protein</div>
         </div>
         <div class="macro-cell">
-          <div id="rFat" class="macro-val fat">â€”</div>
+          <div id="rFat" class="macro-val fat">—</div>
           <div class="macro-lbl">Fat</div>
         </div>
         <div class="macro-cell">
-          <div id="rCarbs" class="macro-val carbs">â€”</div>
+          <div id="rCarbs" class="macro-val carbs">—</div>
           <div class="macro-lbl">Carbs</div>
         </div>
         <div class="macro-cell">
-          <div id="rNetCarbs" class="macro-val net-carbs">â€”</div>
+          <div id="rNetCarbs" class="macro-val net-carbs">—</div>
           <div class="macro-lbl">Net Carbs</div>
         </div>
       </div>
       <div class="result-serving" id="resultServing">Per 100g</div>
     </div>
 
-    <!-- â”€â”€ KETO GUIDE â”€â”€ -->
+    <!-- ── KETO GUIDE ── -->
     <div class="scan-card fade-up delay-2">
       <div class="scan-card-title">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -304,20 +304,20 @@ const currentDay = journey?.current_day || 1;
         <div class="guide-title">Based on net carbs per 100g</div>
         <div class="guide-row">
           <div class="guide-dot green"></div>
-          <div class="guide-text"><strong>Keto Friendly</strong> â€” Under 5g net carbs Â· Safe to eat freely</div>
+          <div class="guide-text"><strong>Keto Friendly</strong> — Under 5g net carbs · Safe to eat freely</div>
         </div>
         <div class="guide-row">
           <div class="guide-dot yellow"></div>
-          <div class="guide-text"><strong>Caution</strong> â€” 5g to 10g net carbs Â· Eat in moderation</div>
+          <div class="guide-text"><strong>Caution</strong> — 5g to 10g net carbs · Eat in moderation</div>
         </div>
         <div class="guide-row">
           <div class="guide-dot red"></div>
-          <div class="guide-text"><strong>Not Keto</strong> â€” Over 10g net carbs Â· Avoid or limit severely</div>
+          <div class="guide-text"><strong>Not Keto</strong> — Over 10g net carbs · Avoid or limit severely</div>
         </div>
       </div>
     </div>
 
-    <!-- â”€â”€ SCAN HISTORY â”€â”€ -->
+    <!-- ── SCAN HISTORY ── -->
     <div class="scan-card fade-up delay-3" id="historyCard" style="display:none;">
       <div class="scan-card-title">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
@@ -335,7 +335,7 @@ const currentDay = journey?.current_day || 1;
     var barcodeInterval = null;
     var scanHistory = JSON.parse(localStorage.getItem('keto-scan-history') || '[]');
 
-    // â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Toast ────────────────────────────────────────────────
     function toast(msg) {
       var el = document.getElementById('scanToast');
       el.textContent = msg;
@@ -344,7 +344,7 @@ const currentDay = journey?.current_day || 1;
       window._toastTimer = setTimeout(function() { el.classList.remove('show'); }, 2800);
     }
 
-    // â”€â”€ Camera â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Camera ───────────────────────────────────────────────
     window.startCamera = function() {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         toast('Camera not supported on this browser');
@@ -372,7 +372,7 @@ const currentDay = journey?.current_day || 1;
               }
             }, 400);
           } else {
-            toast('Auto-detect unavailable â€” enter barcode manually');
+            toast('Auto-detect unavailable — enter barcode manually');
           }
         })
         .catch(function(err) {
@@ -404,9 +404,9 @@ const currentDay = journey?.current_day || 1;
       if (e.key === 'Enter') window.lookupManual();
     });
 
-    // â”€â”€ Barcode Lookup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Barcode Lookup ───────────────────────────────────────
     function lookupBarcode(code) {
-      toast('Looking up productâ€¦');
+      toast('Looking up product…');
       var url = 'https://world.openfoodfacts.org/api/v0/product/' + encodeURIComponent(code) + '.json?fields=product_name,brands,nutriments,serving_quantity,serving_size';
       fetch(url)
         .then(function(r) { return r.json(); })
@@ -417,10 +417,10 @@ const currentDay = journey?.current_day || 1;
           }
           showResult(data.product, code);
         })
-        .catch(function() { toast('Lookup failed â€” check your connection'); });
+        .catch(function() { toast('Lookup failed — check your connection'); });
     }
 
-    // â”€â”€ Show Result â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Show Result ──────────────────────────────────────────
     function showResult(p, code) {
       var n       = p.nutriments || {};
       var cal     = Math.round(n['energy-kcal_100g'] || (n['energy_100g'] / 4.184) || 0);
@@ -454,12 +454,12 @@ const currentDay = journey?.current_day || 1;
       document.getElementById('resultVerdict').className   = 'result-verdict ' + verdictClass;
       document.getElementById('resultName').textContent    = name;
       document.getElementById('resultBrand').textContent   = brand;
-      document.getElementById('rCal').textContent     = cal  || 'â€”';
+      document.getElementById('rCal').textContent     = cal  || '—';
       document.getElementById('rProt').textContent    = prot + 'g';
       document.getElementById('rFat').textContent     = fat  + 'g';
       document.getElementById('rCarbs').textContent   = carbs + 'g';
       document.getElementById('rNetCarbs').textContent= netCarbs + 'g';
-      document.getElementById('resultServing').textContent = 'Per 100g Â· Serving size: ' + serving;
+      document.getElementById('resultServing').textContent = 'Per 100g · Serving size: ' + serving;
       document.getElementById('resultCard').style.display = 'block';
       document.getElementById('resultCard').scrollIntoView({ behavior:'smooth', block:'nearest' });
 
@@ -471,7 +471,7 @@ const currentDay = journey?.current_day || 1;
       toast(verdict);
     }
 
-    // â”€â”€ History â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── History ──────────────────────────────────────────────
     function renderHistory() {
       if (!scanHistory.length) return;
       document.getElementById('historyCard').style.display = 'block';

@@ -47,7 +47,7 @@ if (activeColId) {
   colRecipes = (items || []).map((i: any) => ({ ...(i.recipes || {}), added_at: i.added_at })).filter((r: any) => r.id);
 }
 
-const EMOJI_OPTIONS = ['ðŸ“š','ðŸ³','ðŸ¥—','ðŸ½ï¸','ðŸ’ª','â¤ï¸','â­','ðŸ”¥','ðŸ¥‘','ðŸ§€','ðŸ–','ðŸ«','ðŸ¥¦','ðŸŽ¯','ðŸ†'];
+const EMOJI_OPTIONS = ['📚','🍳','🥗','🍽️','💪','❤️','⭐','🔥','🥑','🧀','🍖','🫐','🥦','🎯','🏆'];
 ---
 
 <!DOCTYPE html>
@@ -55,7 +55,7 @@ const EMOJI_OPTIONS = ['ðŸ“š','ðŸ³','ðŸ¥—','ðŸ½ï¸','ðŸ
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Collections â€” Keto Journey</title>
+  <title>My Collections — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
   <style>
@@ -172,8 +172,8 @@ const EMOJI_OPTIONS = ['ðŸ“š','ðŸ³','ðŸ¥—','ðŸ½ï¸','ðŸ
     <!-- Header -->
     <div class="page-header">
       <div class="header-left">
-        <h1>ðŸ“š My Collections</h1>
-        <div class="header-sub">{collections.length} collection{collections.length !== 1 ? 's' : ''} Â· save recipes into named lists</div>
+        <h1>📚 My Collections</h1>
+        <div class="header-sub">{collections.length} collection{collections.length !== 1 ? 's' : ''} · save recipes into named lists</div>
       </div>
       <button class="btn-new" onclick="window.openCreateModal()">+ New Collection</button>
     </div>
@@ -181,7 +181,7 @@ const EMOJI_OPTIONS = ['ðŸ“š','ðŸ³','ðŸ¥—','ðŸ½ï¸','ðŸ
     <!-- Collections grid -->
     {collections.length === 0 ? (
       <div class="empty-cols">
-        <div class="big-emoji">ðŸ“š</div>
+        <div class="big-emoji">📚</div>
         <h2>No collections yet</h2>
         <p>Create a collection to organise your favourite recipes into named lists.</p>
         <button class="btn-new" style="margin:0 auto;" onclick="window.openCreateModal()">+ Create your first collection</button>
@@ -202,7 +202,7 @@ const EMOJI_OPTIONS = ['ðŸ“š','ðŸ³','ðŸ¥—','ðŸ½ï¸','ðŸ
               class="col-delete-btn"
               aria-label="Delete collection"
               onclick={`event.preventDefault();event.stopPropagation();window.deleteCollection('${col.id}','${col.name.replace(/'/g,"\\'")}');`}
-            >ðŸ—‘</button>
+            >🗑</button>
           </a>
         ))}
       </div>
@@ -217,7 +217,7 @@ const EMOJI_OPTIONS = ['ðŸ“š','ðŸ³','ðŸ¥—','ðŸ½ï¸','ðŸ
             <span>{activeCol.name}</span>
             <span style="font-size:.8rem;color:var(--soft);font-weight:400;">({colRecipes.length} recipe{colRecipes.length !== 1 ? 's' : ''})</span>
           </div>
-          <a href="/dashboard/collections" style="text-decoration:none;font-size:.82rem;color:var(--soft);">â† All collections</a>
+          <a href="/dashboard/collections" style="text-decoration:none;font-size:.82rem;color:var(--soft);">← All collections</a>
         </div>
 
         {colRecipes.length === 0 ? (
@@ -233,18 +233,18 @@ const EMOJI_OPTIONS = ['ðŸ“š','ðŸ³','ðŸ¥—','ðŸ½ï¸','ðŸ
                   <div class="card-img">
                     {recipe.image_url
                       ? <img src={recipe.image_url} alt={recipe.title} loading="lazy" width="400" height="150" />
-                      : <div class="card-img-ph">ðŸ½ï¸</div>
+                      : <div class="card-img-ph">🍽️</div>
                     }
                     <button
                       class="remove-btn"
                       aria-label="Remove from collection"
                       onclick={`window.removeFromCol('${activeColId}','${recipe.id}')`}
-                    >âœ•</button>
+                    >✕</button>
                   </div>
                   <div class="card-body">
                     <a href={`/dashboard/recipe/${recipe.id}`} class="card-title" style="text-decoration:none;">{recipe.title}</a>
                     <div class="card-meta">
-                      {recipe.prep_time && <span>â± {recipe.prep_time}m</span>}
+                      {recipe.prep_time && <span>⏱ {recipe.prep_time}m</span>}
                       {diff && <span class={`diff-badge ${diff}`}>{diff}</span>}
                     </div>
                     <div class="macro-row">
@@ -286,7 +286,7 @@ const EMOJI_OPTIONS = ['ðŸ“š','ðŸ³','ðŸ¥—','ðŸ½ï¸','ðŸ
   <div class="toast" id="toast"></div>
 
   <script is:inline define:vars={{ activeColId }}>
-    var selectedEmoji = 'ðŸ“š';
+    var selectedEmoji = '📚';
 
     function showToast(msg) {
       var t = document.getElementById('toast');
@@ -319,7 +319,7 @@ const EMOJI_OPTIONS = ['ðŸ“š','ðŸ³','ðŸ¥—','ðŸ½ï¸','ðŸ
       if (!name) { document.getElementById('colNameInput').focus(); return; }
       var btn = document.getElementById('btnCreate');
       btn.disabled = true;
-      btn.textContent = 'Creatingâ€¦';
+      btn.textContent = 'Creating…';
 
       fetch('/api/collections', {
         method: 'POST',

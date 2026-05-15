@@ -65,7 +65,7 @@ const avg7Meals = last7Checkins.length
   : null;
 
 // Pre-compute mood emojis to avoid inline ternaries with numbers
-const moodEmojis = ['', 'ðŸ˜”', 'ðŸ˜', 'ðŸ˜Š', 'ðŸ˜„', 'ðŸ¤©'];
+const moodEmojis = ['', '😔', '😐', '😊', '😄', '🤩'];
 const energyMax = 5;
 
 // Format date helper (server-side)
@@ -89,7 +89,7 @@ const entries = allDates.map((date) => {
   const sleepH  = checkin?.sleep_hours   || 0;
   const sleepQ  = checkin?.sleep_quality || 0;
   const moodEmoji = moodEmojis[mood] || '';
-  const energyStars = energy > 0 ? 'â­'.repeat(energy) + 'â˜†'.repeat(Math.max(0, energyMax - energy)) : '';
+  const energyStars = energy > 0 ? '⭐'.repeat(energy) + '☆'.repeat(Math.max(0, energyMax - energy)) : '';
 
   return { date, dateLabel: formatDate(date), energy, mood, water, mealOk, note, highlights, challenges, sleepH, sleepQ, moodEmoji, energyStars };
 });
@@ -104,7 +104,7 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{t('journal.title')} â€” Keto Journey</title>
+  <title>{t('journal.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
   <style>
@@ -135,7 +135,7 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
       padding: 32px 20px 80px;
     }
 
-    /* â”€â”€ Header â”€â”€ */
+    /* ── Header ── */
     .page-header {
       margin-bottom: 28px;
       animation: fadeUp .5s ease both;
@@ -152,7 +152,7 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
       color: var(--soft, #4d7055);
     }
 
-    /* â”€â”€ Summary bar â”€â”€ */
+    /* ── Summary bar ── */
     .summary-bar {
       background: var(--card, #0d1a0f);
       border: 1px solid var(--border, rgba(255,92,122,.1));
@@ -199,7 +199,7 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
     .stat-bar-fill.water  { background: var(--blue, #3b82f6); }
     .stat-bar-fill.meals  { background: var(--purple, #8b5cf6); }
 
-    /* â”€â”€ Timeline â”€â”€ */
+    /* ── Timeline ── */
     .timeline {
       position: relative;
       padding-left: 28px;
@@ -304,7 +304,7 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
     }
     .extra-chip strong { color: var(--text, #dfeedd); }
 
-    /* â”€â”€ Empty state â”€â”€ */
+    /* ── Empty state ── */
     .empty-state {
       text-align: center;
       padding: 60px 20px;
@@ -343,7 +343,7 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
 <div class="rv-pg-main">
   <div class="page-wrap">
     <div class="page-header">
-      <h1>ðŸ“– Daily Reflections</h1>
+      <h1>📖 Daily Reflections</h1>
       {hasData && (
         <p class="subtitle">Your last 30 days of check-ins and reflections</p>
       )}
@@ -351,7 +351,7 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
 
     {!hasData ? (
       <div class="empty-state">
-        <div class="empty-icon">ðŸ“–</div>
+        <div class="empty-icon">📖</div>
         <h2>Nothing logged yet</h2>
         <p>Complete your first daily check-in to start your reflection history.</p>
         <a href="/dashboard/checkin" class="btn-checkin">Start Check-in</a>
@@ -419,21 +419,21 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
                     {entry.water > 0 && (
                       <div class="vital-item">
                         <span class="vital-label">Water</span>
-                        <span class="vital-value">ðŸ’§ {entry.water}</span>
+                        <span class="vital-value">💧 {entry.water}</span>
                       </div>
                     )}
                     <div class="vital-item">
                       <span class="vital-label">Meals</span>
                       {entry.mealOk ? (
-                        <span class="vital-value badge-ok">âœ“ Followed</span>
+                        <span class="vital-value badge-ok">✓ Followed</span>
                       ) : (
-                        <span class="vital-value badge-no">âœ— Skipped</span>
+                        <span class="vital-value badge-no">✗ Skipped</span>
                       )}
                     </div>
                     {entry.sleepH > 0 && (
                       <div class="vital-item">
                         <span class="vital-label">Sleep</span>
-                        <span class="vital-value">ðŸŒ™ {entry.sleepH}h</span>
+                        <span class="vital-value">🌙 {entry.sleepH}h</span>
                       </div>
                     )}
                   </div>
@@ -449,10 +449,10 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
                   {(entry.highlights || entry.challenges) && (
                     <div class="entry-extras">
                       {entry.highlights && (
-                        <span class="extra-chip">â­ <strong>Win:</strong> {entry.highlights}</span>
+                        <span class="extra-chip">⭐ <strong>Win:</strong> {entry.highlights}</span>
                       )}
                       {entry.challenges && (
-                        <span class="extra-chip">âš¡ <strong>Challenge:</strong> {entry.challenges}</span>
+                        <span class="extra-chip">⚡ <strong>Challenge:</strong> {entry.challenges}</span>
                       )}
                     </div>
                   )}
@@ -466,21 +466,21 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
   </div>
 </div></div>
 
-  <!-- â”€â”€ Add Reflection FAB â”€â”€ -->
-  <button class="fab" onclick="openReflModal()" title="Add today's reflection">ï¼‹ Reflect</button>
+  <!-- ── Add Reflection FAB ── -->
+  <button class="fab" onclick="openReflModal()" title="Add today's reflection">＋ Reflect</button>
 
-  <!-- â”€â”€ Reflection Modal â”€â”€ -->
+  <!-- ── Reflection Modal ── -->
   <div id="reflModal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);overflow-y:auto;padding:1.5rem;" onclick="closeReflModal(event)">
     <div style="background:var(--card,#0d1a0f);border:1px solid var(--border2,rgba(255,92,122,.22));border-radius:24px;max-width:500px;margin:3rem auto;padding:2rem;" onclick="event.stopPropagation()">
-      <h2 style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;margin-bottom:1.5rem;">ðŸ“– Today's Reflection</h2>
+      <h2 style="font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.4rem;margin-bottom:1.5rem;">📖 Today's Reflection</h2>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem;">
         <div>
-          <label style="display:block;font-size:.78rem;color:var(--soft);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.06em;">Energy (1â€“5)</label>
+          <label style="display:block;font-size:.78rem;color:var(--soft);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.06em;">Energy (1–5)</label>
           <input id="rf_energy" type="number" min="1" max="5" placeholder="3" style="width:100%;background:var(--card2,#111f13);border:1px solid var(--border);border-radius:10px;padding:.6rem .9rem;color:var(--text);font-size:.95rem;" />
         </div>
         <div>
-          <label style="display:block;font-size:.78rem;color:var(--soft);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.06em;">Mood (1â€“5)</label>
+          <label style="display:block;font-size:.78rem;color:var(--soft);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.06em;">Mood (1–5)</label>
           <input id="rf_mood" type="number" min="1" max="5" placeholder="3" style="width:100%;background:var(--card2,#111f13);border:1px solid var(--border);border-radius:10px;padding:.6rem .9rem;color:var(--text);font-size:.95rem;" />
         </div>
       </div>
@@ -493,11 +493,11 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
         <div>
           <label style="display:block;font-size:.78rem;color:var(--soft);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.06em;">Win / Highlight</label>
-          <input id="rf_highlights" type="text" placeholder="Something that went wellâ€¦" style="width:100%;background:var(--card2,#111f13);border:1px solid var(--border);border-radius:10px;padding:.6rem .9rem;color:var(--text);font-size:.9rem;" />
+          <input id="rf_highlights" type="text" placeholder="Something that went well…" style="width:100%;background:var(--card2,#111f13);border:1px solid var(--border);border-radius:10px;padding:.6rem .9rem;color:var(--text);font-size:.9rem;" />
         </div>
         <div>
           <label style="display:block;font-size:.78rem;color:var(--soft);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.06em;">Challenge</label>
-          <input id="rf_challenges" type="text" placeholder="Something difficultâ€¦" style="width:100%;background:var(--card2,#111f13);border:1px solid var(--border);border-radius:10px;padding:.6rem .9rem;color:var(--text);font-size:.9rem;" />
+          <input id="rf_challenges" type="text" placeholder="Something difficult…" style="width:100%;background:var(--card2,#111f13);border:1px solid var(--border);border-radius:10px;padding:.6rem .9rem;color:var(--text);font-size:.9rem;" />
         </div>
       </div>
 
@@ -541,8 +541,8 @@ const moodPct   = avg7Mood   ? Math.round((parseFloat(avg7Mood)   / 5) * 100) : 
       var challenges = document.getElementById('rf_challenges').value.trim() || null;
       var errEl      = document.getElementById('rf_error');
 
-      if (energy && (energy < 1 || energy > 5)) { errEl.textContent = 'Energy must be 1â€“5'; errEl.style.display='block'; return; }
-      if (mood   && (mood   < 1 || mood   > 5)) { errEl.textContent = 'Mood must be 1â€“5';   errEl.style.display='block'; return; }
+      if (energy && (energy < 1 || energy > 5)) { errEl.textContent = 'Energy must be 1–5'; errEl.style.display='block'; return; }
+      if (mood   && (mood   < 1 || mood   > 5)) { errEl.textContent = 'Mood must be 1–5';   errEl.style.display='block'; return; }
       if (!energy && !mood && !notes && !highlights && !challenges) {
         errEl.textContent = 'Please fill in at least one field.'; errEl.style.display='block'; return;
       }

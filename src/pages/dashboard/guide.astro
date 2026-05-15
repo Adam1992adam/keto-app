@@ -1,6 +1,6 @@
 ﻿---
 // src/pages/dashboard/guide.astro
-// /dashboard/guide â€” Interactive new-user feature guide
+// /dashboard/guide — Interactive new-user feature guide
 import { requireAuth } from '../../lib/auth';
 import { getMaxJourneyDays, getUserJourney, updateCurrentDay } from '../../lib/supabase';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
@@ -21,7 +21,7 @@ const t    = getTranslator(lang);
 await updateCurrentDay(user.id).catch(() => null);
 const today = new Date().toISOString().split('T')[0];
 
-// All queries fire in parallel â€” each fails independently
+// All queries fire in parallel — each fails independently
 let journey = null as any, onboarding = null as any, hasCheckedIn = false, hasLoggedWeight = false, hasFasted = false;
 try {
   const [jRes, obRes, ciRes, wlRes, fsRes] = await Promise.allSettled([
@@ -55,7 +55,7 @@ const isPro   = planType === 'pro_6' || isElite;
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>{t('guide.title')} Â· Keto Journey</title>
+  <title>{t('guide.title')} · Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
@@ -112,7 +112,7 @@ const isPro   = planType === 'pro_6' || isElite;
     .feat-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.1rem 1.25rem;display:flex;gap:1rem;align-items:flex-start;transition:all .2s;text-decoration:none;color:inherit;position:relative;overflow:hidden;}
     .feat-card:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.25);}
     .feat-card.done-card{opacity:.75;}
-    .feat-card.done-card::after{content:'âœ“ Done';position:absolute;top:.6rem;right:.75rem;font-size:.65rem;font-weight:800;color:var(--green);background:rgba(255,92,122,.12);padding:.15rem .45rem;border-radius:6px;}
+    .feat-card.done-card::after{content:'✓ Done';position:absolute;top:.6rem;right:.75rem;font-size:.65rem;font-weight:800;color:var(--green);background:rgba(255,92,122,.12);padding:.15rem .45rem;border-radius:6px;}
     .fc-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.3rem;}
     .fc-body{flex:1;min-width:0;}
     .fc-title{font-size:.9rem;font-weight:800;margin-bottom:.2rem;display:flex;align-items:center;gap:.4rem;}
@@ -173,13 +173,13 @@ const isPro   = planType === 'pro_6' || isElite;
     </div>
     <div class="gh-title">Your <em>Keto Journey</em> <br/>App Manual</div>
     <div class="gh-sub">
-      Everything you need to know to get results â€” explained simply.
+      Everything you need to know to get results — explained simply.
       You're on the <strong style={`color:${tierColor}`}>{tierLabel} plan</strong> ({maxDays} days).
     </div>
     <div class="gh-stats">
-      <span class="ghs-pill" style="color:var(--amber);">ðŸ”¥ {streak}-day streak</span>
-      <span class="ghs-pill" style="color:#a78bfa;">â­ {totalXP} XP Â· Level {level}</span>
-      <span class="ghs-pill" style="color:var(--blue);">ðŸ“… Day {currentDay}</span>
+      <span class="ghs-pill" style="color:var(--amber);">🔥 {streak}-day streak</span>
+      <span class="ghs-pill" style="color:#a78bfa;">⭐ {totalXP} XP · Level {level}</span>
+      <span class="ghs-pill" style="color:var(--blue);">📅 Day {currentDay}</span>
     </div>
   </div>
 
@@ -188,27 +188,27 @@ const isPro   = planType === 'pro_6' || isElite;
     <div class="gp-title">Your Quick-Start Checklist</div>
     <div class="gp-steps">
       <div class="gp-step">
-        <div class={`gp-dot ${hasOnboarded ? 'done' : 'active'}`}>{hasOnboarded ? 'âœ“' : '1'}</div>
+        <div class={`gp-dot ${hasOnboarded ? 'done' : 'active'}`}>{hasOnboarded ? '✓' : '1'}</div>
         <div class="gp-lbl">Set up profile</div>
       </div>
       <div class={`gp-line ${hasOnboarded ? 'done' : ''}`}></div>
       <div class="gp-step">
-        <div class={`gp-dot ${hasCheckedIn ? 'done' : (hasOnboarded ? 'active' : 'pending')}`}>{hasCheckedIn ? 'âœ“' : '2'}</div>
+        <div class={`gp-dot ${hasCheckedIn ? 'done' : (hasOnboarded ? 'active' : 'pending')}`}>{hasCheckedIn ? '✓' : '2'}</div>
         <div class="gp-lbl">First check-in</div>
       </div>
       <div class={`gp-line ${hasCheckedIn ? 'done' : ''}`}></div>
       <div class="gp-step">
-        <div class={`gp-dot ${hasLoggedWeight ? 'done' : (hasCheckedIn ? 'active' : 'pending')}`}>{hasLoggedWeight ? 'âœ“' : '3'}</div>
+        <div class={`gp-dot ${hasLoggedWeight ? 'done' : (hasCheckedIn ? 'active' : 'pending')}`}>{hasLoggedWeight ? '✓' : '3'}</div>
         <div class="gp-lbl">Log weight</div>
       </div>
       <div class={`gp-line ${hasLoggedWeight ? 'done' : ''}`}></div>
       <div class="gp-step">
-        <div class={`gp-dot ${hasFasted ? 'done' : (hasLoggedWeight ? 'active' : 'pending')}`}>{hasFasted ? 'âœ“' : '4'}</div>
+        <div class={`gp-dot ${hasFasted ? 'done' : (hasLoggedWeight ? 'active' : 'pending')}`}>{hasFasted ? '✓' : '4'}</div>
         <div class="gp-lbl">Try fasting</div>
       </div>
       <div class={`gp-line ${hasFasted ? 'done' : ''}`}></div>
       <div class="gp-step">
-        <div class={`gp-dot ${streak >= 3 ? 'done' : (hasFasted ? 'active' : 'pending')}`}>{streak >= 3 ? 'âœ“' : '5'}</div>
+        <div class={`gp-dot ${streak >= 3 ? 'done' : (hasFasted ? 'active' : 'pending')}`}>{streak >= 3 ? '✓' : '5'}</div>
         <div class="gp-lbl">3-day streak</div>
       </div>
     </div>
@@ -224,26 +224,26 @@ const isPro   = planType === 'pro_6' || isElite;
     <div class="feat-grid">
 
       <a href="/dashboard/checkin" class={`feat-card ${hasCheckedIn ? 'done-card' : ''}`}>
-        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(255,92,122,.2),rgba(52,211,153,.1));border:1px solid rgba(255,92,122,.25);">âœï¸</div>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(255,92,122,.2),rgba(52,211,153,.1));border:1px solid rgba(255,92,122,.25);">✏️</div>
         <div class="fc-body">
           <div class="fc-title">Daily Check-in <span class="fc-xp">+30 XP</span></div>
-          <div class="fc-desc">Every day, log your energy level (1â€“5), mood, water glasses, and whether you followed your meal plan. This builds your streak and gives the AI Coach data to personalise your advice. Takes under 2 minutes.</div>
+          <div class="fc-desc">Every day, log your energy level (1–5), mood, water glasses, and whether you followed your meal plan. This builds your streak and gives the AI Coach data to personalise your advice. Takes under 2 minutes.</div>
           <div class="tip-box">
-            <span class="tip-icon">ðŸ’¡</span>
-            <div class="tip-text"><strong>Best time:</strong> Do your check-in right after dinner â€” you'll have all the day's data fresh in your mind. Set a phone alarm for 8 pm.</div>
+            <span class="tip-icon">💡</span>
+            <div class="tip-text"><strong>Best time:</strong> Do your check-in right after dinner — you'll have all the day's data fresh in your mind. Set a phone alarm for 8 pm.</div>
           </div>
-          <a href="/dashboard/checkin" class="fc-action" style="background:rgba(255,92,122,.12);color:var(--green);">Check In Now â†’</a>
+          <a href="/dashboard/checkin" class="fc-action" style="background:rgba(255,92,122,.12);color:var(--green);">Check In Now →</a>
         </div>
       </a>
 
       <a href="/dashboard#tour-tasks" class="feat-card">
-        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(59,130,246,.2),rgba(96,165,250,.1));border:1px solid rgba(59,130,246,.25);">âœ…</div>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(59,130,246,.2),rgba(96,165,250,.1));border:1px solid rgba(59,130,246,.25);">✅</div>
         <div class="fc-body">
-          <div class="fc-title">Daily Tasks <span class="fc-xp">+20â€“50 XP each</span></div>
-          <div class="fc-desc">Each day you get 3â€“5 tasks tailored to your plan (e.g. "Drink 2L water", "Eat a high-fat breakfast", "Do 20 min of movement"). Completing all tasks earns bonus XP and marks it as a "Perfect Day".</div>
+          <div class="fc-title">Daily Tasks <span class="fc-xp">+20–50 XP each</span></div>
+          <div class="fc-desc">Each day you get 3–5 tasks tailored to your plan (e.g. "Drink 2L water", "Eat a high-fat breakfast", "Do 20 min of movement"). Completing all tasks earns bonus XP and marks it as a "Perfect Day".</div>
           <div class="tip-box">
-            <span class="tip-icon">âš¡</span>
-            <div class="tip-text"><strong>Pro tip:</strong> Tasks reset each day at midnight. You can't complete yesterday's tasks, so don't miss a day â€” even one incomplete task means you lose that XP forever.</div>
+            <span class="tip-icon">⚡</span>
+            <div class="tip-text"><strong>Pro tip:</strong> Tasks reset each day at midnight. You can't complete yesterday's tasks, so don't miss a day — even one incomplete task means you lose that XP forever.</div>
           </div>
         </div>
       </a>
@@ -261,26 +261,26 @@ const isPro   = planType === 'pro_6' || isElite;
     <div class="feat-grid">
 
       <a href="/dashboard/progress" class={`feat-card ${hasLoggedWeight ? '' : ''}`}>
-        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(255,92,122,.2),rgba(52,211,153,.1));border:1px solid rgba(255,92,122,.25);">âš–ï¸</div>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(255,92,122,.2),rgba(52,211,153,.1));border:1px solid rgba(255,92,122,.25);">⚖️</div>
         <div class="fc-body">
           <div class="fc-title">Weight Log <span class="fc-xp">+10 XP</span></div>
-          <div class="fc-desc">Log your weight 1â€“2Ã— per week (same time of day, same conditions). The app tracks your loss curve over time and calculates % progress toward your goal weight. You can also log body measurements.</div>
+          <div class="fc-desc">Log your weight 1–2× per week (same time of day, same conditions). The app tracks your loss curve over time and calculates % progress toward your goal weight. You can also log body measurements.</div>
           <div class="tip-box">
-            <span class="tip-icon">ðŸ“…</span>
+            <span class="tip-icon">📅</span>
             <div class="tip-text"><strong>Best time:</strong> Weigh yourself on Monday morning, before eating, after using the bathroom. This gives the most consistent readings and avoids weekend food variation.</div>
           </div>
-          <a href="/dashboard/progress" class="fc-action" style="background:rgba(255,92,122,.12);color:var(--green);">Go to Progress â†’</a>
+          <a href="/dashboard/progress" class="fc-action" style="background:rgba(255,92,122,.12);color:var(--green);">Go to Progress →</a>
         </div>
       </a>
 
       <a href="/dashboard/weekly" class="feat-card">
-        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(167,139,250,.1));border:1px solid rgba(139,92,246,.25);">ðŸ“Š</div>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(167,139,250,.1));border:1px solid rgba(139,92,246,.25);">📊</div>
         <div class="fc-body">
           <div class="fc-title">Weekly Report <span class="fc-xp">+50 XP</span></div>
-          <div class="fc-desc">Every 7 days, complete your Weekly Report â€” a short reflection on energy trends, what worked, what didn't, and your goals for next week. The app emails you a personalised summary every Monday.</div>
+          <div class="fc-desc">Every 7 days, complete your Weekly Report — a short reflection on energy trends, what worked, what didn't, and your goals for next week. The app emails you a personalised summary every Monday.</div>
           <div class="tip-box">
-            <span class="tip-icon">ðŸ“¬</span>
-            <div class="tip-text">Check your email every Monday morning â€” your weekly summary includes your streak, XP earned, energy trends, and a personalised focus for the week ahead.</div>
+            <span class="tip-icon">📬</span>
+            <div class="tip-text">Check your email every Monday morning — your weekly summary includes your streak, XP earned, energy trends, and a personalised focus for the week ahead.</div>
           </div>
         </div>
       </a>
@@ -298,20 +298,20 @@ const isPro   = planType === 'pro_6' || isElite;
     <div class="feat-grid">
 
       <a href="/dashboard/recipes" class="feat-card">
-        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(252,211,77,.1));border:1px solid rgba(245,158,11,.25);">ðŸ½ï¸</div>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(252,211,77,.1));border:1px solid rgba(245,158,11,.25);">🍽️</div>
         <div class="fc-body">
           <div class="fc-title">Daily Meal Plan</div>
           <div class="fc-desc">Your dashboard shows today's 4 meals (Breakfast, Lunch, Dinner, Snack). Each meal is a keto-optimised recipe from your plan's library. Click any meal to see the full recipe with macros, ingredients, and instructions.</div>
           <div class="tip-box">
-            <span class="tip-icon">ðŸ”„</span>
+            <span class="tip-icon">🔄</span>
             <div class="tip-text"><strong>Not feeling a meal?</strong> Hit the "Swap" button on any meal card to get an alternative that fits your dietary preferences and similar macros. Swaps are unlimited.</div>
           </div>
-          <a href="/dashboard/recipes" class="fc-action" style="background:rgba(245,158,11,.12);color:var(--amber);">View Meal Plan â†’</a>
+          <a href="/dashboard/recipes" class="fc-action" style="background:rgba(245,158,11,.12);color:var(--amber);">View Meal Plan →</a>
         </div>
       </a>
 
       <a href="/dashboard/recipes" class="feat-card">
-        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(252,211,77,.1));border:1px solid rgba(245,158,11,.25);">ðŸ”</div>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(252,211,77,.1));border:1px solid rgba(245,158,11,.25);">🔍</div>
         <div class="fc-body">
           <div class="fc-title">Browse All Recipes</div>
           <div class="fc-desc">
@@ -319,7 +319,7 @@ const isPro   = planType === 'pro_6' || isElite;
              planType === 'pro_6'    ? 'Access 87+ keto recipes. Search, filter by meal type or dietary needs, sort by calories, protein, or rating.' :
              'Unlimited access to the full recipe library. Search, filter, rate, and save favorites.'}
           </div>
-          <a href="/dashboard/recipes" class="fc-action" style="background:rgba(245,158,11,.12);color:var(--amber);">Browse Recipes â†’</a>
+          <a href="/dashboard/recipes" class="fc-action" style="background:rgba(245,158,11,.12);color:var(--amber);">Browse Recipes →</a>
         </div>
       </a>
 
@@ -335,15 +335,15 @@ const isPro   = planType === 'pro_6' || isElite;
     </div>
 
     <div class="feat-card" style="margin-bottom:.75rem;cursor:default;">
-      <div class="fc-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(167,139,250,.1));border:1px solid rgba(139,92,246,.25);">â­</div>
+      <div class="fc-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(167,139,250,.1));border:1px solid rgba(139,92,246,.25);">⭐</div>
       <div class="fc-body">
         <div class="fc-title">How You Earn XP</div>
-        <div class="fc-desc">Every action earns you XP. XP fills your level bar â€” every 500 XP = 1 level up. There's no cap: the more consistent you are, the higher your level climbs.</div>
+        <div class="fc-desc">Every action earns you XP. XP fills your level bar — every 500 XP = 1 level up. There's no cap: the more consistent you are, the higher your level climbs.</div>
       </div>
     </div>
 
     <div class="feat-card" style="margin-bottom:.75rem;cursor:default;">
-      <div class="fc-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(252,211,77,.1));border:1px solid rgba(245,158,11,.25);">ðŸ”¥</div>
+      <div class="fc-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(252,211,77,.1));border:1px solid rgba(245,158,11,.25);">🔥</div>
       <div class="fc-body">
         <div class="fc-title">Streak Rules</div>
         <div class="fc-desc">Your streak increases by 1 every day you complete a check-in before midnight. <strong style="color:var(--text);">Miss one day = streak resets to 0.</strong> If you have a streak going, the app emails you a warning at 6 pm if you haven't checked in yet.</div>
@@ -360,12 +360,12 @@ const isPro   = planType === 'pro_6' || isElite;
       </thead>
       <tbody>
         <tr><td>Daily Check-in</td><td class="xp-amt">+30 XP</td><td>Once per day</td></tr>
-        <tr><td>Complete a Task</td><td class="xp-amt">+20â€“50 XP</td><td>Per task</td></tr>
+        <tr><td>Complete a Task</td><td class="xp-amt">+20–50 XP</td><td>Per task</td></tr>
         <tr><td>End a Fast</td><td class="xp-amt">+40 XP</td><td>Per session</td></tr>
         <tr><td>Weekly Report</td><td class="xp-amt">+50 XP</td><td>Once per week</td></tr>
         <tr><td>Referral (friend joins)</td><td class="xp-amt">+150 XP</td><td>Per referral</td></tr>
         <tr><td>Welcome bonus (used referral code)</td><td class="xp-amt">+50 XP</td><td>Once</td></tr>
-        <tr><td>Milestone reached</td><td class="xp-amt">+100 XP</td><td>Day 7, 14, 21, 30â€¦</td></tr>
+        <tr><td>Milestone reached</td><td class="xp-amt">+100 XP</td><td>Day 7, 14, 21, 30…</td></tr>
       </tbody>
     </table>
   </div>
@@ -380,15 +380,15 @@ const isPro   = planType === 'pro_6' || isElite;
     <div class="feat-grid">
 
       <a href="/dashboard/fasting" class={`feat-card ${hasFasted ? '' : ''}`}>
-        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(167,139,250,.1));border:1px solid rgba(139,92,246,.25);">â±ï¸</div>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(167,139,250,.1));border:1px solid rgba(139,92,246,.25);">⏱️</div>
         <div class="fc-body">
           <div class="fc-title">Fasting Timer <span class="fc-xp">+40 XP</span></div>
-          <div class="fc-desc">Fasting + keto is the most powerful fat-loss combination. The app includes a built-in timer for 16:8, 18:6, 20:4, and 24h protocols. Start a fast, and the timer counts up in real time â€” you can close the app and it keeps running.</div>
+          <div class="fc-desc">Fasting + keto is the most powerful fat-loss combination. The app includes a built-in timer for 16:8, 18:6, 20:4, and 24h protocols. Start a fast, and the timer counts up in real time — you can close the app and it keeps running.</div>
           <div class="tip-box">
-            <span class="tip-icon">ðŸŒ™</span>
-            <div class="tip-text"><strong>Beginner tip:</strong> Start with 16:8 â€” stop eating at 8 pm, eat again at noon the next day. You sleep through most of the fast so it barely feels like fasting.</div>
+            <span class="tip-icon">🌙</span>
+            <div class="tip-text"><strong>Beginner tip:</strong> Start with 16:8 — stop eating at 8 pm, eat again at noon the next day. You sleep through most of the fast so it barely feels like fasting.</div>
           </div>
-          <a href="/dashboard/fasting" class="fc-action" style="background:rgba(139,92,246,.12);color:#a78bfa;">Start Fasting â†’</a>
+          <a href="/dashboard/fasting" class="fc-action" style="background:rgba(139,92,246,.12);color:#a78bfa;">Start Fasting →</a>
         </div>
       </a>
 
@@ -404,7 +404,7 @@ const isPro   = planType === 'pro_6' || isElite;
     <div class="feat-grid">
 
       <a href="/dashboard/keto-calculator" class="feat-card">
-        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(59,130,246,.2),rgba(96,165,250,.1));border:1px solid rgba(59,130,246,.25);">ðŸ§®</div>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(59,130,246,.2),rgba(96,165,250,.1));border:1px solid rgba(59,130,246,.25);">🧮</div>
         <div class="fc-body">
           <div class="fc-title">Keto Calculator</div>
           <div class="fc-desc">Enter your body stats to get your personalised TDEE (Total Daily Energy Expenditure) and exact macro targets in grams: calories, protein, fat, and net carbs. Updates your dashboard macro rings.</div>
@@ -412,23 +412,23 @@ const isPro   = planType === 'pro_6' || isElite;
       </a>
 
       <a href="/dashboard/shopping" class="feat-card">
-        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(255,92,122,.2),rgba(52,211,153,.1));border:1px solid rgba(255,92,122,.25);">ðŸ›’</div>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(255,92,122,.2),rgba(52,211,153,.1));border:1px solid rgba(255,92,122,.25);">🛒</div>
         <div class="fc-body">
           <div class="fc-title">Shopping List</div>
-          <div class="fc-desc">Auto-generated weekly shopping list based on your meal plan. Organised by food category. Print or screenshot before heading to the supermarket â€” everything you need for the week is already listed.</div>
+          <div class="fc-desc">Auto-generated weekly shopping list based on your meal plan. Organised by food category. Print or screenshot before heading to the supermarket — everything you need for the week is already listed.</div>
         </div>
       </a>
 
       <a href="/dashboard/ketones" class="feat-card">
-        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(252,211,77,.1));border:1px solid rgba(245,158,11,.25);">ðŸ©¸</div>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(252,211,77,.1));border:1px solid rgba(245,158,11,.25);">🩸</div>
         <div class="fc-body">
           <div class="fc-title">Ketone Tracker</div>
-          <div class="fc-desc">Log your ketone readings (blood, urine, or breath meter) and see your ketosis zone trend over time. Green zone (0.5â€“3.0 mmol/L) is optimal fat-burning. The chart shows your ketosis consistency.</div>
+          <div class="fc-desc">Log your ketone readings (blood, urine, or breath meter) and see your ketosis zone trend over time. Green zone (0.5–3.0 mmol/L) is optimal fat-burning. The chart shows your ketosis consistency.</div>
         </div>
       </a>
 
       <a href="/dashboard/photos" class="feat-card">
-        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(239,68,68,.15),rgba(248,113,113,.1));border:1px solid rgba(239,68,68,.2);">ðŸ“¸</div>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(239,68,68,.15),rgba(248,113,113,.1));border:1px solid rgba(239,68,68,.2);">📸</div>
         <div class="fc-body">
           <div class="fc-title">Before / After Photos</div>
           <div class="fc-desc">Upload progress photos and compare them side-by-side with a draggable slider. The visual difference motivates you more than any number on the scale. Upload one photo per week for best results.</div>
@@ -436,7 +436,7 @@ const isPro   = planType === 'pro_6' || isElite;
       </a>
 
       <a href="/dashboard/share" class="feat-card">
-        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(167,139,250,.1));border:1px solid rgba(139,92,246,.25);">ðŸŽ¨</div>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(167,139,250,.1));border:1px solid rgba(139,92,246,.25);">🎨</div>
         <div class="fc-body">
           <div class="fc-title">Share Your Milestones</div>
           <div class="fc-desc">Generate beautiful shareable cards for Instagram and Stories when you hit milestones (Day 7, 14, 30). 4 design templates, 4 themes, square and story formats. Show your results to the world.</div>
@@ -444,11 +444,11 @@ const isPro   = planType === 'pro_6' || isElite;
       </a>
 
       <a href="/dashboard/referrals" class="feat-card">
-        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(255,92,122,.2),rgba(52,211,153,.1));border:1px solid rgba(255,92,122,.25);">ðŸ¤</div>
+        <div class="fc-icon" style="background:linear-gradient(135deg,rgba(255,92,122,.2),rgba(52,211,153,.1));border:1px solid rgba(255,92,122,.25);">🤝</div>
         <div class="fc-body">
           <div class="fc-title">Referral Program <span class="fc-xp">+150 XP per friend</span></div>
-          <div class="fc-desc">Share your unique referral code with friends. When they sign up and use your code, you earn 150 XP and they get a 50 XP welcome bonus. No limit â€” refer as many people as you like.</div>
-          <a href="/dashboard/referrals" class="fc-action" style="background:rgba(255,92,122,.12);color:var(--green);">Get Your Code â†’</a>
+          <div class="fc-desc">Share your unique referral code with friends. When they sign up and use your code, you earn 150 XP and they get a 50 XP welcome bonus. No limit — refer as many people as you like.</div>
+          <a href="/dashboard/referrals" class="fc-action" style="background:rgba(255,92,122,.12);color:var(--green);">Get Your Code →</a>
         </div>
       </a>
 
@@ -462,14 +462,14 @@ const isPro   = planType === 'pro_6' || isElite;
         <div class="gs-header">
           <div class="gs-num" style="background:linear-gradient(135deg,#f59e0b,#fcd34d);">7</div>
           <div class="gs-title">AI Coach</div>
-          <span class="gs-badge" style="background:rgba(245,158,11,.15);color:#f59e0b;">ðŸ‘‘ Elite Exclusive</span>
+          <span class="gs-badge" style="background:rgba(245,158,11,.15);color:#f59e0b;">👑 Elite Exclusive</span>
         </div>
         <a href="/dashboard/ai-coach" class="feat-card">
-          <div class="fc-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(252,211,77,.1));border:1px solid rgba(245,158,11,.3);">ðŸ¤–</div>
+          <div class="fc-icon" style="background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(252,211,77,.1));border:1px solid rgba(245,158,11,.3);">🤖</div>
           <div class="fc-body">
             <div class="fc-title">Chat with Your AI Coach</div>
-            <div class="fc-desc">Your Elite plan includes an AI coach powered by Gemini. Ask anything â€” "Why am I not losing weight?", "What should I eat before a workout?", "How do I break a plateau?" â€” and get personalised answers based on your actual data: your check-ins, weight trends, and current day.</div>
-            <a href="/dashboard/ai-coach" class="fc-action" style="background:rgba(245,158,11,.15);color:#f59e0b;">Open AI Coach â†’</a>
+            <div class="fc-desc">Your Elite plan includes an AI coach powered by Gemini. Ask anything — "Why am I not losing weight?", "What should I eat before a workout?", "How do I break a plateau?" — and get personalised answers based on your actual data: your check-ins, weight trends, and current day.</div>
+            <a href="/dashboard/ai-coach" class="fc-action" style="background:rgba(245,158,11,.15);color:#f59e0b;">Open AI Coach →</a>
           </div>
         </a>
       </div>
@@ -479,15 +479,15 @@ const isPro   = planType === 'pro_6' || isElite;
         <div class="gs-header">
           <div class="gs-num" style="background:linear-gradient(135deg,#4b5563,#6b7280);">7</div>
           <div class="gs-title">AI Coach</div>
-          <span class="gs-badge" style="background:rgba(245,158,11,.1);color:#f59e0b;">ðŸ‘‘ Elite Only</span>
+          <span class="gs-badge" style="background:rgba(245,158,11,.1);color:#f59e0b;">👑 Elite Only</span>
         </div>
         <div class="feat-card locked-card" style="cursor:default;">
           <div class="lock-badge">Elite Only</div>
-          <div class="fc-icon" style="background:var(--card2);border:1px solid var(--border);">ðŸ¤–</div>
+          <div class="fc-icon" style="background:var(--card2);border:1px solid var(--border);">🤖</div>
           <div class="fc-body">
             <div class="fc-title">Personal AI Coach</div>
-            <div class="fc-desc">Get a personal AI coach that knows your data â€” check-ins, weight, energy, meals â€” and answers your keto questions with context. Available on the Elite 365-day plan.</div>
-            <a href="/dashboard/upgrade" class="fc-action" style="background:rgba(245,158,11,.12);color:#f59e0b;pointer-events:all;">Upgrade to Elite â†’</a>
+            <div class="fc-desc">Get a personal AI coach that knows your data — check-ins, weight, energy, meals — and answers your keto questions with context. Available on the Elite 365-day plan.</div>
+            <a href="/dashboard/upgrade" class="fc-action" style="background:rgba(245,158,11,.12);color:#f59e0b;pointer-events:all;">Upgrade to Elite →</a>
           </div>
         </div>
       </div>
@@ -499,11 +499,11 @@ const isPro   = planType === 'pro_6' || isElite;
     <div class="gc-title">Ready to crush Day {currentDay}?</div>
     <div class="gc-sub">
       {!hasCheckedIn
-        ? `You haven't checked in today yet. Start there â€” it only takes 2 minutes and keeps your streak alive.`
-        : `You've already checked in today â€” great work! Complete your tasks and log a meal to earn more XP.`}
+        ? `You haven't checked in today yet. Start there — it only takes 2 minutes and keeps your streak alive.`
+        : `You've already checked in today — great work! Complete your tasks and log a meal to earn more XP.`}
     </div>
     <a href={hasCheckedIn ? '/dashboard' : '/dashboard/checkin'} class="gc-btn">
-      {hasCheckedIn ? 'Back to Dashboard â†’' : 'Check In Now â†’ +30 XP'}
+      {hasCheckedIn ? 'Back to Dashboard →' : 'Check In Now → +30 XP'}
     </a>
   </div>
 

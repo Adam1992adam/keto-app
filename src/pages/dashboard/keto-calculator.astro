@@ -18,7 +18,7 @@ await updateCurrentDay(user.id).catch(() => null);
 const journey = await getUserJourney(user.id, db).catch(() => null);
 const currentDay = journey?.current_day || 1;
 
-// Pre-fill from onboarding â€” graceful fallback to profile/defaults if DB unavailable
+// Pre-fill from onboarding — graceful fallback to profile/defaults if DB unavailable
 let onboarding = null as any;
 try {
   const { data } = await db
@@ -44,7 +44,7 @@ const prefillWeightDisplay = units === 'imperial'
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{t('calc.title')} â€” Keto Journey</title>
+  <title>{t('calc.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
@@ -77,10 +77,10 @@ const prefillWeightDisplay = units === 'imperial'
 <div class="rv-pg-main">
 <main class="page">
 
-  <!-- â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <!-- ── Header ───────────────────────────────────────────── -->
   <header class="page-header fade-up">
     <div class="header-icon">
-      ðŸ§®
+      🧮
     </div>
     <div>
       <h1 class="page-title">Keto Calculator</h1>
@@ -88,10 +88,10 @@ const prefillWeightDisplay = units === 'imperial'
     </div>
   </header>
 
-  <!-- â”€â”€ Two-column layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <!-- ── Two-column layout ─────────────────────────────────── -->
   <div class="layout">
 
-    <!-- LEFT â€” Input form -->
+    <!-- LEFT — Input form -->
     <section class="card form-card fade-up" style="animation-delay:.05s">
       <h2 class="card-title">Your Details</h2>
 
@@ -158,11 +158,11 @@ const prefillWeightDisplay = units === 'imperial'
       <div class="field">
         <label class="field-label" for="activity">Activity level</label>
         <select class="select" id="activity" onchange="calc()">
-          <option value="1.2">Sedentary â€” desk job, little exercise</option>
-          <option value="1.375">Light â€” exercise 1â€“3 days/week</option>
-          <option value="1.55" selected>Moderate â€” exercise 3â€“5 days/week</option>
-          <option value="1.725">Active â€” exercise 6â€“7 days/week</option>
-          <option value="1.9">Very active â€” physical job + daily training</option>
+          <option value="1.2">Sedentary — desk job, little exercise</option>
+          <option value="1.375">Light — exercise 1–3 days/week</option>
+          <option value="1.55" selected>Moderate — exercise 3–5 days/week</option>
+          <option value="1.725">Active — exercise 6–7 days/week</option>
+          <option value="1.9">Very active — physical job + daily training</option>
         </select>
       </div>
 
@@ -175,7 +175,7 @@ const prefillWeightDisplay = units === 'imperial'
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
             </span>
             <span class="goal-label">Lose Fat</span>
-            <span class="goal-note">âˆ’20% calories</span>
+            <span class="goal-note">−20% calories</span>
           </button>
           <button class="goal-btn" data-val="maintain" onclick="setGoal('maintain')">
             <span class="goal-icon">
@@ -205,35 +205,35 @@ const prefillWeightDisplay = units === 'imperial'
       </div>
 
       <button class="reset-btn" onclick="resetForm()">
-        ðŸ”„
+        🔄
         Reset
       </button>
     </section>
 
-    <!-- RIGHT â€” Results -->
+    <!-- RIGHT — Results -->
     <div class="results-col">
 
       <!-- TDEE card -->
       <div class="card result-card fade-up" style="animation-delay:.1s">
         <div class="result-header">
-          <span class="result-header-icon amber" style="font-size:1rem;">âš¡</span>
+          <span class="result-header-icon amber" style="font-size:1rem;">⚡</span>
           <h3 class="result-title">Daily Calories</h3>
         </div>
         <div class="tdee-row">
           <div class="tdee-block">
-            <div class="tdee-val" id="outBMR">â€”</div>
+            <div class="tdee-val" id="outBMR">—</div>
             <div class="tdee-label">BMR</div>
             <div class="tdee-desc">at rest</div>
           </div>
-          <div class="tdee-arrow">â†’</div>
+          <div class="tdee-arrow">→</div>
           <div class="tdee-block">
-            <div class="tdee-val" id="outTDEE">â€”</div>
+            <div class="tdee-val" id="outTDEE">—</div>
             <div class="tdee-label">TDEE</div>
             <div class="tdee-desc">with activity</div>
           </div>
-          <div class="tdee-arrow">â†’</div>
+          <div class="tdee-arrow">→</div>
           <div class="tdee-block highlight">
-            <div class="tdee-val green" id="outTarget">â€”</div>
+            <div class="tdee-val green" id="outTarget">—</div>
             <div class="tdee-label">Target</div>
             <div class="tdee-desc" id="outGoalLabel">your goal</div>
           </div>
@@ -243,7 +243,7 @@ const prefillWeightDisplay = units === 'imperial'
       <!-- Macros card -->
       <div class="card result-card fade-up" style="animation-delay:.15s">
         <div class="result-header">
-          <span class="result-header-icon green" style="font-size:1rem;">ðŸŽ¯</span>
+          <span class="result-header-icon green" style="font-size:1rem;">🎯</span>
           <h3 class="result-title">Daily Macros</h3>
         </div>
 
@@ -262,7 +262,7 @@ const prefillWeightDisplay = units === 'imperial'
             <circle class="ring-track ring-track3" cx="80" cy="80" r="34" />
             <circle class="ring-seg ring-carb" id="ringCarb" cx="80" cy="80" r="34"
               stroke-dasharray="0 213" stroke-dashoffset="0" />
-            <text x="80" y="76"  class="ring-center-num" id="ringCalLabel">â€”</text>
+            <text x="80" y="76"  class="ring-center-num" id="ringCalLabel">—</text>
             <text x="80" y="92"  class="ring-center-sub">kcal</text>
           </svg>
 
@@ -271,21 +271,21 @@ const prefillWeightDisplay = units === 'imperial'
             <div class="legend-item">
               <span class="legend-dot fat"></span>
               <div>
-                <div class="legend-macro" id="outFatG">â€”g</div>
+                <div class="legend-macro" id="outFatG">—g</div>
                 <div class="legend-label">Fat <span class="legend-pct" id="outFatPct"></span></div>
               </div>
             </div>
             <div class="legend-item">
               <span class="legend-dot prot"></span>
               <div>
-                <div class="legend-macro" id="outProtG">â€”g</div>
+                <div class="legend-macro" id="outProtG">—g</div>
                 <div class="legend-label">Protein <span class="legend-pct" id="outProtPct"></span></div>
               </div>
             </div>
             <div class="legend-item">
               <span class="legend-dot carb"></span>
               <div>
-                <div class="legend-macro" id="outCarbG">â€”g</div>
+                <div class="legend-macro" id="outCarbG">—g</div>
                 <div class="legend-label">Net Carbs <span class="legend-pct" id="outCarbPct"></span></div>
               </div>
             </div>
@@ -297,17 +297,17 @@ const prefillWeightDisplay = units === 'imperial'
           <div class="mbar-row">
             <span class="mbar-name">Fat</span>
             <div class="mbar-track"><div class="mbar-fill fat" id="barFat"></div></div>
-            <span class="mbar-val" id="barFatVal">â€”</span>
+            <span class="mbar-val" id="barFatVal">—</span>
           </div>
           <div class="mbar-row">
             <span class="mbar-name">Protein</span>
             <div class="mbar-track"><div class="mbar-fill prot" id="barProt"></div></div>
-            <span class="mbar-val" id="barProtVal">â€”</span>
+            <span class="mbar-val" id="barProtVal">—</span>
           </div>
           <div class="mbar-row">
             <span class="mbar-name">Net Carbs</span>
             <div class="mbar-track"><div class="mbar-fill carb" id="barCarb"></div></div>
-            <span class="mbar-val" id="barCarbVal">â€”</span>
+            <span class="mbar-val" id="barCarbVal">—</span>
           </div>
         </div>
       </div>
@@ -315,7 +315,7 @@ const prefillWeightDisplay = units === 'imperial'
       <!-- Tips card -->
       <div class="card tips-card fade-up" style="animation-delay:.2s">
         <div class="result-header">
-          <span class="result-header-icon blue" style="font-size:1rem;">â„¹ï¸</span>
+          <span class="result-header-icon blue" style="font-size:1rem;">ℹ️</span>
           <h3 class="result-title">Keto Tips</h3>
         </div>
         <div class="tips-list" id="tipsList">
@@ -326,14 +326,14 @@ const prefillWeightDisplay = units === 'imperial'
       <!-- Water card -->
       <div class="card water-card fade-up" style="animation-delay:.25s">
         <div class="result-header">
-          <span class="result-header-icon cyan" style="font-size:1rem;">ðŸ’§</span>
+          <span class="result-header-icon cyan" style="font-size:1rem;">💧</span>
           <h3 class="result-title">Daily Water</h3>
         </div>
         <div class="water-row">
-          <div class="water-val" id="outWater">â€”</div>
-          <div class="water-sub" id="outWaterGlasses">â€” glasses of 250ml</div>
+          <div class="water-val" id="outWater">—</div>
+          <div class="water-sub" id="outWaterGlasses">— glasses of 250ml</div>
         </div>
-        <p class="water-note">Keto flushes water â€” drink at least this much to avoid keto flu.</p>
+        <p class="water-note">Keto flushes water — drink at least this much to avoid keto flu.</p>
       </div>
 
     </div><!-- /results-col -->
@@ -343,7 +343,7 @@ const prefillWeightDisplay = units === 'imperial'
 </div></div>
 
 <style>
-/* â”€â”€ Page layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Page layout ──────────────────────────────────────────── */
 .page {
   max-width: 1100px;
   margin: 0 auto;
@@ -369,7 +369,7 @@ const prefillWeightDisplay = units === 'imperial'
 }
 .page-sub { color: var(--soft); font-size: .88rem; margin: 0; }
 
-/* â”€â”€ Layout grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Layout grid ─────────────────────────────────────────── */
 .layout {
   display: grid;
   grid-template-columns: 360px 1fr;
@@ -382,7 +382,7 @@ const prefillWeightDisplay = units === 'imperial'
 
 .results-col { display: flex; flex-direction: column; gap: 1.25rem; }
 
-/* â”€â”€ Card base â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Card base ───────────────────────────────────────────── */
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -395,7 +395,7 @@ const prefillWeightDisplay = units === 'imperial'
   margin: 0 0 1.25rem;
 }
 
-/* â”€â”€ Form fields â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Form fields ─────────────────────────────────────────── */
 .field { margin-bottom: 1.1rem; }
 .field-label {
   display: block; font-size: .78rem; font-weight: 700;
@@ -429,7 +429,7 @@ const prefillWeightDisplay = units === 'imperial'
 .height-imperial { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
 .hidden { display: none !important; }
 
-/* â”€â”€ Segmented control â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Segmented control ───────────────────────────────────── */
 .seg {
   display: flex; background: var(--bg2);
   border: 1.5px solid var(--border); border-radius: var(--r-sm);
@@ -449,7 +449,7 @@ const prefillWeightDisplay = units === 'imperial'
   border: 1px solid var(--border);
 }
 
-/* â”€â”€ Goal buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Goal buttons ────────────────────────────────────────── */
 .goal-grid {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem;
 }
@@ -469,7 +469,7 @@ const prefillWeightDisplay = units === 'imperial'
 .goal-label { font-size: .78rem; font-weight: 700; color: var(--text); }
 .goal-note { font-size: .68rem; color: var(--soft); text-align: center; }
 
-/* â”€â”€ Reset button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Reset button ────────────────────────────────────────── */
 .reset-btn {
   display: inline-flex; align-items: center; gap: .4rem;
   padding: .5rem 1rem; border: 1.5px solid var(--border);
@@ -480,7 +480,7 @@ const prefillWeightDisplay = units === 'imperial'
 }
 .reset-btn:hover { border-color: var(--border2); color: var(--text); }
 
-/* â”€â”€ Result cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Result cards ────────────────────────────────────────── */
 .result-card { }
 .result-header {
   display: flex; align-items: center; gap: .5rem;
@@ -495,7 +495,7 @@ const prefillWeightDisplay = units === 'imperial'
   font-size: .95rem; font-weight: 700; color: var(--text); margin: 0;
 }
 
-/* â”€â”€ TDEE row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── TDEE row ────────────────────────────────────────────── */
 .tdee-row {
   display: flex; align-items: center; gap: .75rem;
   flex-wrap: wrap;
@@ -518,7 +518,7 @@ const prefillWeightDisplay = units === 'imperial'
 .tdee-desc  { font-size: .68rem; color: var(--soft); }
 .tdee-arrow { color: var(--muted); font-size: 1.2rem; flex-shrink: 0; }
 
-/* â”€â”€ Ring chart â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Ring chart ──────────────────────────────────────────── */
 .ring-wrap {
   display: flex; align-items: center; gap: 1.5rem;
   margin-bottom: 1.25rem;
@@ -546,7 +546,7 @@ const prefillWeightDisplay = units === 'imperial'
   transform: rotate(90deg); transform-origin: 80px 80px;
 }
 
-/* â”€â”€ Ring legend â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Ring legend ─────────────────────────────────────────── */
 .ring-legend { display: flex; flex-direction: column; gap: .85rem; }
 .legend-item { display: flex; align-items: center; gap: .65rem; }
 .legend-dot {
@@ -562,7 +562,7 @@ const prefillWeightDisplay = units === 'imperial'
 .legend-label { font-size: .76rem; color: var(--soft); }
 .legend-pct { font-size: .72rem; color: var(--soft); }
 
-/* â”€â”€ Macro bars â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Macro bars ──────────────────────────────────────────── */
 .macro-bars { display: flex; flex-direction: column; gap: .7rem; }
 .mbar-row { display: flex; align-items: center; gap: .75rem; }
 .mbar-name { width: 68px; font-size: .78rem; font-weight: 700; color: var(--soft); flex-shrink: 0; }
@@ -580,7 +580,7 @@ const prefillWeightDisplay = units === 'imperial'
 .mbar-fill.carb { background: var(--blue);  }
 .mbar-val { width: 42px; font-size: .78rem; font-weight: 700; color: var(--text); text-align: right; }
 
-/* â”€â”€ Tips â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Tips ────────────────────────────────────────────────── */
 .tips-card { }
 .tips-list { display: flex; flex-direction: column; gap: .6rem; }
 .tip-item {
@@ -591,7 +591,7 @@ const prefillWeightDisplay = units === 'imperial'
 }
 .tip-dot { font-size: .9rem; flex-shrink: 0; margin-top: .05rem; }
 
-/* â”€â”€ Water â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Water ───────────────────────────────────────────────── */
 .water-card { }
 .water-row { display: flex; align-items: baseline; gap: .75rem; margin-bottom: .5rem; }
 .water-val {
@@ -601,7 +601,7 @@ const prefillWeightDisplay = units === 'imperial'
 .water-sub { font-size: .85rem; color: var(--soft); }
 .water-note { font-size: .78rem; color: var(--soft); line-height: 1.5; }
 
-/* â”€â”€ Animations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Animations ──────────────────────────────────────────── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -610,7 +610,7 @@ const prefillWeightDisplay = units === 'imperial'
 </style>
 
 <script is:inline define:vars={{ prefillGoal, units }}>
-/* â•â• State â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══ State ═══════════════════════════════════════════════════ */
 var state = {
   unit:    units === 'imperial' ? 'imperial' : 'metric',
   sex:     'male',
@@ -618,7 +618,7 @@ var state = {
   strict:  'strict',
 };
 
-/* â•â• Boot â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══ Boot ════════════════════════════════════════════════════ */
 (function () {
   setUnit(state.unit, true);
   setSex(state.sex, true);
@@ -627,7 +627,7 @@ var state = {
   calc();
 })();
 
-/* â•â• Setters â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══ Setters ════════════════════════════════════════════════ */
 function setUnit(val, silent) {
   state.unit = val;
   activateSeg('unitSeg', val);
@@ -663,7 +663,7 @@ function activateSeg(id, val) {
   });
 }
 
-/* â•â• Reset â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══ Reset ══════════════════════════════════════════════════ */
 function resetForm() {
   document.getElementById('age').value      = '30';
   document.getElementById('weight').value   = state.unit === 'imperial' ? '154' : '70';
@@ -678,7 +678,7 @@ function resetForm() {
   calc();
 }
 
-/* â•â• Core calculation â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══ Core calculation ═══════════════════════════════════════ */
 function calc() {
   var age      = parseFloat(document.getElementById('age').value)    || 30;
   var weightRaw= parseFloat(document.getElementById('weight').value) || 70;
@@ -707,12 +707,12 @@ function calc() {
   // Goal adjustment
   var goalMult = state.goal === 'lose' ? 0.80 : state.goal === 'gain' ? 1.10 : 1.0;
   var target   = Math.round(tdee * goalMult);
-  var goalLabel= state.goal === 'lose' ? 'âˆ’20% deficit' : state.goal === 'gain' ? '+10% surplus' : 'maintenance';
+  var goalLabel= state.goal === 'lose' ? '−20% deficit' : state.goal === 'gain' ? '+10% surplus' : 'maintenance';
 
   // Carb ceiling by strictness
   var maxCarbs = state.strict === 'strict' ? 20 : state.strict === 'moderate' ? 35 : 50;
 
-  // Macro split â€” fixed carbs, protein ~1g/lb LBM approx (0.8g/kg), rest fat
+  // Macro split — fixed carbs, protein ~1g/lb LBM approx (0.8g/kg), rest fat
   var carbCals = maxCarbs * 4;
   var protG    = Math.round(weightKg * 1.6);         // 1.6g per kg body weight
   var protCals = protG * 4;
@@ -729,7 +729,7 @@ function calc() {
   var waterL    = (waterML / 1000).toFixed(1);
   var glasses   = Math.round(waterML / 250);
 
-  // â”€â”€ Update DOM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Update DOM ──────────────────────────────────────────
   setText('outBMR',   bmr.toLocaleString());
   setText('outTDEE',  tdee.toLocaleString());
   setText('outTarget',target.toLocaleString());
@@ -749,7 +749,7 @@ function calc() {
   setBar('barProt', protPct, protG + 'g');
   setBar('barCarb', carbPct, maxCarbs + 'g');
 
-  // Rings â€” circumferences: r66â†’414.7, r50â†’314.2, r34â†’213.6
+  // Rings — circumferences: r66→414.7, r50→314.2, r34→213.6
   setRing('ringFat',  fatPct,  414.7);
   setRing('ringProt', protPct, 314.2);
   setRing('ringCarb', carbPct, 213.6);
@@ -779,25 +779,25 @@ function setRing(id, pct, circ) {
   el.setAttribute('stroke-dasharray', arc + ' ' + circ);
 }
 
-/* â•â• Tips â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══ Tips ═══════════════════════════════════════════════════ */
 function renderTips(weightKg, bmr, goal, strict, maxCarbs) {
   var tips = [];
 
   if (goal === 'lose') {
-    tips.push({ icon: 'ðŸ”¥', text: 'Aim for a consistent 20% deficit â€” larger cuts risk muscle loss on keto.' });
+    tips.push({ icon: '🔥', text: 'Aim for a consistent 20% deficit — larger cuts risk muscle loss on keto.' });
   }
   if (goal === 'gain') {
-    tips.push({ icon: 'ðŸ’ª', text: 'Hitting protein targets is critical for muscle growth â€” prioritise it at every meal.' });
+    tips.push({ icon: '💪', text: 'Hitting protein targets is critical for muscle growth — prioritise it at every meal.' });
   }
   if (strict === 'strict') {
-    tips.push({ icon: 'âš¡', text: 'Under 20g carbs puts most people in ketosis within 2â€“4 days.' });
+    tips.push({ icon: '⚡', text: 'Under 20g carbs puts most people in ketosis within 2–4 days.' });
   }
-  tips.push({ icon: 'ðŸ¥‘', text: 'Fill fat from whole foods: avocado, olive oil, fatty fish, nuts â€” not just oils.' });
-  tips.push({ icon: 'ðŸ§‚', text: 'Supplement electrolytes (sodium, potassium, magnesium) â€” keto depletes them fast.' });
+  tips.push({ icon: '🥑', text: 'Fill fat from whole foods: avocado, olive oil, fatty fish, nuts — not just oils.' });
+  tips.push({ icon: '🧂', text: 'Supplement electrolytes (sodium, potassium, magnesium) — keto depletes them fast.' });
   if (weightKg > 90) {
-    tips.push({ icon: 'ðŸ’§', text: 'Heavier bodies need more water. Aim for the full target above â€” spread it through the day.' });
+    tips.push({ icon: '💧', text: 'Heavier bodies need more water. Aim for the full target above — spread it through the day.' });
   }
-  tips.push({ icon: 'ðŸ“', text: 'Recalculate every 5 kg of weight lost â€” your TDEE decreases as you lose.' });
+  tips.push({ icon: '📏', text: 'Recalculate every 5 kg of weight lost — your TDEE decreases as you lose.' });
 
   var html = tips.map(function(t) {
     return '<div class="tip-item"><span class="tip-dot">' + t.icon + '</span><span>' + t.text + '</span></div>';

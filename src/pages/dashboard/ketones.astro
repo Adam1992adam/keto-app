@@ -69,9 +69,9 @@ const zoneTip =
   zone === 'below'        ? 'You are not yet in ketosis. Keep carbs under 20g/day.' :
   zone === 'light'        ? 'You are entering ketosis. Keep it up!' :
   zone === 'nutritional'  ? 'Optimal fat-burning zone. Great work!' :
-  zone === 'deep'         ? 'Deep ketosis â€” excellent for mental clarity.' : 'Therapeutic range. Monitor closely.';
+  zone === 'deep'         ? 'Deep ketosis — excellent for mental clarity.' : 'Therapeutic range. Monitor closely.';
 
-// SVG chart â€” last 14 readings, oldest first
+// SVG chart — last 14 readings, oldest first
 const chartRaw = [...entries].slice(0, 14).reverse();
 const chartMax = Math.max(5, ...chartRaw.map((e: any) => parseFloat(e.ketone_mmol)));
 const CW = 560; const CH = 140;
@@ -95,7 +95,7 @@ const today = new Date().toISOString().split('T')[0];
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{t('ketones.title')} Â· Keto Journey</title>
+  <title>{t('ketones.title')} · Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
   <style>
@@ -119,7 +119,7 @@ const today = new Date().toISOString().split('T')[0];
   <!-- Header -->
   <div class="page-header" style="animation:fadeUp .5s ease both;">
     <div>
-      <h1 class="page-title">ðŸ“Š Ketone Tracker</h1>
+      <h1 class="page-title">📊 Ketone Tracker</h1>
       <p class="page-sub">Monitor your ketosis level and fat-burning zone</p>
     </div>
     <button class="log-btn" id="openModal">+ Log Reading</button>
@@ -142,21 +142,21 @@ const today = new Date().toISOString().split('T')[0];
     <div class="stat-card">
       <div class="stat-label">Latest</div>
       <div class="stat-val" style={`color:${zoneColor}`}>
-        {latestVal !== null ? `${latestVal.toFixed(1)}` : 'â€”'}
+        {latestVal !== null ? `${latestVal.toFixed(1)}` : '—'}
       </div>
       <div class="stat-unit">mmol/L</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">7-Day Avg</div>
       <div class="stat-val" style="color:var(--blue)">
-        {weekAvg !== null ? weekAvg.toFixed(1) : 'â€”'}
+        {weekAvg !== null ? weekAvg.toFixed(1) : '—'}
       </div>
       <div class="stat-unit">mmol/L</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Best</div>
       <div class="stat-val" style="color:var(--purple)">
-        {bestVal !== null ? bestVal.toFixed(1) : 'â€”'}
+        {bestVal !== null ? bestVal.toFixed(1) : '—'}
       </div>
       <div class="stat-unit">mmol/L</div>
     </div>
@@ -170,13 +170,13 @@ const today = new Date().toISOString().split('T')[0];
   <!-- Chart card -->
   <div class="card chart-card" style="animation:fadeUp .5s .16s ease both;">
     <div class="card-head">
-      <span class="card-title">ðŸ“ˆ Ketone Trend</span>
+      <span class="card-title">📈 Ketone Trend</span>
       <span class="card-sub">Last {Math.min(14, entries.length)} readings</span>
     </div>
 
     {entries.length === 0 && (
       <div class="empty-chart">
-        <div class="empty-icon" style="font-size:2rem;">ðŸ“Š</div>
+        <div class="empty-icon" style="font-size:2rem;">📊</div>
         <p>Log your first ketone reading to see your trend chart.</p>
       </div>
     )}
@@ -217,9 +217,9 @@ const today = new Date().toISOString().split('T')[0];
         </svg>
         <!-- Zone labels -->
         <div class="chart-zones">
-          <span class="cz-label cz-purple">Deep (3â€“5)</span>
-          <span class="cz-label cz-green">Optimal (1.5â€“3)</span>
-          <span class="cz-label cz-blue">Light (0.5â€“1.5)</span>
+          <span class="cz-label cz-purple">Deep (3–5)</span>
+          <span class="cz-label cz-green">Optimal (1.5–3)</span>
+          <span class="cz-label cz-blue">Light (0.5–1.5)</span>
         </div>
       </div>
     )}
@@ -228,7 +228,7 @@ const today = new Date().toISOString().split('T')[0];
   <!-- Ketone zones guide -->
   <div class="card" style="animation:fadeUp .5s .2s ease both;">
     <div class="card-head">
-      <span class="card-title">ðŸŽ¯ Ketone Zones Guide</span>
+      <span class="card-title">🎯 Ketone Zones Guide</span>
     </div>
     <div class="zones-grid">
       <div class="zone-item zi-gray">
@@ -237,17 +237,17 @@ const today = new Date().toISOString().split('T')[0];
         <div class="zi-desc">Glucose is still the primary fuel. Reduce carbs further.</div>
       </div>
       <div class="zone-item zi-blue">
-        <div class="zi-range">0.5 â€“ 1.5</div>
+        <div class="zi-range">0.5 – 1.5</div>
         <div class="zi-name">Light Ketosis</div>
         <div class="zi-desc">Entering fat-burning mode. Good for weight loss beginners.</div>
       </div>
       <div class="zone-item zi-green">
-        <div class="zi-range">1.5 â€“ 3.0</div>
-        <div class="zi-name">Nutritional Ketosis âœ“</div>
-        <div class="zi-desc">Optimal zone â€” steady energy, fat burning, mental clarity.</div>
+        <div class="zi-range">1.5 – 3.0</div>
+        <div class="zi-name">Nutritional Ketosis ✓</div>
+        <div class="zi-desc">Optimal zone — steady energy, fat burning, mental clarity.</div>
       </div>
       <div class="zone-item zi-purple">
-        <div class="zi-range">3.0 â€“ 5.0</div>
+        <div class="zi-range">3.0 – 5.0</div>
         <div class="zi-name">Deep Ketosis</div>
         <div class="zi-desc">High fat burning, enhanced focus. Common during fasting.</div>
       </div>
@@ -262,13 +262,13 @@ const today = new Date().toISOString().split('T')[0];
   <!-- History -->
   <div class="card" style="animation:fadeUp .5s .24s ease both;">
     <div class="card-head">
-      <span class="card-title">ðŸ“… Reading History</span>
+      <span class="card-title">📅 Reading History</span>
       <span class="card-sub">{entries.length} total</span>
     </div>
 
     {entries.length === 0 && (
       <div class="empty-state">
-        <div class="empty-icon" style="font-size:2rem;">ðŸ“‹</div>
+        <div class="empty-icon" style="font-size:2rem;">📋</div>
         <p>No readings yet. Log your first measurement above.</p>
       </div>
     )}
@@ -298,9 +298,9 @@ const today = new Date().toISOString().split('T')[0];
           return (
             <div class="hist-row">
               <span class="hist-icon">
-                {typeIsBlood  && 'ðŸ©¸'}
-                {typeIsUrine  && 'ðŸ’§'}
-                {typeIsBreath && 'ðŸ’¨'}
+                {typeIsBlood  && '🩸'}
+                {typeIsUrine  && '💧'}
+                {typeIsBreath && '💨'}
               </span>
               <div class="hist-info">
                 <span class="hist-date">{new Date(e.logged_date + 'T12:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}</span>
@@ -309,7 +309,7 @@ const today = new Date().toISOString().split('T')[0];
               <div class="hist-right">
                 <span class="hist-val" style={`color:${eColor}`}>{val.toFixed(1)}</span>
                 <span class="hist-badge" style={`background:${eColor}18;color:${eColor};border-color:${eColor}30;`}>{eLabel}</span>
-                <button class="hist-del" onclick={`deleteEntry('${e.id}')`} title="Delete" aria-label="Delete entry">Ã—</button>
+                <button class="hist-del" onclick={`deleteEntry('${e.id}')`} title="Delete" aria-label="Delete entry">×</button>
               </div>
             </div>
           );
@@ -323,21 +323,21 @@ const today = new Date().toISOString().split('T')[0];
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <div class="modal-head">
-      <h3>ðŸ“Š Log Ketone Reading</h3>
-      <button class="modal-close" id="closeModal">Ã—</button>
+      <h3>📊 Log Ketone Reading</h3>
+      <button class="modal-close" id="closeModal">×</button>
     </div>
     <form id="ketoneForm" class="modal-body">
       <div class="form-row">
         <label class="form-label">Ketone Level (mmol/L) *</label>
         <input type="number" id="ketoneVal" class="form-input" step="0.1" min="0" max="30" placeholder="e.g. 1.8" required />
-        <div class="input-hint">Normal range: 0.5 â€“ 5.0 mmol/L</div>
+        <div class="input-hint">Normal range: 0.5 – 5.0 mmol/L</div>
       </div>
       <div class="form-row">
         <label class="form-label">Measurement Type</label>
         <div class="type-btns" id="typeBtns">
-          <button type="button" class="type-btn active" data-type="blood">ðŸ©¸ Blood</button>
-          <button type="button" class="type-btn" data-type="urine">ðŸ’§ Urine</button>
-          <button type="button" class="type-btn" data-type="breath">ðŸ’¨ Breath</button>
+          <button type="button" class="type-btn active" data-type="blood">🩸 Blood</button>
+          <button type="button" class="type-btn" data-type="urine">💧 Urine</button>
+          <button type="button" class="type-btn" data-type="breath">💨 Breath</button>
         </div>
       </div>
       <div class="form-row">
@@ -346,13 +346,13 @@ const today = new Date().toISOString().split('T')[0];
       </div>
       <div class="form-row">
         <label class="form-label">Notes (optional)</label>
-        <input type="text" id="logNotes" class="form-input" placeholder="e.g. fasted 16h, post-workoutâ€¦" maxlength="200" />
+        <input type="text" id="logNotes" class="form-input" placeholder="e.g. fasted 16h, post-workout…" maxlength="200" />
       </div>
 
       <!-- Live zone preview -->
       <div class="zone-preview" id="zonePreview" style="display:none;">
         <span id="previewDot" class="preview-dot"></span>
-        <span id="previewLabel">â€”</span>
+        <span id="previewLabel">—</span>
       </div>
 
       <div class="modal-actions">
@@ -590,7 +590,7 @@ const today = new Date().toISOString().split('T')[0];
     preview.style.borderColor = z.color + '30';
     previewDot.style.background = z.color;
     previewLbl.style.color = z.color;
-    previewLbl.textContent = val.toFixed(1) + ' mmol/L â€” ' + z.label;
+    previewLbl.textContent = val.toFixed(1) + ' mmol/L — ' + z.label;
   });
 
   // Submit
@@ -600,7 +600,7 @@ const today = new Date().toISOString().split('T')[0];
     if (isNaN(val) || val < 0 || val > 30) { alert('Enter a value between 0 and 30 mmol/L'); return; }
 
     saveBtn.disabled = true;
-    saveBtn.textContent = 'Savingâ€¦';
+    saveBtn.textContent = 'Saving…';
 
     try {
       var res = await fetch('/api/ketones/log', {
@@ -627,7 +627,7 @@ const today = new Date().toISOString().split('T')[0];
       saveBtn.textContent = 'Save Reading';
     }
   });
-  // â”€â”€ Delete entry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Delete entry ─────────────────────────────────────────
   window.deleteEntry = async function(id) {
     if (!confirm('Delete this reading?')) return;
     try {

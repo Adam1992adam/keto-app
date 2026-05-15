@@ -21,7 +21,7 @@ const currentDay = journey?.current_day || 1;
 const dailyTasks = await getDailyTasks(user.id, currentDay, db);
 const incompleteTasks = dailyTasks?.filter((t: any) => t.task_type !== 'reflection' && t.task_type !== 'weight' && !t.completed) || [];
 
-// Per-plan checkout URLs â€” set each in your Cloudflare environment variables.
+// Per-plan checkout URLs — set each in your Cloudflare environment variables.
 // Append query params at runtime to prefill email, name, and user ID.
 const LS_BASIC_URL = import.meta.env.LEMONSQUEEZY_BASIC_URL  || import.meta.env.LEMON_SQUEEZY_CHECKOUT_URL || '';
 const LS_PRO_URL   = import.meta.env.LEMONSQUEEZY_PRO_URL    || import.meta.env.LEMON_SQUEEZY_CHECKOUT_URL || '';
@@ -29,11 +29,11 @@ const LS_ELITE_URL = import.meta.env.LEMONSQUEEZY_ELITE_URL  || import.meta.env.
 
 // Helpers passed to client so checkout URLs can be prefilled
 const userEmail  = user.email || '';
-// userName already declared above (profile.full_name first word) â€” reuse it
+// userName already declared above (profile.full_name first word) — reuse it
 const userFullName = profile.full_name || '';
 const userId     = user.id || '';
 
-// Plan â†’ checkout URL map (consumed in define:vars)
+// Plan → checkout URL map (consumed in define:vars)
 const planCheckoutUrls: Record<string, string> = {
   basic_30: LS_BASIC_URL,
   pro_6:    LS_PRO_URL,
@@ -46,7 +46,7 @@ const plans = [
   {
     id: 'basic_30',
     name: 'Basic',
-    emoji: 'ðŸ¥‘',
+    emoji: '🥑',
     tagline: 'Perfect Start',
     price: 29.99,
     duration: '30 Days',
@@ -73,7 +73,7 @@ const plans = [
   {
     id: 'pro_6',
     name: 'Pro',
-    emoji: 'âš¡',
+    emoji: '⚡',
     tagline: 'Most Popular',
     price: 69,
     duration: '90 Days',
@@ -100,7 +100,7 @@ const plans = [
   {
     id: 'elite_12',
     name: 'Elite',
-    emoji: 'ðŸ‘‘',
+    emoji: '👑',
     tagline: 'Best Value',
     price: 149,
     duration: '360 Days',
@@ -129,7 +129,7 @@ const plans = [
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{t('upgrade.title')} â€” Keto Journey</title>
+  <title>{t('upgrade.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet"/>
@@ -481,29 +481,29 @@ const plans = [
 
   <!-- HERO -->
   <div class="hero">
-    <div class="hero-badge">âš¡ Level Up Your Journey</div>
+    <div class="hero-badge">⚡ Level Up Your Journey</div>
     <h1 class="hero-title">
       Choose Your<br/><span class="hl">Keto Plan</span>
     </h1>
-    <p class="hero-sub">One-time payment. Lifetime access. Cancel-free â€” results guaranteed or your money back.</p>
+    <p class="hero-sub">One-time payment. Lifetime access. Cancel-free — results guaranteed or your money back.</p>
   </div>
 
   <!-- TRUST BADGES -->
   <div class="trust-row">
     <div class="trust-item">
-      <div class="trust-icon">ðŸ…</div>
+      <div class="trust-icon">🏅</div>
       <span>30-Day Guarantee</span>
     </div>
     <div class="trust-item">
-      <div class="trust-icon">ðŸ”’</div>
+      <div class="trust-icon">🔒</div>
       <span>Secure Checkout</span>
     </div>
     <div class="trust-item">
-      <div class="trust-icon">âš¡</div>
+      <div class="trust-icon">⚡</div>
       <span>Instant Access</span>
     </div>
     <div class="trust-item">
-      <div class="trust-icon">ðŸ‘¥</div>
+      <div class="trust-icon">👥</div>
       <span>10,000+ Users</span>
     </div>
   </div>
@@ -523,7 +523,7 @@ const plans = [
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
-        <span class="badge-active">âœ“ Active</span>
+        <span class="badge-active">✓ Active</span>
         <button id="manageSubBtn" style="display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .85rem;border-radius:99px;border:1px solid var(--border2);background:transparent;color:var(--soft);font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;" onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--green)';" onmouseout="this.style.color='var(--soft)';this.style.borderColor='var(--border2)';">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
           Manage Subscription
@@ -563,7 +563,7 @@ const plans = [
             <div class={`feature-item ${!f.included ? 'off' : ''}`}>
               <div class={`feat-check ${f.included ? 'yes' : 'no'}`}
                    style={f.included ? `background:${plan.accent}20;color:${plan.accent}` : ''}>
-                {f.included ? 'âœ“' : 'âœ•'}
+                {f.included ? '✓' : '✕'}
               </div>
               <span class="feat-text">{f.text}</span>
             </div>
@@ -573,7 +573,7 @@ const plans = [
         <!-- CTA -->
         <div class="plan-footer">
           {currentPlan?.id === plan.id ? (
-            <div class="btn-current">âœ“ Your Current Plan</div>
+            <div class="btn-current">✓ Your Current Plan</div>
           ) : (
             <button
               class={`btn-upgrade ${plan.id === 'basic_30' ? 'green' : plan.id === 'pro_6' ? 'indigo' : 'gold'}`}
@@ -585,8 +585,8 @@ const plans = [
               data-plan-url={planCheckoutUrls[plan.id] || ''}
               onclick="openModal(this)"
             >
-              <span>â€º</span>
-              <span>Get {plan.name} â€” ${plan.price}</span>
+              <span>›</span>
+              <span>Get {plan.name} — ${plan.price}</span>
             </button>
           )}
         </div>
@@ -607,18 +607,18 @@ const plans = [
       ['Meal Plan', '30 days', '90 days', '360 days'],
       ['Recipes', '30', '87+', 'Unlimited'],
       ['Free eBooks', '4', '8', '12'],
-      ['Dashboard & Tracking', 'âœ“', 'âœ“', 'âœ“'],
-      ['Macros Tracker', 'âœ“', 'âœ“', 'âœ“'],
-      ['Advanced Analytics', 'â€”', 'âœ“', 'âœ“'],
-      ['Priority Support', 'â€”', 'âœ“', 'âœ“'],
-      ['Community Access', 'â€”', 'â€”', 'âœ“'],
-      ['AI Keto Coach ðŸ¤–', 'â€”', 'â€”', 'âœ“'],
-      ['Lifetime Updates', 'â€”', 'â€”', 'âœ“'],
+      ['Dashboard & Tracking', '✓', '✓', '✓'],
+      ['Macros Tracker', '✓', '✓', '✓'],
+      ['Advanced Analytics', '—', '✓', '✓'],
+      ['Priority Support', '—', '✓', '✓'],
+      ['Community Access', '—', '—', '✓'],
+      ['AI Keto Coach 🤖', '—', '—', '✓'],
+      ['Lifetime Updates', '—', '—', '✓'],
     ].map(row => (
       <div class="compare-row">
         <div class="compare-cell feat-name">{row[0]}</div>
         {[row[1], row[2], row[3]].map((val, i) => (
-          <div class="compare-cell center" style={val === 'âœ“' ? `color:${i===0?'#FF5C7A':i===1?'#6366f1':'#f59e0b'}` : val === 'â€”' ? 'color:var(--muted);opacity:.4' : `font-weight:700;color:${i===0?'#FF5C7A':i===1?'#6366f1':'#f59e0b'}`}>
+          <div class="compare-cell center" style={val === '✓' ? `color:${i===0?'#FF5C7A':i===1?'#6366f1':'#f59e0b'}` : val === '—' ? 'color:var(--muted);opacity:.4' : `font-weight:700;color:${i===0?'#FF5C7A':i===1?'#6366f1':'#f59e0b'}`}>
             {val}
           </div>
         ))}
@@ -639,7 +639,7 @@ const plans = [
         { q:'Is my payment secure?', a:'Yes. All payments are processed securely through LemonSqueezy with industry-standard encryption.' },
       ].map(faq => (
         <div class="faq-item">
-          <div class="faq-q">â“ {faq.q}</div>
+          <div class="faq-q">❓ {faq.q}</div>
           <div class="faq-a">{faq.a}</div>
         </div>
       ))}
@@ -648,9 +648,9 @@ const plans = [
 
   <!-- GUARANTEE -->
   <div class="guarantee">
-    <div class="guarantee-icon">ðŸ…</div>
+    <div class="guarantee-icon">🏅</div>
     <div class="guarantee-title">30-Day Money-Back Guarantee</div>
-    <p class="guarantee-sub">Not satisfied with your results? Contact us within 30 days for a full refund â€” no questions asked. We stand behind every plan.</p>
+    <p class="guarantee-sub">Not satisfied with your results? Contact us within 30 days for a full refund — no questions asked. We stand behind every plan.</p>
   </div>
 
 </div><!-- /page -->
@@ -660,8 +660,8 @@ const plans = [
 <!-- MODAL -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
-    <button class="modal-close" onclick="closeModal()">Ã—</button>
-    <div class="modal-title">Confirm Upgrade âš¡</div>
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div class="modal-title">Confirm Upgrade ⚡</div>
     <p class="modal-sub">You'll be redirected to our secure checkout to complete your payment instantly.</p>
     <div class="modal-plan-box">
       <div class="modal-plan-emoji" id="modalEmoji"></div>
@@ -671,7 +671,7 @@ const plans = [
       </div>
     </div>
     <div class="modal-actions">
-      <button class="modal-confirm" id="modalConfirm">Continue to Secure Checkout â†’</button>
+      <button class="modal-confirm" id="modalConfirm">Continue to Secure Checkout →</button>
       <button class="modal-cancel" onclick="closeModal()">Cancel</button>
     </div>
   </div>
@@ -681,7 +681,7 @@ const plans = [
 
 <script is:inline define:vars={{ userEmail, userName: userFullName, userId, appUrl }}>
 
-// â”€â”€ CHECKOUT URL builder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── CHECKOUT URL builder ──────────────────────────────────────────────────────
 // Prefills email, name, and user_id so the webhook can directly upgrade the account.
 function buildCheckoutUrl(baseUrl) {
   if (!baseUrl) return '';
@@ -696,12 +696,12 @@ function buildCheckoutUrl(baseUrl) {
   } catch(e) { return baseUrl; }
 }
 
-// â”€â”€ MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── MODAL ─────────────────────────────────────────────────────────────────────
 var _pendingCheckoutUrl = '';
 
 function openModal(btn) {
   document.getElementById('modalEmoji').textContent = btn.dataset.planEmoji;
-  document.getElementById('modalName').textContent  = btn.dataset.planName + ' Plan â€” ' + btn.dataset.planDuration;
+  document.getElementById('modalName').textContent  = btn.dataset.planName + ' Plan — ' + btn.dataset.planDuration;
   document.getElementById('modalPrice').textContent = '$' + btn.dataset.planPrice + ' one-time payment';
   _pendingCheckoutUrl = buildCheckoutUrl(btn.dataset.planUrl || '');
   document.getElementById('modalOverlay').classList.add('show');
@@ -717,18 +717,18 @@ document.getElementById('modalOverlay')?.addEventListener('click', function(e) {
 
 document.getElementById('modalConfirm')?.addEventListener('click', function() {
   if (!_pendingCheckoutUrl) {
-    showToast('âš ï¸ Checkout URL not configured. Contact support.');
+    showToast('⚠️ Checkout URL not configured. Contact support.');
     return;
   }
   closeModal();
   window.open(_pendingCheckoutUrl, '_blank');
-  showToast('ðŸš€ Opening secure checkoutâ€¦');
+  showToast('🚀 Opening secure checkout…');
 });
 
-// â”€â”€ MANAGE SUBSCRIPTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── MANAGE SUBSCRIPTION ───────────────────────────────────────────────────────
 document.getElementById('manageSubBtn')?.addEventListener('click', async function() {
   var btn = this;
-  btn.textContent = 'Loadingâ€¦';
+  btn.textContent = 'Loading…';
   btn.disabled = true;
 
   try {
@@ -738,19 +738,19 @@ document.getElementById('manageSubBtn')?.addEventListener('click', async functio
     if (data.portal_url) {
       window.open(data.portal_url, '_blank');
     } else if (data.not_found) {
-      showToast('âš ï¸ No portal account found. Contact support if you need help.');
+      showToast('⚠️ No portal account found. Contact support if you need help.');
     } else {
-      showToast('âš ï¸ ' + (data.error || 'Could not open portal. Try again.'));
+      showToast('⚠️ ' + (data.error || 'Could not open portal. Try again.'));
     }
   } catch(e) {
-    showToast('âŒ Network error. Please try again.');
+    showToast('❌ Network error. Please try again.');
   }
 
   btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg> Manage Subscription';
   btn.disabled = false;
 });
 
-// â”€â”€ TOAST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── TOAST ─────────────────────────────────────────────────────────────────────
 function showToast(msg) {
   var t = document.getElementById('toast');
   if (!t) return;

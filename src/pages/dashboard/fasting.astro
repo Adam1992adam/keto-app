@@ -51,11 +51,11 @@ const historyRows = (pastSessions || []).map(s => {
   const hrs       = s.actual_hours || 0;
   const target    = s.target_hours || 16;
   const pct       = Math.min(Math.round((hrs / target) * 100), 100);
-  const protoName = s.protocol ? s.protocol.replace('_', ':') : 'â€”';
+  const protoName = s.protocol ? s.protocol.replace('_', ':') : '—';
   const done      = s.completed;
   const barColor  = pct >= 100 ? '#FF5C7A' : pct >= 60 ? '#f59e0b' : '#ef4444';
   const checkClass= done ? 'done' : 'partial';
-  const checkIcon = done ? 'âœ“' : '~';
+  const checkIcon = done ? '✓' : '~';
   return { dateStr, timeStr, hrs, target, pct, protoName, done, barColor, checkClass, checkIcon };
 });
 const hasHistory = historyRows.length > 0;
@@ -66,14 +66,14 @@ const hasHistory = historyRows.length > 0;
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Fasting â€” Keto Journey</title>
+  <title>Fasting — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
   <script is:inline>(function(){var t=localStorage.getItem('keto-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
   <style>
-    /* â”€â”€ Rose Vital tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Rose Vital tokens ───────────────────────────────── */
     :root {
       --rv-bg:      #FAF6F1;
       --rv-card:    #FFFFFF;
@@ -126,7 +126,7 @@ const hasHistory = historyRows.length > 0;
       min-height: 100vh;
     }
 
-    /* â”€â”€ Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Shell ───────────────────────────────────────────── */
     .rv-shell {
       display: grid;
       grid-template-columns: 232px 1fr;
@@ -154,7 +154,7 @@ const hasHistory = historyRows.length > 0;
     @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
     @keyframes bounceIn { 0%{transform:scale(0);} 70%{transform:scale(1.1);} 100%{transform:scale(1);} }
 
-    /* â”€â”€ Page header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Page header ─────────────────────────────────────── */
     .rv-hd {
       display: flex; align-items: center; justify-content: space-between;
       margin-bottom: 2rem;
@@ -169,7 +169,7 @@ const hasHistory = historyRows.length > 0;
       font-size: .72rem; color: var(--rv-muted); margin-top: .2rem;
     }
 
-    /* â”€â”€ Timer hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Timer hero ──────────────────────────────────────── */
     .timer-hero {
       text-align: center;
       padding: 2.5rem 2rem 2.25rem;
@@ -224,7 +224,7 @@ const hasHistory = historyRows.length > 0;
     }
     .stage-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: pulseDot 1.5s ease-in-out infinite; }
 
-    /* SVG Ring â€” 240Ã—240 */
+    /* SVG Ring — 240×240 */
     .ring-wrap {
       position: relative; width: 220px; height: 220px;
       margin: 0 auto 1.25rem;
@@ -387,7 +387,7 @@ const hasHistory = historyRows.length > 0;
     }
     .btn-ghost:hover { border-color: var(--rv-ink-soft); color: var(--rv-ink); }
 
-    /* â”€â”€ Section label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Section label ───────────────────────────────────── */
     .rv-sec-lbl {
       font-family: 'Geist Mono', monospace;
       font-size: .65rem; font-weight: 700;
@@ -398,7 +398,7 @@ const hasHistory = historyRows.length > 0;
     }
     .rv-sec-lbl::after { content:''; flex:1; height:1px; background:var(--rv-line); }
 
-    /* â”€â”€ Protocol cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Protocol cards ──────────────────────────────────── */
     .protocol-section {
       background: var(--rv-card); border: 1px solid var(--rv-line);
       border-radius: 20px; padding: 1.5rem;
@@ -461,7 +461,7 @@ const hasHistory = historyRows.length > 0;
     }
     .proto-start-wrap { margin-top: 1.25rem; text-align: center; }
 
-    /* â”€â”€ Fasting stages science â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Fasting stages science ──────────────────────────── */
     .stages-section {
       background: var(--rv-card); border: 1px solid var(--rv-line);
       border-radius: 20px; overflow: hidden;
@@ -521,7 +521,7 @@ const hasHistory = historyRows.length > 0;
       background: var(--rv-line);
     }
 
-    /* â”€â”€ Stats row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Stats row ───────────────────────────────────────── */
     .stats-row {
       display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem;
       margin-bottom: 1.5rem;
@@ -545,7 +545,7 @@ const hasHistory = historyRows.length > 0;
       text-transform: uppercase; letter-spacing: .07em; color: var(--rv-muted);
     }
 
-    /* â”€â”€ History â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── History ─────────────────────────────────────────── */
     .history-section {
       background: var(--rv-card); border: 1px solid var(--rv-line);
       border-radius: 20px; overflow: hidden;
@@ -594,7 +594,7 @@ const hasHistory = historyRows.length > 0;
     .hist-check.done    { background: rgba(255,92,122,.1); color: #FF5C7A; border: 1.5px solid rgba(255,92,122,.2); }
     .hist-check.partial { background: rgba(245,158,11,.1); color: #f59e0b; border: 1.5px solid rgba(245,158,11,.2); }
 
-    /* â”€â”€ Science panels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Science panels ──────────────────────────────────── */
     .science-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
       margin-bottom: 1.5rem;
@@ -613,7 +613,7 @@ const hasHistory = historyRows.length > 0;
     .sci-text { font-size: .76rem; color: var(--rv-muted); line-height: 1.6; }
     .sci-text strong { color: var(--rv-ink); }
 
-    /* â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Toast ───────────────────────────────────────────── */
     .toast {
       position: fixed; top: 1.25rem; right: 1.5rem; z-index: 9999;
       padding: .7rem 1.1rem; border-radius: 10px;
@@ -627,7 +627,7 @@ const hasHistory = historyRows.length > 0;
     .toast-s, .toast-g { background: var(--rv-ink); color: var(--rv-bg); }
     .toast-e { background: #ef4444; color: #fff; }
 
-    /* â”€â”€ Complete overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Complete overlay ────────────────────────────────── */
     .complete-overlay {
       display: none; position: fixed; inset: 0; z-index: 9999;
       background: rgba(250,246,241,.97);
@@ -746,19 +746,19 @@ const hasHistory = historyRows.length > 0;
 
         <div class="burn-strip" id="burnStrip">
           <div class="burn-stage" id="bs0" data-min="0" data-max="4">
-            <span class="bs-emoji">â±ï¸</span>
+            <span class="bs-emoji">⏱️</span>
             <span class="bs-name">Glycogen<br>Depleting</span>
           </div>
           <div class="burn-stage" id="bs1" data-min="4" data-max="8">
-            <span class="bs-emoji">ðŸ”¥</span>
+            <span class="bs-emoji">🔥</span>
             <span class="bs-name">Fat Burning<br>Begins</span>
           </div>
           <div class="burn-stage" id="bs2" data-min="8" data-max="16">
-            <span class="bs-emoji">âš¡</span>
+            <span class="bs-emoji">⚡</span>
             <span class="bs-name">Deep<br>Fat Burn</span>
           </div>
           <div class="burn-stage" id="bs3" data-min="16" data-max="999">
-            <span class="bs-emoji">ðŸ§¬</span>
+            <span class="bs-emoji">🧬</span>
             <span class="bs-name">Autophagy<br>Zone</span>
           </div>
         </div>
@@ -777,13 +777,13 @@ const hasHistory = historyRows.length > 0;
 
         <div class="timer-actions">
           <button class="btn-start" id="startBtn" onclick="startFast()">
-            â–¶ Start Fast
+            ▶ Start Fast
           </button>
           <button class="btn-end" id="endBtn" style="display:none;" onclick="endFast()">
-            â–  End Fast
+            ■ End Fast
           </button>
           <button class="btn-ghost" id="resetBtn" style="display:none;" onclick="resetFast()">
-            â†º Reset
+            ↺ Reset
           </button>
         </div>
       </div>
@@ -793,10 +793,10 @@ const hasHistory = historyRows.length > 0;
         <div class="rv-sec-lbl">Choose Your Protocol</div>
         <div class="protocol-grid">
           {[
-            { val:'16_8', hours:16, icon:'â°', name:'16:8', window:'Fast 16h Â· Eat in 8h window', desc:'The most popular keto fasting protocol. Effective for fat loss and easy to maintain long-term.', diff:'Easy', diffClass:'easy' },
-            { val:'18_6', hours:18, icon:'ðŸ”¥', name:'18:6', window:'Fast 18h Â· Eat in 6h window', desc:'Faster ketosis and deeper fat oxidation. A natural step up from 16:8 once adapted.', diff:'Medium', diffClass:'medium' },
-            { val:'20_4', hours:20, icon:'ðŸ’ª', name:'20:4', window:'Fast 20h Â· Eat in 4h window', desc:'Extended fat-burning window with strong autophagy benefits. Best for experienced fasters.', diff:'Hard', diffClass:'hard' },
-            { val:'omad', hours:23, icon:'âš¡', name:'OMAD 23:1', window:'Fast 23h Â· One meal a day', desc:'Maximum metabolic impact. One eating window per day. Elite-level discipline required.', diff:'Extreme', diffClass:'extreme' },
+            { val:'16_8', hours:16, icon:'⏰', name:'16:8', window:'Fast 16h · Eat in 8h window', desc:'The most popular keto fasting protocol. Effective for fat loss and easy to maintain long-term.', diff:'Easy', diffClass:'easy' },
+            { val:'18_6', hours:18, icon:'🔥', name:'18:6', window:'Fast 18h · Eat in 6h window', desc:'Faster ketosis and deeper fat oxidation. A natural step up from 16:8 once adapted.', diff:'Medium', diffClass:'medium' },
+            { val:'20_4', hours:20, icon:'💪', name:'20:4', window:'Fast 20h · Eat in 4h window', desc:'Extended fat-burning window with strong autophagy benefits. Best for experienced fasters.', diff:'Hard', diffClass:'hard' },
+            { val:'omad', hours:23, icon:'⚡', name:'OMAD 23:1', window:'Fast 23h · One meal a day', desc:'Maximum metabolic impact. One eating window per day. Elite-level discipline required.', diff:'Extreme', diffClass:'extreme' },
           ].map(p => (
             <div class={`proto-card${p.val === defaultProtocol ? ' active' : ''}`}
               data-protocol={p.val} data-hours={p.hours} onclick="selectProtocol(this)">
@@ -811,24 +811,24 @@ const hasHistory = historyRows.length > 0;
           ))}
         </div>
         <div class="proto-start-wrap">
-          <button class="btn-start" onclick="startFast()">â–¶ Start Fast</button>
+          <button class="btn-start" onclick="startFast()">▶ Start Fast</button>
         </div>
       </div>
 
       <!-- FASTING STAGES SCIENCE -->
       <div class="stages-section">
         <div class="stages-head">
-          <div class="sh-icon" style="background:rgba(255,92,122,.1);">ðŸ“ˆ</div>
+          <div class="sh-icon" style="background:rgba(255,92,122,.1);">📈</div>
           <div class="sh-title">What Happens to Your Body</div>
         </div>
         {[
-          { h:0,  color:'#6b7280', icon:'ðŸ½ï¸', name:'Fed State',          desc:'Insulin is elevated. Your body is digesting nutrients from your last meal. Fat burning is minimal.',                                              key:'fed'       },
-          { h:4,  color:'#FF5C7A', icon:'ðŸ“‰', name:'Insulin Drops',       desc:'Blood sugar normalizes. Insulin falls. Your body begins transitioning from glucose to fat as its primary fuel source.',                           key:'insulin'   },
-          { h:8,  color:'#3b82f6', icon:'âš¡', name:'Glycogen Depletion',  desc:'Liver glycogen (stored carbs) starts running out. Your body is forced to find alternative fuel â€” enter: fat burning.',                           key:'glycogen'  },
-          { h:12, color:'#f59e0b', icon:'ðŸ”¥', name:'Fat Burning Begins',  desc:'Ketone production begins. Free fatty acids are released from fat cells. You enter a mild ketogenic state.',                                     key:'burning'   },
-          { h:16, color:'#f97316', icon:'ðŸ”†', name:'Ketosis Deepens',     desc:'Full metabolic shift to fat. Brain switches to ketones for fuel. Mental clarity improves. This is the keto sweet spot.',                        key:'ketosis'   },
-          { h:18, color:'#ef4444', icon:'ðŸ§¹', name:'Autophagy Activates', desc:'Your cells begin cleaning house â€” breaking down damaged proteins and cellular waste. Anti-aging effects begin. This is powerful.',               key:'autophagy' },
-          { h:24, color:'#8b5cf6', icon:'ðŸŒŒ', name:'Deep Autophagy',      desc:'Maximum cellular repair mode. Growth hormone spikes by up to 2000%. Stem cell regeneration increases. The deep healing zone.',                   key:'deep'      },
+          { h:0,  color:'#6b7280', icon:'🍽️', name:'Fed State',          desc:'Insulin is elevated. Your body is digesting nutrients from your last meal. Fat burning is minimal.',                                              key:'fed'       },
+          { h:4,  color:'#FF5C7A', icon:'📉', name:'Insulin Drops',       desc:'Blood sugar normalizes. Insulin falls. Your body begins transitioning from glucose to fat as its primary fuel source.',                           key:'insulin'   },
+          { h:8,  color:'#3b82f6', icon:'⚡', name:'Glycogen Depletion',  desc:'Liver glycogen (stored carbs) starts running out. Your body is forced to find alternative fuel — enter: fat burning.',                           key:'glycogen'  },
+          { h:12, color:'#f59e0b', icon:'🔥', name:'Fat Burning Begins',  desc:'Ketone production begins. Free fatty acids are released from fat cells. You enter a mild ketogenic state.',                                     key:'burning'   },
+          { h:16, color:'#f97316', icon:'🔆', name:'Ketosis Deepens',     desc:'Full metabolic shift to fat. Brain switches to ketones for fuel. Mental clarity improves. This is the keto sweet spot.',                        key:'ketosis'   },
+          { h:18, color:'#ef4444', icon:'🧹', name:'Autophagy Activates', desc:'Your cells begin cleaning house — breaking down damaged proteins and cellular waste. Anti-aging effects begin. This is powerful.',               key:'autophagy' },
+          { h:24, color:'#8b5cf6', icon:'🌌', name:'Deep Autophagy',      desc:'Maximum cellular repair mode. Growth hormone spikes by up to 2000%. Stem cell regeneration increases. The deep healing zone.',                   key:'deep'      },
         ].map((stage, idx) => (
           <div class="stage-item" id={`stage-${stage.key}`} style="position:relative;">
             {idx < 6 && <div class="stage-connector"></div>}
@@ -840,7 +840,7 @@ const hasHistory = historyRows.length > 0;
               <div class="stage-name" id={`sname-${stage.key}`}>{stage.name}</div>
               <div class="stage-desc">{stage.desc}</div>
               <div class="stage-current-badge" id={`sbadge-${stage.key}`} style="display:none;">
-                <span>â—</span> You are here
+                <span>●</span> You are here
               </div>
             </div>
           </div>
@@ -850,22 +850,22 @@ const hasHistory = historyRows.length > 0;
       <!-- STATS -->
       <div class="stats-row">
         <div class="stat-card">
-          <div class="sc-icon">ðŸ”¥</div>
+          <div class="sc-icon">🔥</div>
           <div class="sc-val" style="color:var(--rv-accent-3);">{totalFasts}</div>
           <div class="sc-lbl">Total Fasts</div>
         </div>
         <div class="stat-card">
-          <div class="sc-icon">âœ…</div>
+          <div class="sc-icon">✅</div>
           <div class="sc-val" style="color:#FF5C7A;">{completedFasts}</div>
           <div class="sc-lbl">Completed</div>
         </div>
         <div class="stat-card">
-          <div class="sc-icon">â±ï¸</div>
+          <div class="sc-icon">⏱️</div>
           <div class="sc-val" style="color:var(--rv-blue, #4E80EE);">{avgFastHours}h</div>
           <div class="sc-lbl">Avg Duration</div>
         </div>
         <div class="stat-card">
-          <div class="sc-icon">âš¡</div>
+          <div class="sc-icon">⚡</div>
           <div class="sc-val" style="color:#8b5cf6;">{Math.round(totalFastHours)}h</div>
           <div class="sc-lbl">Total Hours</div>
         </div>
@@ -875,7 +875,7 @@ const hasHistory = historyRows.length > 0;
       {hasHistory && (
         <div class="history-section">
           <div class="stages-head">
-            <div class="sh-icon" style="background:rgba(139,92,246,.1);">ðŸ“…</div>
+            <div class="sh-icon" style="background:rgba(139,92,246,.1);">📅</div>
             <div class="sh-title">Recent Sessions</div>
           </div>
           {historyRows.map(row => (
@@ -903,24 +903,24 @@ const hasHistory = historyRows.length > 0;
       <!-- SCIENCE PANELS -->
       <div class="science-grid">
         <div class="sci-card">
-          <div class="sci-icon">ðŸ§ </div>
+          <div class="sci-icon">🧠</div>
           <div class="sci-title">Fasting + Keto = Supercharged</div>
-          <div class="sci-text">Combining intermittent fasting with a keto diet creates a <strong>dual metabolic advantage</strong>. Keto primes your body to burn fat, while fasting depletes glycogen stores faster â€” meaning you reach deep ketosis in hours, not days.</div>
+          <div class="sci-text">Combining intermittent fasting with a keto diet creates a <strong>dual metabolic advantage</strong>. Keto primes your body to burn fat, while fasting depletes glycogen stores faster — meaning you reach deep ketosis in hours, not days.</div>
         </div>
         <div class="sci-card">
-          <div class="sci-icon">ðŸ“ˆ</div>
+          <div class="sci-icon">📈</div>
           <div class="sci-title">Why 16+ Hours Matters</div>
-          <div class="sci-text">The most significant metabolic benefits â€” <strong>autophagy, growth hormone release, and deep fat oxidation</strong> â€” only kick in after 16 hours. The first 12 hours are just clearing the runway. Push past 16h for the real magic.</div>
+          <div class="sci-text">The most significant metabolic benefits — <strong>autophagy, growth hormone release, and deep fat oxidation</strong> — only kick in after 16 hours. The first 12 hours are just clearing the runway. Push past 16h for the real magic.</div>
         </div>
         <div class="sci-card">
-          <div class="sci-icon">ðŸ’§</div>
+          <div class="sci-icon">💧</div>
           <div class="sci-title">What to Consume While Fasting</div>
           <div class="sci-text"><strong>Water, black coffee, plain tea, and electrolytes</strong> are fasting-safe. Salt + potassium + magnesium prevent energy crashes. Avoid anything with calories or sweeteners.</div>
         </div>
         <div class="sci-card">
-          <div class="sci-icon">âš ï¸</div>
+          <div class="sci-icon">⚠️</div>
           <div class="sci-title">When to Break Your Fast</div>
-          <div class="sci-text"><strong>Extreme dizziness, heart palpitations, or fainting</strong> are signals to eat. Break your fast with something small â€” a few nuts or an egg. These symptoms usually mean electrolyte imbalance, not weakness.</div>
+          <div class="sci-text"><strong>Extreme dizziness, heart palpitations, or fainting</strong> are signals to eat. Break your fast with something small — a few nuts or an egg. These symptoms usually mean electrolyte imbalance, not weakness.</div>
         </div>
       </div>
 
@@ -935,18 +935,18 @@ const hasHistory = historyRows.length > 0;
       <circle cx="70" cy="70" r="60" fill="none" stroke="var(--rv-line)" stroke-width="8"/>
       <circle cx="70" cy="70" r="60" fill="none" stroke="var(--rv-accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="0"/>
     </svg>
-    <div class="co-ring-label">ðŸ†</div>
+    <div class="co-ring-label">🏆</div>
   </div>
   <h2 class="co-title">Fast <em>complete!</em></h2>
   <p style="color:var(--rv-muted);font-size:.88rem;max-width:360px;line-height:1.6;margin-bottom:1rem;" id="coMessage">You crushed it. Your body just unlocked deep fat-burning mode.</p>
   <div class="co-stats">
-    <div class="co-stat"><div class="co-stat-val" id="coHours">â€”</div><div class="co-stat-lbl">Hours Fasted</div></div>
-    <div class="co-stat"><div class="co-stat-val" id="coStage">â€”</div><div class="co-stat-lbl">Stage Reached</div></div>
+    <div class="co-stat"><div class="co-stat-val" id="coHours">—</div><div class="co-stat-lbl">Hours Fasted</div></div>
+    <div class="co-stat"><div class="co-stat-val" id="coStage">—</div><div class="co-stat-lbl">Stage Reached</div></div>
     <div class="co-stat"><div class="co-stat-val" id="coXP">+50</div><div class="co-stat-lbl">XP Earned</div></div>
   </div>
   <div class="co-btns">
-    <a href="/dashboard" class="co-btn-primary">â† Back to Dashboard</a>
-    <button onclick="newFast()" class="co-btn-ghost">â–¶ Fast Again</button>
+    <a href="/dashboard" class="co-btn-primary">← Back to Dashboard</a>
+    <button onclick="newFast()" class="co-btn-ghost">▶ Fast Again</button>
   </div>
 </div>
 
@@ -954,13 +954,13 @@ const hasHistory = historyRows.length > 0;
 
 <script is:inline define:vars={{ defaultProtocol, activeSessionData, userName }}>
 var STAGES = [
-  { key:'fed',       h:0,  color:'#6b7280', name:'Fed State',          emoji:'ðŸ½ï¸' },
-  { key:'insulin',   h:4,  color:'#FF5C7A', name:'Insulin Drops',      emoji:'ðŸ“‰' },
-  { key:'glycogen',  h:8,  color:'#3b82f6', name:'Glycogen Depletion', emoji:'âš¡' },
-  { key:'burning',   h:12, color:'#f59e0b', name:'Fat Burning',        emoji:'ðŸ”¥' },
-  { key:'ketosis',   h:16, color:'#f97316', name:'Deep Ketosis',       emoji:'ðŸ”†' },
-  { key:'autophagy', h:18, color:'#ef4444', name:'Autophagy',          emoji:'ðŸ§¹' },
-  { key:'deep',      h:24, color:'#8b5cf6', name:'Deep Autophagy',     emoji:'ðŸŒŒ' },
+  { key:'fed',       h:0,  color:'#6b7280', name:'Fed State',          emoji:'🍽️' },
+  { key:'insulin',   h:4,  color:'#FF5C7A', name:'Insulin Drops',      emoji:'📉' },
+  { key:'glycogen',  h:8,  color:'#3b82f6', name:'Glycogen Depletion', emoji:'⚡' },
+  { key:'burning',   h:12, color:'#f59e0b', name:'Fat Burning',        emoji:'🔥' },
+  { key:'ketosis',   h:16, color:'#f97316', name:'Deep Ketosis',       emoji:'🔆' },
+  { key:'autophagy', h:18, color:'#ef4444', name:'Autophagy',          emoji:'🧹' },
+  { key:'deep',      h:24, color:'#8b5cf6', name:'Deep Autophagy',     emoji:'🌌' },
 ];
 var BURN_STAGES = [
   { id:'bs0', min:0,  max:4   },
@@ -1097,7 +1097,7 @@ function tick() {
     dispH.toString().padStart(2,'0') + ':' + dispM.toString().padStart(2,'0') + ':' + dispS.toString().padStart(2,'0');
   document.getElementById('timerDisplay').style.color = stage.color;
   var ofEl = document.getElementById('timerOf');
-  ofEl.textContent = elapsed >= target ? 'Goal reached! ðŸŽ‰' : 'of ' + target + ' hours';
+  ofEl.textContent = elapsed >= target ? 'Goal reached! 🎉' : 'of ' + target + ' hours';
   document.getElementById('timerPct').textContent = Math.round(pct * 100) + '% complete';
   var offset = RING_CIRC * (1 - pct);
   document.getElementById('ringProgress').style.strokeDashoffset = offset;
@@ -1117,7 +1117,7 @@ function tick() {
       : 'Only <strong>' + minsLeft + ' minutes</strong> until <strong>' + nextStage.emoji + ' ' + nextStage.name + '</strong>!';
     document.getElementById('stageStatus').innerHTML = 'You\'re in <strong style="color:' + stage.color + '">' + stage.name + '</strong>. ' + untilMsg;
   } else {
-    document.getElementById('stageStatus').innerHTML = 'ðŸŒŒ <strong>Deep Autophagy</strong> â€” Maximum cellular repair is happening right now.';
+    document.getElementById('stageStatus').innerHTML = '🌌 <strong>Deep Autophagy</strong> — Maximum cellular repair is happening right now.';
   }
   for (var j = 0; j < STAGES.length; j++) {
     var s = STAGES[j];
@@ -1149,7 +1149,7 @@ function tick() {
     else if (elapsed >= bs.max) bsEl.classList.add('bs-done');
   }
   if (pct >= 1 && !document.getElementById('completeOverlay').classList.contains('show')) {
-    showToast('ðŸ† You hit your fasting goal!', 'g');
+    showToast('🏆 You hit your fasting goal!', 'g');
   }
 }
 

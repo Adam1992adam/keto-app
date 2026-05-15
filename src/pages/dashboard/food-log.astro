@@ -101,14 +101,14 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Meals â€” Keto Journey</title>
+  <title>Meals — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
   <script is:inline>(function(){var t=localStorage.getItem('keto-theme')||'light';document.documentElement.setAttribute('data-theme',t);})();</script>
   <style>
-    /* â”€â”€ Rose Vital tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Rose Vital tokens ───────────────────────────────── */
     :root {
       --rv-bg:      #FAF6F1;
       --rv-card:    #FFFFFF;
@@ -141,7 +141,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
       min-height: 100vh;
     }
 
-    /* â”€â”€ Shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Shell ───────────────────────────────────────────── */
     .rv-fl-shell {
       display: grid;
       grid-template-columns: 232px 1fr;
@@ -156,7 +156,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
       .rv-fl-main  { padding-bottom: 5.5rem; }
     }
 
-    /* â”€â”€ Page layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Page layout ─────────────────────────────────────── */
     .rv-fl-inner {
       max-width: 780px;
       margin: 0 auto;
@@ -169,7 +169,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
     @keyframes fadeUp { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
     @keyframes spin   { to{transform:rotate(360deg);} }
 
-    /* â”€â”€ Page header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Page header ─────────────────────────────────────── */
     .rv-fl-hd {
       display: flex;
       align-items: center;
@@ -191,7 +191,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
       font-family: 'Geist Mono', monospace;
     }
 
-    /* â”€â”€ Date navigator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Date navigator ──────────────────────────────────── */
     .rv-fl-datebar {
       display: flex;
       align-items: center;
@@ -236,7 +236,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
       vertical-align: middle;
     }
 
-    /* â”€â”€ Macro summary card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Macro summary card ──────────────────────────────── */
     .rv-macro-card {
       background: var(--rv-card);
       border: 1px solid var(--rv-line);
@@ -300,7 +300,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
       text-align: right;
     }
 
-    /* â”€â”€ Week sparkline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Week sparkline ──────────────────────────────────── */
     .rv-sparkline {
       background: var(--rv-card);
       border: 1px solid var(--rv-line);
@@ -342,7 +342,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
       color: var(--rv-muted);
     }
 
-    /* â”€â”€ Section label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Section label ───────────────────────────────────── */
     .rv-section-lbl {
       font-family: 'Geist Mono', monospace;
       font-size: .65rem; font-weight: 700;
@@ -352,7 +352,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
       margin-top: .25rem;
     }
 
-    /* â”€â”€ Meal group â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Meal group ──────────────────────────────────────── */
     .rv-meal-group {
       background: var(--rv-card);
       border: 1px solid var(--rv-line);
@@ -427,7 +427,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
       .rv-fl-pills { display: none; }
     }
 
-    /* â”€â”€ Empty state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Empty state ─────────────────────────────────────── */
     .rv-empty {
       text-align: center;
       padding: 3.5rem 2rem;
@@ -462,7 +462,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
     }
     .rv-btn-primary:hover { opacity: .85; }
 
-    /* â”€â”€ FAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── FAB ─────────────────────────────────────────────── */
     .rv-fab {
       position: fixed; bottom: 5.5rem; right: 1.25rem; z-index: 200;
       width: 52px; height: 52px; border-radius: 50%;
@@ -475,7 +475,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
     .rv-fab:hover { transform: scale(1.08); box-shadow: 0 8px 28px rgba(22,17,15,.35); }
     @media (min-width: 900px) { .rv-fab { bottom: 2rem; right: 2rem; } }
 
-    /* â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Toast ───────────────────────────────────────────── */
     .rv-toast {
       position: fixed; top: 1.25rem; right: 1.5rem; z-index: 9999;
       padding: .7rem 1.1rem; border-radius: 10px;
@@ -488,7 +488,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
     }
     .rv-toast.show { transform: translateX(0); opacity: 1; }
 
-    /* â”€â”€ Modals â€” shared â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Modals — shared ─────────────────────────────────── */
     .rv-backdrop {
       display: none; position: fixed; inset: 0; z-index: 1000;
       background: rgba(22,17,15,.55);
@@ -651,7 +651,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
       .rv-input, .rv-search-input, .rv-serving-input { font-size: 16px !important; }
     }
 
-    /* â”€â”€ Scanner overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Scanner overlay ─────────────────────────────────── */
     .rv-scanner-ov {
       display: none; position: fixed; inset: 0; z-index: 2000;
       background: #000;
@@ -679,7 +679,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
     .rv-scanner-fallback input::placeholder { color: rgba(255,255,255,.35); }
     .rv-scanner-lookup { padding: .58rem 1.5rem; border-radius: 9px; background: var(--rv-accent-2); border: none; color: var(--rv-ink); font-weight: 700; font-size: .84rem; cursor: pointer; }
 
-    /* â”€â”€ Swap modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Swap modal ──────────────────────────────────────── */
     .rv-swap-modal {
       background: var(--rv-card); border: 1px solid var(--rv-line);
       border-radius: 20px 20px 0 0;
@@ -748,7 +748,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
       <div class="rv-fl-hd">
         <div>
           <div class="rv-fl-title">Meal Log</div>
-          <div class="rv-fl-subtitle">{logs.length} item{logs.length !== 1 ? 's' : ''} Â· {Math.round(totals.cal)} kcal consumed</div>
+          <div class="rv-fl-subtitle">{logs.length} item{logs.length !== 1 ? 's' : ''} · {Math.round(totals.cal)} kcal consumed</div>
         </div>
       </div>
 
@@ -762,7 +762,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
             {displayDate}
             {isToday && <span class="rv-today-chip">TODAY</span>}
           </div>
-          <div class="rv-fl-dnsub">Tap â† â†’ to browse history</div>
+          <div class="rv-fl-dnsub">Tap ← → to browse history</div>
         </div>
         <a href={`/dashboard/food-log?date=${nextDay}`} class={`rv-fl-dnarr${isToday ? ' disabled' : ''}`}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
@@ -824,7 +824,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
       <!-- 7-DAY SPARKLINE -->
       <div class="rv-sparkline">
         <div class="rv-sp-head">
-          <div class="rv-sp-title">Calories â€” Last 7 Days</div>
+          <div class="rv-sp-title">Calories — Last 7 Days</div>
           <div class="rv-sp-total">{Math.round(last7.reduce((s,x) => s+x.cal, 0) / 7)} avg/day</div>
         </div>
         <div class="rv-sp-bars">
@@ -934,7 +934,7 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
   </button>
 )}
 
-<!-- â”€â”€ ADD / EDIT MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<!-- ── ADD / EDIT MODAL ──────────────────────────────────────── -->
 <div class="rv-backdrop" id="addModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
   <div class="rv-modal">
     <div class="rv-modal-handle"></div>
@@ -1001,19 +1001,19 @@ const mealMeta: Record<string, { label: string; icon: string }> = {
   </div>
 </div>
 
-<!-- â”€â”€ BARCODE SCANNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<!-- ── BARCODE SCANNER ─────────────────────────────────────────── -->
 <div class="rv-scanner-ov" id="scannerOverlay">
   <div id="scannerContent" style="display:flex;flex-direction:column;align-items:center;width:100%;padding:1.5rem;"></div>
 </div>
 
-<!-- â”€â”€ SWAP MODAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<!-- ── SWAP MODAL ─────────────────────────────────────────────── -->
 <div class="rv-backdrop" id="swapModal" role="dialog" aria-modal="true">
   <div class="rv-swap-modal">
     <div class="rv-modal-handle"></div>
     <div class="rv-modal-title">Suggest Alternatives</div>
     <div class="rv-swap-current" id="swapCurrentInfo"></div>
     <div id="swapList" class="rv-swap-list">
-      <div class="rv-swap-spin">Loading suggestionsâ€¦</div>
+      <div class="rv-swap-spin">Loading suggestions…</div>
     </div>
     <button class="rv-btn-cancel" onclick="window.closeSwap()">Cancel</button>
   </div>
@@ -1028,14 +1028,14 @@ var __swapLogId = null;
 var __swapLogMeal = 'other';
 var __searchTimer = null;
 
-// â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Toast ─────────────────────────────────────────────────────
 function showToast(msg) {
   var t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(function(){ t.classList.remove('show'); }, 2800);
 }
 
-// â”€â”€ Add modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Add modal ─────────────────────────────────────────────────
 window.openAdd = function() {
   document.getElementById('addModal').classList.add('open');
   setTimeout(function(){ document.getElementById('flSearch').focus(); }, 80);
@@ -1063,7 +1063,7 @@ function resetModal() {
   if (dv) dv.style.display = '';
 }
 
-// â”€â”€ Edit entry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Edit entry ────────────────────────────────────────────────
 window.editEntry = function(btn) {
   __editId = btn.getAttribute('data-id');
   var name = btn.getAttribute('data-name') || '';
@@ -1103,7 +1103,7 @@ window.updateEntry = function() {
   var meal  = document.getElementById('flMeal').value || 'other';
   var netCarb = Math.max(0, carb - fiber);
   var btn = document.getElementById('flUpdateBtn');
-  btn.disabled = true; btn.textContent = 'Savingâ€¦';
+  btn.disabled = true; btn.textContent = 'Saving…';
   fetch('/api/food-log/update', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -1117,7 +1117,7 @@ window.updateEntry = function() {
   .catch(function(){ btn.disabled = false; btn.textContent = 'Save Changes'; showToast('Connection error'); });
 };
 
-// â”€â”€ Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Search ────────────────────────────────────────────────────
 window.onSearchInput = function(val) {
   clearTimeout(__searchTimer);
   var q = val.trim();
@@ -1128,7 +1128,7 @@ window.onSearchInput = function(val) {
 function doSearch(q) {
   var box = document.getElementById('searchResults');
   box.className = 'rv-sr-box visible';
-  box.innerHTML = '<div class="rv-sr-spin"><div class="rv-spinner"></div> Searchingâ€¦</div>';
+  box.innerHTML = '<div class="rv-sr-spin"><div class="rv-spinner"></div> Searching…</div>';
   var url = 'https://world.openfoodfacts.org/cgi/search.pl?search_terms='
     + encodeURIComponent(q)
     + '&json=1&page_size=8&fields=product_name,brands,nutriments,serving_quantity&action=process&search_simple=1';
@@ -1136,7 +1136,7 @@ function doSearch(q) {
     .then(function(r){ return r.json(); })
     .then(function(data) {
       var products = (data.products || []).filter(function(p){ return p.product_name && p.nutriments; });
-      if (!products.length) { box.innerHTML = '<div class="rv-sr-empty">No results â€” fill in manually below.</div>'; return; }
+      if (!products.length) { box.innerHTML = '<div class="rv-sr-empty">No results — fill in manually below.</div>'; return; }
       box.innerHTML = '';
       products.forEach(function(p) {
         var n    = p.nutriments;
@@ -1146,7 +1146,7 @@ function doSearch(q) {
         var carb = roundMacro(n['carbohydrates_100g']);
         var fiber= roundMacro(n['fiber_100g']);
         var name = p.product_name || 'Unknown';
-        var brand= p.brands ? 'Â· ' + p.brands.split(',')[0].trim() : '';
+        var brand= p.brands ? '· ' + p.brands.split(',')[0].trim() : '';
         var item = document.createElement('div');
         item.className = 'rv-sr-item';
         item.innerHTML =
@@ -1162,7 +1162,7 @@ function doSearch(q) {
         box.appendChild(item);
       });
     })
-    .catch(function(){ box.innerHTML = '<div class="rv-sr-empty">Search unavailable â€” fill in manually.</div>'; });
+    .catch(function(){ box.innerHTML = '<div class="rv-sr-empty">Search unavailable — fill in manually.</div>'; });
 }
 
 function selectProduct(name, per100) {
@@ -1191,7 +1191,7 @@ function applyServing(g, per100) {
   document.getElementById('flFiber').value = roundMacro(per100.fiber* r);
 }
 
-// â”€â”€ Scanner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Scanner ───────────────────────────────────────────────────
 window.openScanner = function() {
   var overlay = document.getElementById('scannerOverlay');
   var content = document.getElementById('scannerContent');
@@ -1228,7 +1228,7 @@ window.openScanner = function() {
 function showFallbackScanner(content) {
   content.innerHTML =
     '<div class="rv-scanner-fallback">' +
-    '<p style="font-size:1.5rem;margin-bottom:.5rem;">ðŸ“·</p>' +
+    '<p style="font-size:1.5rem;margin-bottom:.5rem;">📷</p>' +
     '<p>Enter the barcode number from the product</p>' +
     '<input id="manualBarcode" type="text" inputmode="numeric" placeholder="e.g. 3017620422003"/>' +
     '<br/><button class="rv-scanner-lookup" onclick="window.lookupManualBarcode()">Look Up</button>' +
@@ -1250,7 +1250,7 @@ window.lookupManualBarcode = function() {
 };
 
 function lookupBarcode(code) {
-  showToast('Looking up barcodeâ€¦');
+  showToast('Looking up barcode…');
   fetch('https://world.openfoodfacts.org/api/v0/product/' + encodeURIComponent(code) + '.json?fields=product_name,brands,nutriments,serving_quantity')
     .then(function(r){ return r.json(); })
     .then(function(data) {
@@ -1268,7 +1268,7 @@ function lookupBarcode(code) {
     .catch(function(){ showToast('Barcode lookup failed'); });
 }
 
-// â”€â”€ Save entry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Save entry ────────────────────────────────────────────────
 window.saveEntry = function() {
   var name = document.getElementById('flName').value.trim();
   if (!name) { document.getElementById('flName').focus(); return; }
@@ -1280,7 +1280,7 @@ window.saveEntry = function() {
   var meal  = document.getElementById('flMeal').value || 'other';
   var netCarb = Math.max(0, carb - fiber);
   var btn = document.getElementById('flSaveBtn');
-  btn.disabled = true; btn.textContent = 'Loggingâ€¦';
+  btn.disabled = true; btn.textContent = 'Logging…';
   fetch('/api/food-log/add', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1294,7 +1294,7 @@ window.saveEntry = function() {
   .catch(function(){ btn.disabled = false; btn.textContent = 'Log Food'; showToast('Connection error'); });
 };
 
-// â”€â”€ Delete entry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Delete entry ──────────────────────────────────────────────
 window.deleteEntry = function(btn) {
   var id  = btn.getAttribute('data-id');
   var row = btn.closest('.rv-fl-row');
@@ -1313,7 +1313,7 @@ window.deleteEntry = function(btn) {
   .catch(function(){ showToast('Error'); });
 };
 
-// â”€â”€ Swap suggestions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Swap suggestions ──────────────────────────────────────────
 window.openSwap = function(btn) {
   __swapLogId   = btn.getAttribute('data-id');
   __swapLogMeal = btn.getAttribute('data-meal') || 'other';
@@ -1324,8 +1324,8 @@ window.openSwap = function(btn) {
   var carb = btn.getAttribute('data-carb') || '0';
   document.getElementById('swapCurrentInfo').innerHTML =
     '<div class="rv-swap-cname">' + escHtml(name) + '</div>' +
-    '<div class="rv-swap-cmacros">' + cal + ' kcal Â· ' + prot + 'g P Â· ' + fat + 'g F Â· ' + carb + 'g C</div>';
-  document.getElementById('swapList').innerHTML = '<div class="rv-swap-spin"><div class="rv-spinner" style="display:inline-block;"></div> Loadingâ€¦</div>';
+    '<div class="rv-swap-cmacros">' + cal + ' kcal · ' + prot + 'g P · ' + fat + 'g F · ' + carb + 'g C</div>';
+  document.getElementById('swapList').innerHTML = '<div class="rv-swap-spin"><div class="rv-spinner" style="display:inline-block;"></div> Loading…</div>';
   document.getElementById('swapModal').classList.add('open');
   var params = new URLSearchParams({ calories: cal, protein_g: prot, fat_g: fat, carbs_g: carb });
   fetch('/api/food/suggest-swaps?' + params.toString())
@@ -1346,7 +1346,7 @@ function renderSwaps(suggestions) {
     card.className = 'rv-swap-card';
     var imgHtml = r.image_url
       ? '<img class="rv-swap-img" src="' + escHtml(r.image_url) + '" alt="" loading="lazy">'
-      : '<div class="rv-swap-img-ph">ðŸ¥—</div>';
+      : '<div class="rv-swap-img-ph">🥗</div>';
     var cal   = Math.round(r.calories  || 0);
     var prot  = Math.round(r.protein   || 0);
     var fat   = Math.round(r.fat       || 0);
@@ -1355,7 +1355,7 @@ function renderSwaps(suggestions) {
     card.innerHTML =
       imgHtml +
       '<div class="rv-swap-info">' +
-        '<div class="rv-swap-name">' + escHtml(r.title) + (time ? ' <span style="color:var(--rv-muted);font-size:.68rem;">Â· ' + time + 'min</span>' : '') + '</div>' +
+        '<div class="rv-swap-name">' + escHtml(r.title) + (time ? ' <span style="color:var(--rv-muted);font-size:.68rem;">· ' + time + 'min</span>' : '') + '</div>' +
         '<div class="rv-swap-pills">' +
           '<span class="rv-pill rv-pill-cal">' + cal + ' cal</span>' +
           '<span class="rv-pill rv-pill-p">' + prot + 'P</span>' +
@@ -1371,7 +1371,7 @@ function renderSwaps(suggestions) {
 
 window.applySwap = function(btn, recipeName, cal, prot, fat, carbs) {
   if (!__swapLogId) return;
-  btn.disabled = true; btn.textContent = 'â€¦';
+  btn.disabled = true; btn.textContent = '…';
   var logId = __swapLogId; var mealType = __swapLogMeal;
   fetch('/api/food-log/delete', { method:'DELETE', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ id: logId }) })
   .then(function(r){ return r.json(); })
@@ -1393,11 +1393,11 @@ window.closeSwap = function() {
   __swapLogId = null;
 };
 
-// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helpers ───────────────────────────────────────────────────
 function roundMacro(v) { return Math.round((v || 0) * 10) / 10; }
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-// â”€â”€ Backdrop / keyboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Backdrop / keyboard ───────────────────────────────────────
 document.getElementById('addModal').addEventListener('click', function(e){ if (e.target === this) window.closeAdd(); });
 document.getElementById('swapModal').addEventListener('click', function(e){ if (e.target === this) window.closeSwap(); });
 document.addEventListener('keydown', function(e){

@@ -1,8 +1,8 @@
 ﻿---
 // src/pages/dashboard/meal-prep.astro
-// Weekly Meal Prep Planner â€” Monâ€“Sun, Breakfast/Lunch/Dinner per day
+// Weekly Meal Prep Planner — Mon–Sun, Breakfast/Lunch/Dinner per day
 // Saves to meal_prep_plans via POST /api/meal-prep/save
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────────────
 
 import { requireAuth } from '../../lib/auth';
 import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
@@ -22,7 +22,7 @@ await updateCurrentDay(user.id).catch(() => null);
 const journey    = await getUserJourney(user.id, db).catch(() => null);
 const currentDay = journey?.current_day || 1;
 
-// â”€â”€ Load last saved plan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Load last saved plan ─────────────────────────────────────────
 const { data: savedPlan, error: loadError } = await db
   .from('meal_prep_plans')
   .select('id, week_start_date, plan_data, created_at')
@@ -35,12 +35,12 @@ const planData = savedPlan?.plan_data || {};
 const savedDate = savedPlan?.week_start_date || '';
 const loadErrMsg = loadError ? loadError.message : '';
 
-// â”€â”€ Days & slots â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Days & slots ─────────────────────────────────────────────────
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const SLOTS = ['breakfast', 'lunch', 'dinner'];
-const SLOT_LABELS = { breakfast: 'ðŸŒ… Breakfast', lunch: 'â˜€ï¸ Lunch', dinner: 'ðŸŒ™ Dinner' };
+const SLOT_LABELS = { breakfast: '🌅 Breakfast', lunch: '☀️ Lunch', dinner: '🌙 Dinner' };
 
-// â”€â”€ Common keto ingredient map per meal keyword â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Common keto ingredient map per meal keyword ──────────────────
 // Used to auto-generate a "Shopping Needs" summary from typed meal names
 const KETO_INGREDIENT_HINTS = {
   eggs:         ['Eggs (1 doz)', 'Butter (2 tbsp)', 'Salt & pepper'],
@@ -50,7 +50,7 @@ const KETO_INGREDIENT_HINTS = {
   salad:        ['Lettuce/greens (1 bag)', 'Olive oil (2 tbsp)', 'Cucumber', 'Cherry tomatoes'],
   chicken:      ['Chicken breast/thighs (500g)', 'Olive oil', 'Garlic (3 cloves)', 'Herbs'],
   beef:         ['Ground beef / steak (400g)', 'Olive oil', 'Garlic', 'Salt & pepper'],
-  salmon:       ['Salmon fillet (2Ã—150g)', 'Lemon (1)', 'Butter (2 tbsp)', 'Dill'],
+  salmon:       ['Salmon fillet (2×150g)', 'Lemon (1)', 'Butter (2 tbsp)', 'Dill'],
   steak:        ['Steak (300g)', 'Butter (30g)', 'Garlic (2 cloves)', 'Rosemary'],
   soup:         ['Bone broth / stock (500ml)', 'Cream (100ml)', 'Onion (1)', 'Garlic'],
   cauliflower:  ['Cauliflower (1 head)', 'Butter (2 tbsp)', 'Cream (50ml)'],
@@ -78,7 +78,7 @@ const planDataJson = JSON.stringify(planData);
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{t('mealprep.title')} Â· Keto Journey</title>
+  <title>{t('mealprep.title')} · Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
@@ -89,12 +89,12 @@ const planDataJson = JSON.stringify(planData);
 <div class="rv-pg-main">
 <main class="mp-page">
 
-  <!-- â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <!-- ── Header ─────────────────────────────────────────────── -->
   <header class="mp-hero">
     <div class="mp-hero-inner">
       <div>
-        <h1 class="mp-title">ðŸ½ï¸ Meal Prep Planner</h1>
-        <p class="mp-sub">Plan your full week of keto meals â€” then save &amp; shop smarter.</p>
+        <h1 class="mp-title">🍽️ Meal Prep Planner</h1>
+        <p class="mp-sub">Plan your full week of keto meals — then save &amp; shop smarter.</p>
         {savedDate && (
           <p class="mp-saved-badge">Last saved: week of {savedDate}</p>
         )}
@@ -103,15 +103,15 @@ const planDataJson = JSON.stringify(planData);
         )}
       </div>
       <button class="mp-btn-save" onclick="window.savePlan()">
-        âœ… Save Plan
+        ✅ Save Plan
       </button>
     </div>
   </header>
 
-  <!-- â”€â”€ Status messages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <!-- ── Status messages ────────────────────────────────────── -->
   <div id="mpStatus" class="mp-status" style="display:none"></div>
 
-  <!-- â”€â”€ Mobile Day Tabs (hidden on desktop) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <!-- ── Mobile Day Tabs (hidden on desktop) ───────────────── -->
   <div class="mp-day-tabs" id="mpDayTabs">
     {DAYS.map((day, di) => (
       <button class={`mp-day-tab${di === 0 ? ' active' : ''}`} data-di={di} onclick="window.selectDay(this)">
@@ -120,7 +120,7 @@ const planDataJson = JSON.stringify(planData);
     ))}
   </div>
 
-  <!-- â”€â”€ Weekly Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <!-- ── Weekly Grid ────────────────────────────────────────── -->
   <section class="mp-grid-section">
     <div class="mp-grid" id="mpGrid">
       {DAYS.map((day, di) => (
@@ -136,7 +136,7 @@ const planDataJson = JSON.stringify(planData);
               <input
                 class="mp-input mp-input-name"
                 type="text"
-                placeholder="Meal nameâ€¦"
+                placeholder="Meal name…"
                 value={(planData[day]?.[slot])?.name || ''}
                 data-day={day}
                 data-field="name"
@@ -160,21 +160,21 @@ const planDataJson = JSON.stringify(planData);
     </div>
   </section>
 
-  <!-- â”€â”€ Sticky mobile save bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <!-- ── Sticky mobile save bar ────────────────────────────── -->
   <div class="mp-sticky-save">
     <button class="mp-btn-save mp-btn-save-sticky" onclick="window.savePlan()">
-      âœ“ Save Plan
+      ✓ Save Plan
     </button>
   </div>
 
-  <!-- â”€â”€ Shopping Needs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <!-- ── Shopping Needs ─────────────────────────────────────── -->
   <section class="mp-shop-section">
     <div class="mp-shop-header">
-      <h2 class="mp-shop-title">ðŸ›’ Shopping Needs</h2>
+      <h2 class="mp-shop-title">🛒 Shopping Needs</h2>
       <p class="mp-shop-sub">Auto-generated from your typed meal names. Fill in your plan above to see suggestions.</p>
     </div>
     <div id="mpShopList" class="mp-shop-grid">
-      <p class="mp-shop-empty">Start filling in meals above â€” ingredient suggestions will appear here.</p>
+      <p class="mp-shop-empty">Start filling in meals above — ingredient suggestions will appear here.</p>
     </div>
   </section>
 
@@ -196,7 +196,7 @@ const planDataJson = JSON.stringify(planData);
 .rv-pg-main{overflow-y:auto;}
 @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}}
 
-/* â”€â”€ Base â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Base ────────────────────────────────────────────────────── */
 body {
   background: var(--bg);
   color: var(--text);
@@ -205,14 +205,14 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* â”€â”€ Page layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Page layout ─────────────────────────────────────────────── */
 .mp-page {
   padding: 2rem 1.5rem 6rem;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-/* â”€â”€ Hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Hero ────────────────────────────────────────────────────── */
 .mp-hero {
   margin-bottom: 2rem;
   animation: fadeUp .5s ease both;
@@ -255,7 +255,7 @@ body {
   border-radius: 99px;
 }
 
-/* â”€â”€ Save button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Save button ─────────────────────────────────────────────── */
 .mp-btn-save {
   padding: .75rem 1.6rem;
   background: var(--rv-accent);
@@ -273,7 +273,7 @@ body {
 .mp-btn-save:active { transform: translateY(0); opacity: .85; }
 .mp-btn-save:disabled { opacity: .55; cursor: not-allowed; transform: none; }
 
-/* â”€â”€ Status bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Status bar ──────────────────────────────────────────────── */
 .mp-status {
   padding: .85rem 1.25rem;
   border-radius: 12px;
@@ -285,7 +285,7 @@ body {
 .mp-status.ok    { background: rgba(255,92,122,.12); border: 1px solid rgba(255,92,122,.25); color: var(--green2); }
 .mp-status.error { background: rgba(239,68,68,.1);   border: 1px solid rgba(239,68,68,.2);   color: #f87171; }
 
-/* â”€â”€ Grid section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Grid section ────────────────────────────────────────────── */
 .mp-grid-section { animation: fadeUp .5s .1s ease both; }
 
 .mp-grid {
@@ -305,7 +305,7 @@ body {
   .mp-grid { grid-template-columns: 1fr; }
 }
 
-/* â”€â”€ Day card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Day card ────────────────────────────────────────────────── */
 .mp-day-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -340,7 +340,7 @@ body {
   border-radius: 99px;
 }
 
-/* â”€â”€ Slot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Slot ────────────────────────────────────────────────────── */
 .mp-slot {
   padding: .75rem .85rem;
   border-bottom: 1px solid var(--border);
@@ -375,7 +375,7 @@ body {
 .mp-input:focus { border-color: var(--green); background: rgba(255,92,122,.04); }
 .mp-input-prep { font-size: .76rem; color: var(--soft); }
 
-/* â”€â”€ Shopping section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Shopping section ────────────────────────────────────────── */
 .mp-shop-section {
   margin-top: 2.5rem;
   animation: fadeUp .5s .2s ease both;
@@ -444,13 +444,13 @@ body {
   flex-shrink: 0;
 }
 
-/* â”€â”€ Animation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Animation ───────────────────────────────────────────────── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* â”€â”€ Mobile day tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Mobile day tabs ─────────────────────────────────────────── */
 .mp-day-tabs {
   display: none;
   gap: .35rem;
@@ -485,7 +485,7 @@ body {
   color: #fff;
 }
 
-/* â”€â”€ Sticky save bar (mobile only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Sticky save bar (mobile only) ──────────────────────────── */
 .mp-sticky-save {
   display: none;
   position: fixed;
@@ -501,7 +501,7 @@ body {
   width: 100%;
 }
 
-/* â”€â”€ Mobile overrides â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Mobile overrides ────────────────────────────────────────── */
 @media (max-width: 640px) {
   .mp-day-tabs { display: flex; }
   .mp-sticky-save { display: block; }
@@ -523,13 +523,13 @@ body {
 <script is:inline define:vars={{ planDataJson, DAYS: JSON.stringify(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']) }}>
 (function () {
 
-  /* â”€â”€ State: live plan in memory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── State: live plan in memory ──────────────────────────── */
   var plan = {};
   try { plan = JSON.parse(planDataJson) || {}; } catch(e) { plan = {}; }
 
   var days = JSON.parse(DAYS);
 
-  /* â”€â”€ Ingredient hints (mirrors server-side map) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Ingredient hints (mirrors server-side map) ─────────── */
   var hints = {
     eggs:         ['Eggs (1 doz)', 'Butter (2 tbsp)', 'Salt & pepper'],
     omelette:     ['Eggs (3)', 'Cheese (30g)', 'Spinach (handful)', 'Butter'],
@@ -538,7 +538,7 @@ body {
     salad:        ['Lettuce/greens (1 bag)', 'Olive oil (2 tbsp)', 'Cucumber', 'Cherry tomatoes'],
     chicken:      ['Chicken breast/thighs (500g)', 'Olive oil', 'Garlic (3 cloves)', 'Herbs'],
     beef:         ['Ground beef / steak (400g)', 'Olive oil', 'Garlic', 'Salt & pepper'],
-    salmon:       ['Salmon fillet (2Ã—150g)', 'Lemon (1)', 'Butter (2 tbsp)', 'Dill'],
+    salmon:       ['Salmon fillet (2×150g)', 'Lemon (1)', 'Butter (2 tbsp)', 'Dill'],
     steak:        ['Steak (300g)', 'Butter (30g)', 'Garlic (2 cloves)', 'Rosemary'],
     soup:         ['Bone broth / stock (500ml)', 'Cream (100ml)', 'Onion (1)', 'Garlic'],
     cauliflower:  ['Cauliflower (1 head)', 'Butter (2 tbsp)', 'Cream (50ml)'],
@@ -556,21 +556,21 @@ body {
     coffee:       ['Coffee beans / grounds', 'Heavy cream (50ml)', 'Butter (1 tbsp)'],
   };
 
-  /* â”€â”€ Category definitions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Category definitions ───────────────────────────────── */
   var cats = {
-    'Protein & Meat':   { icon: 'ðŸ¥©', kw: ['egg','chicken','beef','steak','bacon','salmon','tuna','shrimp','lamb','pork','turkey','fish'] },
-    'Dairy & Cheese':   { icon: 'ðŸ§€', kw: ['cheese','butter','cream','ghee','milk','parmesan','mozzarella','cheddar','ricotta','kefir'] },
-    'Fresh Produce':    { icon: 'ðŸ¥¬', kw: ['avocado','spinach','lettuce','broccoli','cauliflower','zucchini','cucumber','tomato','celery','lemon','onion'] },
-    'Pantry & Oils':    { icon: 'ðŸº', kw: ['olive oil','coconut','almond flour','soy sauce','mustard','mayo','broth','stock','vinegar','baking'] },
-    'Herbs & Spices':   { icon: 'ðŸŒ¿', kw: ['salt','pepper','garlic','dill','rosemary','herbs','paprika','thyme','basil','oregano','ginger'] },
+    'Protein & Meat':   { icon: '🥩', kw: ['egg','chicken','beef','steak','bacon','salmon','tuna','shrimp','lamb','pork','turkey','fish'] },
+    'Dairy & Cheese':   { icon: '🧀', kw: ['cheese','butter','cream','ghee','milk','parmesan','mozzarella','cheddar','ricotta','kefir'] },
+    'Fresh Produce':    { icon: '🥬', kw: ['avocado','spinach','lettuce','broccoli','cauliflower','zucchini','cucumber','tomato','celery','lemon','onion'] },
+    'Pantry & Oils':    { icon: '🏺', kw: ['olive oil','coconut','almond flour','soy sauce','mustard','mayo','broth','stock','vinegar','baking'] },
+    'Herbs & Spices':   { icon: '🌿', kw: ['salt','pepper','garlic','dill','rosemary','herbs','paprika','thyme','basil','oregano','ginger'] },
   };
 
-  /* â”€â”€ Listen to inputs already rendered in the DOM â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Listen to inputs already rendered in the DOM ───────── */
   document.querySelectorAll('.mp-input').forEach(function(inp) {
     inp.addEventListener('input', function() { window.onMealInput(inp); });
   });
 
-  /* â”€â”€ onMealInput: update plan state + refresh shopping â”€â”€â”€â”€ */
+  /* ── onMealInput: update plan state + refresh shopping ──── */
   window.onMealInput = function(el) {
     var day   = el.getAttribute('data-day');
     var slot  = el.getAttribute('data-slot');
@@ -584,9 +584,9 @@ body {
     refreshShopping();
   };
 
-  /* â”€â”€ Gather ingredient suggestions from typed meal names â”€â”€ */
+  /* ── Gather ingredient suggestions from typed meal names ── */
   function buildShoppingList() {
-    var collected = {}; // category â†’ Set of items
+    var collected = {}; // category → Set of items
 
     Object.keys(plan).forEach(function(day) {
       Object.keys(plan[day]).forEach(function(slot) {
@@ -640,13 +640,13 @@ body {
     var catKeys = Object.keys(list);
 
     if (catKeys.length === 0) {
-      container.innerHTML = '<p class="mp-shop-empty">Start filling in meals above â€” ingredient suggestions will appear here.</p>';
+      container.innerHTML = '<p class="mp-shop-empty">Start filling in meals above — ingredient suggestions will appear here.</p>';
       return;
     }
 
     var html = '';
     catKeys.forEach(function(cat) {
-      var catDef = cats[cat] || { icon: 'ðŸ“¦' };
+      var catDef = cats[cat] || { icon: '📦' };
       var items = Object.keys(list[cat]);
       if (!items.length) return;
 
@@ -658,10 +658,10 @@ body {
       html += '</div>';
     });
 
-    container.innerHTML = html || '<p class="mp-shop-empty">No suggestions yet â€” type some meal names above.</p>';
+    container.innerHTML = html || '<p class="mp-shop-empty">No suggestions yet — type some meal names above.</p>';
   }
 
-  /* â”€â”€ savePlan: POST to /api/meal-prep/save â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── savePlan: POST to /api/meal-prep/save ─────────────── */
   window.savePlan = function() {
     var btn = document.querySelector('.mp-btn-save');
     var statusEl = document.getElementById('mpStatus');
@@ -686,7 +686,7 @@ body {
     mon.setDate(now.getDate() + diff);
     var weekStart = mon.toISOString().split('T')[0];
 
-    if (btn) { btn.disabled = true; btn.textContent = 'â³ Savingâ€¦'; }
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving…'; }
     if (statusEl) { statusEl.style.display = 'none'; }
 
     fetch('/api/meal-prep/save', {
@@ -696,33 +696,33 @@ body {
     })
     .then(function(res) { return res.json(); })
     .then(function(data) {
-      if (btn) { btn.disabled = false; btn.textContent = 'ðŸ’¾ Save Plan'; }
+      if (btn) { btn.disabled = false; btn.textContent = '💾 Save Plan'; }
       if (statusEl) {
         statusEl.style.display = 'block';
         if (data.success) {
           statusEl.className = 'mp-status ok';
-          statusEl.textContent = 'âœ… Meal prep plan saved for the week of ' + weekStart + '!';
+          statusEl.textContent = '✅ Meal prep plan saved for the week of ' + weekStart + '!';
           plan = freshPlan;
         } else {
           statusEl.className = 'mp-status error';
-          statusEl.textContent = 'âŒ Save failed: ' + (data.error || 'Unknown error');
+          statusEl.textContent = '❌ Save failed: ' + (data.error || 'Unknown error');
         }
         // Auto-hide after 4s
         setTimeout(function() { statusEl.style.display = 'none'; }, 4000);
       }
     })
     .catch(function(err) {
-      if (btn) { btn.disabled = false; btn.textContent = 'ðŸ’¾ Save Plan'; }
+      if (btn) { btn.disabled = false; btn.textContent = '💾 Save Plan'; }
       if (statusEl) {
         statusEl.style.display = 'block';
         statusEl.className = 'mp-status error';
-        statusEl.textContent = 'âŒ Network error: ' + err.message;
+        statusEl.textContent = '❌ Network error: ' + err.message;
         setTimeout(function() { statusEl.style.display = 'none'; }, 4000);
       }
     });
   };
 
-  /* â”€â”€ Mobile day-tab selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Mobile day-tab selection ───────────────────────────── */
   window.selectDay = function(tabBtn) {
     var di = parseInt(tabBtn.getAttribute('data-di'), 10);
     // Update tab styles
@@ -741,7 +741,7 @@ body {
     if (first) first.classList.add('mp-day-active');
   }());
 
-  /* â”€â”€ Initial shopping render from saved plan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Initial shopping render from saved plan ────────────── */
   refreshShopping();
 
 })();

@@ -1,5 +1,5 @@
 ﻿---
-// src/pages/dashboard/steps.astro â€” Daily Steps Tracker
+// src/pages/dashboard/steps.astro — Daily Steps Tracker
 import { requireAuth } from '../../lib/auth';
 import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
 import Sidebar from '../../components/Sidebar.astro';
@@ -73,7 +73,7 @@ const ringStroke = `${CIRC}`;
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{t('steps.title')} Â· Keto Journey</title>
+  <title>{t('steps.title')} · Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
   <script is:inline>(function(){ var t=localStorage.getItem('keto-theme')||'light'; document.documentElement.setAttribute('data-theme',t); })();</script>
@@ -199,7 +199,7 @@ const ringStroke = `${CIRC}`;
 <div class="rv-pg-main">
 <div class="page">
     <h1 class="page-title fade-up">Daily <em>Steps</em></h1>
-    <p class="page-sub fade-up d1">Track your activity â€” every step counts toward your keto goals.</p>
+    <p class="page-sub fade-up d1">Track your activity — every step counts toward your keto goals.</p>
 
     <!-- Stats row -->
     <div class="stats-row fade-up d1">
@@ -294,7 +294,7 @@ const ringStroke = `${CIRC}`;
       </div>
       <div style="font-size:.68rem;color:var(--soft);margin-top:.25rem;">
         <span style="display:inline-block;width:8px;height:2px;background:rgba(245,158,11,.5);vertical-align:middle;margin-right:.3rem;border-radius:1px;"></span>
-        Daily goal line &nbsp;Â·&nbsp; Gold bar = goal reached
+        Daily goal line &nbsp;·&nbsp; Gold bar = goal reached
       </div>
     </div>
 
@@ -308,7 +308,7 @@ const ringStroke = `${CIRC}`;
         <strong>How to export from iPhone:</strong>
         <ol class="import-steps">
           <li>Open the <strong>Health</strong> app on your iPhone</li>
-          <li>Tap your profile photo â†’ <strong>Export All Health Data</strong></li>
+          <li>Tap your profile photo → <strong>Export All Health Data</strong></li>
           <li>From the ZIP, prepare a CSV with two columns: <code>date</code> and <code>steps</code></li>
         </ol>
         <strong>Expected CSV format:</strong> &nbsp;<code>date</code> (YYYY-MM-DD) &nbsp;|&nbsp; <code>steps</code> (number)
@@ -366,7 +366,7 @@ const ringStroke = `${CIRC}`;
       var steps  = stepsOverride !== undefined ? stepsOverride : (parseInt(document.getElementById('stepsInput').value) || 0);
       var source = sourceOverride || 'manual';
       var btn    = document.getElementById('btnSave');
-      if (btn) { btn.disabled = true; btn.textContent = 'Savingâ€¦'; }
+      if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
 
       fetch('/api/steps/save', {
         method: 'POST',
@@ -375,10 +375,10 @@ const ringStroke = `${CIRC}`;
       })
       .then(function(r){ return r.json(); })
       .then(function(d){
-        if (d.success) { currentSteps = steps; updateUI(steps, currentGoal); toast('âœ… ' + steps.toLocaleString() + ' steps saved!'); }
-        else toast('âŒ Failed to save');
+        if (d.success) { currentSteps = steps; updateUI(steps, currentGoal); toast('✅ ' + steps.toLocaleString() + ' steps saved!'); }
+        else toast('❌ Failed to save');
       })
-      .catch(function(){ toast('âŒ Network error'); })
+      .catch(function(){ toast('❌ Network error'); })
       .finally(function(){ if (btn) { btn.disabled = false; btn.textContent = 'Save'; } });
     };
 
@@ -387,7 +387,7 @@ const ringStroke = `${CIRC}`;
       currentGoal = g;
       document.getElementById('ringGoal').textContent = 'Goal: ' + g.toLocaleString() + ' steps';
       window.saveSteps(currentSteps, 'manual');
-      toast('ðŸŽ¯ Goal set to ' + g.toLocaleString() + ' steps');
+      toast('🎯 Goal set to ' + g.toLocaleString() + ' steps');
     };
 
     window.toggleAutoCount = function() {
@@ -396,13 +396,13 @@ const ringStroke = `${CIRC}`;
 
     function startAutoCount() {
       if (typeof DeviceMotionEvent === 'undefined') {
-        toast('âŒ Motion sensor not available on this device');
+        toast('❌ Motion sensor not available on this device');
         return;
       }
       if (typeof DeviceMotionEvent.requestPermission === 'function') {
         DeviceMotionEvent.requestPermission()
-          .then(function(s){ if (s === 'granted') beginMotion(); else toast('âŒ Motion permission denied'); })
-          .catch(function(){ toast('âŒ Could not request permission'); });
+          .then(function(s){ if (s === 'granted') beginMotion(); else toast('❌ Motion permission denied'); })
+          .catch(function(){ toast('❌ Could not request permission'); });
       } else {
         beginMotion();
       }
@@ -412,9 +412,9 @@ const ringStroke = `${CIRC}`;
       autoActive = true; motionCount = 0;
       var btn = document.getElementById('btnAutoCount');
       btn.classList.add('active');
-      btn.innerHTML = '<div class="pulse-dot"></div><span id="btnAutoLabel">Countingâ€¦ 0 steps â€” tap to stop</span>';
+      btn.innerHTML = '<div class="pulse-dot"></div><span id="btnAutoLabel">Counting… 0 steps — tap to stop</span>';
       window.addEventListener('devicemotion', onMotion);
-      toast('ðŸ‘Ÿ Auto-counting started â€” walk with your phone');
+      toast('👟 Auto-counting started — walk with your phone');
     }
 
     function stopAutoCount() {
@@ -439,7 +439,7 @@ const ringStroke = `${CIRC}`;
         cooldown = true;
         setTimeout(function(){ cooldown = false; }, 350);
         var lbl = document.getElementById('btnAutoLabel');
-        if (lbl) lbl.textContent = 'Countingâ€¦ ' + motionCount + ' steps â€” tap to stop';
+        if (lbl) lbl.textContent = 'Counting… ' + motionCount + ' steps — tap to stop';
       }
     }
 
@@ -471,8 +471,8 @@ const ringStroke = `${CIRC}`;
         Promise.all(promises).then(function() {
           var st = document.getElementById('importStatus');
           st.style.display = 'block';
-          st.textContent = 'âœ… Imported ' + imported + ' day(s) of step data.';
-          toast('âœ… Imported ' + imported + ' days');
+          st.textContent = '✅ Imported ' + imported + ' day(s) of step data.';
+          toast('✅ Imported ' + imported + ' days');
           setTimeout(function(){ window.location.reload(); }, 1500);
         });
       };

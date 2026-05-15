@@ -1,6 +1,6 @@
 ﻿---
 // src/pages/dashboard/photos.astro
-// Progress Photo Gallery â€” full-featured with upload, compare, timeline
+// Progress Photo Gallery — full-featured with upload, compare, timeline
 import { getUserJourney, updateCurrentDay } from '../../lib/supabase';
 import { requireAuth } from '../../lib/auth';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
@@ -65,7 +65,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{t('photos.title')} â€” Keto Journey</title>
+  <title>{t('photos.title')} — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
@@ -84,14 +84,14 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
     @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}}
   </style>
   <style>
-    /* â”€â”€ Page layout â”€â”€ */
+    /* ── Page layout ── */
     .page-wrap {
       max-width: 1200px;
       margin: 0 auto;
       padding: 2rem 1.5rem 6rem;
     }
 
-    /* â”€â”€ Page header â”€â”€ */
+    /* ── Page header ── */
     .page-header {
       display: flex;
       align-items: center;
@@ -145,7 +145,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       border-color: rgba(255,92,122,.35);
     }
 
-    /* â”€â”€ Insights banner â”€â”€ */
+    /* ── Insights banner ── */
     .insights-banner {
       display: flex;
       gap: .75rem;
@@ -170,7 +170,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
     .insight-pill.warn { border-color: rgba(245,158,11,.3); color: var(--gold); background: rgba(245,158,11,.08); }
     .insight-tip { font-size: .78rem; color: var(--soft); font-style: italic; margin-left: auto; }
 
-    /* â”€â”€ Upload section â”€â”€ */
+    /* ── Upload section ── */
     .upload-section {
       background: var(--card);
       border: 1px solid var(--border);
@@ -260,7 +260,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
     .upload-status.ok  { color: var(--green); }
     .upload-status.err { color: var(--red); }
 
-    /* â”€â”€ Gallery grid â”€â”€ */
+    /* ── Gallery grid ── */
     .gallery-header {
       display: flex;
       align-items: center;
@@ -377,7 +377,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
     }
     .photo-card.selected .compare-badge { display: flex; }
 
-    /* â”€â”€ Empty state â”€â”€ */
+    /* ── Empty state ── */
     .empty-state {
       text-align: center;
       padding: 4rem 2rem;
@@ -389,7 +389,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
     .empty-title { font-family: 'Fraunces', serif; font-size: 1.3rem; font-weight: 900; color: var(--text); margin-bottom: .5rem; }
     .empty-sub   { font-size: .88rem; color: var(--soft); }
 
-    /* â”€â”€ Comparison panel â”€â”€ */
+    /* ── Comparison panel ── */
     .compare-panel {
       position: fixed;
       bottom: 0;
@@ -453,7 +453,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       font-size: .82rem;
     }
 
-    /* â”€â”€ Timeline view â”€â”€ */
+    /* ── Timeline view ── */
     .timeline-view { display: none; }
     .timeline-line {
       position: relative;
@@ -543,7 +543,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       border: 1px solid rgba(59,130,246,.2);
     }
 
-    /* â”€â”€ Lightbox â”€â”€ */
+    /* ── Lightbox ── */
     .lightbox {
       position: fixed;
       inset: 0;
@@ -601,7 +601,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
     }
     .lightbox-close:hover { background: rgba(239,68,68,.3); border-color: var(--red); }
 
-    /* â”€â”€ Before/After Slider overlay â”€â”€ */
+    /* ── Before/After Slider overlay ── */
     .slider-overlay {
       position: fixed;
       inset: 0;
@@ -627,7 +627,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       cursor: ew-resize;
     }
 
-    /* AFTER image â€” always full width underneath */
+    /* AFTER image — always full width underneath */
     .slider-img-after {
       display: block;
       width: 100%;
@@ -636,7 +636,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       object-fit: contain;
     }
 
-    /* BEFORE image â€” clipped to left portion via clip-path */
+    /* BEFORE image — clipped to left portion via clip-path */
     .slider-img-before {
       position: absolute;
       inset: 0;
@@ -745,7 +745,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       text-align: center;
     }
 
-    /* â”€â”€ Animations â”€â”€ */
+    /* ── Animations ── */
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(18px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -777,10 +777,10 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       </div>
       <div class="header-actions">
         <button class="btn btn-ghost" id="btnCompare" onclick="window.toggleCompareMode()">
-          ðŸ–¼ Compare
+          🖼 Compare
         </button>
         <button class="btn btn-ghost" id="btnUploadToggle" onclick="window.toggleUpload()">
-          â¬† Upload
+          ⬆ Upload
         </button>
       </div>
     </div>
@@ -788,15 +788,15 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
     <!-- Insights Banner (2+ photos) -->
     {totalPhotos >= 2 && (
       <div class="insights-banner">
-        <div class="insight-pill">ðŸ“· {totalPhotos} photo{totalPhotos === 1 ? '' : 's'}</div>
+        <div class="insight-pill">📷 {totalPhotos} photo{totalPhotos === 1 ? '' : 's'}</div>
         {spanDays > 0 && (
-          <div class="insight-pill">ðŸ“… Over {spanDays} days</div>
+          <div class="insight-pill">📅 Over {spanDays} days</div>
         )}
         {daysSinceLast !== null && daysSinceLast > 7 && (
-          <div class="insight-pill warn">ðŸ“ˆ Last photo {daysSinceLast} days ago â€” time for an update!</div>
+          <div class="insight-pill warn">📈 Last photo {daysSinceLast} days ago — time for an update!</div>
         )}
         {daysSinceLast !== null && daysSinceLast <= 7 && (
-          <div class="insight-pill">ðŸ“ˆ Last photo {daysSinceLast === 0 ? 'today' : daysSinceLast + 'd ago'}</div>
+          <div class="insight-pill">📈 Last photo {daysSinceLast === 0 ? 'today' : daysSinceLast + 'd ago'}</div>
         )}
         <p class="insight-tip">+ Take photos weekly on the same day for best comparison</p>
       </div>
@@ -804,16 +804,16 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
 
     <!-- Upload Section (hidden by default) -->
     <div class="upload-section" id="uploadSection" style="display:none;">
-      <div class="upload-title">ðŸ“· Upload a Progress Photo</div>
+      <div class="upload-title">📷 Upload a Progress Photo</div>
       <div class="upload-grid">
         <!-- Drop Zone -->
         <div>
           <div class="drop-zone" id="dropZone">
             <input type="file" id="fileInput" accept="image/*" />
             <div id="dropZoneContent">
-              <div class="drop-icon">ðŸ“·</div>
+              <div class="drop-icon">📷</div>
               <div class="drop-label">Drop image here or click to select</div>
-              <div class="drop-sub">Images only Â· Max 5MB Â· Auto-compressed</div>
+              <div class="drop-sub">Images only · Max 5MB · Auto-compressed</div>
             </div>
             <img id="previewImg" class="preview-img" alt="Preview" />
           </div>
@@ -855,10 +855,10 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       </div>
       <div class="view-toggles">
         <button class="btn btn-active" id="btnGrid" onclick="window.switchView('grid')">
-          âŠž Grid
+          ⊞ Grid
         </button>
         <button class="btn btn-ghost" id="btnTimeline" onclick="window.switchView('timeline')">
-          ðŸ“… Timeline
+          📅 Timeline
         </button>
       </div>
     </div>
@@ -867,14 +867,14 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
     <div id="gridView">
       {photosWithDay.length === 0 && (
         <div class="empty-state">
-          <div class="empty-icon">ðŸ“·</div>
+          <div class="empty-icon">📷</div>
           <div class="empty-title">Your gallery is empty</div>
           <p class="empty-sub">
             Upload your first progress photo to start tracking your transformation.<br />
-            Seeing is believing â€” every photo tells your story.
+            Seeing is believing — every photo tells your story.
           </p>
           <button class="btn btn-primary" style="margin-top:1.25rem;" onclick="window.toggleUpload()">
-            â¬† Upload First Photo
+            ⬆ Upload First Photo
           </button>
         </div>
       )}
@@ -883,7 +883,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
         <div class="photo-grid" id="photoGrid">
           {photosWithDay.map((photo) => {
             const dateFormatted = new Date(photo.taken_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            const notesSnippet = photo.notes ? photo.notes.slice(0, 60) + (photo.notes.length > 60 ? 'â€¦' : '') : '';
+            const notesSnippet = photo.notes ? photo.notes.slice(0, 60) + (photo.notes.length > 60 ? '…' : '') : '';
             return (
               <div
                 class="photo-card"
@@ -895,7 +895,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
                 data-notes={photo.notes || ''}
                 onclick={`window.handleCardClick('${photo.id}')`}
               >
-                <div class="compare-badge" id={`badge-${photo.id}`}>âœ“</div>
+                <div class="compare-badge" id={`badge-${photo.id}`}>✓</div>
                 <img src={photo.photo_data} alt={`Progress photo ${dateFormatted}`} loading="lazy" />
                 <div class="photo-info">
                   <div class="photo-date">{dateFormatted}</div>
@@ -906,7 +906,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
                       class="delete-btn"
                       title="Delete photo"
                       onclick={`event.stopPropagation(); window.deletePhoto('${photo.id}')`}
-                    >Ã—</button>
+                    >×</button>
                   </div>
                 </div>
               </div>
@@ -920,7 +920,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
     <div id="timelineView" class="timeline-view">
       {photosTimeline.length === 0 && (
         <div class="empty-state">
-          <div class="empty-icon">ðŸ“…</div>
+          <div class="empty-icon">📅</div>
           <div class="empty-title">No photos yet</div>
           <p class="empty-sub">Upload photos to see your timeline.</p>
         </div>
@@ -947,7 +947,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
                     <div class="timeline-card-date">{dateFormatted}</div>
                     {photo.notes && (
                       <div class="timeline-card-notes">
-                        {photo.notes.slice(0, 120)}{photo.notes.length > 120 ? 'â€¦' : ''}
+                        {photo.notes.slice(0, 120)}{photo.notes.length > 120 ? '…' : ''}
                       </div>
                     )}
                     <span class="timeline-card-day">Day {photo.dayNum}</span>
@@ -966,10 +966,10 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
   <div class="compare-panel" id="comparePanel">
     <div class="compare-inner">
       <div class="compare-header">
-        <span class="compare-heading">ðŸ“Š Side-by-Side Comparison</span>
+        <span class="compare-heading">📊 Side-by-Side Comparison</span>
         <div style="display:flex;gap:.5rem;">
           <button class="btn btn-active" id="btnSlider" onclick="window.openSlider()" style="display:none;">
-            âŸº Slider View
+            ⟺ Slider View
           </button>
           <button class="btn btn-ghost" onclick="window.clearComparison()">Clear</button>
         </div>
@@ -987,26 +987,26 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
 
   <!-- Before/After Slider Overlay -->
   <div class="slider-overlay" id="sliderOverlay">
-    <button class="slider-close" onclick="window.closeSlider()">âœ•</button>
+    <button class="slider-close" onclick="window.closeSlider()">✕</button>
     <div class="slider-wrap" id="sliderWrap">
       <img class="slider-img-after"  id="sliderImgAfter"  src="" alt="After" />
       <img class="slider-img-before" id="sliderImgBefore" src="" alt="Before" />
       <div class="slider-divider"    id="sliderDivider"></div>
-      <div class="slider-handle"     id="sliderHandle">âŸº</div>
+      <div class="slider-handle"     id="sliderHandle">⟺</div>
       <div class="slider-label slider-label-before">Before</div>
       <div class="slider-label slider-label-after">After</div>
     </div>
     <div class="slider-info">
-      <div class="slider-info-side" id="sliderInfoLeft">â€”</div>
-      <div class="slider-info-side" style="text-align:right;" id="sliderInfoRight">â€”</div>
+      <div class="slider-info-side" id="sliderInfoLeft">—</div>
+      <div class="slider-info-side" style="text-align:right;" id="sliderInfoRight">—</div>
     </div>
-    <p class="slider-hint">Drag the handle Â· â† â†’ arrow keys</p>
+    <p class="slider-hint">Drag the handle · ← → arrow keys</p>
   </div>
 
   <!-- Lightbox -->
   <div class="lightbox" id="lightbox" onclick="window.closeLightbox()">
     <div class="lightbox-inner" onclick="event.stopPropagation()">
-      <button class="lightbox-close" onclick="window.closeLightbox()">âœ•</button>
+      <button class="lightbox-close" onclick="window.closeLightbox()">✕</button>
       <img class="lightbox-img" id="lightboxImg" src="" alt="Progress photo" />
       <div class="lightbox-info">
         <div>
@@ -1020,7 +1020,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
 
   <script is:inline define:vars={{ todayStr }}>
   (function () {
-    /* â”€â”€ State â”€â”€ */
+    /* ── State ── */
     var compareMode     = false;
     var selectedIds     = [];
     var selectedData    = {};
@@ -1028,11 +1028,11 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
     var currentView     = 'grid';
     var selectedFile    = null;
 
-    /* â”€â”€ Init date input â”€â”€ */
+    /* ── Init date input ── */
     var dateInput = document.getElementById('photoDate');
     if (dateInput) dateInput.value = todayStr;
 
-    /* â”€â”€ Upload toggle â”€â”€ */
+    /* ── Upload toggle ── */
     window.toggleUpload = function () {
       uploadVisible = !uploadVisible;
       var sec = document.getElementById('uploadSection');
@@ -1042,7 +1042,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       if (uploadVisible && sec) sec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     };
 
-    /* â”€â”€ View toggle â”€â”€ */
+    /* ── View toggle ── */
     window.switchView = function (v) {
       currentView = v;
       var grid     = document.getElementById('gridView');
@@ -1062,7 +1062,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       }
     };
 
-    /* â”€â”€ Compare mode â”€â”€ */
+    /* ── Compare mode ── */
     window.toggleCompareMode = function () {
       compareMode = !compareMode;
       var btn = document.getElementById('btnCompare');
@@ -1114,7 +1114,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       }
     }
 
-    /* â”€â”€ Card click handler â”€â”€ */
+    /* ── Card click handler ── */
     window.handleCardClick = function (id) {
       if (compareMode) {
         var card = document.getElementById('card-' + id);
@@ -1160,7 +1160,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       }
     };
 
-    /* â”€â”€ Lightbox â”€â”€ */
+    /* ── Lightbox ── */
     window.openLightbox = function (src, date, day, notes) {
       var lb     = document.getElementById('lightbox');
       var lbImg  = document.getElementById('lightboxImg');
@@ -1189,7 +1189,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       }
     });
 
-    /* â”€â”€ Delete photo â”€â”€ */
+    /* ── Delete photo ── */
     window.deletePhoto = function (id) {
       if (!confirm('Delete this photo? This cannot be undone.')) return;
       fetch('/api/photos/delete', {
@@ -1211,7 +1211,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
         });
     };
 
-    /* â”€â”€ File input / drag-drop â”€â”€ */
+    /* ── File input / drag-drop ── */
     var fileInput  = document.getElementById('fileInput');
     var dropZone   = document.getElementById('dropZone');
     var previewImg = document.getElementById('previewImg');
@@ -1253,7 +1253,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       });
     }
 
-    /* â”€â”€ Canvas compression + upload â”€â”€ */
+    /* ── Canvas compression + upload ── */
     window.doUpload = function () {
       if (!selectedFile) {
         setStatus('Please select an image first.', 'err');
@@ -1270,8 +1270,8 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
         return;
       }
 
-      setStatus('Compressingâ€¦', '');
-      if (btn) { btn.disabled = true; btn.textContent = 'Uploadingâ€¦'; }
+      setStatus('Compressing…', '');
+      if (btn) { btn.disabled = true; btn.textContent = 'Uploading…'; }
 
       var reader = new FileReader();
       reader.onload = function (e) {
@@ -1291,7 +1291,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
           ctx.drawImage(img, 0, 0, w, h);
           var b64 = canvas.toDataURL('image/jpeg', 0.7);
 
-          setStatus('Uploadingâ€¦', '');
+          setStatus('Uploading…', '');
           fetch('/api/photos/upload', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1329,7 +1329,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       el.className = 'upload-status' + (type ? ' ' + type : '');
     }
 
-    /* â”€â”€ Show/hide Slider button when 2 photos selected â”€â”€ */
+    /* ── Show/hide Slider button when 2 photos selected ── */
     var _origUpdateCompare = updateComparePanel;
     updateComparePanel = function() {
       _origUpdateCompare();
@@ -1337,7 +1337,7 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       if (btn) btn.style.display = selectedIds.length === 2 ? 'inline-flex' : 'none';
     };
 
-    /* â”€â”€ Before/After Slider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Before/After Slider ─────────────────────────── */
     var sliderPos = 50; // percentage
     var sliderDragging = false;
 
@@ -1357,10 +1357,10 @@ const MILESTONES = [1, 7, 14, 21, 30, 60, 90, 180, 365];
       if (before) before.src = d1.src;
       if (after)  after.src  = d2.src;
       if (infoL) {
-        infoL.innerHTML = d1.date + '<span>Day ' + d1.day + ' Â· Before</span>';
+        infoL.innerHTML = d1.date + '<span>Day ' + d1.day + ' · Before</span>';
       }
       if (infoR) {
-        infoR.innerHTML = d2.date + '<span>Day ' + d2.day + ' Â· After</span>';
+        infoR.innerHTML = d2.date + '<span>Day ' + d2.day + ' · After</span>';
       }
 
       sliderPos = 50;

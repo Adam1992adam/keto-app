@@ -98,7 +98,16 @@
       "Bash(echo \"PUSH_EXIT:$?\")",
       "Bash(npm list *)",
       "Read(//c/Users/abdellatif/.claude/projects/C--Users-abdellatif-Videos-keto-app/3d45b738-4ecb-4fbe-b384-386a06669047/tool-results/**)",
-      "Bash(tar -xzf design.tar.gz \"keto-app/README.md\" \"keto-app/project/Check-in.html\" \"keto-app/project/checkin/Cards.jsx\" \"keto-app/project/checkin/MoodHero.jsx\" \"keto-app/project/checkin/Reflection.jsx\" \"keto-app/project/checkin/Submit.jsx\" \"keto-app/project/checkin/app.jsx\")"
+      "Bash(tar -xzf design.tar.gz \"keto-app/README.md\" \"keto-app/project/Check-in.html\" \"keto-app/project/checkin/Cards.jsx\" \"keto-app/project/checkin/MoodHero.jsx\" \"keto-app/project/checkin/Reflection.jsx\" \"keto-app/project/checkin/Submit.jsx\" \"keto-app/project/checkin/app.jsx\")",
+      "Bash(git diff *)",
+      "Bash(ls src/middleware*)",
+      "Bash(ls src/pages/middleware*)",
+      "Bash(ls src/middleware.ts)",
+      "Bash(ls src/middleware/)",
+      "Bash(python -c ' *)",
+      "Bash(python *)",
+      "PowerShell(cd \"C:\\\\Users\\\\abdellatif\\\\Videos\\\\keto-app\"; $env:PUBLIC_SUPABASE_URL=\"https://placeholder.supabase.co\"; $env:PUBLIC_SUPABASE_ANON_KEY=\"placeholder\"; $env:PUBLIC_APP_URL=\"https://placeholder.com\"; npx astro check --minimumSeverity error 2>&1 | Select-Object -First 60)",
+      "PowerShell(cd \"C:\\\\Users\\\\abdellatif\\\\Videos\\\\keto-app\"; $env:PUBLIC_SUPABASE_URL=\"https://placeholder.supabase.co\"; $env:PUBLIC_SUPABASE_ANON_KEY=\"placeholder\"; $env:PUBLIC_APP_URL=\"https://placeholder.com\"; npx astro check --minimumSeverity error 2>&1 | Select-String -Pattern \"error|Result|✓|✗|0 errors\" --SimpleMatch)"
     ]
   }
 }

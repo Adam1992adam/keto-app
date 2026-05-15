@@ -17,7 +17,7 @@ const { user, profile, db } = auth;
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t    = getTranslator(lang);
 const planType  = profile.subscription_tier || 'basic_30';
-const tierLabel = planType === 'elite_12' ? 'ðŸ‘‘ Elite' : planType === 'pro_6' ? 'âš¡ Pro' : 'ðŸ¥‘ Basic';
+const tierLabel = planType === 'elite_12' ? '👑 Elite' : planType === 'pro_6' ? '⚡ Pro' : '🥑 Basic';
 const userName  = profile.full_name?.split(' ')[0] || 'there';
 const isElite   = planType === 'elite_12';
 
@@ -26,7 +26,7 @@ const wLabel = weightLabel(units);
 const plan   = getPlan(profile.subscription_tier);
 const maxDays = planType === 'elite_12' ? 365 : planType === 'pro_6' ? 180 : 30;
 
-// Journey first â€” needed for subsequent queries
+// Journey first — needed for subsequent queries
 const journey    = await getUserJourney(user.id, db).catch(() => null);
 const currentDay = journey?.current_day || 1;
 
@@ -86,7 +86,7 @@ const displayHeight       = profile.height_cm
   ? (units === 'imperial'
       ? (() => { const ti = profile.height_cm! / 2.54; return `${Math.floor(ti/12)}'${Math.round(ti%12)}"`; })()
       : `${profile.height_cm} cm`)
-  : 'â€”';
+  : '—';
 
 const weightInputVal = profile.weight_kg
   ? (units === 'imperial' ? kgToLbs(profile.weight_kg) : profile.weight_kg) : '';
@@ -105,16 +105,16 @@ const mgFat  = macroGoals?.fat_g          || fatGrams;
 const mgCarb = macroGoals?.carbs_g        || carbGrams;
 
 const achievementsList = [
-  { name:'First Step',     icon:'ðŸŽ¯', done: perfectDays  >= 1  },
-  { name:'Week Warrior',   icon:'ðŸ“…', done: perfectDays  >= 7  },
-  { name:'Two Weeks',      icon:'ðŸ’ª', done: perfectDays  >= 14 },
-  { name:'On Fire',        icon:'ðŸ”¥', done: currentStreak>= 7  },
-  { name:'Level Master',   icon:'â­', done: level        >= 5  },
-  { name:'XP Hunter',      icon:'ðŸ…', done: totalXP      >= 500 },
-  { name:'First Kilo',     icon:'âš–ï¸', done: weightChange >= 1  },
-  { name:'Keto Champ',     icon:'ðŸ‘‘', done: currentDay   >= 30 },
-  { name:'Five Down',      icon:'ðŸ†', done: weightChange >= 5  },
-  { name:'Halfway Hero',   icon:'ðŸŒŸ', done: currentDay   >= 15 },
+  { name:'First Step',     icon:'🎯', done: perfectDays  >= 1  },
+  { name:'Week Warrior',   icon:'📅', done: perfectDays  >= 7  },
+  { name:'Two Weeks',      icon:'💪', done: perfectDays  >= 14 },
+  { name:'On Fire',        icon:'🔥', done: currentStreak>= 7  },
+  { name:'Level Master',   icon:'⭐', done: level        >= 5  },
+  { name:'XP Hunter',      icon:'🏅', done: totalXP      >= 500 },
+  { name:'First Kilo',     icon:'⚖️', done: weightChange >= 1  },
+  { name:'Keto Champ',     icon:'👑', done: currentDay   >= 30 },
+  { name:'Five Down',      icon:'🏆', done: weightChange >= 5  },
+  { name:'Halfway Hero',   icon:'🌟', done: currentDay   >= 15 },
 ];
 
 const dayProgress  = Math.min(100, Math.round((currentDay / maxDays) * 100));
@@ -129,7 +129,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Profile â€” Keto Journey</title>
+  <title>Profile — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -164,7 +164,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
     html { scroll-behavior: smooth; }
     body { font-family: var(--rv-body); background: var(--rv-bg); color: var(--rv-ink); min-height: 100vh; overflow-x: hidden; }
 
-    /* â”€â”€ SHELL â”€â”€ */
+    /* ── SHELL ── */
     .rv-shell {
       display: grid;
       grid-template-columns: 232px 1fr;
@@ -174,7 +174,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
       color: var(--rv-ink);
     }
 
-    /* â”€â”€ SIDEBAR â”€â”€ */
+    /* ── SIDEBAR ── */
     .rv-sb {
       width: 232px;
       position: sticky; top: 0; height: 100vh;
@@ -228,10 +228,10 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
     .rv-sb-name { font-family: var(--rv-display); font-size: .83rem; font-weight: 600; color: var(--rv-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .rv-sb-plan { font-size: .68rem; letter-spacing: .07em; color: var(--rv-muted); font-family: var(--rv-mono); margin-top: 1px; }
 
-    /* â”€â”€ MAIN â”€â”€ */
+    /* ── MAIN ── */
     .rv-main { display: flex; flex-direction: column; min-height: 100vh; background: var(--rv-bg); }
 
-    /* â”€â”€ TOPBAR â”€â”€ */
+    /* ── TOPBAR ── */
     .rv-topbar {
       position: sticky; top: 0; z-index: 100;
       display: flex; align-items: center; justify-content: space-between;
@@ -260,7 +260,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
     }
     .rv-top-cta:hover { opacity: .82; }
 
-    /* â”€â”€ CONTENT GRID â”€â”€ */
+    /* ── CONTENT GRID ── */
     .rv-content { padding: 20px 20px 40px; }
     .rv-pgrid {
       display: grid;
@@ -271,7 +271,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
     .rv-p8  { grid-column: span 8; }
     .rv-p4  { grid-column: span 4; }
 
-    /* â”€â”€ HERO â”€â”€ */
+    /* ── HERO ── */
     .rv-hero {
       position: relative; border-radius: 24px; overflow: hidden;
       background: var(--rv-ink); color: #FAF6F1; grid-column: span 12;
@@ -333,7 +333,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
     }
     .rv-hero-acts { display: flex; gap: .625rem; flex-wrap: wrap; }
 
-    /* â”€â”€ BUTTONS â”€â”€ */
+    /* ── BUTTONS ── */
     .rv-btn {
       display: inline-flex; align-items: center; gap: .4rem;
       padding: .65rem 1.25rem; border-radius: 10px;
@@ -362,7 +362,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
     }
     .rv-btn-danger:hover { background: rgba(239,68,68,.06); }
 
-    /* â”€â”€ BASE CARD â”€â”€ */
+    /* ── BASE CARD ── */
     .rv-pcard {
       background: var(--rv-card);
       border: 1px solid var(--rv-line);
@@ -382,7 +382,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
     }
     .rv-pcard-sub { font-size: .73rem; color: var(--rv-muted); margin-bottom: 1rem; }
 
-    /* â”€â”€ ACHIEVEMENTS â”€â”€ */
+    /* ── ACHIEVEMENTS ── */
     .rv-ach-grid {
       display: grid; grid-template-columns: repeat(10, 1fr);
       gap: .5rem; padding: 14px 20px 18px;
@@ -404,7 +404,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
     }
     .rv-ach-tile.locked .rv-ach-name { color: var(--rv-muted); }
 
-    /* â”€â”€ BODY STATS â”€â”€ */
+    /* ── BODY STATS ── */
     .rv-stats6 {
       display: grid; grid-template-columns: repeat(6, 1fr);
       border-top: 1px solid var(--rv-line);
@@ -434,7 +434,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
       transition: width .8s ease;
     }
 
-    /* â”€â”€ GOALS (dark) â”€â”€ */
+    /* ── GOALS (dark) ── */
     .rv-goals-body { padding: 20px; }
     .rv-goals-ey {
       font-family: var(--rv-mono); font-size: .6rem; letter-spacing: .12em;
@@ -457,7 +457,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
     }
     .rv-md { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 
-    /* â”€â”€ PLAN (dark) â”€â”€ */
+    /* ── PLAN (dark) ── */
     .rv-plan-body { padding: 20px; }
     .rv-plan-tier {
       font-family: var(--rv-display); font-size: 2.4rem; font-weight: 800; line-height: 1; margin-bottom: .1rem;
@@ -487,7 +487,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
     .rv-plan-rl { font-family: var(--rv-mono); font-size: .58rem; letter-spacing: .07em; color: rgba(250,246,241,.32); text-transform: uppercase; }
     .rv-plan-rv { font-family: var(--rv-display); font-weight: 700; font-size: .85rem; }
 
-    /* â”€â”€ PHOTOS â”€â”€ */
+    /* ── PHOTOS ── */
     .rv-photos-body { padding: 14px 20px 18px; }
     .rv-photos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .875rem; }
     .rv-photo-slot {
@@ -507,7 +507,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
     }
     .rv-photo-empty:hover { background: var(--rv-line); border-color: var(--rv-ink); }
 
-    /* â”€â”€ PREFS â”€â”€ */
+    /* ── PREFS ── */
     .rv-prefs-body { padding: 14px 20px 18px; }
     .rv-psec { margin-bottom: 1.5rem; }
     .rv-psec:last-child { margin-bottom: 0; }
@@ -541,7 +541,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
     .rv-lang-btn:hover { border-color: var(--rv-ink); color: var(--rv-ink); }
     .rv-lang-btn.on { border-color: var(--rv-accent); background: rgba(255,92,122,.06); color: var(--rv-accent); }
 
-    /* â”€â”€ SETTINGS â”€â”€ */
+    /* ── SETTINGS ── */
     .rv-settings-body { padding: 14px 20px 18px; }
     .rv-ssec {
       margin-bottom: 1.75rem; padding-bottom: 1.75rem;
@@ -575,7 +575,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
     .rv-action-row.danger { color: #ef4444; }
     .rv-action-row.danger:hover { background: rgba(239,68,68,.04); border-color: rgba(239,68,68,.2); }
 
-    /* â”€â”€ MODAL â”€â”€ */
+    /* ── MODAL ── */
     .rv-modal {
       position: fixed; inset: 0; background: rgba(22,17,15,.6);
       backdrop-filter: blur(10px); z-index: 300; display: none;
@@ -600,7 +600,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
     }
     .rv-modal-body { padding: 1.25rem; }
 
-    /* â”€â”€ TOAST â”€â”€ */
+    /* ── TOAST ── */
     .rv-toast {
       position: fixed; top: 4.5rem; right: 1.25rem; z-index: 9999;
       background: var(--rv-ink); color: #FAF6F1; padding: .75rem 1.25rem;
@@ -611,7 +611,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
     }
     .rv-toast.show { transform: translateY(0); opacity: 1; }
 
-    /* â”€â”€ RESPONSIVE â”€â”€ */
+    /* ── RESPONSIVE ── */
     @media(max-width: 1100px) {
       .rv-p8 { grid-column: span 12; }
       .rv-p4 { grid-column: span 12; }
@@ -640,19 +640,19 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
 </head>
 <body>
 
-<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• APP SHELL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<!-- ════════════════ APP SHELL ════════════════ -->
 <div class="rv-shell">
 
   <Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="profile" />
 
-  <!-- â”€â”€ Main â”€â”€ -->
+  <!-- ── Main ── -->
   <div class="rv-main">
 
     <!-- Topbar -->
     <header class="rv-topbar">
       <div class="rv-top-l">
         <p class="rv-top-greet">Your <em>Profile</em></p>
-        <p class="rv-top-meta">DAY {currentDay} Â· {plan.name.toUpperCase()} Â· LEVEL {level}</p>
+        <p class="rv-top-meta">DAY {currentDay} · {plan.name.toUpperCase()} · LEVEL {level}</p>
       </div>
       <div class="rv-top-r">
         <a href="/dashboard/notifications" class="rv-top-icon" aria-label="Notifications">
@@ -666,7 +666,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
     <div class="rv-content">
       <div class="rv-pgrid">
 
-        <!-- â”€â”€ HERO (span 12) â”€â”€ -->
+        <!-- ── HERO (span 12) ── -->
         <div class="rv-hero">
           <div class="rv-hero-grad"></div>
           <div class="rv-hero-glow"></div>
@@ -680,7 +680,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
                   : avatarLetter}
             </div>
             <div>
-              <div class="rv-hero-eyebrow">{plan.emoji} {plan.name} Â· Level {level}</div>
+              <div class="rv-hero-eyebrow">{plan.emoji} {plan.name} · Level {level}</div>
               <div class="rv-hero-name">
                 {profile.full_name?.split(' ')[0]}
                 {profile.full_name?.split(' ').length > 1 && <em> {profile.full_name?.split(' ').slice(1).join(' ')}</em>}
@@ -714,7 +714,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
           </div>
         </div>
 
-        <!-- â”€â”€ Achievements (span 12) â”€â”€ -->
+        <!-- ── Achievements (span 12) ── -->
         <div class="rv-p12 rv-pcard">
           <div class="rv-pcard-head">
             <div>
@@ -725,14 +725,14 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
           <div class="rv-ach-grid">
             {achievementsList.map(a => (
               <div class={`rv-ach-tile${a.done ? ' earned' : ' locked'}`}>
-                <div class="rv-ach-icon">{a.done ? a.icon : 'ðŸ”’'}</div>
+                <div class="rv-ach-icon">{a.done ? a.icon : '🔒'}</div>
                 <div class="rv-ach-name">{a.name}</div>
               </div>
             ))}
           </div>
         </div>
 
-        <!-- â”€â”€ Body Stats (span 8) â”€â”€ -->
+        <!-- ── Body Stats (span 8) ── -->
         <div class="rv-p8 rv-pcard">
           <div class="rv-pcard-head">
             <div>
@@ -747,7 +747,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
               <div class="rv-sc-lbl">Height</div>
             </div>
             <div class="rv-sc">
-              <div class="rv-sc-val">{weightLogs.length > 0 ? displayStartWeight : 'â€”'}</div>
+              <div class="rv-sc-val">{weightLogs.length > 0 ? displayStartWeight : '—'}</div>
               <div class="rv-sc-lbl">Start</div>
             </div>
             <div class="rv-sc">
@@ -759,7 +759,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
               <div class="rv-sc-lbl">Goal</div>
             </div>
             <div class="rv-sc">
-              <div class="rv-sc-val">{bmi ? bmi.toFixed(1) : 'â€”'}</div>
+              <div class="rv-sc-val">{bmi ? bmi.toFixed(1) : '—'}</div>
               <div class="rv-sc-lbl">BMI</div>
             </div>
             <div class="rv-sc">
@@ -778,7 +778,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
           </div>
         </div>
 
-        <!-- â”€â”€ Goals Card (span 4, dark) â”€â”€ -->
+        <!-- ── Goals Card (span 4, dark) ── -->
         <div class="rv-p4 rv-pcard-dark">
           <div class="rv-goals-body">
             <div class="rv-goals-ey">TARGET WEIGHT</div>
@@ -801,26 +801,26 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
           </div>
         </div>
 
-        <!-- â”€â”€ Progress Photos (span 8) â”€â”€ -->
+        <!-- ── Progress Photos (span 8) ── -->
         <div class="rv-p8 rv-pcard">
           <div class="rv-pcard-head">
             <div>
               <div class="rv-pcard-title">Progress Photos</div>
               <div class="rv-pcard-sub">Visual transformation timeline</div>
             </div>
-            <a href="/dashboard/photos" class="rv-btn rv-btn-outline" style="font-size:.75rem;padding:.45rem .875rem;flex-shrink:0;text-decoration:none;">View All â†’</a>
+            <a href="/dashboard/photos" class="rv-btn rv-btn-outline" style="font-size:.75rem;padding:.45rem .875rem;flex-shrink:0;text-decoration:none;">View All →</a>
           </div>
           <div class="rv-photos-body">
             <div class="rv-photos-grid">
               <div class="rv-photo-slot">
                 <div class="rv-photo-inner">
-                  <span style="font-size:1.75rem;">ðŸ“¸</span>
+                  <span style="font-size:1.75rem;">📸</span>
                   <span style="font-size:.65rem;font-family:var(--rv-mono);">Before</span>
                 </div>
               </div>
               <div class="rv-photo-slot">
                 <div class="rv-photo-inner">
-                  <span style="font-size:1.75rem;">ðŸ“¸</span>
+                  <span style="font-size:1.75rem;">📸</span>
                   <span style="font-size:.65rem;font-family:var(--rv-mono);">Progress</span>
                 </div>
               </div>
@@ -832,7 +832,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
           </div>
         </div>
 
-        <!-- â”€â”€ Plan (span 4, dark) â”€â”€ -->
+        <!-- ── Plan (span 4, dark) ── -->
         <div class="rv-p4 rv-pcard-dark">
           <div class="rv-plan-body">
             <div class="rv-goals-ey">CURRENT PLAN</div>
@@ -870,7 +870,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
           </div>
         </div>
 
-        <!-- â”€â”€ Preferences (span 12) â”€â”€ -->
+        <!-- ── Preferences (span 12) ── -->
         <div class="rv-p12 rv-pcard">
           <div class="rv-pcard-head">
             <div>
@@ -890,11 +890,11 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
               <div class="rv-plbl">Language</div>
               <div class="rv-lang-grid">
                 {[
-                  { code:'en', flag:'ðŸ‡ºðŸ‡¸', label:'English' },
-                  { code:'fr', flag:'ðŸ‡«ðŸ‡·', label:'FranÃ§ais' },
-                  { code:'de', flag:'ðŸ‡©ðŸ‡ª', label:'Deutsch' },
-                  { code:'es', flag:'ðŸ‡ªðŸ‡¸', label:'EspaÃ±ol' },
-                  { code:'pt', flag:'ðŸ‡§ðŸ‡·', label:'PortuguÃªs' },
+                  { code:'en', flag:'🇺🇸', label:'English' },
+                  { code:'fr', flag:'🇫🇷', label:'Français' },
+                  { code:'de', flag:'🇩🇪', label:'Deutsch' },
+                  { code:'es', flag:'🇪🇸', label:'Español' },
+                  { code:'pt', flag:'🇧🇷', label:'Português' },
                 ].map(l => (
                   <button class={`rv-lang-btn${lang === l.code ? ' on' : ''}`} onclick={`setLang('${l.code}')`}>
                     {l.flag} {l.label}
@@ -921,7 +921,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
           </div>
         </div>
 
-        <!-- â”€â”€ Settings (span 12) â”€â”€ -->
+        <!-- ── Settings (span 12) ── -->
         <div class="rv-p12 rv-pcard" id="editSection">
           <div class="rv-pcard-head">
             <div>
@@ -1056,12 +1056,12 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
   </div><!-- /rv-main -->
 </div><!-- /rv-shell -->
 
-<!-- â”€â”€ Modals â”€â”€ -->
+<!-- ── Modals ── -->
 <div class="rv-modal" id="weightModal">
   <div class="rv-modal-box">
     <div class="rv-modal-head">
       <span class="rv-modal-title">Log Weight</span>
-      <button class="rv-modal-close" onclick="document.getElementById('weightModal').classList.remove('open')">Ã—</button>
+      <button class="rv-modal-close" onclick="document.getElementById('weightModal').classList.remove('open')">×</button>
     </div>
     <div class="rv-modal-body">
       <form id="weightForm" onsubmit="logWeight(event)">
@@ -1083,11 +1083,11 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
   <div class="rv-modal-box">
     <div class="rv-modal-head">
       <span class="rv-modal-title">Change Avatar</span>
-      <button class="rv-modal-close" onclick="document.getElementById('avatarModal').classList.remove('open')">Ã—</button>
+      <button class="rv-modal-close" onclick="document.getElementById('avatarModal').classList.remove('open')">×</button>
     </div>
     <div class="rv-modal-body">
       <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:.4rem;margin-bottom:1rem;">
-        {['ðŸ¥‘','ðŸ”¥','ðŸ’ª','âš¡','ðŸ†','ðŸŒŸ','ðŸš€','ðŸ’Ž','ðŸ‘‘','ðŸ…','ðŸŽ¯','ðŸŒ¿'].map(emoji => (
+        {['🥑','🔥','💪','⚡','🏆','🌟','🚀','💎','👑','🏅','🎯','🌿'].map(emoji => (
           <button onclick={`setEmoji('${emoji}')`} class="ava-btn">{emoji}</button>
         ))}
       </div>
@@ -1106,7 +1106,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
   <div class="rv-modal-box">
     <div class="rv-modal-head">
       <span class="rv-modal-title" style="color:#ef4444;">Delete Account</span>
-      <button class="rv-modal-close" onclick="document.getElementById('deleteModal').classList.remove('open')">Ã—</button>
+      <button class="rv-modal-close" onclick="document.getElementById('deleteModal').classList.remove('open')">×</button>
     </div>
     <div class="rv-modal-body">
       <p style="margin-bottom:1rem;font-size:.82rem;color:var(--rv-muted);line-height:1.6;">This permanently deletes your account and all data. This cannot be undone.</p>

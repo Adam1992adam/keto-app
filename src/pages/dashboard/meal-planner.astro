@@ -17,7 +17,7 @@ await updateCurrentDay(user.id).catch(() => null);
 const journey    = await getUserJourney(user.id, db).catch(() => null);
 const currentDay = journey?.current_day || 1;
 
-// Compute current week (Monâ€“Sun) from ?week= param or today
+// Compute current week (Mon–Sun) from ?week= param or today
 function getMonday(dateStr: string): Date {
   const d = new Date(dateStr + 'T00:00:00Z');
   const day = d.getUTCDay();
@@ -49,7 +49,7 @@ const prevMonday = (() => { const d = new Date(monday); d.setUTCDate(d.getUTCDat
 const nextMonday = (() => { const d = new Date(monday); d.setUTCDate(d.getUTCDate() + 7); return d.toISOString().slice(0, 10); })();
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
-const MEAL_EMOJI: Record<string, string> = { breakfast: 'ðŸ³', lunch: 'ðŸ¥—', dinner: 'ðŸ½ï¸', snack: 'ðŸ¥‘' };
+const MEAL_EMOJI: Record<string, string> = { breakfast: '🍳', lunch: '🥗', dinner: '🍽️', snack: '🥑' };
 
 // Fetch this week's planned entries
 const { data: entries } = await db
@@ -60,7 +60,7 @@ const { data: entries } = await db
   .lte('plan_date', weekEnd)
   .order('plan_date', { ascending: true });
 
-// Build lookup: plan_date â†’ meal_type â†’ entries[]
+// Build lookup: plan_date → meal_type → entries[]
 const grid: Record<string, Record<string, any[]>> = {};
 for (const day of days) {
   grid[day.date] = { breakfast: [], lunch: [], dinner: [], snack: [] };
@@ -71,8 +71,8 @@ for (const e of (entries || [])) {
   }
 }
 
-// Week label e.g. "Apr 14 â€“ Apr 20, 2026"
-const weekLabel = `${days[0].month} ${days[0].day} â€“ ${days[6].month} ${days[6].day}, ${monday.getUTCFullYear()}`;
+// Week label e.g. "Apr 14 – Apr 20, 2026"
+const weekLabel = `${days[0].month} ${days[0].day} – ${days[6].month} ${days[6].day}, ${monday.getUTCFullYear()}`;
 
 // Today's ISO date for highlighting
 const todayStr = new Date().toISOString().slice(0, 10);
@@ -83,7 +83,7 @@ const todayStr = new Date().toISOString().slice(0, 10);
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Meal Planner â€” Keto Journey</title>
+  <title>Meal Planner — Keto Journey</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet" />
@@ -136,7 +136,7 @@ const todayStr = new Date().toISOString().slice(0, 10);
     .ml-name { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--soft); }
     .meal-cell { background:var(--card); border-right:1px solid var(--border); border-bottom:1px solid var(--border); padding:.4rem; min-height:90px; display:flex; flex-direction:column; gap:.3rem; vertical-align:top; }
     .meal-cell:last-child { border-right:none; }
-    /* last row â€” no bottom border */
+    /* last row — no bottom border */
     .meal-row:last-child .meal-cell,
     .meal-row:last-child .meal-label { border-bottom:none; }
     .meal-cell.today-col { background:rgba(255,92,122,.03); }
@@ -213,13 +213,13 @@ const todayStr = new Date().toISOString().slice(0, 10);
     <!-- Header -->
     <div class="page-header">
       <div class="header-left">
-        <h1>ðŸ“… Meal Planner</h1>
+        <h1>📅 Meal Planner</h1>
         <div class="header-sub">{weekLabel}</div>
       </div>
       <div class="week-nav">
-        <a href={`/dashboard/meal-planner?week=${prevMonday}`} class="week-btn" aria-label="Previous week">â€¹</a>
+        <a href={`/dashboard/meal-planner?week=${prevMonday}`} class="week-btn" aria-label="Previous week">‹</a>
         <div class="week-label">{weekLabel}</div>
-        <a href={`/dashboard/meal-planner?week=${nextMonday}`} class="week-btn" aria-label="Next week">â€º</a>
+        <a href={`/dashboard/meal-planner?week=${nextMonday}`} class="week-btn" aria-label="Next week">›</a>
       </div>
     </div>
 
@@ -253,11 +253,11 @@ const todayStr = new Date().toISOString().slice(0, 10);
                     <div class="mp-chip" id={`chip-${e.id}`}>
                       {e.recipes?.image_url
                         ? <img class="mp-chip-img" src={e.recipes.image_url} alt="" loading="lazy" />
-                        : <div class="mp-chip-ph">ðŸ½ï¸</div>
+                        : <div class="mp-chip-ph">🍽️</div>
                       }
                       <a href={`/dashboard/recipe/${e.recipe_id}`} style="flex:1;text-decoration:none;color:inherit;" class="mp-chip-name">{e.recipes?.title || 'Recipe'}</a>
                       {e.recipes?.calories && <span class="mp-chip-cal">{e.recipes.calories}cal</span>}
-                      <button class="mp-chip-del" aria-label="Remove" onclick={`window.removeEntry('${e.id}')`}>âœ•</button>
+                      <button class="mp-chip-del" aria-label="Remove" onclick={`window.removeEntry('${e.id}')`}>✕</button>
                     </div>
                   ))}
                   <button class="add-slot-btn" onclick={`window.openPicker('${d.date}','${mealType}')`}>
@@ -295,11 +295,11 @@ const todayStr = new Date().toISOString().slice(0, 10);
                     <div class="mp-chip" id={`mob-chip-${e.id}`}>
                       {e.recipes?.image_url
                         ? <img class="mp-chip-img" src={e.recipes.image_url} alt="" loading="lazy" />
-                        : <div class="mp-chip-ph">ðŸ½ï¸</div>
+                        : <div class="mp-chip-ph">🍽️</div>
                       }
                       <a href={`/dashboard/recipe/${e.recipe_id}`} style="flex:1;text-decoration:none;color:inherit;" class="mp-chip-name">{e.recipes?.title || 'Recipe'}</a>
                       {e.recipes?.calories && <span class="mp-chip-cal">{e.recipes.calories}cal</span>}
-                      <button class="mp-chip-del" aria-label="Remove" onclick={`window.removeEntry('${e.id}','${d.date}','${mealType}')`}>âœ•</button>
+                      <button class="mp-chip-del" aria-label="Remove" onclick={`window.removeEntry('${e.id}','${d.date}','${mealType}')`}>✕</button>
                     </div>
                   ))}
                   <button class="add-slot-btn" onclick={`window.openPicker('${d.date}','${mealType}')`}>
@@ -320,14 +320,14 @@ const todayStr = new Date().toISOString().slice(0, 10);
     <div class="modal">
       <div class="modal-head">
         <div class="modal-title" id="pickerTitle">Add to Breakfast</div>
-        <button class="modal-close" onclick="window.closePicker()">âœ•</button>
+        <button class="modal-close" onclick="window.closePicker()">✕</button>
       </div>
       <div class="modal-search-wrap">
-        ðŸ”
-        <input class="modal-search-input" id="pickerSearch" type="text" placeholder="Search recipesâ€¦" autocomplete="off" />
+        🔍
+        <input class="modal-search-input" id="pickerSearch" type="text" placeholder="Search recipes…" autocomplete="off" />
       </div>
       <div class="modal-results" id="pickerResults">
-        <div class="ms-status">Start typing to searchâ€¦</div>
+        <div class="ms-status">Start typing to search…</div>
       </div>
     </div>
   </div>
@@ -364,11 +364,11 @@ const todayStr = new Date().toISOString().slice(0, 10);
     window.openPicker = function(date, meal) {
       pickerDate = date;
       pickerMeal = meal;
-      var emoji = { breakfast:'ðŸ³', lunch:'ðŸ¥—', dinner:'ðŸ½ï¸', snack:'ðŸ¥‘' };
+      var emoji = { breakfast:'🍳', lunch:'🥗', dinner:'🍽️', snack:'🥑' };
       document.getElementById('pickerTitle').textContent =
         'Add to ' + (emoji[meal] || '') + ' ' + meal.charAt(0).toUpperCase() + meal.slice(1) +
-        ' Â· ' + new Date(date + 'T00:00:00Z').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', timeZone:'UTC' });
-      document.getElementById('pickerResults').innerHTML = '<div class="ms-status">Start typing to searchâ€¦</div>';
+        ' · ' + new Date(date + 'T00:00:00Z').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', timeZone:'UTC' });
+      document.getElementById('pickerResults').innerHTML = '<div class="ms-status">Start typing to search…</div>';
       document.getElementById('pickerSearch').value = '';
       document.getElementById('pickerModal').classList.add('show');
       setTimeout(function() { document.getElementById('pickerSearch').focus(); }, 80);
@@ -384,10 +384,10 @@ const todayStr = new Date().toISOString().slice(0, 10);
       var q = this.value.trim();
       clearTimeout(pickerTimer);
       if (!q) {
-        document.getElementById('pickerResults').innerHTML = '<div class="ms-status">Start typing to searchâ€¦</div>';
+        document.getElementById('pickerResults').innerHTML = '<div class="ms-status">Start typing to search…</div>';
         return;
       }
-      document.getElementById('pickerResults').innerHTML = '<div class="ms-status">Searchingâ€¦</div>';
+      document.getElementById('pickerResults').innerHTML = '<div class="ms-status">Searching…</div>';
       pickerTimer = setTimeout(function() {
         fetch('/api/recipes/search?q=' + encodeURIComponent(q) + '&page=1')
           .then(function(r) { return r.json(); })
@@ -401,11 +401,11 @@ const todayStr = new Date().toISOString().slice(0, 10);
             recipes.forEach(function(r) {
               var img = r.image_url
                 ? '<img class="ms-img" src="' + r.image_url + '" alt="" loading="lazy" />'
-                : '<div class="ms-img-ph">ðŸ½ï¸</div>';
+                : '<div class="ms-img-ph">🍽️</div>';
               html += '<div class="ms-card" onclick="window.addToPlanner(\'' + r.id + '\',\'' + escJs(r.title) + '\',' + (r.calories || 0) + ',\'' + (r.image_url || '') + '\')">' +
                 img +
                 '<div class="ms-info"><div class="ms-title">' + escHtml(r.title) + '</div>' +
-                '<div class="ms-meta">ðŸ”¥ ' + r.calories + ' cal &nbsp;Â·&nbsp; ðŸ¥© ' + r.net_carbs + 'g carbs</div></div>' +
+                '<div class="ms-meta">🔥 ' + r.calories + ' cal &nbsp;·&nbsp; 🥩 ' + r.net_carbs + 'g carbs</div></div>' +
                 '</div>';
             });
             document.getElementById('pickerResults').innerHTML = html;
@@ -424,14 +424,14 @@ const todayStr = new Date().toISOString().slice(0, 10);
       })
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        if (data.error) { showToast('âŒ ' + data.error); return; }
+        if (data.error) { showToast('❌ ' + data.error); return; }
         window.closePicker();
         var e = data.entry;
 
         // Build chip HTML
         var imgHtml = imageUrl
           ? '<img class="mp-chip-img" src="' + imageUrl + '" alt="" loading="lazy" />'
-          : '<div class="mp-chip-ph">ðŸ½ï¸</div>';
+          : '<div class="mp-chip-ph">🍽️</div>';
         var calHtml = calories ? '<span class="mp-chip-cal">' + calories + 'cal</span>' : '';
 
         // Desktop: find the correct cell
@@ -469,9 +469,9 @@ const todayStr = new Date().toISOString().slice(0, 10);
           else mobBody.appendChild(chip2);
         }
 
-        showToast('âœ… Added to ' + pickerMeal);
+        showToast('✅ Added to ' + pickerMeal);
       })
-      .catch(function() { showToast('âŒ Could not add recipe'); });
+      .catch(function() { showToast('❌ Could not add recipe'); });
     };
 
     window.removeEntry = function(entryId) {
@@ -482,7 +482,7 @@ const todayStr = new Date().toISOString().slice(0, 10);
       })
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        if (data.error) { showToast('âŒ ' + data.error); return; }
+        if (data.error) { showToast('❌ ' + data.error); return; }
         ['chip-' + entryId, 'mob-chip-' + entryId].forEach(function(id) {
           var el = document.getElementById(id);
           if (el) {
@@ -493,7 +493,7 @@ const todayStr = new Date().toISOString().slice(0, 10);
           }
         });
       })
-      .catch(function() { showToast('âŒ Could not remove'); });
+      .catch(function() { showToast('❌ Could not remove'); });
     };
 
     function escHtml(s) {
