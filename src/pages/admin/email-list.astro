@@ -1,0 +1,278 @@
+---
+import { createClient } from '@supabase/supabase-js';
+
+const adminSession = Astro.cookies.get('admin-session')?.value;
+if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
+
+const env = (Astro.locals as any)?.runtime?.env || {};
+const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL || env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+const db = createClient(SUPABASE_URL, SERVICE_KEY);
+
+const [
+  { data: profilesRaw },
+  { data: leadsRaw },
+] = await Promise.all([
+  db.from('profiles').select('id, email, full_name, subscription_tier, subscription_status, created_at').order('created_at', { ascending: false }),
+  db.from('leads').select('id, email, name, nurture_step, converted, created_at').order('created_at', { ascending: false }),
+]);
+
+const appUsers = (profilesRaw || []).map((p: any) => ({
+  source: 'app',
+  email: p.email || '',
+  name: p.full_name || '',
+  tier: p.subscription_tier || 'none',
+  status: p.subscription_status || 'none',
+  info: p.subscription_tier ? `${p.subscription_tier} · ${p.subscription_status}` : 'No subscription',
+  created_at: p.created_at,
+}));
+
+const leads = (leadsRaw || []).map((l: any) => ({
+  source: 'lead',
+  email: l.email || '',
+  name: l.name || '',
+  tier: '',
+  status: l.converted ? 'converted' : 'lead',
+  info: l.converted ? 'Converted to paid' : `Nurture step ${l.nurture_step ?? 0}`,
+  created_at: l.created_at,
+}));
+
+// Merge and deduplicate by email (app user wins if same email)
+const appEmails = new Set(appUsers.map(u => u.email.toLowerCase()));
+const uniqueLeads = leads.filter(l => !appEmails.has(l.email.toLowerCase()));
+const all = [...appUsers, ...uniqueLeads].sort(
+  (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+);
+
+const totalApp  = appUsers.length;
+const totalLeads = uniqueLeads.length;
+const totalAll  = all.length;
+const activeApp  = appUsers.filter(u => u.status === 'active').length;
+const convertedLeads = uniqueLeads.filter(l => l.status === 'converted').length;
+
+const allJson = JSON.stringify(all);
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Email List · Admin</title>
+  <meta name="robots" content="noindex,nofollow"/>
+  <style>
+    :root{--bg:#060d09;--bg2:#0a1510;--card:#0d1a0f;--card2:#111f13;--border:rgba(255,92,122,.12);--border2:rgba(255,92,122,.25);--text:#dfeedd;--soft:#4d7055;--muted:#233328;--accent:#FF5C7A;--accent2:#B6FF3C;--gold:#f59e0b;--red:#ef4444;--blue:#3b82f6;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);}
+    a{color:var(--accent);text-decoration:none;}a:hover{text-decoration:underline;}
+
+    .admin-nav{background:var(--card);border-bottom:1px solid var(--border);padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+    .nav-brand{display:flex;align-items:center;gap:.6rem;}
+    .nav-logo{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),#ff8fa3);border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;color:#fff;}
+    .nav-title{font-size:1rem;font-weight:800;color:var(--text);}
+    .nav-links{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;}
+    .nav-link{font-size:.82rem;font-weight:600;color:var(--soft);padding:.4rem .8rem;border-radius:8px;transition:all .2s;}
+    .nav-link:hover,.nav-link.active{color:var(--text);background:var(--muted);text-decoration:none;}
+
+    .page{max-width:1400px;margin:0 auto;padding:2rem 1.5rem 5rem;}
+    .page-header{margin-bottom:1.5rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+    .page-title{font-size:1.8rem;font-weight:900;color:var(--text);}
+    .page-sub{font-size:.85rem;color:var(--soft);margin-top:.3rem;}
+
+    .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem;}
+    .stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem 1.2rem;}
+    .stat-num{font-size:1.8rem;font-weight:900;color:var(--text);line-height:1;}
+    .stat-label{font-size:.75rem;color:var(--soft);margin-top:.3rem;}
+    .stat-card.accent .stat-num{color:var(--accent);}
+    .stat-card.green .stat-num{color:var(--accent2);}
+
+    .controls{display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center;}
+    .search-input{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.55rem .9rem;font-size:.88rem;color:var(--text);outline:none;width:260px;}
+    .search-input:focus{border-color:var(--accent);}
+    .search-input::placeholder{color:var(--soft);}
+    .filter-btn{padding:.5rem .95rem;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--card2);color:var(--soft);transition:all .15s;}
+    .filter-btn:hover,.filter-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+    .export-btn{margin-left:auto;padding:.5rem 1rem;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;border:1px solid var(--border2);background:rgba(255,92,122,.1);color:var(--accent);transition:all .15s;}
+    .export-btn:hover{background:rgba(255,92,122,.2);}
+
+    .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+    table{width:100%;border-collapse:collapse;}
+    thead th{padding:.75rem 1rem;text-align:left;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);border-bottom:1px solid var(--border);background:var(--card2);}
+    tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
+    tbody tr:last-child{border-bottom:none;}
+    tbody tr:hover{background:rgba(255,92,122,.04);}
+    td{padding:.7rem 1rem;font-size:.85rem;color:var(--text);vertical-align:middle;}
+    .email-cell{font-weight:600;color:var(--text);}
+    .name-cell{color:var(--soft);}
+
+    .badge{display:inline-block;padding:.2rem .55rem;border-radius:6px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+    .badge-app{background:rgba(59,130,246,.15);color:var(--blue);}
+    .badge-lead{background:rgba(245,158,11,.15);color:var(--gold);}
+    .badge-active{background:rgba(182,255,60,.15);color:var(--accent2);}
+    .badge-expired{background:rgba(239,68,68,.12);color:var(--red);}
+    .badge-converted{background:rgba(182,255,60,.15);color:var(--accent2);}
+    .badge-none{background:var(--muted);color:var(--soft);}
+    .badge-basic{background:rgba(59,130,246,.12);color:var(--blue);}
+    .badge-pro{background:rgba(139,92,246,.12);color:#8b5cf6;}
+    .badge-elite{background:rgba(245,158,11,.12);color:var(--gold);}
+
+    .date-cell{font-size:.78rem;color:var(--soft);white-space:nowrap;}
+    .empty{text-align:center;padding:3rem;color:var(--soft);font-size:.9rem;}
+
+    .count-info{font-size:.8rem;color:var(--soft);margin-bottom:.5rem;}
+    @media(max-width:700px){.search-input{width:100%;}.controls{flex-direction:column;align-items:stretch;}.export-btn{margin-left:0;}}
+  </style>
+</head>
+<body>
+
+<nav class="admin-nav">
+  <div class="nav-brand">
+    <div class="nav-logo">K</div>
+    <span class="nav-title">Email List</span>
+  </div>
+  <div class="nav-links">
+    <a href="/admin" class="nav-link">Dashboard</a>
+    <a href="/admin/leads" class="nav-link">Lead Nurture</a>
+    <a href="/admin/email-list" class="nav-link active">Email List</a>
+    <a href="/admin/blog" class="nav-link">Blog</a>
+    <a href="/admin/builder" class="nav-link">Page Builder</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">Email List</div>
+      <div class="page-sub">All app users + free book subscribers — {totalAll} total contacts</div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-num">{totalAll}</div><div class="stat-label">Total Contacts</div></div>
+    <div class="stat-card accent"><div class="stat-num">{totalApp}</div><div class="stat-label">App Users</div></div>
+    <div class="stat-card green"><div class="stat-num">{activeApp}</div><div class="stat-label">Active Subscribers</div></div>
+    <div class="stat-card"><div class="stat-num">{totalLeads}</div><div class="stat-label">Free Book Leads</div></div>
+    <div class="stat-card"><div class="stat-num">{convertedLeads}</div><div class="stat-label">Converted Leads</div></div>
+  </div>
+
+  <div class="controls">
+    <input type="text" class="search-input" id="searchInput" placeholder="Search email or name…" oninput="filterTable()"/>
+    <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">All</button>
+    <button class="filter-btn" data-filter="app" onclick="setFilter('app',this)">App Users</button>
+    <button class="filter-btn" data-filter="lead" onclick="setFilter('lead',this)">Free Book Leads</button>
+    <button class="filter-btn" data-filter="active" onclick="setFilter('active',this)">Active Only</button>
+    <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
+  </div>
+
+  <div class="count-info" id="countInfo">Showing {totalAll} contacts</div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Name</th>
+          <th>Source</th>
+          <th>Status / Plan</th>
+          <th>Details</th>
+          <th>Joined</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        {all.map((row: any) => (
+          <tr
+            data-source={row.source}
+            data-status={row.status}
+            data-email={row.email.toLowerCase()}
+            data-name={row.name.toLowerCase()}
+          >
+            <td class="email-cell">{row.email}</td>
+            <td class="name-cell">{row.name || '—'}</td>
+            <td>
+              {row.source === 'app'
+                ? <span class="badge badge-app">App</span>
+                : <span class="badge badge-lead">Lead</span>
+              }
+            </td>
+            <td>
+              {row.status === 'active'    && <span class="badge badge-active">Active</span>}
+              {row.status === 'expired'   && <span class="badge badge-expired">Expired</span>}
+              {row.status === 'converted' && <span class="badge badge-converted">Converted</span>}
+              {row.status === 'lead'      && <span class="badge badge-none">Lead</span>}
+              {row.status === 'none'      && <span class="badge badge-none">No Plan</span>}
+              {' '}
+              {row.tier === 'basic_30'  && <span class="badge badge-basic">Basic</span>}
+              {row.tier === 'pro_6'     && <span class="badge badge-pro">Pro</span>}
+              {row.tier === 'elite_12'  && <span class="badge badge-elite">Elite</span>}
+            </td>
+            <td style="font-size:.78rem;color:var(--soft);">{row.info}</td>
+            <td class="date-cell">{new Date(row.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+    <div class="empty" id="emptyMsg" style="display:none">No contacts match your search.</div>
+  </div>
+
+</div>
+
+<script is:inline define:vars={{ allJson }}>
+var ALL = JSON.parse(allJson);
+var currentFilter = 'all';
+var currentSearch = '';
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  filterTable();
+}
+
+function filterTable() {
+  currentSearch = document.getElementById('searchInput').value.toLowerCase().trim();
+  var rows = document.querySelectorAll('#tableBody tr');
+  var shown = 0;
+  rows.forEach(function(row) {
+    var source = row.getAttribute('data-source');
+    var status = row.getAttribute('data-status');
+    var email  = row.getAttribute('data-email');
+    var name   = row.getAttribute('data-name');
+    var matchFilter = currentFilter === 'all'
+      || currentFilter === source
+      || (currentFilter === 'active' && status === 'active');
+    var matchSearch = !currentSearch
+      || email.includes(currentSearch)
+      || name.includes(currentSearch);
+    var visible = matchFilter && matchSearch;
+    row.style.display = visible ? '' : 'none';
+    if (visible) shown++;
+  });
+  document.getElementById('countInfo').textContent = 'Showing ' + shown + ' contacts';
+  document.getElementById('emptyMsg').style.display = shown === 0 ? 'block' : 'none';
+}
+
+function exportCSV() {
+  var rows = document.querySelectorAll('#tableBody tr');
+  var lines = ['Email,Name,Source,Status,Plan,Info,Joined'];
+  rows.forEach(function(row) {
+    if (row.style.display === 'none') return;
+    var cells = row.querySelectorAll('td');
+    var email  = (cells[0]?.textContent || '').trim();
+    var name   = (cells[1]?.textContent || '').trim().replace(/,/g, ' ');
+    var source = row.getAttribute('data-source');
+    var status = row.getAttribute('data-status');
+    var info   = (cells[4]?.textContent || '').trim().replace(/,/g, ' ');
+    var joined = (cells[5]?.textContent || '').trim();
+    var plan   = source === 'app' ? (ALL.find(function(u) { return u.email.toLowerCase() === email.toLowerCase(); }) || {}).tier || '' : '';
+    lines.push([email, name, source, status, plan, info, joined].join(','));
+  });
+  var blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'email-list-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+</script>
+
+</body>
+</html>

@@ -1,6 +1,7 @@
 ---
 import { createClient } from '@supabase/supabase-js';
 import { marked } from 'marked';
+marked.use({ gfm: true, breaks: false });
 
 const supabaseUrl  = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseAnon = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
@@ -28,7 +29,8 @@ const { data: relatedRaw } = await db
   .limit(3);
 const related = relatedRaw || [];
 
-const contentHtml = marked.parse(post.content || '');
+const rawContent = (post.content || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+const contentHtml = await marked.parse(rawContent);
 
 const pageTitle = post.seo_title || post.title;
 const pageDesc  = post.seo_description || post.excerpt || '';
@@ -115,6 +117,7 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
     /* PROSE */
     .prose { font-size:1.05rem; line-height:1.85; color:var(--ink-soft); max-width:720px; }
     .prose h1,.prose h2,.prose h3,.prose h4 { font-family:var(--display); color:var(--ink); line-height:1.2; }
+    .prose h1 { font-size:2rem; font-weight:800; margin:2.5em 0 .7em; }
     .prose h2 {
       font-size:1.65rem; font-weight:800; margin:2.8em 0 .7em;
       padding-left:16px; border-left:4px solid var(--accent);

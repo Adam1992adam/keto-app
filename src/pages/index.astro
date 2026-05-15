@@ -15,6 +15,31 @@ if (accessToken) {
   if (user) return Astro.redirect('/dashboard');
 }
 
+// Check for a custom homepage published via the Page Builder
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+if (serviceKey) {
+  const adminDb = createClient(supabaseUrl, serviceKey);
+  const { data: pageConfig } = await adminDb
+    .from('page_configs')
+    .select('gjs_html, gjs_css')
+    .eq('page', 'home')
+    .eq('is_published', true)
+    .maybeSingle();
+  if (pageConfig?.gjs_html) {
+    const customCss = pageConfig.gjs_css || '';
+    const customHtml = pageConfig.gjs_html;
+    return new Response(
+      `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>` +
+      `<title>Keto Journey — Transform Your Body With Intelligent Keto</title>` +
+      `<meta name="description" content="AI-powered keto meal plans, daily coaching, and smart progress tracking."/>` +
+      `<link rel="icon" type="image/png" href="/icon-72.png"/>` +
+      (customCss ? `<style>${customCss}</style>` : '') +
+      `</head><body>${customHtml}</body></html>`,
+      { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+    );
+  }
+}
+
 const SITE_URL       = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').replace(/\/$/, '');
 const accountDeleted = Astro.url.searchParams.get('deleted') === '1';
 
