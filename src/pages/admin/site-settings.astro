@@ -1,0 +1,185 @@
+---
+import { createClient } from '@supabase/supabase-js';
+
+const adminSession = Astro.cookies.get('admin-session')?.value;
+if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
+
+const env = (Astro.locals as any)?.runtime?.env || {};
+const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL || env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+const db = createClient(SUPABASE_URL, SERVICE_KEY);
+
+const { data: rows } = await db.from('site_settings').select('key, value, label, category').order('category').order('key');
+
+const settingsMap: Record<string, { value: string; label: string; category: string }> = {};
+for (const r of (rows || [])) settingsMap[r.key] = { value: r.value, label: r.label, category: r.category };
+
+const grouped: Record<string, Array<{ key: string; value: string; label: string }>> = {};
+for (const [key, s] of Object.entries(settingsMap)) {
+  if (!grouped[s.category]) grouped[s.category] = [];
+  grouped[s.category].push({ key, value: s.value, label: s.label });
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  general: 'General',
+  contact: 'Contact',
+  social:  'Social Media',
+};
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Site Settings · Admin</title>
+  <meta name="robots" content="noindex,nofollow"/>
+  <style>
+    :root{--bg:#060d09;--bg2:#0a1510;--card:#0d1a0f;--card2:#111f13;--border:rgba(255,92,122,.12);--border2:rgba(255,92,122,.25);--text:#dfeedd;--soft:#4d7055;--muted:#233328;--accent:#FF5C7A;--accent2:#B6FF3C;--gold:#f59e0b;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);}
+    a{color:var(--accent);text-decoration:none;}a:hover{text-decoration:underline;}
+
+    .admin-nav{background:var(--card);border-bottom:1px solid var(--border);padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;flex-wrap:wrap;gap:.5rem;}
+    .nav-brand{display:flex;align-items:center;gap:.6rem;}
+    .nav-logo{width:34px;height:34px;background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;color:#fff;}
+    .nav-title{font-size:1rem;font-weight:800;color:var(--text);}
+    .nav-links{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;}
+    .nav-link{font-size:.82rem;font-weight:600;color:var(--soft);padding:.4rem .8rem;border-radius:8px;transition:all .2s;}
+    .nav-link:hover,.nav-link.active{color:var(--text);background:var(--muted);text-decoration:none;}
+
+    .page{max-width:860px;margin:0 auto;padding:2rem 1.5rem 6rem;}
+    .page-title{font-size:1.8rem;font-weight:900;color:var(--text);margin-bottom:.3rem;}
+    .page-sub{font-size:.85rem;color:var(--soft);margin-bottom:2rem;}
+
+    .section{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.6rem;margin-bottom:1.5rem;}
+    .section-title{font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin-bottom:1.2rem;padding-bottom:.7rem;border-bottom:1px solid var(--border);}
+
+    .field{display:flex;flex-direction:column;gap:.4rem;margin-bottom:1.1rem;}
+    .field:last-child{margin-bottom:0;}
+    .field label{font-size:.8rem;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.05em;}
+    .field input[type="text"],.field input[type="email"],.field input[type="url"],.field textarea{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:.6rem .95rem;font-size:.9rem;color:var(--text);outline:none;width:100%;font-family:inherit;transition:border-color .15s;}
+    .field input:focus,.field textarea:focus{border-color:var(--accent);}
+    .field textarea{resize:vertical;min-height:80px;}
+    .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;}
+    .toggle-label{font-size:.88rem;font-weight:600;color:var(--text);}
+    .toggle{position:relative;width:46px;height:26px;flex-shrink:0;}
+    .toggle input{opacity:0;width:0;height:0;}
+    .toggle-slider{position:absolute;inset:0;background:var(--muted);border-radius:999px;cursor:pointer;transition:background .2s;}
+    .toggle-slider:before{content:'';position:absolute;height:20px;width:20px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:transform .2s;}
+    .toggle input:checked + .toggle-slider{background:var(--accent);}
+    .toggle input:checked + .toggle-slider:before{transform:translateX(20px);}
+
+    .save-bar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);padding:1rem 1.5rem;display:flex;align-items:center;justify-content:flex-end;gap:1rem;z-index:40;}
+    .btn-save{padding:.65rem 1.8rem;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:.92rem;font-weight:800;cursor:pointer;transition:opacity .15s;}
+    .btn-save:hover{opacity:.88;}
+    .btn-save:disabled{opacity:.5;cursor:default;}
+    .status-msg{font-size:.85rem;font-weight:600;opacity:0;transition:opacity .3s;}
+    .status-msg.show{opacity:1;}
+    .status-msg.ok{color:var(--accent2);}
+    .status-msg.err{color:#ef4444;}
+  </style>
+</head>
+<body>
+
+<nav class="admin-nav">
+  <div class="nav-brand">
+    <div class="nav-logo">⚙</div>
+    <span class="nav-title">Site Settings</span>
+  </div>
+  <div class="nav-links">
+    <a href="/admin" class="nav-link">Dashboard</a>
+    <a href="/admin/leads" class="nav-link">Lead Nurture</a>
+    <a href="/admin/email-list" class="nav-link">Email List</a>
+    <a href="/admin/blog" class="nav-link">Articles</a>
+    <a href="/admin/builder" class="nav-link">Page Builder</a>
+    <a href="/admin/site-settings" class="nav-link active">Site Settings</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="page-title">Site Settings</div>
+  <div class="page-sub">Configure global settings for Keto Journey.</div>
+
+  <form id="settingsForm">
+    {Object.entries(grouped).map(([cat, fields]) => (
+      <div class="section">
+        <div class="section-title">{CATEGORY_LABELS[cat] || cat}</div>
+        {fields.map(f => (
+          <div class="field">
+            {(f.key === 'announcement_enabled' || f.key === 'maintenance_mode') ? (
+              <div class="toggle-row">
+                <span class="toggle-label">{f.label}</span>
+                <label class="toggle">
+                  <input type="checkbox" name={f.key} checked={f.value === 'true'}/>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            ) : f.key === 'site_announcement' ? (
+              <>
+                <label for={f.key}>{f.label}</label>
+                <textarea id={f.key} name={f.key}>{f.value}</textarea>
+              </>
+            ) : (
+              <>
+                <label for={f.key}>{f.label}</label>
+                <input type={f.key === 'support_email' ? 'email' : 'url'} id={f.key} name={f.key} value={f.value} placeholder={f.key === 'support_email' ? 'support@ketojourney.fun' : 'https://'}/>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    ))}
+  </form>
+</div>
+
+<div class="save-bar">
+  <span class="status-msg" id="statusMsg"></span>
+  <button class="btn-save" id="saveBtn" onclick="saveSettings()">Save Settings</button>
+</div>
+
+<script is:inline>
+function saveSettings() {
+  var btn = document.getElementById('saveBtn');
+  var msg = document.getElementById('statusMsg');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  var form = document.getElementById('settingsForm');
+  var settings = {};
+  form.querySelectorAll('input[type="text"],input[type="email"],input[type="url"],textarea').forEach(function(el) {
+    settings[el.name] = el.value;
+  });
+  form.querySelectorAll('input[type="checkbox"]').forEach(function(el) {
+    settings[el.name] = el.checked ? 'true' : 'false';
+  });
+
+  fetch('/api/admin/site-settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ settings: settings }),
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      btn.disabled = false;
+      btn.textContent = 'Save Settings';
+      if (data.success) {
+        msg.textContent = '✓ Settings saved';
+        msg.className = 'status-msg ok show';
+      } else {
+        msg.textContent = '✗ ' + (data.error || 'Save failed');
+        msg.className = 'status-msg err show';
+      }
+      setTimeout(function() { msg.className = 'status-msg'; }, 3000);
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.textContent = 'Save Settings';
+      msg.textContent = '✗ Network error';
+      msg.className = 'status-msg err show';
+      setTimeout(function() { msg.className = 'status-msg'; }, 3000);
+    });
+}
+</script>
+
+</body>
+</html>

@@ -130,11 +130,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (!isMediaPost && safe.length < 3)
       return json({ error: 'Content must be at least 3 characters' }, 400);
 
-    // Single profile query covers both ban check and timezone
+    // Single profile query covers ban check, tier enforcement, and timezone
     const { data: posterProfile } = await db
-      .from('profiles').select('community_banned, timezone').eq('id', user.id).maybeSingle();
+      .from('profiles').select('community_banned, subscription_tier, timezone').eq('id', user.id).maybeSingle();
     if (posterProfile?.community_banned)
       return json({ error: 'You are banned from the community.' }, 403);
+    const tier = posterProfile?.subscription_tier || '';
+    if (tier !== 'pro_6' && tier !== 'elite_12')
+      return json({ error: 'Community requires a Pro or Elite subscription.' }, 403);
 
     // Rate limit: max 10 posts per user per day (in user's local timezone)
     const dayStart = localDayStartISO(posterProfile?.timezone || 'UTC');

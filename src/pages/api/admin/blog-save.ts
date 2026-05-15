@@ -1,5 +1,22 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import sanitizeHtml from 'sanitize-html';
+
+const BLOG_SANITIZE: sanitizeHtml.IOptions = {
+  allowedTags: ['h1','h2','h3','h4','p','strong','em','u','s','blockquote',
+                'ul','ol','li','a','img','hr','br',
+                'table','thead','tbody','tr','td','th'],
+  allowedAttributes: {
+    a:   ['href','target','rel'],
+    img: ['src','alt','width','height'],
+    td:  ['colspan','rowspan'],
+    th:  ['colspan','rowspan'],
+  },
+  allowedSchemes: ['https','http','mailto'],
+  transformTags: {
+    a: sanitizeHtml.simpleTransform('a', { rel: 'noopener noreferrer' }),
+  },
+};
 
 function json(data: any, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
@@ -27,7 +44,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     title: title.trim().slice(0, 200),
     slug: slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, ''),
     excerpt: excerpt.trim().slice(0, 500),
-    content: content.trim(),
+    content: sanitizeHtml(content.trim(), BLOG_SANITIZE),
     cover_image_url: cover_image_url.trim().slice(0, 500),
     category: category.trim().slice(0, 50),
     tags: Array.isArray(tags) ? tags.map((t: string) => t.trim()).filter(Boolean) : [],

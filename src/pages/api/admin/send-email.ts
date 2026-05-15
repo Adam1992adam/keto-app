@@ -75,16 +75,26 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     const { Resend } = await import('resend');
     const resend = new Resend(RESEND_KEY);
 
+    const CHUNK = 100;
     let sent = 0;
     let errors = 0;
 
-    for (const email of recipients) {
+    for (let i = 0; i < recipients.length; i += CHUNK) {
+      const chunk = recipients.slice(i, i + CHUNK);
       try {
-        await resend.emails.send({ from: FROM, to: email, subject: subject.trim(), html: wrappedHtml });
-        sent++;
+        const messages = chunk.map(email => ({
+          from: FROM,
+          to: email,
+          subject: subject.trim(),
+          html: wrappedHtml,
+        }));
+        const result = await resend.batch.send(messages);
+        const batchErrors = (result.data?.data || []).filter((r: any) => r.error).length;
+        sent   += chunk.length - batchErrors;
+        errors += batchErrors;
       } catch (err) {
-        console.error('[admin/send-email]', email, err);
-        errors++;
+        console.error('[admin/send-email] batch chunk', i, err);
+        errors += chunk.length;
       }
     }
 
