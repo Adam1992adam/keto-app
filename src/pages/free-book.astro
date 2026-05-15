@@ -2,7 +2,7 @@
 export const prerender = true;
 const SITE_URL  = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').replace(/\/$/, '');
 const PAGE_TITLE = 'Free Keto Recipe Book — 80+ Recipes Under 5g Net Carbs | KetoJourney';
-const PAGE_DESC  = 'Download our free keto recipe book: 80+ beginner-friendly recipes with full macros, shopping lists, and meal prep tips. Completely free — instant download.';
+const PAGE_DESC  = 'Get our free keto recipe collection: 80+ beginner-friendly recipes with full macros, shopping lists, and meal prep tips. Completely free — sent to your inbox instantly.';
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -207,7 +207,7 @@ const PAGE_DESC  = 'Download our free keto recipe book: 80+ beginner-friendly re
   <div class="hero-left">
     <div class="hero-badge">📖 Free Recipe Book</div>
     <h1 class="hero-title">80+ Keto Recipes,<br/><em>Completely Free</em></h1>
-    <p class="hero-sub">Breakfasts, lunches, dinners, snacks, and desserts — every recipe under 5g net carbs, with full macros, shopping lists, and step-by-step guides. Download instantly.</p>
+    <p class="hero-sub">Breakfasts, lunches, dinners, snacks, and desserts — every recipe under 5g net carbs, with full macros, shopping lists, and step-by-step guides. Sent straight to your inbox.</p>
 
     <div class="form-card">
       <p class="form-card-label">Get your free copy →</p>
@@ -221,13 +221,13 @@ const PAGE_DESC  = 'Download our free keto recipe book: 80+ beginner-friendly re
           <input class="field-input" type="email" id="emailInput" placeholder="your@email.com" autocomplete="email"/>
         </div>
       </div>
-      <button class="form-submit" id="submitBtn" type="button">Download Free Book →</button>
+      <button class="form-submit" id="submitBtn" type="button">Send Me the Recipes →</button>
       <p class="form-note">🔒 No spam, ever. Unsubscribe anytime.</p>
       <div class="form-msg" id="formMsg"></div>
     </div>
 
     <div class="trust-row">
-      <span class="trust-item">Instant download</span>
+      <span class="trust-item">Sent to your inbox</span>
       <span class="trust-item">80+ recipes</span>
       <span class="trust-item">No credit card</span>
     </div>
@@ -264,7 +264,7 @@ const PAGE_DESC  = 'Download our free keto recipe book: 80+ beginner-friendly re
   <div class="proof-bar-inner">
     <div class="proof-stat">
       <div class="proof-num">12k+</div>
-      <div class="proof-label">Downloads</div>
+      <div class="proof-label">Subscribers</div>
     </div>
     <div class="proof-stat">
       <div class="proof-num">80+</div>
@@ -510,7 +510,7 @@ const PAGE_DESC  = 'Download our free keto recipe book: 80+ beginner-friendly re
         <input class="field-input" type="email" id="emailInput2" placeholder="your@email.com" autocomplete="email"/>
       </div>
     </div>
-    <button class="form-submit" id="submitBtn2" type="button" style="margin-top:14px;">Download Free Book →</button>
+    <button class="form-submit" id="submitBtn2" type="button" style="margin-top:14px;">Send Me the Recipes →</button>
     <p class="form-note">🔒 No spam. Unsubscribe anytime.</p>
     <div class="form-msg" id="formMsg2"></div>
   </div>
@@ -573,7 +573,7 @@ const PAGE_DESC  = 'Download our free keto recipe book: 80+ beginner-friendly re
         } else {
           show(msg, res.d.error || 'Something went wrong. Please try again.', 'error');
           btn.disabled    = false;
-          btn.textContent = 'Download Free Book →';
+          btn.textContent = 'Send Me the Recipes →';
         }
       })
       .catch(function () {
