@@ -262,30 +262,30 @@ const existingContent = isEdit ? (post.content || '') : '';
 
   <div class="tb-sep"></div>
 
-  <!-- Inline formatting -->
-  <button class="tb-btn" id="boldBtn"   onclick="fmt('bold')"          title="Bold (Ctrl+B)"><strong>B</strong></button>
-  <button class="tb-btn" id="italicBtn" onclick="fmt('italic')"        title="Italic (Ctrl+I)"><em>I</em></button>
-  <button class="tb-btn"                onclick="fmt('strikeThrough')" title="Strikethrough"><s>S</s></button>
-  <button class="tb-btn"                onclick="fmt('underline')"     title="Underline"><u>U</u></button>
+  <!-- Inline formatting — onmousedown preventDefault keeps editor focus/selection intact -->
+  <button class="tb-btn" id="boldBtn"   onmousedown="event.preventDefault()" onclick="fmt('bold')"          title="Bold (Ctrl+B)"><strong>B</strong></button>
+  <button class="tb-btn" id="italicBtn" onmousedown="event.preventDefault()" onclick="fmt('italic')"        title="Italic (Ctrl+I)"><em>I</em></button>
+  <button class="tb-btn"                onmousedown="event.preventDefault()" onclick="fmt('strikeThrough')" title="Strikethrough"><s>S</s></button>
+  <button class="tb-btn"                onmousedown="event.preventDefault()" onclick="fmt('underline')"     title="Underline"><u>U</u></button>
 
   <div class="tb-sep"></div>
 
   <!-- Lists -->
-  <button class="tb-btn" onclick="fmt('insertUnorderedList')" title="Bullet list">• List</button>
-  <button class="tb-btn" onclick="fmt('insertOrderedList')"   title="Numbered list">1. List</button>
+  <button class="tb-btn" onmousedown="event.preventDefault()" onclick="fmt('insertUnorderedList')" title="Bullet list">• List</button>
+  <button class="tb-btn" onmousedown="event.preventDefault()" onclick="fmt('insertOrderedList')"   title="Numbered list">1. List</button>
 
   <div class="tb-sep"></div>
 
   <!-- Insert -->
-  <button class="tb-btn" onclick="openLinkDialog()"              title="Insert link">🔗 Link</button>
-  <button class="tb-btn" onclick="document.getElementById('inlineImgFile').click()" title="Insert image">🖼 Image</button>
-  <button class="tb-btn" onclick="fmt('insertHorizontalRule')"   title="Horizontal rule">— Rule</button>
+  <button class="tb-btn" onmousedown="event.preventDefault()" onclick="openLinkDialog()"              title="Insert link">🔗 Link</button>
+  <button class="tb-btn" onmousedown="event.preventDefault()" onclick="document.getElementById('inlineImgFile').click()" title="Insert image">🖼 Image</button>
+  <button class="tb-btn" onmousedown="event.preventDefault()" onclick="fmt('insertHorizontalRule')"   title="Horizontal rule">— Rule</button>
 
   <div class="tb-sep"></div>
 
   <!-- Alignment -->
-  <button class="tb-btn" onclick="fmt('justifyLeft')"   title="Align left">⬛L</button>
-  <button class="tb-btn" onclick="fmt('justifyCenter')" title="Centre">⬛C</button>
+  <button class="tb-btn" onmousedown="event.preventDefault()" onclick="fmt('justifyLeft')"   title="Align left">⬛L</button>
+  <button class="tb-btn" onmousedown="event.preventDefault()" onclick="fmt('justifyCenter')" title="Centre">⬛C</button>
 
   <div class="tb-spacer"></div>
 
@@ -453,13 +453,15 @@ var savedRange = null; // remember cursor before link dialog
    LOAD EXISTING CONTENT
 ═══════════════════════════════════════════ */
 (function loadContent() {
-  if (!existingContent) return;
+  if (!existingContent) {
+    /* New article — give the editor an initial paragraph so cursor has a block */
+    editor.innerHTML = '<p><br></p>';
+    return;
+  }
   var content = existingContent.trim();
   if (content.startsWith('<')) {
-    // Already HTML — load directly
     editor.innerHTML = content;
   } else {
-    // Markdown — convert to HTML via marked CDN
     var tryParse = function() {
       if (typeof marked !== 'undefined') {
         editor.innerHTML = marked.parse(content);
@@ -475,46 +477,120 @@ var savedRange = null; // remember cursor before link dialog
 
 /* ═══════════════════════════════════════════
    BLOCK TYPE DROPDOWN
+   Save selection on mousedown BEFORE the
+   dropdown steals focus from the editor.
 ═══════════════════════════════════════════ */
+var savedBlockRange = null;
+
+blockSel.addEventListener('mousedown', function() {
+  var sel = window.getSelection();
+  if (sel && sel.rangeCount && editor.contains(sel.anchorNode)) {
+    savedBlockRange = sel.getRangeAt(0).cloneRange();
+  }
+});
+
 blockSel.addEventListener('change', function() {
   applyBlock(blockSel.value);
 });
 
+/* Find the direct block-level child of #editor that contains a node */
+function getBlockInEditor(node) {
+  var n = (node && node.nodeType === 3) ? node.parentNode : node;
+  while (n && n.parentNode && n.parentNode !== editor) {
+    n = n.parentNode;
+  }
+  return (n && n !== editor) ? n : null;
+}
+
 window.applyBlock = function(tag) {
   editor.focus();
-  if (savedRange) {
-    var sel = window.getSelection();
+
+  /* Restore selection saved before dropdown stole focus */
+  var sel = window.getSelection();
+  if (savedBlockRange) {
     sel.removeAllRanges();
-    sel.addRange(savedRange);
-    savedRange = null;
+    sel.addRange(savedBlockRange);
+    savedBlockRange = null;
   }
-  document.execCommand('formatBlock', false, tag === 'p' ? 'p' : tag);
+
+  var range = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+  var block = range ? getBlockInEditor(range.startContainer) : null;
+
+  if (!block) {
+    /* No block found — append a new element */
+    var newEl = document.createElement(tag === 'p' ? 'p' : tag);
+    newEl.innerHTML = '​';
+    editor.appendChild(newEl);
+    placeCursorIn(newEl);
+    updateToolbarState();
+    return;
+  }
+
+  /* Already the right tag — nothing to do */
+  if (block.nodeName.toLowerCase() === tag) {
+    updateToolbarState();
+    return;
+  }
+
+  if (tag === 'blockquote') {
+    /* Wrap block content in <blockquote><p>…</p></blockquote> */
+    var bq = document.createElement('blockquote');
+    var inner = document.createElement('p');
+    inner.innerHTML = block.innerHTML || '​';
+    bq.appendChild(inner);
+    editor.replaceChild(bq, block);
+    placeCursorIn(inner);
+  } else if (block.nodeName.toLowerCase() === 'blockquote') {
+    /* Unwrap blockquote → target tag */
+    var innerP = block.querySelector('p');
+    var newEl2 = document.createElement(tag);
+    newEl2.innerHTML = (innerP ? innerP.innerHTML : block.innerHTML) || '​';
+    editor.replaceChild(newEl2, block);
+    placeCursorIn(newEl2);
+  } else {
+    /* Simple tag swap (p ↔ h1/h2/h3/h4) */
+    var newEl3 = document.createElement(tag);
+    newEl3.innerHTML = block.innerHTML || '​';
+    editor.replaceChild(newEl3, block);
+    placeCursorIn(newEl3);
+  }
+
   updateToolbarState();
 };
 
+function placeCursorIn(el) {
+  var sel = window.getSelection();
+  var r = document.createRange();
+  r.selectNodeContents(el);
+  r.collapse(false); /* cursor at end */
+  sel.removeAllRanges();
+  sel.addRange(r);
+}
+
 /* Update dropdown + button states when cursor moves */
 document.addEventListener('selectionchange', function() {
-  if (!document.activeElement || !editor.contains(document.activeElement) && document.activeElement !== editor) return;
+  if (!document.activeElement) return;
+  if (!editor.contains(document.activeElement) && document.activeElement !== editor) return;
   updateToolbarState();
 });
 editor.addEventListener('keyup', updateToolbarState);
 editor.addEventListener('mouseup', updateToolbarState);
 
 function updateToolbarState() {
-  /* Block type */
   var sel = window.getSelection();
   if (sel && sel.rangeCount) {
     var node = sel.anchorNode;
+    var found = false;
     while (node && node !== editor) {
       var t = node.nodeName.toLowerCase();
       if (t === 'h1' || t === 'h2' || t === 'h3' || t === 'h4' || t === 'blockquote') {
-        blockSel.value = t; break;
+        blockSel.value = t; found = true; break;
       }
-      if (t === 'p' || t === 'div') { blockSel.value = 'p'; break; }
+      if (t === 'p' || t === 'div') { blockSel.value = 'p'; found = true; break; }
       node = node.parentNode;
     }
+    if (!found) blockSel.value = 'p';
   }
-  /* Bold / italic active states */
   try {
     document.getElementById('boldBtn').classList.toggle('active', document.queryCommandState('bold'));
     document.getElementById('italicBtn').classList.toggle('active', document.queryCommandState('italic'));
