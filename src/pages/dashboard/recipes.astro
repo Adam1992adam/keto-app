@@ -1,1230 +1,770 @@
-﻿---
-import { getUserJourney, getDailyTasks, getPlan } from '../../lib/supabase';
+---
 import { requireAuth } from '../../lib/auth';
 import Sidebar from '../../components/Sidebar.astro';
 import { getTranslator, normaliseLang } from '../../lib/i18n';
+import { getUserJourney } from '../../lib/supabase';
 
 const auth = await requireAuth(Astro);
 if ('redirect' in auth) return Astro.redirect(auth.redirect);
 const { user, profile, db } = auth;
+
 const planType  = profile.subscription_tier || 'basic_30';
 const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
-const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
-const t    = getTranslator(lang);
+const lang      = normaliseLang(Astro.cookies.get('keto-lang')?.value);
+const t         = getTranslator(lang);
 
-const journey = await getUserJourney(user.id, db);
+const journey    = await getUserJourney(user.id, db);
 const currentDay = journey?.current_day || 1;
-const dailyTasks = await getDailyTasks(user.id, currentDay, db);
-const incompleteTasks = dailyTasks?.filter(
-  (t: any) => t.task_type !== 'reflection' && t.task_type !== 'weight' && !t.completed
-) || [];
+const userName   = profile.full_name?.split(' ')[0] || 'Friend';
 
-const plan = getPlan(profile.subscription_tier);
-const tier = planType;
-
-// Tier unlock levels: basic=4, pro=8, elite=12 books per category
-const unlockedCount = tier === 'elite_12' ? 12 : tier === 'pro_6' ? 8 : 4;
-
-// Real recipe counts + one cover image per book_id from DB
-const { data: bookCountRows } = await db.from('recipes').select('book_id, image_url').not('book_id', 'is', null);
-const recipeCountMap: Record<string, number> = {};
-const bookImageMap: Record<string, string> = {};
-for (const r of (bookCountRows || [])) {
-  if (r.book_id) {
-    recipeCountMap[r.book_id] = (recipeCountMap[r.book_id] || 0) + 1;
-    if (r.image_url && !bookImageMap[r.book_id]) bookImageMap[r.book_id] = r.image_url;
-  }
+function getMealType(bookId) {
+  if (!bookId) return 'Other';
+  if (bookId.startsWith('ds')) return 'Dessert';
+  if (bookId.startsWith('d'))  return 'Dinner';
+  if (bookId.startsWith('sm')) return 'Smoothie';
+  if (bookId.startsWith('s'))  return 'Snack';
+  if (bookId.startsWith('bk')) return 'Baking';
+  if (bookId.startsWith('b'))  return 'Breakfast';
+  if (bookId.startsWith('l'))  return 'Lunch';
+  return 'Other';
 }
 
-const userName = profile.full_name?.split(' ')[0] || 'Friend';
+const dinnerBookIds = ['d1','d2','d3','d4','d5','d6','d7','d8','d9','d10','d11','d12'];
 
-// Book categories with 12 books each
-const bookCategories = [
+const [tonightRes, recipesRes, favsRes] = await Promise.allSettled([
+  db.from('recipes')
+    .select('id, title, description, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, difficulty')
+    .in('book_id', dinnerBookIds)
+    .not('image_url', 'is', null)
+    .limit(3),
+  db.from('recipes')
+    .select('id, title, description, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, difficulty, book_id, tags')
+    .not('image_url', 'is', null)
+    .limit(60),
+  db.from('recipe_favorites')
+    .select('recipe_id')
+    .eq('user_id', user.id),
+]);
+
+const tonightRecipes = tonightRes.status === 'fulfilled' ? (tonightRes.value?.data || []) : [];
+const allRecipes     = recipesRes.status === 'fulfilled' ? (recipesRes.value?.data || []) : [];
+const favsRaw        = favsRes.status === 'fulfilled' ? (favsRes.value?.data || []) : [];
+
+const favSet = new Set(favsRaw.map((f) => f.recipe_id));
+
+const favIds = favsRaw.map((f) => f.recipe_id).slice(0, 8);
+let savedRecipes = [];
+if (favIds.length > 0) {
+  const savedRes = await db
+    .from('recipes')
+    .select('id, title, image_url, net_carbs, calories')
+    .in('id', favIds)
+    .limit(8);
+  savedRecipes = savedRes.data || [];
+}
+
+const collectionDefs = [
   {
-    id: 'breakfast',
-    name: 'Breakfast',
-    emoji: '🍳',
-    gradient: 'linear-gradient(135deg,#f59e0b,#d97706)',
-    glow: 'rgba(245,158,11,.3)',
-    accent: '#f59e0b',
-    desc: 'Start your day with energizing keto breakfasts',
-    books: [
-      { id:'b1',  title:'Keto Eggs Mastery',       pages: 48, emoji:'🥚', desc:'20+ egg-based breakfast recipes with macro breakdowns' },
-      { id:'b2',  title:'Avocado Mornings',         pages: 52, emoji:'🥑', desc:'Creative avocado dishes to fuel your morning' },
-      { id:'b3',  title:'Keto Pancake Bible',       pages: 44, emoji:'🥞', desc:'Fluffy low-carb pancakes, waffles & French toast' },
-      { id:'b4',  title:'Power Breakfast Bowls',    pages: 56, emoji:'🥣', desc:'Filling breakfast bowls packed with healthy fats' },
-      { id:'b5',  title:'Bacon & Beyond',           pages: 40, emoji:'🥓', desc:'Savory breakfast meats done the keto way' },
-      { id:'b6',  title:'Keto Smoothie Bowls',      pages: 38, emoji:'🍓', desc:'Thick, creamy bowls under 5g net carbs each' },
-      { id:'b7',  title:'Overnight Keto',           pages: 42, emoji:'⏰', desc:'Prep-ahead breakfasts ready in minutes' },
-      { id:'b8',  title:'Cheese Lover\'s Breakfast',pages: 46, emoji:'🧀', desc:'Cheese-forward morning meals full of flavor' },
-      { id:'b9',  title:'Keto Omelette Art',        pages: 50, emoji:'🍳', desc:'Gourmet omelettes for every taste and mood' },
-      { id:'b10', title:'Fat Bomb Breakfasts',      pages: 44, emoji:'💣', desc:'High-fat morning starters to hit ketosis fast' },
-      { id:'b11', title:'Weekend Keto Brunch',      pages: 60, emoji:'☀️', desc:'Impressive brunch recipes for special mornings' },
-      { id:'b12', title:'Keto Breakfast Meal Prep', pages: 54, emoji:'📦', desc:'Batch-cook a week\'s worth of breakfasts in 2 hours' },
-    ]
+    id: 'ec-carbs', title: 'Under 5g net carbs', sub: "Strict-mode meals that don't taste like punishment.", tone: 'rose', filter: 'low-carb',
+    previews: allRecipes.filter((r) => (r.net_carbs || 0) <= 5).slice(0, 3),
+    count: allRecipes.filter((r) => (r.net_carbs || 0) <= 5).length,
   },
   {
-    id: 'lunch',
-    name: 'Lunch',
-    emoji: '🥗',
-    gradient: 'linear-gradient(135deg,#FF5C7A,#E0394F)',
-    glow: 'rgba(255,92,122,.3)',
-    accent: '#FF5C7A',
-    desc: 'Satisfying midday meals to keep you in ketosis',
-    books: [
-      { id:'l1',  title:'Keto Salad Bible',         pages: 58, emoji:'🥬', desc:'30+ hearty salads that actually fill you up' },
-      { id:'l2',  title:'Lettuce Wrap Secrets',     pages: 42, emoji:'🌯', desc:'Fresh, crunchy wraps with bold fillings' },
-      { id:'l3',  title:'Keto Soups & Stews',       pages: 52, emoji:'🍲', desc:'Warming bowls perfect for meal prep' },
-      { id:'l4',  title:'Power Protein Lunches',    pages: 48, emoji:'💪', desc:'High-protein midday meals under 8g carbs' },
-      { id:'l5',  title:'Keto Grain-Free Bowls',    pages: 50, emoji:'🥙', desc:'Buddha-style bowls with keto-friendly bases' },
-      { id:'l6',  title:'Office Lunch Keto',        pages: 44, emoji:'💼', desc:'Pack-and-go lunches that stay fresh all day' },
-      { id:'l7',  title:'Keto Chicken Lunches',     pages: 56, emoji:'🍗', desc:'15 ways to make chicken exciting at lunch' },
-      { id:'l8',  title:'Seafood Keto Lunch',       pages: 46, emoji:'🦞', desc:'Light yet satisfying seafood-based lunches' },
-      { id:'l9',  title:'Keto Charcuterie Plates',  pages: 38, emoji:'🧆', desc:'Beautiful boards that double as a full meal' },
-      { id:'l10', title:'Tuna & Salmon Specials',   pages: 42, emoji:'🐟', desc:'Quick canned-fish recipes packed with omega-3' },
-      { id:'l11', title:'Keto Cauliflower Lunches', pages: 48, emoji:'🌿', desc:'Cauliflower transformed into 20 lunch ideas' },
-      { id:'l12', title:'30-Min Keto Lunches',      pages: 60, emoji:'⚡', desc:'Fast, delicious lunches ready before hunger strikes' },
-    ]
+    id: 'ec-quick', title: '20 minutes or less', sub: 'For the nights when cooking is the enemy.', tone: 'lime', filter: 'quick',
+    previews: allRecipes.filter((r) => (r.prep_time || 0) + (r.cook_time || 0) <= 20).slice(0, 3),
+    count: allRecipes.filter((r) => (r.prep_time || 0) + (r.cook_time || 0) <= 20).length,
   },
   {
-    id: 'dinner',
-    name: 'Dinner',
-    emoji: '🍽️',
-    gradient: 'linear-gradient(135deg,#ef4444,#dc2626)',
-    glow: 'rgba(239,68,68,.3)',
-    accent: '#ef4444',
-    desc: 'Hearty evening meals your whole family will love',
-    books: [
-      { id:'d1',  title:'Keto Steak Nights',        pages: 52, emoji:'🥩', desc:'Master every cut — ribeye, sirloin, T-bone & more' },
-      { id:'d2',  title:'Family Keto Dinners',      pages: 64, emoji:'👨‍👩‍👧', desc:'Crowd-pleasing dinners even picky eaters love' },
-      { id:'d3',  title:'Keto Italian Night',       pages: 58, emoji:'🇮🇹', desc:'Pasta-free Italian classics — zoodles, lasagna & more' },
-      { id:'d4',  title:'Slow Cooker Keto',         pages: 56, emoji:'🍳', desc:'Set it and forget it — 25 crockpot keto meals' },
-      { id:'d5',  title:'Keto Seafood Dinner',      pages: 50, emoji:'🦐', desc:'Impressive seafood dishes for special occasions' },
-      { id:'d6',  title:'Asian Keto Kitchen',       pages: 54, emoji:'🥢', desc:'Stir-fries, curries & Asian flavors without the carbs' },
-      { id:'d7',  title:'Keto BBQ & Grill',         pages: 48, emoji:'🔥', desc:'Smoky grilled meats and sides for summer nights' },
-      { id:'d8',  title:'Keto Mexican Nights',      pages: 52, emoji:'🌮', desc:'Tacos, enchiladas & burritos — all keto style' },
-      { id:'d9',  title:'Ground Beef Keto',         pages: 46, emoji:'🫕', desc:'Budget-friendly ground beef transformed 20 ways' },
-      { id:'d10', title:'Keto Casseroles',          pages: 50, emoji:'🥘', desc:'Comforting baked casseroles for cold evenings' },
-      { id:'d11', title:'Sheet Pan Keto Dinners',   pages: 44, emoji:'📋', desc:'One pan, minimal cleanup, maximum flavor' },
-      { id:'d12', title:'Keto Date Night Dinners',  pages: 60, emoji:'🥂', desc:'Restaurant-quality meals for two, at home' },
-    ]
+    id: 'ec-dinner', title: "Tonight's dinner", sub: 'High-fat dinner recipes to end your day in ketosis.', tone: 'dark', filter: 'dinner',
+    previews: allRecipes.filter((r) => getMealType(r.book_id) === 'Dinner').slice(0, 3),
+    count: allRecipes.filter((r) => getMealType(r.book_id) === 'Dinner').length,
   },
   {
-    id: 'snacks',
-    name: 'Snacks',
-    emoji: '🥜',
-    gradient: 'linear-gradient(135deg,#8b5cf6,#7c3aed)',
-    glow: 'rgba(139,92,246,.3)',
-    accent: '#8b5cf6',
-    desc: 'Keto-friendly snacks to beat cravings all day',
-    books: [
-      { id:'s1',  title:'Keto Cheese Crisps',       pages: 36, emoji:'🧀', desc:'Crunchy cheese-based snacks for any craving' },
-      { id:'s2',  title:'Fat Bomb Handbook',        pages: 48, emoji:'💣', desc:'50 fat bomb recipes — sweet, savory & everything in between' },
-      { id:'s3',  title:'Keto Dips & Spreads',      pages: 42, emoji:'🫙', desc:'Guacamole, hummus alternatives & creamy dips' },
-      { id:'s4',  title:'Nuts & Seeds Snacks',      pages: 38, emoji:'🌰', desc:'Seasoned nut mixes and seed snack recipes' },
-      { id:'s5',  title:'Keto Jerky & Meat Snacks', pages: 40, emoji:'🥓', desc:'Homemade jerky and protein-packed bites' },
-      { id:'s6',  title:'Veggie Keto Snacks',       pages: 36, emoji:'🥦', desc:'Low-carb veggie snacks that satisfy the crunch' },
-      { id:'s7',  title:'Keto Energy Bars',         pages: 44, emoji:'⚡', desc:'Homemade bars better than any store-bought option' },
-      { id:'s8',  title:'Keto Deviled Eggs',        pages: 32, emoji:'🥚', desc:'Creative deviled egg recipes for snacking' },
-      { id:'s9',  title:'Keto Charcuterie',         pages: 40, emoji:'🍖', desc:'Build stunning snack boards for every occasion' },
-      { id:'s10', title:'Keto Popcorn Alternatives',pages: 36, emoji:'🍿', desc:'Crunchy movie-night snacks without the carbs' },
-      { id:'s11', title:'Keto Dipping Sauces',      pages: 38, emoji:'🥫', desc:'Sauces that make every snack 10x better' },
-      { id:'s12', title:'5-Min Keto Snacks',        pages: 44, emoji:'⏱️', desc:'Quick snacks you can make before hunger wins' },
-    ]
+    id: 'ec-breakfast', title: 'Power breakfast', sub: 'Start keto-strong. Every. Single. Morning.', tone: 'orange', filter: 'breakfast',
+    previews: allRecipes.filter((r) => getMealType(r.book_id) === 'Breakfast').slice(0, 3),
+    count: allRecipes.filter((r) => getMealType(r.book_id) === 'Breakfast').length,
   },
   {
-    id: 'smoothies',
-    name: 'Smoothies',
-    emoji: '🥤',
-    gradient: 'linear-gradient(135deg,#06b6d4,#0891b2)',
-    glow: 'rgba(6,182,212,.3)',
-    accent: '#06b6d4',
-    desc: 'Delicious blended drinks to sip your way to ketosis',
-    books: [
-      { id:'sm1',  title:'Keto Green Smoothies',    pages: 44, emoji:'🥬', desc:'Nutrient-dense green blends under 4g net carbs' },
-      { id:'sm2',  title:'Keto Berry Smoothies',     pages: 40, emoji:'🫐', desc:'Berry-packed low-carb blends bursting with antioxidants' },
-      { id:'sm3',  title:'Keto Protein Shakes',     pages: 38, emoji:'💪', desc:'High-protein post-workout shakes to fuel recovery' },
-      { id:'sm4',  title:'Creamy Keto Shakes',      pages: 42, emoji:'🥛', desc:'Rich velvety blended drinks to crush hunger and hit macros' },
-      { id:'sm5',  title:'Keto Coffee Drinks',      pages: 36, emoji:'☕', desc:'Bulletproof coffee and MCT-powered morning drinks' },
-      { id:'sm6',  title:'Keto Detox Smoothies',    pages: 40, emoji:'✨', desc:'Cleansing blends to support your health journey' },
-      { id:'sm7',  title:'Chocolate Keto Shakes',   pages: 38, emoji:'🍫', desc:'Rich chocolate smoothies that taste like dessert' },
-      { id:'sm8',  title:'Keto Tropical Blends',    pages: 36, emoji:'🌴', desc:'Tropical flavors without the sugar spike' },
-      { id:'sm9',  title:'Keto Nut Milk Recipes',   pages: 42, emoji:'🥛', desc:'Make your own almond, coconut & macadamia milks' },
-      { id:'sm10', title:'Keto Collagen Smoothies', pages: 40, emoji:'🌟', desc:'Beauty-boosting blends with collagen peptides' },
-      { id:'sm11', title:'Kids Keto Smoothies',     pages: 38, emoji:'🧒', desc:'Family-friendly blends the whole household will enjoy' },
-      { id:'sm12', title:'Keto Smoothie Meal Prep', pages: 44, emoji:'📦', desc:'Batch-prep a week of smoothie packs in 30 minutes' },
-    ]
+    id: 'ec-protein', title: 'High protein', sub: '30g+ to protect muscle while burning fat.', tone: 'rose', filter: 'high-protein',
+    previews: allRecipes.filter((r) => (r.protein || 0) >= 30).slice(0, 3),
+    count: allRecipes.filter((r) => (r.protein || 0) >= 30).length,
   },
-  {
-    id: 'baking',
-    name: 'Keto Baking',
-    emoji: '🍞',
-    gradient: 'linear-gradient(135deg,#d97706,#b45309)',
-    glow: 'rgba(217,119,6,.3)',
-    accent: '#d97706',
-    desc: 'Breads, muffins & baked goods without the carbs',
-    books: [
-      { id:'bk1',  title:'Keto Bread Bible',        pages: 60, emoji:'🍞', desc:'20 keto bread recipes from sandwich loaves to rolls' },
-      { id:'bk2',  title:'Keto Cookies & Bars',      pages: 54, emoji:'🍪', desc:'20 irresistible cookies, brownies and bars all under 5g carbs' },
-      { id:'bk3',  title:'Keto Muffins & Cupcakes', pages: 48, emoji:'🧁', desc:'Moist, fluffy muffins that pass the taste test' },
-      { id:'bk4',  title:'Keto Cakes & Tarts',       pages: 44, emoji:'🎂', desc:'Elegant layer cakes, tarts and showpiece desserts done keto' },
-      { id:'bk5',  title:'Keto Crackers & Chips',   pages: 40, emoji:'🫓', desc:'Crunchy baked snacks for dipping and munching' },
-      { id:'bk6',  title:'Coconut Flour Baking',    pages: 50, emoji:'🥥', desc:'Nut-free baking alternatives using coconut flour' },
-      { id:'bk7',  title:'Keto Bagels & Rolls',     pages: 42, emoji:'🥯', desc:'Fathead dough transformed into bakery favorites' },
-      { id:'bk8',  title:'Keto Flatbreads',         pages: 38, emoji:'🫓', desc:'Quick flatbreads and wraps baked in 15 minutes' },
-      { id:'bk9',  title:'Keto Savory Bakes',       pages: 52, emoji:'🧆', desc:'Quiches, frittatas and savory baked goods' },
-      { id:'bk10', title:'Psyllium Husk Baking',    pages: 44, emoji:'🌿', desc:'Gut-healthy fiber-rich keto baking secrets' },
-      { id:'bk11', title:'Keto Tortillas & Wraps',  pages: 40, emoji:'🌯', desc:'Perfect low-carb tortillas for tacos and wraps' },
-      { id:'bk12', title:'Advanced Keto Baking',    pages: 66, emoji:'👨‍🍳', desc:'Master-level techniques for serious keto bakers' },
-    ]
-  },
-  {
-    id: 'desserts',
-    name: 'Desserts',
-    emoji: '🍰',
-    gradient: 'linear-gradient(135deg,#ec4899,#db2777)',
-    glow: 'rgba(236,72,153,.3)',
-    accent: '#ec4899',
-    desc: 'Sweet treats that won\'t kick you out of ketosis',
-    books: [
-      { id:'ds1',  title:'Keto Ice Cream Book',      pages: 52, emoji:'🍦', desc:'20 creamy frozen desserts from scoops to pops to ice cream cakes' },
-      { id:'ds2',  title:'Keto Puddings & Custards',pages: 48, emoji:'🍮', desc:'Silky smooth puddings, mousses, crème brûlée and custards' },
-      { id:'ds3',  title:'Keto Candy & Confections',pages: 44, emoji:'🍬', desc:'Truffles, fudge, bark and candy — all sugar-free and keto' },
-      { id:'ds4',  title:'Keto Pies & Cobblers',    pages: 56, emoji:'🥧', desc:'Buttery keto crusts filled with cobblers, pies and fruit tarts' },
-      { id:'ds5',  title:'Keto Brownies & Bars',    pages: 48, emoji:'🟫', desc:'Fudgy brownies and blondies with zero guilt' },
-      { id:'ds6',  title:'Keto Mousse & Puddings',  pages: 42, emoji:'🍮', desc:'Silky smooth desserts ready in under 10 minutes' },
-      { id:'ds7',  title:'Keto Pies & Tarts',       pages: 54, emoji:'🥧', desc:'Buttery crusts and creamy fillings — all keto' },
-      { id:'ds8',  title:'Keto Candy Book',         pages: 40, emoji:'🍬', desc:'Homemade keto candy that satisfies every sweet tooth' },
-      { id:'ds9',  title:'Keto Tiramisu & Classics',pages: 50, emoji:'☕', desc:'Italian and French classics reimagined keto-style' },
-      { id:'ds10', title:'No-Bake Keto Desserts',   pages: 44, emoji:'❄️', desc:'25 desserts that require zero oven time' },
-      { id:'ds11', title:'Keto Birthday Cakes',     pages: 58, emoji:'🎂', desc:'Celebration cakes and frosting recipes to impress' },
-      { id:'ds12', title:'Keto Dessert Meal Prep',  pages: 48, emoji:'📦', desc:'Make a week of desserts in one Sunday session' },
-    ]
-  }
 ];
 
-const totalUnlocked = bookCategories.length * unlockedCount;
-const totalBooks    = bookCategories.length * 12;
+const tn0 = tonightRecipes[0] || null;
+const tn1 = tonightRecipes[1] || null;
+const tn2 = tonightRecipes[2] || null;
+const hasTn = tn0 !== null;
+const hasSmalls = tn1 !== null;
 
-// Unique gradient angle per book slot so covers look distinct
-const gradientAngles = [128, 155, 110, 168, 118, 148, 133, 162, 115, 142, 157, 122];
+// Pre-compute all derived card data so the template map needs NO const declarations
+const recipeCards = allRecipes.map((r) => {
+  const meal = getMealType(r.book_id);
+  const totalTime = (r.prep_time || 0) + (r.cook_time || 0);
+  const isFaved = favSet.has(r.id);
+  const tagsStr = Array.isArray(r.tags) ? r.tags.join(',').toLowerCase() : '';
+  const raw = r.description || '';
+  const descFull = raw.length > 60 ? raw.slice(0, 60) + '…' : raw;
+  return {
+    id: r.id,
+    title: r.title,
+    calories: r.calories || 0,
+    fat: r.fat || 0,
+    protein: r.protein || 0,
+    net_carbs: r.net_carbs || 0,
+    image_url: r.image_url,
+    meal,
+    totalTime,
+    isFaved,
+    tagsStr,
+    descFull,
+  };
+});
+
+// Pre-compute collection previews so template map needs NO const either
+const colCards = collectionDefs.map((c) => ({
+  ...c,
+  cover: c.previews[0] ? c.previews[0].image_url : null,
+  thumbs: c.previews.filter((p) => !!p.image_url).slice(0, 3),
+}));
 ---
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{t('recipes.title')} — Keto Journey</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recipes — Keto Journey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
 
   <style>
     :root {
-      --bg:#FAF6F1; --surface:#F2EDE5; --card:#FFFFFF; --card2:#F2EDE5;
-      --border:rgba(255,90,122,.12); --border2:rgba(255,90,122,.28);
-      --text:#1A110D; --muted:#C8B5AD; --soft:#7A5C52;
-      --green:#FF5C7A; --green2:#B6FF3C; --blue:#3b82f6;
-      --purple:#8b5cf6; --gold:#f59e0b; --red:#ef4444; --cyan:#06b6d4;
-      --rv-accent:#FF5C7A; --radius:20px;
+      --display: 'Bricolage Grotesque', system-ui, sans-serif;
+      --serif: 'Instrument Serif', Georgia, serif;
+      --mono: 'SFMono-Regular', 'Consolas', monospace;
+      --bg: #FAF6F1;
+      --bg-alt: #F2EDE5;
+      --ink: #16110F;
+      --ink-soft: #4A4340;
+      --muted: #8A8077;
+      --line: #E5DED2;
+      --card: #FFFFFF;
+      --accent: #FF5C7A;
+      --accent-2: #B6FF3C;
+      --accent-3: #FF914D;
     }
-    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-    html{scroll-behavior:smooth;}
-    body{font-family:'Bricolage Grotesque',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
-    .rv-pg-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
-    .rv-pg-main{overflow-y:auto;}
-    @media(max-width:900px){.rv-pg-shell{grid-template-columns:1fr;}}
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Bricolage Grotesque', system-ui, sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; overflow-x: hidden; }
+    button { cursor: pointer; font-family: inherit; background: none; border: none; }
+    a { text-decoration: none; color: inherit; }
 
-    /* BG */
-    .bg-mesh{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
-    .orb{position:absolute;border-radius:50%;filter:blur(110px);animation:orbDrift ease-in-out infinite;}
-    [data-theme="light"] .orb{opacity:.15;}
-    .o1{width:700px;height:700px;background:rgba(255,92,122,.06);top:-200px;left:-200px;animation-duration:24s;opacity:.5;}
-    .o2{width:600px;height:600px;background:rgba(139,92,246,.05);bottom:-150px;right:-150px;animation-duration:30s;animation-delay:-14s;opacity:.4;}
-    .o3{width:400px;height:400px;background:rgba(245,158,11,.04);top:40%;left:40%;animation-duration:20s;animation-delay:-8s;opacity:.35;}
-    @keyframes orbDrift{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(50px,-60px) scale(1.07);}66%{transform:translate(-40px,50px) scale(.94);}}
+    .rx-shell { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+    .rx-main { min-width: 0; overflow-x: hidden; }
+    @media (max-width: 900px) { .rx-shell { grid-template-columns: 1fr; } }
 
-    /* NAV */
-    nav{position:sticky;top:0;z-index:100;height:var(--nav-h);background:rgba(12,17,23,.85);border-bottom:1px solid var(--border);backdrop-filter:blur(20px);display:flex;align-items:center;transition:background .3s;}
-    [data-theme="light"] nav{background:rgba(255,255,255,.88);}
-    .nav-inner{max-width:1280px;margin:0 auto;padding:0 1.5rem;width:100%;display:flex;align-items:center;gap:1.5rem;}
-    .nav-brand{display:flex;align-items:center;gap:.6rem;text-decoration:none;font-weight:700;font-size:1.1rem;color:var(--text);flex-shrink:0;}
-    .nav-links{display:flex;align-items:center;gap:.25rem;flex:1;overflow-x:auto;}
-    .nav-links::-webkit-scrollbar{display:none;}
-    .nav-link{display:flex;align-items:center;gap:.4rem;padding:.45rem .9rem;border-radius:10px;font-size:.82rem;font-weight:600;color:var(--soft);text-decoration:none;white-space:nowrap;transition:all .2s;}
-    .nav-link:hover,.nav-link.active{background:rgba(255,92,122,.1);color:var(--green);}
-    .nav-right{display:flex;align-items:center;gap:.75rem;flex-shrink:0;}
-    .theme-btn{width:38px;height:38px;border-radius:10px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;transition:all .2s;}
-    .theme-btn:hover{border-color:var(--green);}
-    .notif-wrap{position:relative;}
-    .notif-btn{width:38px;height:38px;border-radius:10px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1rem;position:relative;transition:all .2s;}
-    .notif-btn:hover{border-color:var(--green);}
-    .notif-badge{position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;width:18px;height:18px;border-radius:50%;font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center;animation:pulseBadge 2s infinite;}
-    @keyframes pulseBadge{0%,100%{transform:scale(1);}50%{transform:scale(1.2);}}
-    .notif-dropdown{position:absolute;top:calc(100% + .5rem);right:0;width:340px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);display:none;z-index:200;}
-    .notif-dropdown.open{display:block;animation:dropIn .25s ease;}
-    @keyframes dropIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
-    .notif-item{display:flex;align-items:center;gap:.875rem;padding:.875rem 1.25rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .2s;}
-    .notif-item:hover{background:rgba(255,92,122,.06);}
-    .nav-avatar{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--green),var(--blue));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.95rem;text-decoration:none;transition:all .2s;}
-    .nav-avatar:hover{transform:scale(1.05);}
+    /* ─── TONIGHT ─── */
+    .tonight { background: var(--ink); color: #FFF6F0; padding: 52px 48px 48px; }
+    .tn-inner { max-width: 1360px; margin: 0 auto; display: grid; grid-template-columns: 1fr 480px; gap: 48px; align-items: center; }
+    .tn-label { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 18px; }
+    .tn-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); display: inline-block; }
+    .tn-title { font-size: clamp(28px, 4vw, 50px); font-weight: 700; letter-spacing: -0.04em; line-height: 1.05; margin-bottom: 12px; }
+    .tn-title em { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; color: var(--accent); }
+    .tn-sub { font-size: 14px; color: rgba(255,246,240,.5); line-height: 1.5; max-width: 38ch; margin-bottom: 24px; }
+    .tn-pick-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 10px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 600; transition: all .15s; }
+    .tn-pick-btn:hover { background: color-mix(in oklab, var(--accent) 85%, #fff); }
 
-    /* PAGE */
-    .page{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:1.25rem 1.5rem 5rem;}
-    @media(min-width:901px){.page{padding-top:1.25rem;}} /* rv-pg-main provides 58px top clearance */
+    /* Card layout */
+    .tn-cards { display: flex; gap: 12px; height: 360px; }
+    .tn-card { border-radius: 18px; overflow: hidden; position: relative; cursor: pointer; transition: transform .2s; display: block; flex-shrink: 0; }
+    .tn-card:hover { transform: translateY(-3px); }
+    .tn-card img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s; }
+    .tn-card:hover img { transform: scale(1.05); }
+    .tn-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 25%, rgba(22,17,15,.88) 100%); }
+    .tn-card-body { position: absolute; left: 16px; right: 16px; bottom: 16px; z-index: 2; }
+    .tn-rank { font-family: var(--mono); font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 6px; }
+    .tn-name { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; color: #FFF6F0; line-height: 1.2; margin-bottom: 8px; }
+    .tn-macros { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tn-chip { font-family: var(--mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 8px; border-radius: 5px; background: rgba(255,246,240,.12); border: 1px solid rgba(255,246,240,.18); color: #FFF6F0; }
+    .tn-chip-green { background: rgba(182,255,60,.15); border-color: rgba(182,255,60,.3); color: var(--accent-2); }
+    .tn-btns { display: flex; gap: 7px; margin-top: 10px; }
+    .tn-btn-p { padding: 7px 13px; border-radius: 8px; font-size: 11px; font-weight: 600; background: var(--accent); color: #fff; border: 1.5px solid var(--accent); transition: all .15s; }
+    .tn-btn-g { padding: 7px 13px; border-radius: 8px; font-size: 11px; font-weight: 600; background: transparent; color: #FFF6F0; border: 1.5px solid rgba(255,246,240,.25); transition: all .15s; }
+    .tn-btn-p:hover { opacity: .88; }
+    .tn-btn-g:hover { border-color: rgba(255,246,240,.5); }
+    .tn-card-hero { flex: 1; min-width: 0; }
+    .tn-card-hero .tn-name { font-size: 22px; }
+    .tn-smalls { width: 195px; display: flex; flex-direction: column; gap: 12px; flex-shrink: 0; }
+    .tn-card-sm { flex: 1; }
+    .tn-card-sm .tn-btns { display: none; }
+    .tn-card-sm .tn-name { font-size: 13.5px; }
+    .tn-card-sm .tn-chip { font-size: 8.5px; padding: 2px 6px; }
 
-    /* HERO */
-    .hero{margin-bottom:2.5rem;animation:fadeUp .5s ease both;}
-    .hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(255,92,122,.1);border:1px solid rgba(255,92,122,.25);border-radius:99px;padding:.4rem 1.1rem;font-size:.78rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1.25rem;}
-    .hero-title{font-size:clamp(2rem,4vw,3rem);font-weight:900;line-height:1.1;margin-bottom:.75rem;}
-    .hero-title .hl{font-style:italic;background:linear-gradient(135deg,var(--green),var(--green2),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    @media (max-width: 1100px) { .tn-inner { grid-template-columns: 1fr; gap: 28px; } .tn-cards { height: 260px; } }
+    @media (max-width: 700px) { .tonight { padding: 32px 20px 28px; } .tn-cards { display: none; } }
 
-    /* PLAN STATS ROW */
-    .plan-stats{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:2.5rem;}
-    .plan-stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1rem 1.5rem;display:flex;align-items:center;gap:.875rem;transition:all .25s;animation:fadeUp .4s ease both;}
-    .plan-stat:hover{border-color:var(--border2);transform:translateY(-2px);}
-    .ps-icon{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
-    .ps-val{font-size:1.6rem;font-weight:900;line-height:1;}
-    .ps-lbl{font-size:.7rem;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;margin-top:.15rem;}
+    /* ─── FILTER BAR ─── */
+    .fl { position: sticky; top: 0; z-index: 30; background: color-mix(in oklab, var(--bg) 88%, transparent); backdrop-filter: blur(16px) saturate(1.2); -webkit-backdrop-filter: blur(16px) saturate(1.2); border-bottom: 1px solid var(--line); }
+    .fl-inner { max-width: 1360px; margin: 0 auto; padding: 12px 32px; display: flex; flex-direction: column; gap: 10px; }
+    .fl-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
-    /* PLAN PROGRESS */
-    .unlock-banner{
-      background:linear-gradient(135deg,rgba(255,92,122,.08),rgba(52,211,153,.04));
-      border:1px solid rgba(255,92,122,.2);border-radius:16px;
-      padding:1.25rem 1.75rem;margin-bottom:2.5rem;
-      display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;
-      animation:fadeUp .4s .1s ease both;
-    }
-    .unlock-left{display:flex;align-items:center;gap:1rem;}
-    .unlock-emoji{font-size:1.75rem;}
-    .unlock-title{font-weight:800;font-size:.95rem;}
-    .unlock-sub{font-size:.78rem;color:var(--soft);margin-top:.2rem;}
-    .plan-badge-pill{display:inline-flex;align-items:center;gap:.4rem;background:rgba(255,92,122,.12);border:1px solid rgba(255,92,122,.3);border-radius:99px;padding:.3rem .9rem;font-size:.75rem;font-weight:800;color:var(--green);}
-    .lock-tiers{display:flex;gap:.5rem;flex-wrap:wrap;}
-    .tier-pill{padding:.3rem .8rem;border-radius:99px;font-size:.72rem;font-weight:700;border:1px solid;transition:all .2s;}
-    .tier-pill.active{background:rgba(255,92,122,.15);border-color:rgba(255,92,122,.4);color:var(--green);}
-    .tier-pill.locked{background:transparent;border-color:var(--border);color:var(--muted);}
+    .fl-search { position: relative; flex: 1; min-width: 180px; max-width: 320px; }
+    .fl-search input { width: 100%; padding: 10px 12px 10px 36px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); font-size: 13px; color: var(--ink); outline: none; font-family: inherit; transition: border-color .15s; }
+    .fl-search input:focus { border-color: var(--ink); }
+    .fl-search input::placeholder { color: var(--muted); }
+    .fl-search-ic { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--muted); pointer-events: none; }
 
-    /* CATEGORY TABS */
-    .cat-tabs{display:flex;gap:.5rem;margin-bottom:2rem;overflow-x:auto;padding-bottom:.25rem;}
-    .cat-tabs::-webkit-scrollbar{display:none;}
-    .cat-tab{display:flex;align-items:center;gap:.4rem;padding:.55rem 1.1rem;border-radius:99px;font-size:.82rem;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:var(--card);color:var(--soft);white-space:nowrap;transition:all .25s;flex-shrink:0;}
-    .cat-tab:hover{border-color:var(--border2);color:var(--text);}
-    .cat-tab.active{background:var(--green);border-color:var(--green);color:#fff;box-shadow:0 4px 14px rgba(255,92,122,.35);}
+    .fl-pills { display: flex; gap: 3px; padding: 3px; background: var(--bg-alt); border: 1px solid var(--line); border-radius: 999px; flex-wrap: wrap; }
+    .fl-pill { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; padding: 7px 12px; border-radius: 999px; color: var(--muted); font-weight: 600; transition: all .15s; white-space: nowrap; }
+    .fl-pill:hover { color: var(--ink); }
+    .fl-pill.active { background: var(--ink); color: var(--bg); }
 
-    /* CATEGORY PANEL */
-    .cat-panel{display:none;}
-    .cat-panel.active{display:block;animation:fadeUp .35s ease both;}
+    .fl-spacer { flex: 1; min-width: 8px; }
 
-    /* CATEGORY HEADER */
-    .cat-header{
-      border-radius:var(--radius);padding:2rem 2.5rem;
-      margin-bottom:1.75rem;position:relative;overflow:hidden;
-    }
-    .cat-header::before{content:'';position:absolute;top:-60px;right:-60px;width:240px;height:240px;border-radius:50%;filter:blur(60px);opacity:.2;}
-    .cat-h-inner{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;}
-    .cat-h-left{display:flex;align-items:center;gap:1.25rem;}
-    .cat-big-icon{width:70px;height:70px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;}
-    .cat-h-title{font-size:1.8rem;font-weight:900;margin-bottom:.2rem;}
-    .cat-h-desc{font-size:.875rem;opacity:.8;}
-    .cat-h-stats{display:flex;gap:.75rem;flex-wrap:wrap;}
-    .cat-stat-pill{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:.4rem 1rem;font-size:.78rem;font-weight:700;color:#fff;backdrop-filter:blur(8px);}
+    .fl-sl { display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); }
+    .fl-sl .fl-l { font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+    .fl-sl input[type="range"] { flex: 1; -webkit-appearance: none; appearance: none; height: 3px; border-radius: 999px; background: var(--bg-alt); outline: none; width: 80px; cursor: pointer; }
+    .fl-sl input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--accent); cursor: pointer; }
+    .fl-sl input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); cursor: pointer; }
+    .fl-sl .fl-v { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--ink); min-width: 50px; text-align: right; }
 
-    /* BOOKS GRID */
-    .books-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.25rem;}
+    .fl-view { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--card); flex-shrink: 0; }
+    .fl-view button { width: 32px; height: 32px; display: grid; place-items: center; font-size: 13px; color: var(--muted); border-right: 1px solid var(--line); }
+    .fl-view button:last-child { border-right: none; }
+    .fl-view button.on { background: var(--ink); color: var(--bg); }
 
-    /* BOOK CARD */
-    .book-card{
-      background:var(--card);border:1px solid var(--border);
-      border-radius:18px;overflow:hidden;transition:all .3s;
-      position:relative;
-    }
-    .book-card:not(.locked-card):hover{transform:translateY(-6px);border-color:var(--border2);box-shadow:0 18px 44px rgba(0,0,0,.3);}
-    .book-card[data-book-cat="breakfast"]:not(.locked-card):hover{box-shadow:0 18px 44px rgba(245,158,11,.18);}
-    .book-card[data-book-cat="lunch"]:not(.locked-card):hover{box-shadow:0 18px 44px rgba(255,92,122,.18);}
-    .book-card[data-book-cat="dinner"]:not(.locked-card):hover{box-shadow:0 18px 44px rgba(239,68,68,.18);}
-    .book-card[data-book-cat="snacks"]:not(.locked-card):hover{box-shadow:0 18px 44px rgba(139,92,246,.18);}
-    .book-card[data-book-cat="smoothies"]:not(.locked-card):hover{box-shadow:0 18px 44px rgba(6,182,212,.18);}
-    .book-card[data-book-cat="baking"]:not(.locked-card):hover{box-shadow:0 18px 44px rgba(217,119,6,.18);}
-    .book-card[data-book-cat="desserts"]:not(.locked-card):hover{box-shadow:0 18px 44px rgba(236,72,153,.18);}
-    .book-card.locked-card{opacity:.55;filter:grayscale(.4);}
+    .fl-diets { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+    .fl-diet { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; padding: 6px 10px; border-radius: 999px; border: 1px dashed var(--line); color: var(--muted); font-weight: 600; transition: all .15s; }
+    .fl-diet:hover { border-style: solid; border-color: var(--ink); color: var(--ink); }
+    .fl-diet.active { background: var(--ink); color: var(--accent-2); border-color: var(--ink); border-style: solid; }
 
-    /* CARD IMAGE HEADER */
-    .book-img-header{
-      width:100%;height:180px;position:relative;overflow:hidden;
-      border-radius:14px 14px 0 0;flex-shrink:0;
-    }
-    .book-cover-img{
-      position:absolute;inset:0;width:100%;height:100%;
-      object-fit:cover;display:block;z-index:1;
-      transition:transform .35s ease;
-    }
-    .book-card:not(.locked-card):hover .book-cover-img{transform:scale(1.06);}
-    .book-img-placeholder{
-      position:absolute;inset:0;display:flex;flex-direction:column;
-      align-items:center;justify-content:center;gap:.5rem;
-      overflow:hidden;z-index:0;
-    }
-    /* Radial light spots for depth */
-    .book-img-placeholder::before{
-      content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
-      background-image:
-        radial-gradient(circle at 25% 20%,rgba(255,255,255,.22) 0%,transparent 55%),
-        radial-gradient(circle at 78% 80%,rgba(255,255,255,.14) 0%,transparent 48%);
-    }
-    /* Bottom fade so label stays readable */
-    .book-img-placeholder::after{
-      content:'';position:absolute;bottom:0;left:0;right:0;height:38%;pointer-events:none;z-index:0;
-      background:linear-gradient(to top,rgba(0,0,0,.28),transparent);
-    }
-    .book-card:not(.locked-card):hover .book-img-placeholder::before{
-      background-image:
-        radial-gradient(circle at 30% 25%,rgba(255,255,255,.28) 0%,transparent 55%),
-        radial-gradient(circle at 72% 75%,rgba(255,255,255,.18) 0%,transparent 48%);
-    }
-    .book-img-placeholder-emoji{
-      font-size:3.8rem;
-      filter:drop-shadow(0 6px 20px rgba(0,0,0,.45));
-      position:relative;z-index:1;
-      transform:rotate(-6deg);
-      transition:transform .35s ease;
-    }
-    .book-card:not(.locked-card):hover .book-img-placeholder-emoji{
-      transform:rotate(0deg) scale(1.1);
-    }
-    .book-img-placeholder-label{
-      font-size:.68rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
-      color:rgba(255,255,255,.9);text-shadow:0 1px 6px rgba(0,0,0,.35);
-      position:relative;z-index:1;
-    }
-    .book-meal-badge{
-      position:absolute;top:.6rem;left:.7rem;z-index:2;
-      display:inline-flex;align-items:center;gap:.3rem;
-      padding:.25rem .65rem;border-radius:99px;
-      font-size:.65rem;font-weight:800;
-      background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.2);
-      color:#fff;backdrop-filter:blur(8px);
-      text-transform:uppercase;letter-spacing:.06em;
-    }
-    .book-number-badge{
-      position:absolute;top:.6rem;right:.7rem;z-index:2;
-      width:22px;height:22px;border-radius:6px;
-      background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.2);
-      font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center;
-      color:rgba(255,255,255,.85);backdrop-filter:blur(8px);
-    }
+    .fl-result { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-left: auto; white-space: nowrap; }
+    .fl-result strong { font-family: 'Bricolage Grotesque', system-ui, sans-serif; color: var(--ink); font-size: 15px; font-weight: 600; letter-spacing: -0.02em; }
 
-    .book-top{padding:1rem 1.25rem .875rem;position:relative;}
-    .book-title{font-size:.96rem;font-weight:700;line-height:1.3;margin-bottom:.35rem;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
-    .book-desc{font-size:.76rem;color:var(--soft);line-height:1.5;margin-bottom:.75rem;}
-    .book-meta{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;}
-    .book-pages-badge{padding:.2rem .6rem;border-radius:99px;font-size:.68rem;font-weight:700;background:var(--surface);border:1px solid var(--border);color:var(--soft);}
+    @media (max-width: 1100px) { .fl-inner { padding: 10px 16px; } .fl-sl { display: none; } .fl-spacer { display: none; } }
 
-    .book-bottom{padding:.75rem 1.25rem 1.1rem;border-top:1px solid var(--border);}
-    .btn-download{
-      display:flex;align-items:center;justify-content:center;gap:.5rem;
-      width:100%;padding:.7rem;border-radius:11px;
-      font-size:.82rem;font-weight:800;border:none;cursor:pointer;
-      text-decoration:none;transition:all .25s;position:relative;overflow:hidden;
-    }
-    .btn-download::before{content:'';position:absolute;inset:0;background:linear-gradient(to right,transparent,rgba(255,255,255,.12),transparent);transform:translateX(-100%);transition:transform .4s;}
-    .btn-download:hover::before{transform:translateX(100%);}
-    .btn-download:hover{transform:translateY(-1px);}
+    /* ─── BODY ─── */
+    .rx-body { max-width: 1360px; margin: 0 auto; padding: 36px 32px 80px; }
+    .rx-section { margin-bottom: 52px; }
+    @media (max-width: 1100px) { .rx-body { padding: 24px 16px 60px; } }
 
-    .btn-locked{
-      display:flex;align-items:center;justify-content:center;gap:.5rem;
-      width:100%;padding:.7rem;border-radius:11px;
-      font-size:.82rem;font-weight:700;border:1.5px dashed var(--border);
-      background:transparent;color:var(--muted);cursor:pointer;
-      transition:all .2s;
-    }
-    .btn-locked:hover{border-color:var(--green);color:var(--green);}
+    .sec-head { display: flex; align-items: flex-end; gap: 24px; margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+    .sec-head h2 { font-size: clamp(24px, 3vw, 38px); font-weight: 600; letter-spacing: -0.035em; line-height: 1; }
+    .sec-head h2 em { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; color: var(--accent); }
+    .sec-head p { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 14px; color: var(--muted); margin-left: auto; text-align: right; line-height: 1.45; max-width: 30ch; }
+    @media (max-width: 900px) { .sec-head { flex-direction: column; align-items: flex-start; } .sec-head p { margin-left: 0; text-align: left; } }
 
-    /* LOCK OVERLAY */
-    .lock-overlay{
-      position:absolute;inset:0;border-radius:18px;
-      background:linear-gradient(to bottom,transparent 30%,rgba(12,17,23,.7));
-      pointer-events:none;display:flex;align-items:flex-end;justify-content:center;
-      padding:1rem;
-    }
-    [data-theme="light"] .lock-overlay{background:linear-gradient(to bottom,transparent 30%,rgba(240,244,248,.7));}
-    .lock-badge-overlay{
-      display:flex;align-items:center;gap:.4rem;
-      padding:.35rem .875rem;border-radius:99px;
-      font-size:.72rem;font-weight:800;
-      background:rgba(12,17,23,.8);border:1px solid rgba(255,255,255,.1);
-      color:rgba(255,255,255,.7);backdrop-filter:blur(8px);
-    }
-    [data-theme="light"] .lock-badge-overlay{background:rgba(240,244,248,.9);color:var(--muted);border-color:var(--border);}
+    /* ─── COLLECTIONS ─── */
+    .col-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+    .col-card { position: relative; border-radius: 16px; overflow: hidden; cursor: pointer; aspect-ratio: 4/5; transition: transform .2s; }
+    .col-card:hover { transform: translateY(-3px); }
+    .col-card img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s; }
+    .col-card:hover img { transform: scale(1.06); }
+    .col-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 30%, rgba(22,17,15,.78) 100%); }
+    .col-card.rose::after { background: linear-gradient(180deg, transparent 30%, color-mix(in oklab, var(--accent) 82%, transparent) 100%); }
+    .col-card.lime::after { background: linear-gradient(180deg, transparent 30%, color-mix(in oklab, var(--accent-2) 82%, transparent) 100%); }
+    .col-card.lime .col-body { color: var(--ink); }
+    .col-card.lime .col-count { background: rgba(22,17,15,.15); }
+    .col-card.orange::after { background: linear-gradient(180deg, transparent 30%, color-mix(in oklab, var(--accent-3) 86%, transparent) 100%); }
+    .col-placeholder { width: 100%; height: 100%; background: var(--bg-alt); }
+    .col-body { position: absolute; left: 14px; right: 14px; bottom: 14px; color: #fff; z-index: 2; }
+    .col-count { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.18em; text-transform: uppercase; opacity: .9; margin-bottom: 6px; display: inline-block; padding: 3px 7px; background: rgba(0,0,0,.38); border-radius: 4px; backdrop-filter: blur(4px); }
+    .col-title { font-size: 17px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.1; }
+    .col-sub { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 12px; line-height: 1.3; margin-top: 6px; opacity: .88; }
+    .col-stack { position: absolute; top: 12px; right: 12px; display: flex; z-index: 2; }
+    .col-thumb { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(250,246,241,.7); margin-left: -8px; }
+    .col-thumb:first-child { margin-left: 0; }
+    @media (max-width: 1000px) { .col-strip { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 580px) { .col-strip { grid-template-columns: repeat(2, 1fr); gap: 8px; } }
 
-    /* UPGRADE CTA */
-    .upgrade-cta{
-      background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(139,92,246,.05));
-      border:1px solid rgba(99,102,241,.25);border-radius:var(--radius);
-      padding:2.5rem;text-align:center;margin-top:2rem;
-    }
-    .upgrade-cta-title{font-size:1.6rem;font-weight:900;margin-bottom:.75rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-    .upgrade-cta-sub{font-size:.9rem;color:var(--soft);margin-bottom:1.75rem;line-height:1.6;}
-    .upgrade-tiers{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:1.75rem;}
-    .upgrade-tier-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;text-align:center;min-width:140px;transition:all .25s;}
-    .upgrade-tier-card:hover{border-color:var(--border2);transform:translateY(-3px);}
-    .upgrade-tier-card .tier-name{font-weight:800;font-size:.9rem;margin-bottom:.3rem;}
-    .upgrade-tier-card .tier-books{font-size:.78rem;color:var(--soft);}
-    .btn-upgrade-cta{display:inline-flex;align-items:center;gap:.6rem;padding:.875rem 2rem;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-weight:800;font-size:.9rem;text-decoration:none;box-shadow:0 4px 16px rgba(99,102,241,.35);transition:all .25s;}
-    .btn-upgrade-cta:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(99,102,241,.45);}
+    /* ─── RECIPE GRID ─── */
+    .rx-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .rc-card { border-radius: 18px; overflow: hidden; background: var(--card); border: 1px solid var(--line); transition: transform .2s, box-shadow .2s, border-color .2s; display: flex; flex-direction: column; }
+    .rc-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(22,17,15,.09); border-color: color-mix(in oklab, var(--line) 30%, var(--accent)); }
+    .rc-card.hidden { display: none !important; }
+    .rc-img { position: relative; aspect-ratio: 3/2; overflow: hidden; flex-shrink: 0; }
+    .rc-img img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s; }
+    .rc-card:hover .rc-img img { transform: scale(1.04); }
+    .rc-img-grad { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 50%, rgba(22,17,15,.4) 100%); }
+    .rc-meal { position: absolute; top: 10px; left: 10px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; padding: 4px 8px; border-radius: 5px; background: rgba(250,246,241,.92); color: var(--ink); backdrop-filter: blur(4px); }
+    .rc-heart { position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; background: rgba(250,246,241,.92); border: none; cursor: pointer; display: grid; place-items: center; font-size: 14px; transition: all .2s; backdrop-filter: blur(4px); z-index: 2; }
+    .rc-heart:hover { transform: scale(1.12); }
+    .rc-heart.saved { background: var(--accent); color: #fff; }
+    .rc-time { position: absolute; bottom: 10px; right: 10px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.08em; background: rgba(22,17,15,.7); color: #FFF6F0; padding: 3px 7px; border-radius: 5px; backdrop-filter: blur(4px); }
+    .rc-info { padding: 14px 16px 0; flex: 1; }
+    .rc-title { font-size: 14.5px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.3; margin-bottom: 3px; color: var(--ink); }
+    .rc-desc { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+    .rc-macros { display: flex; border-top: 1px solid var(--line); margin-top: 14px; padding: 10px 16px; font-family: var(--mono); }
+    .rc-macro { flex: 1; text-align: center; }
+    .rc-macro:not(:last-child) { border-right: 1px solid var(--line); }
+    .rc-mv { font-size: 14px; font-weight: 700; letter-spacing: -0.02em; font-family: 'Bricolage Grotesque', system-ui, sans-serif; display: block; color: var(--ink); }
+    .rc-ml { font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); display: block; margin-top: 1px; }
 
-    /* MODAL */
-    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center;padding:1.5rem;backdrop-filter:blur(8px);}
-    .modal-overlay.show{display:flex;}
-    .modal{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:2.5rem;max-width:400px;width:100%;box-shadow:0 40px 80px rgba(0,0,0,.5);animation:popIn .3s ease;text-align:center;position:relative;}
-    @keyframes popIn{from{opacity:0;transform:scale(.9) translateY(16px);}to{opacity:1;transform:scale(1) translateY(0);}}
-    .modal-close{position:absolute;top:1rem;right:1rem;background:var(--surface);border:none;width:30px;height:30px;border-radius:50%;cursor:pointer;color:var(--soft);font-size:1rem;display:flex;align-items:center;justify-content:center;}
-    .modal-btn-close{width:100%;padding:.75rem;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--soft);font-weight:700;font-size:.875rem;cursor:pointer;transition:all .2s;}
-    .modal-btn-close:hover{border-color:var(--green);color:var(--green);}
+    /* List view */
+    .rx-grid.list-view { grid-template-columns: 1fr; }
+    .rx-grid.list-view .rc-card { flex-direction: row; }
+    .rx-grid.list-view .rc-img { width: 140px; aspect-ratio: unset; flex-shrink: 0; }
+    .rx-grid.list-view .rc-img img { width: 140px; height: 100%; }
+    .rx-grid.list-view .rc-info { padding: 16px 18px; }
+    .rx-grid.list-view .rc-macros { border-top: none; border-left: 1px solid var(--line); padding: 16px 20px; margin-top: 0; flex-direction: column; gap: 6px; width: 160px; flex-shrink: 0; }
+    .rx-grid.list-view .rc-macro { border-right: none !important; text-align: left; display: flex; align-items: center; gap: 8px; }
+    .rx-grid.list-view .rc-macro .rc-mv { font-size: 13px; }
+    .rx-grid.list-view .rc-macro .rc-ml { margin-top: 0; }
 
-    /* LOCK MODAL */
-    .lock-modal-icon{font-size:3rem;margin-bottom:1rem;}
-    .lock-modal-title{font-size:1.3rem;font-weight:900;margin-bottom:.5rem;}
-    .lock-modal-sub{font-size:.875rem;color:var(--soft);line-height:1.6;margin-bottom:1.5rem;}
-    .lock-tiers-row{display:flex;gap:.75rem;justify-content:center;margin-bottom:1.5rem;flex-wrap:wrap;}
-    .lock-tier-pill{padding:.5rem 1.1rem;border-radius:99px;font-size:.78rem;font-weight:800;border:1.5px solid;}
-    .modal-btn-upgrade{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.875rem;border-radius:12px;border:none;cursor:pointer;font-weight:800;font-size:.9rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 4px 14px rgba(99,102,241,.35);text-decoration:none;margin-bottom:.75rem;}
+    .no-results { display: none; text-align: center; padding: 60px 20px; }
+    .no-results.show { display: block; }
+    .no-results h3 { font-size: 18px; font-weight: 600; margin-bottom: 6px; color: var(--ink-soft); }
+    .no-results p { color: var(--muted); font-size: 13.5px; }
 
-    /* TOAST */
-    .toast{position:fixed;top:5rem;right:1.5rem;z-index:9999;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;padding:.875rem 1.5rem;border-radius:12px;font-weight:700;font-size:.875rem;box-shadow:0 10px 30px rgba(255,92,122,.4);transform:translateY(-20px);opacity:0;pointer-events:none;transition:all .35s cubic-bezier(.4,0,.2,1);}
-    .toast.show{transform:translateY(0);opacity:1;}
+    @media (max-width: 1100px) { .rx-grid { grid-template-columns: repeat(2, 1fr); } .rx-grid.list-view .rc-macros { display: none; } }
+    @media (max-width: 600px) { .rx-grid { grid-template-columns: 1fr; } .rx-grid.list-view { grid-template-columns: 1fr; } }
 
-    @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
-    @media(max-width:768px){.books-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));}.cat-header{padding:1.5rem;}.cat-h-title{font-size:1.4rem;}.book-img-header{height:160px;}}
-    @media(max-width:480px){.books-grid{grid-template-columns:1fr;}.book-img-header{height:150px;}}
+    /* ─── KITCHEN ─── */
+    .kitchen { background: var(--ink); border-radius: 24px; padding: 32px 36px; color: #FFF6F0; }
+    .kc-head { margin-bottom: 22px; }
+    .kc-head h2 { font-size: 28px; font-weight: 600; letter-spacing: -0.03em; margin-bottom: 4px; }
+    .kc-head h2 em { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; color: var(--accent); }
+    .kc-sub { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-size: 14px; color: rgba(255,246,240,.48); }
+    .kc-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .kc-thumb { border-radius: 14px; overflow: hidden; position: relative; aspect-ratio: 1; cursor: pointer; transition: transform .2s; display: block; }
+    .kc-thumb:hover { transform: scale(1.03); }
+    .kc-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .kc-thumb::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, rgba(22,17,15,.75) 100%); }
+    .kc-thumb-lbl { position: absolute; bottom: 8px; left: 8px; right: 8px; z-index: 2; font-size: 10px; font-weight: 600; color: #FFF6F0; line-height: 1.2; }
+    .kc-empty { grid-column: 1/-1; text-align: center; padding: 40px 20px; color: rgba(255,246,240,.38); }
+    .kc-empty h3 { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+    .kc-empty p { font-size: 13px; line-height: 1.5; }
+    @media (max-width: 900px) { .kitchen { padding: 24px 20px; } .kc-board { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 580px) { .kc-board { grid-template-columns: repeat(2, 1fr); } }
 
-    /* FILTER BAR */
-    .filter-bar{
-      display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;
-      background:var(--card);border:1px solid var(--border);border-radius:16px;
-      padding:1rem 1.25rem;margin-bottom:1.75rem;
-      animation:fadeUp .4s .05s ease both;
-    }
-    .filter-search-wrap{flex:1;min-width:180px;position:relative;}
-    .filter-search-wrap svg{position:absolute;left:.75rem;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--soft);pointer-events:none;}
-    .filter-search{
-      width:100%;padding:.6rem .75rem .6rem 2.25rem;
-      border-radius:10px;border:1.5px solid var(--border);
-      background:var(--surface);color:var(--text);font-size:.85rem;      transition:border-color .2s;outline:none;
-    }
-    .filter-search:focus{border-color:var(--green);}
-    .filter-search::placeholder{color:var(--soft);}
-    .filter-group{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;}
-    .filter-label{font-size:.72rem;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;}
-    .filter-divider{width:1px;height:24px;background:var(--border);flex-shrink:0;}
-    .filter-btn{
-      padding:.38rem .85rem;border-radius:99px;font-size:.78rem;font-weight:700;
-      border:1.5px solid var(--border);background:transparent;color:var(--soft);
-      cursor:pointer;white-space:nowrap;transition:all .2s;
-    }
-    .filter-btn:hover{border-color:var(--border2);color:var(--text);}
-    .filter-btn.active{background:var(--green);border-color:var(--green);color:#fff;box-shadow:0 3px 10px rgba(255,92,122,.3);}
-    .filter-btn.macro-low.active{background:#3b82f6;border-color:#3b82f6;box-shadow:0 3px 10px rgba(59,130,246,.3);}
-    .filter-btn.macro-med.active{background:#f59e0b;border-color:#f59e0b;color:#fff;box-shadow:0 3px 10px rgba(245,158,11,.3);}
-    .filter-results{font-size:.78rem;color:var(--soft);margin-left:auto;white-space:nowrap;}
-    .book-card.filter-hidden{display:none!important;}
-    .no-results-msg{display:none;text-align:center;padding:3rem 1rem;color:var(--soft);font-size:.9rem;}
-    .no-results-msg.show{display:block;}
+    /* ─── TOAST ─── */
+    .toast { position: fixed; bottom: 24px; right: 24px; z-index: 9999; background: var(--ink); color: #FFF6F0; padding: 12px 20px; border-radius: 12px; font-size: 13px; font-weight: 600; box-shadow: 0 8px 24px rgba(22,17,15,.28); transform: translateY(16px); opacity: 0; pointer-events: none; transition: all .3s cubic-bezier(.4,0,.2,1); }
+    .toast.show { transform: translateY(0); opacity: 1; }
 
-    /* ── GLOBAL SEARCH BUTTON ── */
-    .global-search-btn{display:flex;align-items:center;gap:.6rem;margin-top:1.1rem;padding:.6rem 1.1rem;border-radius:12px;background:var(--card);border:1.5px solid var(--border2);color:var(--soft);font-size:.88rem;cursor:pointer;transition:all .2s;max-width:340px;width:100%;}
-    .global-search-btn:hover{border-color:var(--green);color:var(--text);box-shadow:0 4px 16px rgba(255,92,122,.15);}
-    .global-search-btn span:first-of-type{flex:1;text-align:left;}
-    .gsb-kbd{font-size:.72rem;padding:.1rem .35rem;border-radius:5px;background:var(--muted);border:1px solid var(--border2);color:var(--soft);font-family:monospace;flex-shrink:0;}
-
-    /* ── SEARCH OVERLAY ── */
-    .search-overlay{position:fixed;inset:0;z-index:9900;background:rgba(6,13,9,.82);backdrop-filter:blur(6px);display:flex;align-items:flex-start;justify-content:center;padding-top:5vh;opacity:0;pointer-events:none;transition:opacity .2s;}
-    .search-overlay.open{opacity:1;pointer-events:all;}
-    .search-panel{background:var(--card);border:1.5px solid var(--border2);border-radius:20px;width:min(680px,95vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.6);}
-    .sp-header{display:flex;align-items:center;gap:.6rem;padding:.9rem 1rem;border-bottom:1px solid var(--border);}
-    .sp-input-wrap{flex:1;display:flex;align-items:center;gap:.5rem;background:var(--card2);border:1.5px solid var(--border);border-radius:10px;padding:.45rem .75rem;}
-    .sp-input-wrap:focus-within{border-color:var(--green);}
-    .sp-icon{width:16px;height:16px;flex-shrink:0;color:var(--soft);}
-    .sp-input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:.95rem;font-family:inherit;}
-    .sp-input::placeholder{color:var(--soft);}
-    .sp-clear{background:transparent;border:none;color:var(--soft);cursor:pointer;font-size:.85rem;padding:.1rem .3rem;border-radius:5px;transition:color .15s;}
-    .sp-clear:hover{color:var(--text);}
-    .sp-close-btn{padding:.38rem .65rem;border-radius:8px;background:var(--muted);border:1px solid var(--border);color:var(--soft);font-size:.75rem;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;}
-    .sp-close-btn:hover{border-color:var(--border2);color:var(--text);}
-    .sp-filters{display:flex;flex-wrap:wrap;gap:.5rem 1.2rem;padding:.65rem 1rem;border-bottom:1px solid var(--border);background:var(--card2);}
-    .spf-group{display:flex;align-items:center;gap:.35rem;flex-wrap:wrap;}
-    .spf-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);white-space:nowrap;}
-    .spf-btn{padding:.25rem .6rem;border-radius:7px;font-size:.75rem;font-weight:600;border:1.5px solid var(--border);background:transparent;color:var(--soft);cursor:pointer;transition:all .15s;}
-    .spf-btn:hover{border-color:var(--border2);color:var(--text);}
-    .spf-btn.active{background:var(--green);border-color:var(--green);color:#fff;}
-    .sp-status{padding:.6rem 1rem;font-size:.82rem;color:var(--soft);border-bottom:1px solid var(--border);}
-    .sp-results{flex:1;overflow-y:auto;padding:.75rem;}
-    .sp-results::-webkit-scrollbar{width:4px;}
-    .sp-results::-webkit-scrollbar-track{background:transparent;}
-    .sp-results::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
-    .sp-result-card{display:flex;align-items:center;gap:.9rem;padding:.65rem .8rem;border-radius:12px;border:1.5px solid var(--border);background:var(--card2);margin-bottom:.5rem;cursor:pointer;transition:all .2s;text-decoration:none;}
-    .sp-result-card:hover{border-color:var(--green);background:var(--muted);transform:translateY(-1px);}
-    .sp-result-img{width:52px;height:52px;border-radius:9px;object-fit:cover;flex-shrink:0;background:var(--muted);}
-    .sp-result-img-placeholder{width:52px;height:52px;border-radius:9px;background:var(--muted);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;}
-    .sp-result-info{flex:1;min-width:0;}
-    .sp-result-title{font-size:.9rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:.2rem;}
-    .sp-result-meta{display:flex;flex-wrap:wrap;gap:.4rem .8rem;font-size:.73rem;color:var(--soft);}
-    .sp-result-meta span{display:flex;align-items:center;gap:.2rem;}
-    .sp-result-fav{font-size:.85rem;flex-shrink:0;}
-    .sp-result-diff{display:inline-block;font-size:.65rem;font-weight:800;text-transform:uppercase;padding:.1rem .4rem;border-radius:5px;letter-spacing:.05em;}
-    .sp-result-diff.easy{background:rgba(255,92,122,.15);color:#B6FF3C;}
-    .sp-result-diff.medium{background:rgba(245,158,11,.15);color:#fbbf24;}
-    .sp-result-diff.hard{background:rgba(239,68,68,.15);color:#f87171;}
-    .sp-footer{padding:.75rem 1rem;border-top:1px solid var(--border);display:flex;justify-content:center;}
-    .sp-load-more{padding:.45rem 1.2rem;border-radius:10px;background:transparent;border:1.5px solid var(--border2);color:var(--soft);font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s;}
-    .sp-load-more:hover{border-color:var(--green);color:var(--green);}
-    .sp-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;}
-    @media(max-width:520px){.sp-grid{grid-template-columns:1fr;}}
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body>
-<div class="rv-pg-shell">
-<Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="recipes" />
-<div class="rv-pg-main">
 
-<div style="display:none" aria-hidden="true">
-</div>
+<div class="rx-shell">
+  <Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="recipes" />
+  <main class="rx-main">
 
-<!-- PAGE -->
-<div class="page">
-
-  <!-- HERO -->
-  <div class="hero">
-    <div class="hero-badge">📖 Recipe Library</div>
-    <h1 class="hero-title">Your Keto <span class="hl">Recipe Books</span></h1>
-    <p style="font-size:.95rem;color:var(--soft);max-width:500px;line-height:1.6;">
-      {totalUnlocked} books unlocked across 7 categories — based on your <strong style="color:var(--text);">{plan.name} Plan</strong>.
-    </p>
-    <!-- Global search trigger -->
-    <button class="global-search-btn" id="globalSearchBtn" onclick="window.openSearch()">
-      🔍
-      <span>Search all recipes…</span>
-      <span class="gsb-kbd">⌘K</span>
-    </button>
-  </div>
-
-  <!-- PLAN STATS -->
-  <div class="plan-stats">
-    <div class="plan-stat" style="animation-delay:.05s;">
-      <div class="ps-icon" style="background:linear-gradient(135deg,var(--green),var(--green2));">{plan.emoji}</div>
-      <div>
-        <div class="ps-val" style="color:var(--green);">{plan.name}</div>
-        <div class="ps-lbl">Current Plan</div>
-      </div>
-    </div>
-    <div class="plan-stat" style="animation-delay:.1s;">
-      <div class="ps-icon" style="background:linear-gradient(135deg,var(--blue),#2563eb);">📖</div>
-      <div>
-        <div class="ps-val" style="color:var(--blue);">{totalUnlocked}</div>
-        <div class="ps-lbl">Books Unlocked</div>
-      </div>
-    </div>
-    <div class="plan-stat" style="animation-delay:.15s;">
-      <div class="ps-icon" style="background:linear-gradient(135deg,var(--muted),#334155);">🔒</div>
-      <div>
-        <div class="ps-val" style="color:var(--soft);">{totalBooks - totalUnlocked}</div>
-        <div class="ps-lbl">Books Locked</div>
-      </div>
-    </div>
-    <div class="plan-stat" style="animation-delay:.2s;">
-      <div class="ps-icon" style="background:linear-gradient(135deg,var(--purple),#7c3aed);">📚</div>
-      <div>
-        <div class="ps-val" style="color:var(--purple);">7</div>
-        <div class="ps-lbl">Categories</div>
-      </div>
-    </div>
-    <div class="plan-stat" style="animation-delay:.25s;">
-      <div class="ps-icon" style="background:linear-gradient(135deg,var(--gold),#d97706);">⭐</div>
-      <div>
-        <div class="ps-val" style="color:var(--gold);">{unlockedCount}/12</div>
-        <div class="ps-lbl">Per Category</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- UNLOCK BANNER -->
-  <div class="unlock-banner">
-    <div class="unlock-left">
-      <div class="unlock-emoji">{plan.emoji}</div>
-      <div>
-        <div class="unlock-title">You unlock <strong>{unlockedCount} books</strong> per category</div>
-        <div class="unlock-sub">Upgrade to unlock more — up to 12 books per category on Elite</div>
-      </div>
-    </div>
-    <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
-      <div class="lock-tiers">
-        <span class="tier-pill {tier === 'basic_30' ? 'active' : 'locked'}">🥑 Basic: 4/12</span>
-        <span class="tier-pill {tier === 'pro_6' ? 'active' : tier === 'elite_12' ? 'locked' : 'locked'}">⚡ Pro: 8/12</span>
-        <span class="tier-pill {tier === 'elite_12' ? 'active' : 'locked'}">👑 Elite: 12/12</span>
-      </div>
-      {tier !== 'elite_12' && (
-        <a href="/dashboard/upgrade" class="plan-badge-pill">⬆️ Upgrade</a>
-      )}
-    </div>
-  </div>
-
-  <!-- FILTER BAR -->
-  <div class="filter-bar" id="filterBar">
-    <!-- Search -->
-    <div class="filter-search-wrap">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input class="filter-search" id="bookSearch" type="text" placeholder="Search recipe books…" autocomplete="off" oninput="window.applyFilters()" />
-    </div>
-
-    <div class="filter-divider"></div>
-
-    <!-- Category filter -->
-    <div class="filter-group">
-      <span class="filter-label">Category</span>
-      <button class="filter-btn active" data-cat-filter="all"    onclick="window.setCatFilter('all')">All</button>
-      <button class="filter-btn"        data-cat-filter="breakfast" onclick="window.setCatFilter('breakfast')">🍳 Breakfast</button>
-      <button class="filter-btn"        data-cat-filter="lunch"  onclick="window.setCatFilter('lunch')">🥗 Lunch</button>
-      <button class="filter-btn"        data-cat-filter="dinner" onclick="window.setCatFilter('dinner')">🍽️ Dinner</button>
-      <button class="filter-btn"        data-cat-filter="snacks" onclick="window.setCatFilter('snacks')">🥜 Snack</button>
-      <button class="filter-btn"        data-cat-filter="desserts" onclick="window.setCatFilter('desserts')">🍰 Dessert</button>
-    </div>
-
-    <div class="filter-divider"></div>
-
-    <!-- Macro / carb filter -->
-    <div class="filter-group">
-      <span class="filter-label">Carbs</span>
-      <button class="filter-btn active" data-macro-filter="any"    onclick="window.setMacroFilter('any')">Any</button>
-      <button class="filter-btn macro-low" data-macro-filter="low" onclick="window.setMacroFilter('low')">Low &lt;5g</button>
-      <button class="filter-btn macro-med" data-macro-filter="med" onclick="window.setMacroFilter('med')">Medium 5–10g</button>
-    </div>
-
-    <div class="filter-results" id="filterResults"></div>
-  </div>
-
-  <!-- CATEGORY TABS -->
-  <div class="cat-tabs" id="catTabs">
-    {bookCategories.map((cat, i) => (
-      <button class={`cat-tab ${i === 0 ? 'active' : ''}`} data-cat={cat.id}
-        style={i === 0 ? `background:${cat.accent};border-color:${cat.accent};box-shadow:0 4px 14px ${cat.glow}` : ''}>
-        <span>{cat.emoji}</span>
-        <span>{cat.name}</span>
-        <span style={`font-size:.7rem;opacity:.8;background:rgba(255,255,255,.2);padding:.1rem .4rem;border-radius:99px;`}>{unlockedCount}/12</span>
-      </button>
-    ))}
-  </div>
-
-  <!-- CATEGORY PANELS -->
-  {bookCategories.map((cat, catIdx) => (
-    <div class={`cat-panel ${catIdx === 0 ? 'active' : ''}`} id={`panel-${cat.id}`}>
-
-      <!-- Category Header -->
-      <div class="cat-header" style={`background:linear-gradient(135deg,${cat.accent}15,${cat.accent}06);border:1px solid ${cat.accent}25;`}>
-        <div class="cat-header::before" style={`background:${cat.accent};`}></div>
-        <div class="cat-h-inner">
-          <div class="cat-h-left">
-            <div class="cat-big-icon" style={`background:${cat.gradient};box-shadow:0 8px 24px ${cat.glow};`}>
-              {cat.emoji}
-            </div>
-            <div>
-              <div class="cat-h-title" style={`background:${cat.gradient};-webkit-background-clip:text;-webkit-text-fill-color:transparent;`}>{cat.name} Books</div>
-              <div class="cat-h-desc" style="color:var(--soft);">{cat.desc}</div>
-            </div>
-          </div>
-          <div class="cat-h-stats">
-            <span class="cat-stat-pill" style={`background:${cat.accent}20;border-color:${cat.accent}40;color:${cat.accent};`}>
-              {unlockedCount} Unlocked
-            </span>
-            <span class="cat-stat-pill" style="background:var(--surface);border-color:var(--border);color:var(--soft);">
-              🔒 {12 - unlockedCount} Locked
-            </span>
-            <span class="cat-stat-pill" style={`background:${cat.accent}20;border-color:${cat.accent}40;color:${cat.accent};`}>
-              📖 12 Total
-            </span>
-          </div>
+    <!-- ── TONIGHT ── -->
+    <section class="tonight">
+      <div class="tn-inner">
+        <div>
+          <div class="tn-label"><span class="tn-dot"></span>Tonight's Table</div>
+          <h2 class="tn-title">Your keto kitchen,<br /><em>curated for today.</em></h2>
+          <p class="tn-sub">Day {currentDay} &middot; Dinner picks aligned with your keto goals.</p>
+          {hasTn && (
+            <a href={`/dashboard/recipe/${tn0.id}`} class="tn-pick-btn">View top pick &rarr;</a>
+          )}
         </div>
-      </div>
 
-      <!-- No Results Message -->
-      <div class="no-results-msg" id={`no-results-${cat.id}`}>
-        No books match your search. Try a different keyword or filter.
-      </div>
-
-      <!-- Books Grid -->
-      <div class="books-grid">
-        {cat.books.map((book, bookIdx) => {
-          const isUnlocked = bookIdx < unlockedCount;
-          const requiredPlan = bookIdx < 4 ? 'Basic' : bookIdx < 8 ? 'Pro' : 'Elite';
-          const requiredEmoji = bookIdx < 4 ? '🥑' : bookIdx < 8 ? '⚡' : '👑';
-          return (
-            <div class={`book-card ${!isUnlocked ? 'locked-card' : ''}`} data-book-cat={cat.id} data-book-title={book.title.toLowerCase()} data-book-desc={book.desc.toLowerCase()}>
-              <div class="book-img-header">
-                {isUnlocked && bookImageMap[book.id] && (
-                  <img
-                    class="book-cover-img"
-                    src={bookImageMap[book.id]}
-                    alt={book.title}
-                    loading="lazy"
-                    onerror="this.style.display='none'"
-                  />
-                )}
-                <div class="book-img-placeholder" style={`background:${isUnlocked ? cat.gradient.replace(/\d+deg/, `${gradientAngles[bookIdx % 12]}deg`) : 'linear-gradient(145deg,#BFC6CC,#8B959C)'};`}>
-                  <span class="book-img-placeholder-emoji">{isUnlocked ? book.emoji : '🔒'}</span>
-                  <span class="book-img-placeholder-label">{isUnlocked ? cat.name : 'Locked'}</span>
+        {hasTn && (
+          <div class="tn-cards">
+            <!-- Hero -->
+            <a class="tn-card tn-card-hero" href={`/dashboard/recipe/${tn0.id}`}>
+              <img src={tn0.image_url} alt={tn0.title} loading="eager" />
+              <div class="tn-card-body">
+                <div class="tn-rank">Pick #1</div>
+                <div class="tn-name">{tn0.title}</div>
+                <div class="tn-macros">
+                  <span class="tn-chip">{tn0.calories} kcal</span>
+                  <span class="tn-chip">{tn0.fat}g fat</span>
+                  <span class="tn-chip tn-chip-green">{tn0.net_carbs}g net</span>
                 </div>
-                <div class="book-meal-badge">{cat.emoji} {cat.name}</div>
-                <div class="book-number-badge">{bookIdx + 1}</div>
-              </div>
-              <div class="book-top">
-                <div class="book-title" style={!isUnlocked ? 'color:var(--soft);' : ''}>{book.title}</div>
-                <div class="book-desc">{book.desc}</div>
-                <div class="book-meta">
-                  <span class="book-pages-badge">🍽️ {recipeCountMap[book.id] || 0} recipes</span>
-                  {!isUnlocked && (
-                    <span style={`padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:800;background:${bookIdx < 8 ? 'rgba(99,102,241,.1)' : 'rgba(245,158,11,.1)'};border:1px solid ${bookIdx < 8 ? 'rgba(99,102,241,.25)' : 'rgba(245,158,11,.25)'};color:${bookIdx < 8 ? '#818cf8' : '#fbbf24'};`}>
-                      {requiredEmoji} {requiredPlan}+
-                    </span>
-                  )}
+                <div class="tn-btns">
+                  <span class="tn-btn-p">View recipe</span>
                 </div>
               </div>
-              <div class="book-bottom">
-                {isUnlocked ? (
-                  <a
-                    href={`/dashboard/recipes/${book.id}`}
-                    class="btn-download"
-                    style={`background:${cat.gradient};color:#fff;box-shadow:0 4px 12px ${cat.glow};text-decoration:none;display:flex;align-items:center;justify-content:center;gap:.4rem;`}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    <span>View Recipes</span>
+            </a>
+            <!-- Small cards -->
+            {hasSmalls && (
+              <div class="tn-smalls">
+                <a class="tn-card tn-card-sm" href={`/dashboard/recipe/${tn1.id}`}>
+                  <img src={tn1.image_url} alt={tn1.title} loading="lazy" />
+                  <div class="tn-card-body">
+                    <div class="tn-rank">Pick #2</div>
+                    <div class="tn-name">{tn1.title}</div>
+                    <div class="tn-macros">
+                      <span class="tn-chip">{tn1.calories} kcal</span>
+                      <span class="tn-chip tn-chip-green">{tn1.net_carbs}g net</span>
+                    </div>
+                  </div>
+                </a>
+                {tn2 && (
+                  <a class="tn-card tn-card-sm" href={`/dashboard/recipe/${tn2.id}`}>
+                    <img src={tn2.image_url} alt={tn2.title} loading="lazy" />
+                    <div class="tn-card-body">
+                      <div class="tn-rank">Pick #3</div>
+                      <div class="tn-name">{tn2.title}</div>
+                      <div class="tn-macros">
+                        <span class="tn-chip">{tn2.calories} kcal</span>
+                        <span class="tn-chip tn-chip-green">{tn2.net_carbs}g net</span>
+                      </div>
+                    </div>
                   </a>
-                ) : (
-                  <button
-                    class="btn-locked"
-                    onclick={`openLockModal('${requiredPlan}','${requiredEmoji}','${book.title}')`}
-                  >
-                    🔒
-                    <span>Unlock with {requiredPlan}+</span>
-                  </button>
                 )}
               </div>
-            </div>
-          );
-        })}
+            )}
+          </div>
+        )}
+        {!hasTn && (
+          <p style="color:rgba(255,246,240,.35);font-size:14px;">No dinner recipes found.</p>
+        )}
       </div>
+    </section>
 
-      <!-- Upgrade CTA (only if not elite) -->
-      {tier !== 'elite_12' && (
-        <div class="upgrade-cta">
-          <div class="upgrade-cta-title">🔓 Unlock More {cat.name} Books</div>
-          <p class="upgrade-cta-sub">
-            You have <strong style="color:var(--text);">{unlockedCount} out of 12</strong> books unlocked in this category.<br/>
-            Upgrade to access all {cat.name} recipes.
-          </p>
-          <div class="upgrade-tiers">
-            {[
-              { name:'Basic', emoji:'🥑', books: 4, color:'#FF5C7A', current: tier === 'basic_30' },
-              { name:'Pro',   emoji:'⚡', books: 8, color:'#6366f1', current: tier === 'pro_6' },
-              { name:'Elite', emoji:'👑', books:12, color:'#f59e0b', current: false },
-            ].map(t => (
-              <div class="upgrade-tier-card" style={t.current ? `border-color:${t.color};background:${t.color}10;` : ''}>
-                <div style={`font-size:1.5rem;margin-bottom:.4rem;`}>{t.emoji}</div>
-                <div class="tier-name" style={t.current ? `color:${t.color}` : ''}>{t.name} {t.current ? '✓' : ''}</div>
-                <div class="tier-books" style={t.current ? `color:${t.color};font-weight:700;` : ''}>{t.books}/12 books</div>
-              </div>
+    <!-- ── FILTER BAR ── -->
+    <div class="fl" id="filterBar">
+      <div class="fl-inner">
+        <div class="fl-row">
+          <div class="fl-search">
+            <span class="fl-search-ic">&#x2315;</span>
+            <input id="rxSearch" type="text" placeholder="Search recipes&hellip;" autocomplete="off" />
+          </div>
+
+          <div class="fl-pills" id="mealPills">
+            {['All','Breakfast','Lunch','Dinner','Snack','Dessert','Smoothie'].map(m => (
+              <button class={`fl-pill${m === 'All' ? ' active' : ''}`} data-meal={m}>{m}</button>
             ))}
           </div>
-          <a href="/dashboard/upgrade" class="btn-upgrade-cta">
-            ⚡
-            <span>Upgrade Plan</span>
-          </a>
+
+          <div class="fl-spacer"></div>
+
+          <div class="fl-sl">
+            <span class="fl-l">TIME</span>
+            <input type="range" id="timeSlider" min="5" max="90" step="5" value="90" />
+            <span class="fl-v" id="timeVal">Any</span>
+          </div>
+
+          <div class="fl-sl">
+            <span class="fl-l">NET CARBS</span>
+            <input type="range" id="carbSlider" min="1" max="20" step="1" value="20" />
+            <span class="fl-v" id="carbVal">&le; 20g</span>
+          </div>
+
+          <div class="fl-view" id="viewToggle">
+            <button class="on" data-view="grid" title="Grid">&#x229E;</button>
+            <button data-view="list" title="List">&#x2261;</button>
+          </div>
         </div>
-      )}
 
-    </div>
-  ))}
-
-</div><!-- /page -->
-
-<!-- LOCK MODAL -->
-<div class="modal-overlay" id="lockModal">
-  <div class="modal">
-    <button class="modal-close" onclick="closeLockModal()">×</button>
-    <div class="lock-modal-icon">🔒</div>
-    <div class="lock-modal-title" id="lockModalTitle">Premium Content</div>
-    <p class="lock-modal-sub" id="lockModalSub">This book requires a higher plan to unlock.</p>
-    <div class="lock-tiers-row">
-      <span class="lock-tier-pill" style="background:rgba(255,92,122,.1);border-color:rgba(255,92,122,.3);color:#FF5C7A;">🥑 Basic: 4 books</span>
-      <span class="lock-tier-pill" style="background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.3);color:#818cf8;">⚡ Pro: 8 books</span>
-      <span class="lock-tier-pill" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:#fbbf24;">👑 Elite: 12 books</span>
-    </div>
-    <a href="/dashboard/upgrade" class="modal-btn-upgrade" onclick="closeLockModal()">
-      ⚡<span>Upgrade to Unlock</span>
-    </a>
-    <button class="modal-btn-close" onclick="closeLockModal()">Not Now</button>
-  </div>
-</div>
-
-<!-- GLOBAL SEARCH OVERLAY -->
-<div class="search-overlay" id="searchOverlay" onclick="if(event.target===this)window.closeSearch()">
-  <div class="search-panel">
-    <div class="sp-header">
-      <div class="sp-input-wrap">
-        <svg class="sp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input id="globalSearchInput" class="sp-input" type="text" placeholder="Search all recipes…" autocomplete="off" />
-        <button class="sp-clear" id="spClearBtn" onclick="window.clearSearch()" style="display:none;">✕</button>
-      </div>
-      <button class="sp-close-btn" onclick="window.closeSearch()">Esc</button>
-    </div>
-    <div class="sp-filters">
-      <div class="spf-group">
-        <span class="spf-label">Difficulty</span>
-        <button class="spf-btn active" data-spf-diff="all">All</button>
-        <button class="spf-btn" data-spf-diff="easy">Easy</button>
-        <button class="spf-btn" data-spf-diff="medium">Medium</button>
-        <button class="spf-btn" data-spf-diff="hard">Hard</button>
-      </div>
-      <div class="spf-group">
-        <span class="spf-label">Max carbs</span>
-        <button class="spf-btn active" data-spf-carbs="0">Any</button>
-        <button class="spf-btn" data-spf-carbs="5">≤5g</button>
-        <button class="spf-btn" data-spf-carbs="10">≤10g</button>
-        <button class="spf-btn" data-spf-carbs="15">≤15g</button>
+        <div class="fl-row">
+          <span style="font-family:var(--mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-right:4px;">DIET</span>
+          <div class="fl-diets" id="dietChips">
+            {['Vegetarian','Dairy-free','Gluten-free','No-cook','Quick','Batch-friendly'].map(d => (
+              <button class="fl-diet" data-diet={d.toLowerCase()}>{d}</button>
+            ))}
+          </div>
+          <div class="fl-result"><strong id="resultNum">{allRecipes.length}</strong>&nbsp;recipes</div>
+        </div>
       </div>
     </div>
-    <div class="sp-status" id="spStatus">Start typing to search across all recipes…</div>
-    <div class="sp-results" id="spResults"></div>
-    <div class="sp-footer" id="spFooter" style="display:none;">
-      <button class="sp-load-more" id="spLoadMore" onclick="window.searchLoadMore()">Load more results</button>
-    </div>
-  </div>
+
+    <!-- ── BODY ── -->
+    <div class="rx-body">
+
+      <!-- COLLECTIONS -->
+      <section class="rx-section">
+        <div class="sec-head">
+          <h2>Collections, <em>built for the days you're having</em>.</h2>
+          <p>Themed bundles. Click to filter the library below.</p>
+        </div>
+        <div class="col-strip">
+          {colCards.map((c) => (
+            <div class={`col-card ${c.tone}`} onclick={`window.applyColFilter('${c.filter}')`} role="button" tabindex="0">
+              {c.cover
+                ? <img src={c.cover} alt={c.title} loading="lazy" />
+                : <div class="col-placeholder"></div>
+              }
+              <div class="col-stack">
+                {c.thumbs.map((p) => (
+                  <img class="col-thumb" src={p.image_url} alt={p.title} loading="lazy" />
+                ))}
+              </div>
+              <div class="col-body">
+                <div class="col-count">{c.count} recipes</div>
+                <div class="col-title">{c.title}</div>
+                <div class="col-sub">{c.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <!-- RECIPE GRID -->
+      <section class="rx-section">
+        <div class="sec-head">
+          <h2>The library, <em>every recipe</em>.</h2>
+          <p>Browse and filter. Use the bar above to narrow down.</p>
+        </div>
+
+        <div class="rx-grid" id="rxGrid">
+          {recipeCards.map((r) => (
+            <div
+              class="rc-card"
+              data-id={r.id}
+              data-meal={r.meal}
+              data-net={r.net_carbs}
+              data-time={r.totalTime}
+              data-protein={r.protein}
+              data-tags={r.tagsStr}
+            >
+              <div class="rc-img">
+                <img src={r.image_url} alt={r.title} loading="lazy" />
+                <div class="rc-img-grad"></div>
+                <span class="rc-meal">{r.meal}</span>
+                <button
+                  class={`rc-heart${r.isFaved ? ' saved' : ''}`}
+                  data-id={r.id}
+                  data-saved={r.isFaved ? '1' : '0'}
+                  onclick="window.toggleSave(this)"
+                  aria-label={r.isFaved ? 'Unsave recipe' : 'Save recipe'}
+                >
+                  {r.isFaved ? '♥' : '♡'}
+                </button>
+                {r.totalTime > 0 && <span class="rc-time">{r.totalTime} min</span>}
+              </div>
+              <a href={`/dashboard/recipe/${r.id}`} class="rc-info">
+                <div class="rc-title">{r.title}</div>
+                {r.descFull && <div class="rc-desc">{r.descFull}</div>}
+              </a>
+              <div class="rc-macros">
+                <div class="rc-macro">
+                  <span class="rc-mv">{r.calories}</span>
+                  <span class="rc-ml">kcal</span>
+                </div>
+                <div class="rc-macro">
+                  <span class="rc-mv">{r.fat}g</span>
+                  <span class="rc-ml">fat</span>
+                </div>
+                <div class="rc-macro">
+                  <span class="rc-mv">{r.protein}g</span>
+                  <span class="rc-ml">protein</span>
+                </div>
+                <div class="rc-macro">
+                  <span class="rc-mv">{r.net_carbs}g</span>
+                  <span class="rc-ml">net</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div class="no-results" id="noResults">
+          <h3>No recipes match</h3>
+          <p>Try adjusting your filters or search term.</p>
+        </div>
+      </section>
+
+      <!-- KITCHEN -->
+      <section class="rx-section">
+        <div class="kitchen">
+          <div class="kc-head">
+            <h2>Your kitchen, <em>saved for later</em>.</h2>
+            <p class="kc-sub">Recipes you&rsquo;ve hearted. Tap any to open.</p>
+          </div>
+          <div class="kc-board">
+            {savedRecipes.map((r) => (
+              <a class="kc-thumb" href={`/dashboard/recipe/${r.id}`}>
+                <img src={r.image_url} alt={r.title} loading="lazy" />
+                <span class="kc-thumb-lbl">{r.title}</span>
+              </a>
+            ))}
+            {savedRecipes.length === 0 && (
+              <div class="kc-empty">
+                <h3>Nothing saved yet</h3>
+                <p>Tap &hearts; on any recipe above to save it here.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+    </div><!-- rx-body -->
+  </main>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<script is:inline define:vars={{ tier, unlockedCount }}>
+<script is:inline>
+(function() {
+  var _state = { meal: 'All', search: '', time: 90, net: 20, diets: [], view: 'grid' };
 
-// ── CATEGORY TABS ──
-const catColors = {
-  breakfast: { bg:'#f59e0b', glow:'rgba(245,158,11,.35)' },
-  lunch:     { bg:'#FF5C7A', glow:'rgba(255,92,122,.35)' },
-  dinner:    { bg:'#ef4444', glow:'rgba(239,68,68,.35)' },
-  snacks:    { bg:'#8b5cf6', glow:'rgba(139,92,246,.35)' },
-  smoothies: { bg:'#06b6d4', glow:'rgba(6,182,212,.35)' },
-  baking:    { bg:'#d97706', glow:'rgba(217,119,6,.35)' },
-  desserts:  { bg:'#ec4899', glow:'rgba(236,72,153,.35)' },
-};
-
-document.querySelectorAll('.cat-tab').forEach(tab => {
-  tab.addEventListener('click', function() {
-    const catId = this.dataset.cat;
-    const colors = catColors[catId] || { bg:'var(--green)', glow:'rgba(255,92,122,.35)' };
-
-    // Update tabs
-    document.querySelectorAll('.cat-tab').forEach(t => {
-      t.classList.remove('active');
-      t.style.background = '';
-      t.style.borderColor = '';
-      t.style.color = '';
-      t.style.boxShadow = '';
-    });
-    this.classList.add('active');
-    this.style.background = colors.bg;
-    this.style.borderColor = colors.bg;
-    this.style.color = '#fff';
-    this.style.boxShadow = `0 4px 14px ${colors.glow}`;
-
-    // Update panels
-    document.querySelectorAll('.cat-panel').forEach(p => p.classList.remove('active'));
-    document.getElementById(`panel-${catId}`)?.classList.add('active');
-
-    // Scroll into view
-    document.getElementById(`panel-${catId}`)?.scrollIntoView({ behavior:'smooth', block:'start' });
-  });
-});
-
-// ── LOCK MODAL ──
-function openLockModal(planName, planEmoji, bookTitle) {
-  document.getElementById('lockModalTitle').textContent = `${planEmoji} ${planName}+ Required`;
-  document.getElementById('lockModalSub').textContent = `"${bookTitle}" is available on the ${planName} plan and above. Upgrade to unlock all books in this tier.`;
-  document.getElementById('lockModal').classList.add('show');
-}
-function closeLockModal() { document.getElementById('lockModal').classList.remove('show'); }
-document.getElementById('lockModal').addEventListener('click', e => { if (e.target === document.getElementById('lockModal')) closeLockModal(); });
-
-// ── TOAST ──
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  if (!t) return;
-  t.textContent = msg;
-  t.className = 'toast show';
-  setTimeout(() => t.classList.remove('show'), 3000);
-}
-
-window.openLockModal = openLockModal;
-window.closeLockModal = closeLockModal;
-
-// ── FILTER SYSTEM ──
-// Low-carb categories (snack-type / dessert / smoothie)
-var lowCarbCats  = ['snacks', 'smoothies', 'desserts'];
-// Medium-carb categories (meal-based / baking)
-var medCarbCats  = ['breakfast', 'baking'];
-// "dinner" and "lunch" are also medium in a general sense — include all remaining
-// but for simplicity: "any" = all, "low" = snacks/smoothies/desserts, "med" = breakfast/baking/lunch/dinner
-
-var activeCatFilter   = 'all';
-var activeMacroFilter = 'any';
-
-window.setCatFilter = function(cat) {
-  activeCatFilter = cat;
-  // Update filter btn states
-  document.querySelectorAll('[data-cat-filter]').forEach(function(btn) {
-    btn.classList.toggle('active', btn.dataset.catFilter === cat);
-  });
-  // If selecting a specific category, also activate the matching cat tab
-  if (cat !== 'all') {
-    var matchingTab = document.querySelector('.cat-tab[data-cat="' + cat + '"]');
-    if (matchingTab) matchingTab.click();
-  }
-  window.applyFilters();
-};
-
-window.setMacroFilter = function(macro) {
-  activeMacroFilter = macro;
-  document.querySelectorAll('[data-macro-filter]').forEach(function(btn) {
-    btn.classList.toggle('active', btn.dataset.macroFilter === macro);
-  });
-  window.applyFilters();
-};
-
-window.applyFilters = function() {
-  var searchVal = (document.getElementById('bookSearch').value || '').toLowerCase().trim();
-
-  // Determine which cat panels to search: active panel only (or all if 'all' tab active)
-  var activePanelId = null;
-  document.querySelectorAll('.cat-panel').forEach(function(p) {
-    if (p.classList.contains('active')) activePanelId = p.id;
-  });
-
-  var totalVisible = 0;
-
-  // Iterate every book card across all panels
-  document.querySelectorAll('.book-card[data-book-cat]').forEach(function(card) {
-    var cardCat   = card.dataset.bookCat || '';
-    var cardTitle = card.dataset.bookTitle || '';
-    var cardDesc  = card.dataset.bookDesc || '';
-
-    // Panel visibility: only filter cards in the currently visible panel
-    var cardPanelId = 'panel-' + cardCat;
-    var isInActivePanel = (cardPanelId === activePanelId);
-
-    if (!isInActivePanel) {
-      // Cards not in active panel are hidden by panel, not by filter class
-      card.classList.remove('filter-hidden');
-      return;
-    }
-
-    // 1. Search filter
-    var passesSearch = !searchVal || cardTitle.indexOf(searchVal) !== -1 || cardDesc.indexOf(searchVal) !== -1;
-
-    // 2. Category filter (within active panel — redundant but consistent)
-    var passesCat = activeCatFilter === 'all' || activeCatFilter === cardCat;
-
-    // 3. Macro / carb filter based on category type
-    var passesMacro = true;
-    if (activeMacroFilter === 'low') {
-      passesMacro = lowCarbCats.indexOf(cardCat) !== -1;
-    } else if (activeMacroFilter === 'med') {
-      passesMacro = lowCarbCats.indexOf(cardCat) === -1; // breakfast/lunch/dinner/baking
-    }
-
-    var visible = passesSearch && passesCat && passesMacro;
-    card.classList.toggle('filter-hidden', !visible);
-    if (visible) totalVisible++;
-  });
-
-  // Show/hide no-results message for active panel
-  document.querySelectorAll('.no-results-msg').forEach(function(msg) {
-    msg.classList.remove('show');
-  });
-  if (activePanelId) {
-    var catId = activePanelId.replace('panel-', '');
-    var noMsg = document.getElementById('no-results-' + catId);
-    if (noMsg && totalVisible === 0) noMsg.classList.add('show');
-  }
-
-  // Update results counter
-  var resultsEl = document.getElementById('filterResults');
-  if (resultsEl) {
-    resultsEl.textContent = totalVisible > 0 ? totalVisible + ' book' + (totalVisible === 1 ? '' : 's') + ' shown' : '';
-  }
-};
-
-// Re-apply filters whenever a category tab is clicked (tab click changes active panel)
-document.querySelectorAll('.cat-tab').forEach(function(tab) {
-  tab.addEventListener('click', function() {
-    // Small delay so panel switch happens first
-    setTimeout(function() { window.applyFilters(); }, 50);
-  });
-});
-
-// ── GLOBAL SEARCH OVERLAY ──
-var spDiff  = 'all';
-var spCarbs = 0;
-var spPage  = 1;
-var spTotal = 0;
-var spQuery = '';
-var spFetching = false;
-var spDebounceTimer = null;
-
-window.openSearch = function() {
-  document.getElementById('searchOverlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
-  setTimeout(function() { document.getElementById('globalSearchInput').focus(); }, 80);
-};
-
-window.closeSearch = function() {
-  document.getElementById('searchOverlay').classList.remove('open');
-  document.body.style.overflow = '';
-};
-
-window.clearSearch = function() {
-  document.getElementById('globalSearchInput').value = '';
-  document.getElementById('spClearBtn').style.display = 'none';
-  document.getElementById('spStatus').textContent = 'Start typing to search across all recipes…';
-  document.getElementById('spResults').innerHTML = '';
-  document.getElementById('spFooter').style.display = 'none';
-  spPage = 1; spTotal = 0; spQuery = '';
-};
-
-window.searchLoadMore = function() {
-  spPage++;
-  fetchSearch(spQuery, false);
-};
-
-function fetchSearch(q, reset) {
-  if (spFetching) return;
-  if (reset) { spPage = 1; document.getElementById('spResults').innerHTML = ''; }
-  spFetching = true;
-  spQuery = q;
-
-  var params = new URLSearchParams({ q: q, page: spPage });
-  if (spDiff !== 'all')  params.set('difficulty', spDiff);
-  if (spCarbs > 0)       params.set('maxCarbs', spCarbs);
-
-  document.getElementById('spStatus').textContent = 'Searching…';
-
-  fetch('/api/recipes/search?' + params.toString())
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      spFetching = false;
-      if (data.error) {
-        document.getElementById('spStatus').textContent = 'Something went wrong. Try again.';
-        return;
+  function applyFilters() {
+    var cards = document.querySelectorAll('#rxGrid .rc-card');
+    var visible = 0;
+    cards.forEach(function(card) {
+      var meal = card.dataset.meal || '';
+      var net = parseFloat(card.dataset.net) || 0;
+      var time = parseFloat(card.dataset.time) || 0;
+      var tags = (card.dataset.tags || '').split(',');
+      var titleEl = card.querySelector('.rc-title');
+      var title = titleEl ? titleEl.textContent.toLowerCase() : '';
+      var show = true;
+      if (_state.meal !== 'All' && meal !== _state.meal) show = false;
+      if (_state.search && title.indexOf(_state.search) === -1) show = false;
+      if (net > _state.net) show = false;
+      if (_state.time < 90 && time > _state.time && time > 0) show = false;
+      if (_state.diets.length > 0) {
+        var dietMatch = _state.diets.some(function(d) {
+          return tags.some(function(tag) { return tag.trim() === d; });
+        });
+        if (!dietMatch) show = false;
       }
-      spTotal = data.total || 0;
-      var recipes = data.recipes || [];
-
-      if (reset && recipes.length === 0) {
-        document.getElementById('spStatus').textContent = 'No recipes found for "' + q + '"';
-        document.getElementById('spFooter').style.display = 'none';
-        return;
-      }
-
-      var shown = document.getElementById('spResults').querySelectorAll('.sp-result-card').length + recipes.length;
-      document.getElementById('spStatus').textContent = spTotal + ' recipe' + (spTotal === 1 ? '' : 's') + ' found' + (q ? ' for "' + q + '"' : '');
-
-      var frag = document.createDocumentFragment();
-      recipes.forEach(function(r) {
-        var a = document.createElement('a');
-        a.href = '/dashboard/recipe/' + r.id;
-        a.className = 'sp-result-card';
-        a.onclick = function() { window.closeSearch(); };
-
-        var imgHtml = r.image_url
-          ? '<img class="sp-result-img" src="' + r.image_url + '" alt="" loading="lazy" />'
-          : '<div class="sp-result-img-placeholder">🍽️</div>';
-
-        var diffHtml = r.difficulty
-          ? '<span class="sp-result-diff ' + r.difficulty.toLowerCase() + '">' + r.difficulty + '</span>'
-          : '';
-
-        var favHtml = r.favorited ? '<span class="sp-result-fav">❤️</span>' : '';
-
-        a.innerHTML = imgHtml +
-          '<div class="sp-result-info">' +
-            '<div class="sp-result-title">' + escHtml(r.title) + '</div>' +
-            '<div class="sp-result-meta">' +
-              '<span>🔥 ' + r.calories + ' cal</span>' +
-              '<span>🥩 ' + r.net_carbs + 'g carbs</span>' +
-              '<span>⏱ ' + (r.prep_time + r.cook_time) + 'min</span>' +
-              (diffHtml ? '<span>' + diffHtml + '</span>' : '') +
-            '</div>' +
-          '</div>' +
-          favHtml;
-
-        frag.appendChild(a);
-      });
-      document.getElementById('spResults').appendChild(frag);
-
-      var hasMore = data.has_more;
-      document.getElementById('spFooter').style.display = hasMore ? 'flex' : 'none';
-    })
-    .catch(function() {
-      spFetching = false;
-      document.getElementById('spStatus').textContent = 'Network error. Try again.';
+      card.classList.toggle('hidden', !show);
+      if (show) visible++;
     });
-}
-
-function escHtml(str) {
-  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// Input debounce
-document.getElementById('globalSearchInput').addEventListener('input', function() {
-  var val = this.value.trim();
-  document.getElementById('spClearBtn').style.display = val ? 'inline' : 'none';
-  clearTimeout(spDebounceTimer);
-  if (!val) {
-    document.getElementById('spStatus').textContent = 'Start typing to search across all recipes…';
-    document.getElementById('spResults').innerHTML = '';
-    document.getElementById('spFooter').style.display = 'none';
-    return;
+    var numEl = document.getElementById('resultNum');
+    if (numEl) numEl.textContent = visible;
+    var noRes = document.getElementById('noResults');
+    if (noRes) noRes.classList.toggle('show', visible === 0);
   }
-  spDebounceTimer = setTimeout(function() { fetchSearch(val, true); }, 340);
-});
 
-// Filter buttons
-document.querySelectorAll('[data-spf-diff]').forEach(function(btn) {
-  btn.addEventListener('click', function() {
-    spDiff = this.dataset.spfDiff;
-    document.querySelectorAll('[data-spf-diff]').forEach(function(b) { b.classList.remove('active'); });
-    this.classList.add('active');
-    var q = document.getElementById('globalSearchInput').value.trim();
-    if (q) fetchSearch(q, true);
-  });
-});
-
-document.querySelectorAll('[data-spf-carbs]').forEach(function(btn) {
-  btn.addEventListener('click', function() {
-    spCarbs = parseInt(this.dataset.spfCarbs) || 0;
-    document.querySelectorAll('[data-spf-carbs]').forEach(function(b) { b.classList.remove('active'); });
-    this.classList.add('active');
-    var q = document.getElementById('globalSearchInput').value.trim();
-    if (q) fetchSearch(q, true);
-  });
-});
-
-// ⌘K / Ctrl+K shortcut
-document.addEventListener('keydown', function(e) {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-    e.preventDefault();
-    var overlay = document.getElementById('searchOverlay');
-    if (overlay.classList.contains('open')) { window.closeSearch(); } else { window.openSearch(); }
+  // Meal pills
+  var pills = document.getElementById('mealPills');
+  if (pills) {
+    pills.addEventListener('click', function(e) {
+      var btn = e.target.closest('.fl-pill');
+      if (!btn) return;
+      _state.meal = btn.dataset.meal;
+      pills.querySelectorAll('.fl-pill').forEach(function(p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      applyFilters();
+    });
   }
-  if (e.key === 'Escape') { window.closeSearch(); }
-});
+
+  // Search
+  var searchEl = document.getElementById('rxSearch');
+  if (searchEl) {
+    searchEl.addEventListener('input', function(e) {
+      _state.search = e.target.value.toLowerCase().trim();
+      applyFilters();
+    });
+  }
+
+  // Time slider
+  var timeSlider = document.getElementById('timeSlider');
+  var timeVal = document.getElementById('timeVal');
+  if (timeSlider && timeVal) {
+    timeSlider.addEventListener('input', function(e) {
+      _state.time = parseInt(e.target.value);
+      timeVal.textContent = _state.time >= 90 ? 'Any' : '≤ ' + _state.time + ' min';
+      applyFilters();
+    });
+  }
+
+  // Carb slider
+  var carbSlider = document.getElementById('carbSlider');
+  var carbVal = document.getElementById('carbVal');
+  if (carbSlider && carbVal) {
+    carbSlider.addEventListener('input', function(e) {
+      _state.net = parseInt(e.target.value);
+      carbVal.textContent = '≤ ' + _state.net + 'g';
+      applyFilters();
+    });
+  }
+
+  // View toggle
+  var viewToggle = document.getElementById('viewToggle');
+  if (viewToggle) {
+    viewToggle.addEventListener('click', function(e) {
+      var btn = e.target.closest('button');
+      if (!btn || !btn.dataset.view) return;
+      _state.view = btn.dataset.view;
+      viewToggle.querySelectorAll('button').forEach(function(b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      var grid = document.getElementById('rxGrid');
+      if (grid) grid.classList.toggle('list-view', _state.view === 'list');
+    });
+  }
+
+  // Diet chips
+  var dietChips = document.getElementById('dietChips');
+  if (dietChips) {
+    dietChips.addEventListener('click', function(e) {
+      var btn = e.target.closest('.fl-diet');
+      if (!btn) return;
+      var diet = btn.dataset.diet;
+      var idx = _state.diets.indexOf(diet);
+      if (idx > -1) { _state.diets.splice(idx, 1); btn.classList.remove('active'); }
+      else { _state.diets.push(diet); btn.classList.add('active'); }
+      applyFilters();
+    });
+  }
+
+  // Collection filter shortcut
+  window.applyColFilter = function(filter) {
+    if (filter === 'low-carb') {
+      _state.net = 5;
+      if (carbSlider) carbSlider.value = 5;
+      if (carbVal) carbVal.textContent = '≤ 5g';
+    }
+    if (filter === 'quick') {
+      _state.time = 20;
+      if (timeSlider) timeSlider.value = 20;
+      if (timeVal) timeVal.textContent = '≤ 20 min';
+    }
+    if (filter === 'dinner' || filter === 'breakfast') {
+      var meal = filter === 'dinner' ? 'Dinner' : 'Breakfast';
+      _state.meal = meal;
+      if (pills) {
+        pills.querySelectorAll('.fl-pill').forEach(function(p) {
+          p.classList.toggle('active', p.dataset.meal === meal);
+        });
+      }
+    }
+    if (filter === 'high-protein') {
+      _state.search = '';
+    }
+    applyFilters();
+    var grid = document.getElementById('rxGrid');
+    if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // Save toggle
+  window.toggleSave = function(btn) {
+    var id = btn.dataset.id;
+    var wasSaved = btn.dataset.saved === '1';
+    var nowSaved = !wasSaved;
+    btn.dataset.saved = nowSaved ? '1' : '0';
+    btn.textContent = nowSaved ? '♥' : '♡';
+    btn.classList.toggle('saved', nowSaved);
+    showToast(nowSaved ? '♥ Saved to favorites' : 'Removed from favorites');
+    fetch('/api/recipes/favorite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipeId: id, favorited: nowSaved }),
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d && d.error) {
+        btn.dataset.saved = wasSaved ? '1' : '0';
+        btn.textContent = wasSaved ? '♥' : '♡';
+        btn.classList.toggle('saved', wasSaved);
+        showToast('Could not save — try again');
+      }
+    }).catch(function() {
+      btn.dataset.saved = wasSaved ? '1' : '0';
+      btn.textContent = wasSaved ? '♥' : '♡';
+      btn.classList.toggle('saved', wasSaved);
+      showToast('Could not save — try again');
+    });
+  };
+
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, 2600);
+  }
+  window.showToast = showToast;
+})();
 </script>
-</div></div>
+
 </body>
 </html>
