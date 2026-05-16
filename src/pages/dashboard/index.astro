@@ -301,6 +301,7 @@ const mealTypeConfig = {
 };
 
 const fastingData = activeFast ? {
+  id:           activeFast.id,
   started_at:   activeFast.started_at,
   target_hours: activeFast.target_hours || 16,
   protocol:     activeFast.protocol || 'IF',
@@ -661,6 +662,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
               <span>Goal: {fastingData.target_hours}h</span>
               <span id="fastRemain">calculating…</span>
             </div>
+            <button class="rv-fast-stop-btn" onclick="window.stopFast()" id="fastStopBtn">Stop fast</button>
           </div>
         ) : (
           <div class="rv-fast-idle">
@@ -1254,6 +1256,15 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
     font-family: var(--rv-display); font-size: 0.82rem; font-weight: 700;
     text-decoration: none;
   }
+  .rv-fast-stop-btn {
+    margin-top: 10px; padding: 8px 20px; border-radius: 20px;
+    background: rgba(239,68,68,.12); color: #ef4444;
+    border: 1px solid rgba(239,68,68,.28);
+    font-family: var(--rv-display); font-size: 0.78rem; font-weight: 700;
+    cursor: pointer; transition: background .18s;
+  }
+  .rv-fast-stop-btn:hover { background: rgba(239,68,68,.22); }
+  .rv-fast-stop-btn:disabled { opacity: .5; cursor: not-allowed; }
 
   /* ── weight card ── */
   .rv-weight-stats { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
@@ -1531,6 +1542,31 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
     }
     updateFast();
     setInterval(updateFast, 1000);
+
+    window.stopFast = function() {
+      var btn = document.getElementById('fastStopBtn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Stopping…'; }
+      var now = new Date().toISOString();
+      var elapsed = Date.now() - fStart;
+      var actualHours = Math.round((elapsed / 3600000) * 10) / 10;
+      var completed = elapsed >= fTarget;
+      fetch('/api/fasting/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: rvFasting.id, ended_at: now, actual_hours: actualHours, completed: completed }),
+      }).then(function(res) { return res.json(); }).then(function(data) {
+        if (data.xp_earned) {
+          var card = document.querySelector('.rv-fasting');
+          if (card) {
+            card.innerHTML = '<div class="rv-card-head"><h2 class="rv-card-title">Fasting</h2><a href="/dashboard/fasting" class="rv-card-link">Details →</a></div><div style="text-align:center;padding:24px 0 16px;color:var(--rv-muted);font-family:var(--rv-display);font-size:0.85rem"><div style="font-size:2rem;margin-bottom:8px">✓</div><div style="color:#B6FF3C;font-weight:700;font-size:1rem;margin-bottom:4px">+' + data.xp_earned + ' XP</div><div>Fast complete!</div></div>';
+          }
+        } else {
+          window.location.reload();
+        }
+      }).catch(function() {
+        if (btn) { btn.disabled = false; btn.textContent = 'Stop fast'; }
+      });
+    };
   }
 
   /* ── Meal completion ────────────────────────────────── */

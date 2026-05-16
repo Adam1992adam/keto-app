@@ -31,24 +31,100 @@ function getMealType(bookId) {
 
 const dinnerBookIds = ['d1','d2','d3','d4','d5','d6','d7','d8','d9','d10','d11','d12'];
 
-const [tonightRes, recipesRes, favsRes] = await Promise.allSettled([
+// Curated fallback images per category (Pexels / Unsplash CDN — no API key needed)
+const FALLBACK_IMGS = {
+  Breakfast: [
+    'https://images.pexels.com/photos/1437587/pexels-photo-1437587.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/2097090/pexels-photo-2097090.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/376464/pexels-photo-376464.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/566566/pexels-photo-566566.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/3625372/pexels-photo-3625372.jpeg?auto=compress&cs=tinysrgb&w=600',
+  ],
+  Lunch: [
+    'https://images.pexels.com/photos/1059905/pexels-photo-1059905.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/1640772/pexels-photo-1640772.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/2116094/pexels-photo-2116094.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/1640774/pexels-photo-1640774.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/70497/pexels-photo-70497.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/2664216/pexels-photo-2664216.jpeg?auto=compress&cs=tinysrgb&w=600',
+  ],
+  Dinner: [
+    'https://images.pexels.com/photos/262897/pexels-photo-262897.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/299347/pexels-photo-299347.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/675951/pexels-photo-675951.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/769289/pexels-photo-769289.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/1639562/pexels-photo-1639562.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/2232/pexels-photo-2232.jpeg?auto=compress&cs=tinysrgb&w=600',
+  ],
+  Snack: [
+    'https://images.pexels.com/photos/1640770/pexels-photo-1640770.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/1583884/pexels-photo-1583884.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/4393426/pexels-photo-4393426.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/3843281/pexels-photo-3843281.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/461428/pexels-photo-461428.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/1099680/pexels-photo-1099680.jpeg?auto=compress&cs=tinysrgb&w=600',
+  ],
+  Smoothie: [
+    'https://images.pexels.com/photos/775031/pexels-photo-775031.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/1346347/pexels-photo-1346347.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/1640769/pexels-photo-1640769.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/434258/pexels-photo-434258.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/1092730/pexels-photo-1092730.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/2396220/pexels-photo-2396220.jpeg?auto=compress&cs=tinysrgb&w=600',
+  ],
+  Dessert: [
+    'https://images.pexels.com/photos/291528/pexels-photo-291528.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/1126359/pexels-photo-1126359.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/3407777/pexels-photo-3407777.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/1099680/pexels-photo-1099680.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/1126359/pexels-photo-1126359.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/2373520/pexels-photo-2373520.jpeg?auto=compress&cs=tinysrgb&w=600',
+  ],
+  Baking: [
+    'https://images.pexels.com/photos/1775043/pexels-photo-1775043.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/205961/pexels-photo-205961.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/1702373/pexels-photo-1702373.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/1350560/pexels-photo-1350560.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/3892469/pexels-photo-3892469.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/1414235/pexels-photo-1414235.jpeg?auto=compress&cs=tinysrgb&w=600',
+  ],
+  Other: [
+    'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/1640772/pexels-photo-1640772.jpeg?auto=compress&cs=tinysrgb&w=600',
+    'https://images.pexels.com/photos/70497/pexels-photo-70497.jpeg?auto=compress&cs=tinysrgb&w=600',
+  ],
+};
+
+const SEL = 'id, title, description, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, difficulty, book_id, tags';
+const [bfRes, lRes, dnRes, snRes, smRes, dsRes, bkRes, tonightRes, favsRes] = await Promise.allSettled([
+  db.from('recipes').select(SEL).in('book_id', ['b1','b2','b3','b4','b5','b6']).limit(10),
+  db.from('recipes').select(SEL).in('book_id', ['l1','l2','l3','l4','l5','l6']).limit(10),
+  db.from('recipes').select(SEL).in('book_id', ['d1','d2','d3','d4','d5','d6']).limit(10),
+  db.from('recipes').select(SEL).in('book_id', ['s1','s2','s3','s4']).limit(8),
+  db.from('recipes').select(SEL).in('book_id', ['sm1','sm2','sm3']).limit(6),
+  db.from('recipes').select(SEL).in('book_id', ['ds1','ds2','ds3']).limit(6),
+  db.from('recipes').select(SEL).in('book_id', ['bk1','bk2','bk3']).limit(6),
   db.from('recipes')
     .select('id, title, description, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, difficulty')
     .in('book_id', dinnerBookIds)
-    .not('image_url', 'is', null)
     .limit(3),
-  db.from('recipes')
-    .select('id, title, description, calories, protein, fat, net_carbs, image_url, prep_time, cook_time, difficulty, book_id, tags')
-    .not('image_url', 'is', null)
-    .limit(60),
   db.from('recipe_favorites')
     .select('recipe_id')
     .eq('user_id', user.id),
 ]);
 
+const bfRaw  = bfRes.status  === 'fulfilled' ? (bfRes.value?.data  || []) : [];
+const lRaw   = lRes.status   === 'fulfilled' ? (lRes.value?.data   || []) : [];
+const dnRaw  = dnRes.status  === 'fulfilled' ? (dnRes.value?.data  || []) : [];
+const snRaw  = snRes.status  === 'fulfilled' ? (snRes.value?.data  || []) : [];
+const smRaw  = smRes.status  === 'fulfilled' ? (smRes.value?.data  || []) : [];
+const dsRaw  = dsRes.status  === 'fulfilled' ? (dsRes.value?.data  || []) : [];
+const bkRaw  = bkRes.status  === 'fulfilled' ? (bkRes.value?.data  || []) : [];
 const tonightRecipes = tonightRes.status === 'fulfilled' ? (tonightRes.value?.data || []) : [];
-const allRecipes     = recipesRes.status === 'fulfilled' ? (recipesRes.value?.data || []) : [];
 const favsRaw        = favsRes.status === 'fulfilled' ? (favsRes.value?.data || []) : [];
+
+const allRecipes = [...bfRaw, ...lRaw, ...dnRaw, ...snRaw, ...smRaw, ...dsRaw, ...bkRaw];
 
 const favSet = new Set(favsRaw.map((f) => f.recipe_id));
 
@@ -58,41 +134,24 @@ const savedResult = favIds.length > 0
   : null;
 const savedRecipes = savedResult?.data || [];
 
-const collectionDefs = [
-  {
-    id: 'ec-carbs', title: 'Under 5g net carbs', sub: "Strict-mode meals that don't taste like punishment.", tone: 'rose', filter: 'low-carb',
-    previews: allRecipes.filter((r) => (r.net_carbs || 0) <= 5).slice(0, 3),
-    count: allRecipes.filter((r) => (r.net_carbs || 0) <= 5).length,
-  },
-  {
-    id: 'ec-quick', title: '20 minutes or less', sub: 'For the nights when cooking is the enemy.', tone: 'lime', filter: 'quick',
-    previews: allRecipes.filter((r) => (r.prep_time || 0) + (r.cook_time || 0) <= 20).slice(0, 3),
-    count: allRecipes.filter((r) => (r.prep_time || 0) + (r.cook_time || 0) <= 20).length,
-  },
-  {
-    id: 'ec-dinner', title: "Tonight's dinner", sub: 'High-fat dinner recipes to end your day in ketosis.', tone: 'dark', filter: 'dinner',
-    previews: allRecipes.filter((r) => getMealType(r.book_id) === 'Dinner').slice(0, 3),
-    count: allRecipes.filter((r) => getMealType(r.book_id) === 'Dinner').length,
-  },
-  {
-    id: 'ec-breakfast', title: 'Power breakfast', sub: 'Start keto-strong. Every. Single. Morning.', tone: 'orange', filter: 'breakfast',
-    previews: allRecipes.filter((r) => getMealType(r.book_id) === 'Breakfast').slice(0, 3),
-    count: allRecipes.filter((r) => getMealType(r.book_id) === 'Breakfast').length,
-  },
-  {
-    id: 'ec-protein', title: 'High protein', sub: '30g+ to protect muscle while burning fat.', tone: 'rose', filter: 'high-protein',
-    previews: allRecipes.filter((r) => (r.protein || 0) >= 30).slice(0, 3),
-    count: allRecipes.filter((r) => (r.protein || 0) >= 30).length,
-  },
-];
-
-const tn0 = tonightRecipes[0] || null;
-const tn1 = tonightRecipes[1] || null;
-const tn2 = tonightRecipes[2] || null;
+// Apply dinner fallback images to tonight's picks
+const _tnFallbacks = FALLBACK_IMGS['Dinner'];
+const _enrichTn = (r, idx) => r ? { ...r, image_url: r.image_url || _tnFallbacks[idx % _tnFallbacks.length] } : null;
+const tn0 = _enrichTn(tonightRecipes[0] || null, 0);
+const tn1 = _enrichTn(tonightRecipes[1] || null, 1);
+const tn2 = _enrichTn(tonightRecipes[2] || null, 2);
 const hasTn = tn0 !== null;
 const hasSmalls = tn1 !== null;
 
-// Pre-compute all derived card data so the template map needs NO const declarations
+// Pre-compute all derived card data with image deduplication + Pexels fallbacks
+const _seenImgs = new Set();
+const _fallbackCursors = {};
+function _nextFallback(meal) {
+  const pool = FALLBACK_IMGS[meal] || FALLBACK_IMGS['Other'];
+  const cursor = _fallbackCursors[meal] || 0;
+  _fallbackCursors[meal] = (cursor + 1) % pool.length;
+  return pool[cursor];
+}
 const recipeCards = allRecipes.map((r) => {
   const meal = getMealType(r.book_id);
   const totalTime = (r.prep_time || 0) + (r.cook_time || 0);
@@ -100,6 +159,11 @@ const recipeCards = allRecipes.map((r) => {
   const tagsStr = Array.isArray(r.tags) ? r.tags.join(',').toLowerCase() : '';
   const raw = r.description || '';
   const descFull = raw.length > 60 ? raw.slice(0, 60) + '…' : raw;
+  let img = r.image_url;
+  if (!img || _seenImgs.has(img)) {
+    img = _nextFallback(meal);
+  }
+  _seenImgs.add(img);
   return {
     id: r.id,
     title: r.title,
@@ -107,7 +171,7 @@ const recipeCards = allRecipes.map((r) => {
     fat: r.fat || 0,
     protein: r.protein || 0,
     net_carbs: r.net_carbs || 0,
-    image_url: r.image_url,
+    image_url: img,
     meal,
     totalTime,
     isFaved,
@@ -115,6 +179,35 @@ const recipeCards = allRecipes.map((r) => {
     descFull,
   };
 });
+
+// Collection defs use recipeCards (already deduplicated images)
+const collectionDefs = [
+  {
+    id: 'ec-carbs', title: 'Under 5g net carbs', sub: "Strict-mode meals that don't taste like punishment.", tone: 'rose', filter: 'low-carb',
+    previews: recipeCards.filter((r) => r.net_carbs <= 5).slice(0, 3),
+    count: recipeCards.filter((r) => r.net_carbs <= 5).length,
+  },
+  {
+    id: 'ec-quick', title: '20 minutes or less', sub: 'For the nights when cooking is the enemy.', tone: 'lime', filter: 'quick',
+    previews: recipeCards.filter((r) => r.totalTime <= 20).slice(0, 3),
+    count: recipeCards.filter((r) => r.totalTime <= 20).length,
+  },
+  {
+    id: 'ec-dinner', title: "Tonight's dinner", sub: 'High-fat dinner recipes to end your day in ketosis.', tone: 'dark', filter: 'dinner',
+    previews: recipeCards.filter((r) => r.meal === 'Dinner').slice(0, 3),
+    count: recipeCards.filter((r) => r.meal === 'Dinner').length,
+  },
+  {
+    id: 'ec-breakfast', title: 'Power breakfast', sub: 'Start keto-strong. Every. Single. Morning.', tone: 'orange', filter: 'breakfast',
+    previews: recipeCards.filter((r) => r.meal === 'Breakfast').slice(0, 3),
+    count: recipeCards.filter((r) => r.meal === 'Breakfast').length,
+  },
+  {
+    id: 'ec-protein', title: 'High protein', sub: '30g+ to protect muscle while burning fat.', tone: 'rose', filter: 'high-protein',
+    previews: recipeCards.filter((r) => r.protein >= 30).slice(0, 3),
+    count: recipeCards.filter((r) => r.protein >= 30).length,
+  },
+];
 
 // Pre-compute collection previews so template map needs NO const either
 const colCards = collectionDefs.map((c) => ({
