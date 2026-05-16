@@ -422,6 +422,8 @@ const clientData = {
       .rh-title { font-size: clamp(34px,8vw,56px); }
       .related-grid { grid-template-columns: 1fr; }
       .ing-row { grid-template-columns: 24px 90px 1fr; }
+      .rh-cta-row { flex-wrap: nowrap; gap: 6px; }
+      .rh-btn { padding: 9px 13px; font-size: 12px; gap: 5px; }
     }
   </style>
 </head>
@@ -881,6 +883,7 @@ const clientData = {
   var _faved = cd.isFavorited;
   if (favBtn) {
     favBtn.addEventListener('click', function() {
+      var prev = _faved;
       _faved = !_faved;
       favBtn.textContent = _faved ? '★ Saved' : '☆ Save';
       favBtn.className = _faved ? 'rh-btn ghost saved' : 'rh-btn ghost';
@@ -889,7 +892,19 @@ const clientData = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recipeId: cd.recipeId, favorited: _faved }),
       }).then(function(r) { return r.json(); }).then(function(d) {
-        window.showToast(_faved ? '★ Saved to favorites' : 'Removed from favorites');
+        if (d && d.error) {
+          _faved = prev;
+          favBtn.textContent = prev ? '★ Saved' : '☆ Save';
+          favBtn.className = prev ? 'rh-btn ghost saved' : 'rh-btn ghost';
+          window.showToast('Could not save — please try again');
+        } else {
+          window.showToast(_faved ? '★ Saved to favorites' : 'Removed from favorites');
+        }
+      }).catch(function() {
+        _faved = prev;
+        favBtn.textContent = prev ? '★ Saved' : '☆ Save';
+        favBtn.className = prev ? 'rh-btn ghost saved' : 'rh-btn ghost';
+        window.showToast('Could not save — please try again');
       });
     });
   }
