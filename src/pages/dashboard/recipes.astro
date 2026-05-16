@@ -53,15 +53,10 @@ const favsRaw        = favsRes.status === 'fulfilled' ? (favsRes.value?.data || 
 const favSet = new Set(favsRaw.map((f) => f.recipe_id));
 
 const favIds = favsRaw.map((f) => f.recipe_id).slice(0, 8);
-let savedRecipes = [];
-if (favIds.length > 0) {
-  const savedRes = await db
-    .from('recipes')
-    .select('id, title, image_url, net_carbs, calories')
-    .in('id', favIds)
-    .limit(8);
-  savedRecipes = savedRes.data || [];
-}
+const savedResult = favIds.length > 0
+  ? await db.from('recipes').select('id, title, image_url, net_carbs, calories').in('id', favIds).limit(8)
+  : null;
+const savedRecipes = savedResult?.data || [];
 
 const collectionDefs = [
   {
