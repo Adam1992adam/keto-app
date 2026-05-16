@@ -37,7 +37,7 @@ const initials  = (userName[0] || 'U').toUpperCase();
 const tierCss   = planType === 'elite_12' ? 'dn-tier dn-tier--elite' : planType === 'pro_6' ? 'dn-tier dn-tier--pro' : 'dn-tier dn-tier--basic';
 
 const progressPages = ['progress', 'photos', 'checkin', 'reflections', 'ketones', 'share', 'steps'];
-const mealPages     = ['recipes', 'food-log', 'food-photo', 'favorites', 'collections', 'meal-prep', 'scanner'];
+const mealPages     = ['recipes', 'food-log', 'food-photo', 'favorites', 'collections', 'meal-prep'];
 const planPages     = ['shopping', 'habits', 'weekly', 'fasting', 'keto-calculator', 'meal-planner'];
 const morePages     = ['learn', 'notifications', 'export', 'referrals', 'guide', 'billing'];
 
@@ -48,7 +48,6 @@ const activeGroup =
   planPages.includes(activePage)      ? 'plan'      :
   morePages.includes(activePage)      ? 'more'      :
   activePage === 'profile'            ? 'profile'   :
-  activePage === 'ai-coach'           ? 'ai-coach'  :
   activePage === 'community'          ? 'community' :
   '';
 
@@ -74,7 +73,6 @@ const groups = [
       { href: '/dashboard/favorites',    key: 'favorites',    label: t('nav.favorites')     },
       { href: '/dashboard/collections',  key: 'collections',  label: 'Collections'          },
       { href: '/dashboard/meal-prep',    key: 'meal-prep',    label: t('nav.meal_prep')     },
-      { href: '/dashboard/scanner',   key: 'scanner',   label: t('nav.scanner')   },
     ],
   },
   {
@@ -167,27 +165,7 @@ gtag('config', 'G-JRQ61VBZ4N');
       </li>
     ))}
 
-    <!-- AI Coach + Community (Elite only; locked buttons for others) -->
-    {planType === 'elite_12' && (
-      <li>
-        <a href="/dashboard/ai-coach"
-          class={`dn-tab dn-elite${activePage === 'ai-coach' ? ' active' : ''}`}>
-          <Sparkles size={13} />
-          {t('nav.ai_coach')}
-        </a>
-      </li>
-    )}
-    {planType !== 'elite_12' && (
-      <li>
-        <button
-          class="dn-tab dn-locked"
-          onclick="window.showFeatureUpsell && window.showFeatureUpsell('ai-coach')"
-          title="Elite only">
-          <Sparkles size={13} />
-          {t('nav.ai_coach')} 🔒
-        </button>
-      </li>
-    )}
+    <!-- Community (Pro/Elite) -->
     {(planType === 'elite_12' || planType === 'pro_6') && (
       <li>
         <a href="/dashboard/community"

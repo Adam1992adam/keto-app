@@ -32,7 +32,7 @@ const nav = [
 const activeMap: Record<string, string> = {
   'food-photo': 'food-photo', 'food-log': 'food-log',
   'recipe': 'recipes', 'recipes': 'recipes', 'favorites': 'recipes', 'collections': 'recipes',
-  'meal-planner': 'recipes', 'scanner': 'scanner',
+  'meal-planner': 'recipes',
   'checkin': 'progress', 'photos': 'photos', 'ketones': 'ketones', 'steps': 'steps',
   'reflections': 'progress', 'share': 'share',
   'weekly': 'shopping', 'meal-prep': 'shopping',
@@ -406,12 +406,6 @@ const activeId = activeMap[activePage] || activePage;
         <span>{item.label}</span>
       </a>
     ))}
-    {isElite && (
-      <a href="/dashboard/ai-coach" class={`rv-ni rv-ni--elite${activePage === 'ai-coach' ? ' rv-ni--active' : ''}`}>
-        <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        <span>AI Coach</span>
-      </a>
-    )}
     <a href="/dashboard/profile" class={`rv-ni${activePage === 'profile' ? ' rv-ni--active' : ''}`}>
       <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       <span>Profile</span>
@@ -443,10 +437,6 @@ const activeId = activeMap[activePage] || activePage;
     <a href="/dashboard/food-photo" class={`rv-ni${activeId === 'food-photo' ? ' rv-ni--active' : ''}`}>
       <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
       <span>Food Photo AI</span>
-    </a>
-    <a href="/dashboard/scanner" class={`rv-ni${activeId === 'scanner' ? ' rv-ni--active' : ''}`}>
-      <svg class="rv-ni-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5v14"/><path d="M8 5v14"/><path d="M12 5v14"/><path d="M17 5v14"/><path d="M21 5v14"/></svg>
-      <span>Barcode Scan</span>
     </a>
   </nav>
 
@@ -730,10 +720,6 @@ window.addEventListener('pageshow', function(e) {
       <a href="/dashboard/food-photo" class="rv-mob-tile">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
         <span>Food Photo</span>
-      </a>
-      <a href="/dashboard/scanner" class="rv-mob-tile">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5v14"/><path d="M8 5v14"/><path d="M12 5v14"/><path d="M17 5v14"/><path d="M21 5v14"/></svg>
-        <span>Scanner</span>
       </a>
       <a href="/dashboard/steps" class="rv-mob-tile">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
