@@ -393,7 +393,7 @@ const activeRevenuePct = totalUsers > 0 ? Math.round((activeSubscribers / totalU
             <tr class="empty-row"><td colspan="11">No users found</td></tr>
           )}
           {usersData.map(u => (
-            <tr data-name={(u.full_name || '').toLowerCase()} data-email={(u.email || '').toLowerCase()} data-status={u.subscription_status || 'none'} data-tier={u.subscription_tier || ''}>
+            <tr data-id={u.id} data-name={(u.full_name || '').toLowerCase()} data-email={(u.email || '').toLowerCase()} data-status={u.subscription_status || 'none'} data-tier={u.subscription_tier || ''}>
               <td style="font-weight:700;white-space:nowrap;">{u.full_name || '—'}</td>
               <td style="color:var(--soft);font-size:.82rem;">{u.email}</td>
               <td>
@@ -413,9 +413,14 @@ const activeRevenuePct = totalUsers > 0 ? Math.round((activeSubscribers / totalU
               <td style="font-size:.82rem;color:var(--soft);">{u.endDateStr}</td>
               <td style="font-size:.78rem;color:var(--soft);white-space:nowrap;">{u.joinedStr}</td>
               <td>
-                <button class="btn btn-edit" onclick={`openEditModal('${u.id}','${(u.full_name || '').replace(/'/g, "\\'")}','${u.email}','${u.subscription_tier || ''}','${u.subscription_status || ''}','${u.endDateIso}')`}>
-                  Edit
-                </button>
+                <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+                  <button class="btn btn-edit" onclick={`openEditModal('${u.id}','${(u.full_name || '').replace(/'/g, "\\'")}','${u.email}','${u.subscription_tier || ''}','${u.subscription_status || ''}','${u.endDateIso}')`}>
+                    Edit
+                  </button>
+                  <button class="btn btn-danger" onclick={`deleteUser('${u.id}','${(u.full_name || u.email || '').replace(/'/g, "\\'")}')`}>
+                    Delete
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
@@ -587,6 +592,25 @@ const activeRevenuePct = totalUsers > 0 ? Math.round((activeSubscribers / totalU
       });
   }
   window.deletePending = deletePending;
+
+  function deleteUser(userId, userName) {
+    if (!confirm('PERMANENTLY DELETE user "' + userName + '"?\n\nThis will erase ALL their data including subscription, journey, recipes, community posts, and cannot be undone.')) return;
+    fetch('/api/admin/delete-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: userId }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.success) {
+          showToast('User deleted', 'success');
+          var row = document.querySelector('#usersTable tr[data-id="' + userId + '"]');
+          if (row) row.remove();
+        } else { showToast('Error: ' + (data.error || 'Unknown'), 'error'); }
+      })
+      .catch(function () { showToast('Network error', 'error'); });
+  }
+  window.deleteUser = deleteUser;
 
   function adminLogout() {
     if (!confirm('Sign out of admin panel?')) return;

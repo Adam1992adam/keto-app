@@ -309,6 +309,12 @@ const dataJson = JSON.stringify({ enriched, bannedUsers });
                   {!isPost && !isHidden && !isDeleted && (
                     <button class="btn btn-hide" onclick={`modAction('hide_comment','${r.id}',null,'${r.comment_id}',null)`}>Hide Comment</button>
                   )}
+                  {isPost && !isDeleted && (
+                    <button class="btn btn-ban" style="border-color:rgba(239,68,68,.5);color:#f87171;" onclick={`modAction('delete_post','${r.id}','${r.post_id}',null,null)`}>Delete Post</button>
+                  )}
+                  {!isPost && !isDeleted && (
+                    <button class="btn btn-ban" style="border-color:rgba(239,68,68,.5);color:#f87171;" onclick={`modAction('delete_comment','${r.id}',null,'${r.comment_id}',null)`}>Delete Comment</button>
+                  )}
                   {r.author && !r.author.community_banned && (
                     <button class="btn btn-ban" onclick={`modAction('ban_user','${r.id}',null,null,'${r.author?.id}')`}>Ban User</button>
                   )}
@@ -408,7 +414,7 @@ async function modAction(action, reportId, postId, commentId, userId, cardId) {
 
     setTimeout(function() {
       if (card) {
-        if (action === 'dismiss' || action === 'hide_post' || action === 'hide_comment' || action === 'ban_user') {
+        if (action === 'dismiss' || action === 'hide_post' || action === 'hide_comment' || action === 'ban_user' || action === 'delete_post' || action === 'delete_comment') {
           card.style.transition = 'opacity .4s';
           card.style.opacity = '0';
           setTimeout(function() { card.remove(); }, 400);

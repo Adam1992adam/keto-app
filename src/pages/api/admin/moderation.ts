@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { json } from '../../../lib/apiResponse';
 
-const VALID_ACTIONS = ['dismiss', 'hide_post', 'hide_comment', 'ban_user', 'unban_user'];
+const VALID_ACTIONS = ['dismiss', 'hide_post', 'hide_comment', 'ban_user', 'unban_user', 'delete_post', 'delete_comment'];
 
 function getAdminDb() {
   const url = process.env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
@@ -86,6 +86,31 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         .update({ community_banned: false, community_banned_at: null, community_banned_reason: null })
         .eq('id', user_id);
       if (error) return json({ error: 'Server error' }, 500);
+      return json({ success: true });
+    }
+
+    if (action === 'delete_post') {
+      if (!post_id) return json({ error: 'post_id required' }, 400);
+      await db.from('community_comments').delete().eq('post_id', post_id);
+      const { error } = await db.from('community_posts').delete().eq('id', post_id);
+      if (error) return json({ error: 'Server error' }, 500);
+      if (report_id) {
+        await db.from('community_reports')
+          .update({ status: 'actioned', reviewed_at: new Date().toISOString(), mod_note: mod_note || 'Post deleted' })
+          .eq('id', report_id);
+      }
+      return json({ success: true });
+    }
+
+    if (action === 'delete_comment') {
+      if (!comment_id) return json({ error: 'comment_id required' }, 400);
+      const { error } = await db.from('community_comments').delete().eq('id', comment_id);
+      if (error) return json({ error: 'Server error' }, 500);
+      if (report_id) {
+        await db.from('community_reports')
+          .update({ status: 'actioned', reviewed_at: new Date().toISOString(), mod_note: mod_note || 'Comment deleted' })
+          .eq('id', report_id);
+      }
       return json({ success: true });
     }
 
