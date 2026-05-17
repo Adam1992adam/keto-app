@@ -121,6 +121,25 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
     gtag('config', 'G-JRQ61VBZ4N');
   </script>
 
+  <!-- Google Ads — replace YOUR_CONVERSION_ID with your actual ID -->
+  <!-- <script async src="https://www.googletagmanager.com/gtag/js?id=AW-YOUR_CONVERSION_ID"></script>
+  <script is:inline>
+    gtag('config', 'AW-YOUR_CONVERSION_ID');
+  </script> -->
+
+  <!-- Facebook Pixel — replace YOUR_PIXEL_ID with your actual ID -->
+  <!-- <script is:inline>
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', 'YOUR_PIXEL_ID');
+    fbq('track', 'PageView');
+  </script>
+  <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=YOUR_PIXEL_ID&ev=PageView&noscript=1"/></noscript> -->
+
   <style>
     /* ── RESET ── */
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1668,7 +1687,7 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
       </h1>
 
       <p class="hero-sub">
-        The only AI-powered keto coaching app that builds a complete personalized program around <em>your</em> body and goals — daily meal plans, a 24/7 AI coach, fasting timer, barcode scanner, and real-time progress tracking. Proven by 2,400+ women to deliver an average of 8.4 kg in 30 days.
+        The keto coaching app that builds a complete personalized program around <em>your</em> body and goals — daily meal plans, fasting timer, food log, and real-time progress tracking. Proven by 2,400+ women to deliver an average of 18.5 lbs in 30 days.
       </p>
 
       <div class="hero-cta-row">
@@ -1692,7 +1711,7 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
         <div>
           <div style="display:flex;gap:2px;color:var(--accent);font-size:12px">★★★★★</div>
           <div style="font-size:13px;color:var(--ink-soft);margin-top:2px">
-            <strong style="color:var(--ink)">2,400+ women</strong> down an avg. of 8.4kg
+            <strong style="color:var(--ink)">2,400+ women</strong> down an avg. of 18.5 lbs
           </div>
         </div>
       </div>
@@ -1701,7 +1720,7 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
     <!-- Right: visual -->
     <div class="hero-visual">
       <div class="visual-photo">
-        <img src="https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=900&q=85" alt="Active woman" loading="eager"/>
+        <img src="/images/home/hero-woman.jpg" onerror="this.src='https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=900&q=85'" alt="Active woman" loading="eager"/>
       </div>
 
       <!-- Activity rings card -->
@@ -1733,7 +1752,7 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
       <!-- Stat chip: weight loss -->
       <div class="stat-chip stat-chip-1">
         <div>
-          <div class="num">−8.2<span style="font-size:14px;opacity:.7">kg</span></div>
+          <div class="num">−18<span style="font-size:14px;opacity:.7">lbs</span></div>
           <div class="lbl">Day 14</div>
         </div>
       </div>
@@ -1750,7 +1769,7 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
       <!-- Meal card -->
       <div class="meal-card">
         <div class="meal-card-head">
-          <img class="meal-thumb" src="https://images.unsplash.com/photo-1525351484163-7529414344d8?w=200&q=85" alt=""/>
+          <img class="meal-thumb" src="/images/home/meal-thumb.jpg" onerror="this.src='https://images.unsplash.com/photo-1525351484163-7529414344d8?w=200&q=85'" alt=""/>
           <div>
             <div class="meal-card-meta">Breakfast · 8:30</div>
             <div class="meal-card-title">Egg &amp; Avocado Bowl</div>
@@ -1791,11 +1810,11 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
     <div class="marquee-dot"></div>
     <div class="marquee-item"><span class="marquee-num">87%</span><span class="marquee-lbl">Reach their goal</span></div>
     <div class="marquee-dot"></div>
-    <div class="marquee-item"><span class="marquee-num">8.4<em>kg</em></span><span class="marquee-lbl">Avg. lost</span></div>
+    <div class="marquee-item"><span class="marquee-num">18.5<em>lbs</em></span><span class="marquee-lbl">Avg. lost</span></div>
     <div class="marquee-dot"></div>
     <div class="marquee-item"><span class="marquee-num">30-day</span><span class="marquee-lbl">Money-back</span></div>
     <div class="marquee-dot"></div>
-    <div class="marquee-item"><span class="marquee-num">24/7</span><span class="marquee-lbl">AI coach</span></div>
+    <div class="marquee-item"><span class="marquee-num">500+</span><span class="marquee-lbl">Keto recipes</span></div>
     <div class="marquee-dot"></div>
 
     <div class="marquee-item"><span class="marquee-num">2,400+</span><span class="marquee-lbl">Active women</span></div>
@@ -1804,11 +1823,11 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
     <div class="marquee-dot"></div>
     <div class="marquee-item"><span class="marquee-num">87%</span><span class="marquee-lbl">Reach their goal</span></div>
     <div class="marquee-dot"></div>
-    <div class="marquee-item"><span class="marquee-num">8.4<em>kg</em></span><span class="marquee-lbl">Avg. lost</span></div>
+    <div class="marquee-item"><span class="marquee-num">18.5<em>lbs</em></span><span class="marquee-lbl">Avg. lost</span></div>
     <div class="marquee-dot"></div>
     <div class="marquee-item"><span class="marquee-num">30-day</span><span class="marquee-lbl">Money-back</span></div>
     <div class="marquee-dot"></div>
-    <div class="marquee-item"><span class="marquee-num">24/7</span><span class="marquee-lbl">AI coach</span></div>
+    <div class="marquee-item"><span class="marquee-num">500+</span><span class="marquee-lbl">Keto recipes</span></div>
     <div class="marquee-dot"></div>
 
     <div class="marquee-item"><span class="marquee-num">2,400+</span><span class="marquee-lbl">Active women</span></div>
@@ -1817,11 +1836,11 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
     <div class="marquee-dot"></div>
     <div class="marquee-item"><span class="marquee-num">87%</span><span class="marquee-lbl">Reach their goal</span></div>
     <div class="marquee-dot"></div>
-    <div class="marquee-item"><span class="marquee-num">8.4<em>kg</em></span><span class="marquee-lbl">Avg. lost</span></div>
+    <div class="marquee-item"><span class="marquee-num">18.5<em>lbs</em></span><span class="marquee-lbl">Avg. lost</span></div>
     <div class="marquee-dot"></div>
     <div class="marquee-item"><span class="marquee-num">30-day</span><span class="marquee-lbl">Money-back</span></div>
     <div class="marquee-dot"></div>
-    <div class="marquee-item"><span class="marquee-num">24/7</span><span class="marquee-lbl">AI coach</span></div>
+    <div class="marquee-item"><span class="marquee-num">500+</span><span class="marquee-lbl">Keto recipes</span></div>
     <div class="marquee-dot"></div>
   </div>
 </div>
@@ -1839,20 +1858,20 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
         <em>coaches</em> you every day.
       </h2>
       <p class="section-lede" style="margin-top:22px;max-width:600px">
-        KetoJourney isn't a recipe collection or a macro calculator — it's a structured coaching program. You get a personalized 30, 90, or 360-day roadmap with daily check-ins, smart meal plans, a barcode scanner, fasting timer, and an AI coach that answers your questions at midnight. Everything is designed so you never have to guess what to eat or what to do next.
+        KetoJourney isn't a recipe collection or a macro calculator — it's a structured coaching program. You get a personalized 30, 90, or 360-day roadmap with daily check-ins, smart meal plans, a fasting timer, and real-time progress tracking. Everything is designed so you never have to guess what to eat or what to do next.
       </p>
       <p style="margin-top:16px;max-width:600px;font-size:16px;line-height:1.65;color:var(--ink-soft)">
         Over 2,400 women have used KetoJourney to break plateaus, reverse metabolic fatigue, and reach weights they hadn't seen in years — without counting calories or giving up the foods they love.
       </p>
       <div class="about-tag-cloud">
         <span class="about-pill">Personalized meal plans</span>
-        <span class="about-pill">AI Keto Coach</span>
         <span class="about-pill">500+ recipes</span>
         <span class="about-pill">Intermittent fasting</span>
-        <span class="about-pill">Barcode scanner</span>
+        <span class="about-pill">Food photo analyzer</span>
         <span class="about-pill">Progress analytics</span>
         <span class="about-pill">Daily accountability</span>
         <span class="about-pill">Community access</span>
+        <span class="about-pill">Weekly reports</span>
       </div>
     </div>
     <div class="about-stats">
@@ -1867,7 +1886,7 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
         <div class="about-stat-desc">Members who follow the plan for 30+ days hit their first weight goal.</div>
       </div>
       <div class="about-stat-card">
-        <div class="about-stat-num">8.4kg</div>
+        <div class="about-stat-num">18.5 lbs</div>
         <div class="about-stat-lbl">Average Lost</div>
         <div class="about-stat-desc">Average weight loss in the first 30 days across all plans.</div>
       </div>
@@ -1888,7 +1907,7 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
   <div class="features-inner">
     <div class="section-head">
       <div>
-        <div class="section-kicker">FEATURES · 18+ TOOLS</div>
+        <div class="section-kicker">FEATURES · 16+ TOOLS</div>
         <h2 class="section-h2">
           Built for women<br/>
           who want it <em>done.</em>
@@ -1900,39 +1919,19 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
     </div>
 
     <div class="feat-grid">
-      <!-- Large card: AI Coach -->
+      <!-- Large card: Personalized Meal Plan -->
       <article class="feat-card large">
         <div class="feat-img">
-          <img src="https://images.unsplash.com/photo-1551076805-e1869033e561?w=900&q=85" alt="" loading="lazy"/>
+          <img src="/images/home/feat-meal-plan.jpg" onerror="this.src='https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=900&q=85'" alt="" loading="lazy"/>
         </div>
         <div class="feat-body">
           <div class="feat-card-head">
-            <span class="feat-kicker">AI Coach</span>
+            <span class="feat-kicker">Meal Plan</span>
             <span class="feat-tag">01</span>
           </div>
           <div>
-            <div class="feat-title">Your nutritionist in your pocket</div>
-            <p class="feat-desc" style="margin-top:10px">Ask anything, anytime. Get instant macro advice, food swaps, plateau fixes, and motivation — trained on 1000+ keto research papers.</p>
-          </div>
-          <div style="display:flex;justify-content:flex-end">
-            <span class="feat-arrow">→</span>
-          </div>
-        </div>
-      </article>
-
-      <!-- Small card: Smart Meals -->
-      <article class="feat-card">
-        <div class="feat-img">
-          <img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=700&q=85" alt="" loading="lazy"/>
-        </div>
-        <div class="feat-body">
-          <div class="feat-card-head">
-            <span class="feat-kicker">Smart Meals</span>
-            <span class="feat-tag">02</span>
-          </div>
-          <div>
-            <div class="feat-title">A plan that adapts to you</div>
-            <p class="feat-desc" style="margin-top:10px">Allergies, preferences, fasting window — we build a rotation around your life.</p>
+            <div class="feat-title">A personalized plan — built around your life</div>
+            <p class="feat-desc" style="margin-top:10px">Allergies, preferences, fasting window — we build a daily meal rotation that fits your goals and auto-refreshes every 30 days.</p>
           </div>
           <div style="display:flex;justify-content:flex-end">
             <span class="feat-arrow">→</span>
@@ -1943,12 +1942,12 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
       <!-- Small card: Fasting Timer -->
       <article class="feat-card">
         <div class="feat-img">
-          <img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=700&q=85" alt="" loading="lazy"/>
+          <img src="/images/home/feat-fasting.jpg" onerror="this.src='https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=700&q=85'" alt="" loading="lazy"/>
         </div>
         <div class="feat-body">
           <div class="feat-card-head">
             <span class="feat-kicker">Fasting Timer</span>
-            <span class="feat-tag">03</span>
+            <span class="feat-tag">02</span>
           </div>
           <div>
             <div class="feat-title">16:8 · 18:6 · 20:4</div>
@@ -1960,19 +1959,19 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
         </div>
       </article>
 
-      <!-- Small card: Keto Scanner -->
+      <!-- Small card: Progress Tracking -->
       <article class="feat-card">
         <div class="feat-img">
-          <img src="https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=700&q=85" alt="" loading="lazy"/>
+          <img src="/images/home/feat-progress.jpg" onerror="this.src='https://images.unsplash.com/photo-1535914254981-b5012eebbd15?w=700&q=85'" alt="" loading="lazy"/>
         </div>
         <div class="feat-body">
           <div class="feat-card-head">
-            <span class="feat-kicker">Keto Scanner</span>
-            <span class="feat-tag">04</span>
+            <span class="feat-kicker">Progress</span>
+            <span class="feat-tag">03</span>
           </div>
           <div>
-            <div class="feat-title">Scan it. Know it.</div>
-            <p class="feat-desc" style="margin-top:10px">Point your camera at any barcode. We'll tell you if it's keto-safe in under a second.</p>
+            <div class="feat-title">See every pound lost.</div>
+            <p class="feat-desc" style="margin-top:10px">Weight trends, body measurements, ketone charts, and a projected goal date — all on one screen.</p>
           </div>
           <div style="display:flex;justify-content:flex-end">
             <span class="feat-arrow">→</span>
@@ -2171,10 +2170,10 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
         <span class="tool-tier">All plans</span>
       </div>
       <div class="tool-card">
-        <div class="tool-icon">🤖</div>
-        <div class="tool-name">AI Keto Coach</div>
-        <p class="tool-desc">Ask anything at any hour. Powered by Gemini 1.5 — trained on 1,000+ keto studies for precise, safe answers.</p>
-        <span class="tool-tier elite">Elite only</span>
+        <div class="tool-icon">📊</div>
+        <div class="tool-name">Macro Tracker</div>
+        <p class="tool-desc">Log meals by search or photo. Real-time macro totals, daily history, and smart meal-swap suggestions.</p>
+        <span class="tool-tier">All plans</span>
       </div>
       <div class="tool-card">
         <div class="tool-icon">📋</div>
@@ -2195,9 +2194,9 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
         <span class="tool-tier">All plans</span>
       </div>
       <div class="tool-card">
-        <div class="tool-icon">🔍</div>
-        <div class="tool-name">Barcode Scanner</div>
-        <p class="tool-desc">Instant keto-safe verdict for 1M+ packaged foods via Open Food Facts database.</p>
+        <div class="tool-icon">🏆</div>
+        <div class="tool-name">XP &amp; Streaks</div>
+        <p class="tool-desc">Earn XP for daily check-ins, completed meals, and fasting goals. Level up and maintain your streak.</p>
         <span class="tool-tier">All plans</span>
       </div>
       <div class="tool-card">
@@ -2397,7 +2396,7 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
               <div class="sname">Layla K.</div>
               <div class="splan">Pro · Day 67</div>
             </div>
-            <div class="story-loss">−14 kg</div>
+            <div class="story-loss">−31 lbs</div>
           </div>
         </div>
       </article>
@@ -2406,11 +2405,11 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
         <div class="story-avatar" style="background:linear-gradient(135deg,#0ea5e9,#B6FF3C)">E</div>
         <div>
           <div class="story-stars">★★★★★</div>
-          <p class="story-quote">"The AI coach answered every question I had at 11pm when I was craving something. Like a nutritionist in my pocket."</p>
+          <p class="story-quote">"The progress tracking kept me going. Seeing the chart move week after week made it feel real. I finally understood my own body."</p>
           <div class="story-meta">
             <div>
               <div class="sname">Emma L.</div>
-              <div class="splan">Elite · AI Coach</div>
+              <div class="splan">Elite · Day 90</div>
             </div>
             <div class="story-loss">−24 lbs</div>
           </div>
