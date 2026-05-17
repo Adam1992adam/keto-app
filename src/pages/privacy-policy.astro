@@ -29,30 +29,31 @@ const SITE_URL = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').r
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,900&family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&display=swap" rel="stylesheet"/>
   <style>
     :root {
-      --bg: #060d09; --card: #0d1a0f; --border: rgba(255,92,122,.12);
-      --text: #dfeedd; --soft: #4d7055; --green: #FF5C7A; --green2: #B6FF3C;
+      --bg: #FAF6F1; --card: #FFFFFF; --border: #E5DED2;
+      --ink: #16110F; --soft: #8A8077; --muted: #4A4340;
+      --accent: #FF5C7A; --accent-2: #B6FF3C;
     }
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); line-height:1.7; }
-    a { color:var(--green); text-decoration:none; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--ink); line-height:1.7; }
+    a { color:var(--accent); text-decoration:none; }
     a:hover { text-decoration:underline; }
 
-    .nav { display:flex; align-items:center; justify-content:space-between; padding:1rem 2rem; border-bottom:1px solid var(--border); }
-    .nav-logo { font-family:'Fraunces',serif; font-weight:900; font-size:1.2rem; color:var(--green2); display:flex; align-items:center; gap:.5rem; }
+    .nav { display:flex; align-items:center; justify-content:space-between; padding:1rem 2rem; border-bottom:1px solid var(--border); background:var(--bg); }
+    .nav-logo { font-family:'Fraunces',serif; font-weight:900; font-size:1.2rem; color:var(--ink); display:flex; align-items:center; gap:.5rem; }
     .nav-back { font-size:.83rem; font-weight:700; color:var(--soft); border:1px solid var(--border); padding:.4rem .9rem; border-radius:8px; transition:all .2s; }
-    .nav-back:hover { color:var(--text); border-color:var(--green); text-decoration:none; }
+    .nav-back:hover { color:var(--ink); border-color:var(--accent); text-decoration:none; }
 
     .page { max-width:760px; margin:0 auto; padding:3rem 1.5rem 5rem; }
-    .page-label { font-size:.7rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--green); margin-bottom:.75rem; }
+    .page-label { font-size:.7rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); margin-bottom:.75rem; }
     h1 { font-family:'Fraunces',serif; font-weight:900; font-size:clamp(2rem,4vw,2.8rem); line-height:1.1; margin-bottom:.5rem; }
     .meta { font-size:.78rem; color:var(--soft); margin-bottom:2.5rem; }
 
     .section { margin-bottom:2rem; padding:1.5rem; background:var(--card); border:1px solid var(--border); border-radius:16px; }
-    h2 { font-family:'Fraunces',serif; font-size:1.15rem; font-weight:700; color:var(--green2); margin-bottom:.75rem; }
-    p { font-size:.9rem; color:rgba(223,238,221,.8); margin-bottom:.75rem; }
+    h2 { font-family:'Fraunces',serif; font-size:1.15rem; font-weight:700; color:var(--ink); margin-bottom:.75rem; }
+    p { font-size:.9rem; color:var(--muted); margin-bottom:.75rem; }
     p:last-child { margin-bottom:0; }
     ul { padding-left:1.25rem; margin:.5rem 0; }
-    li { font-size:.9rem; color:rgba(223,238,221,.8); margin-bottom:.35rem; }
+    li { font-size:.9rem; color:var(--muted); margin-bottom:.35rem; }
 
     .footer { text-align:center; padding:2rem; border-top:1px solid var(--border); font-size:.78rem; color:var(--soft); }
   </style>
