@@ -1,0 +1,349 @@
+---
+export const prerender = true;
+const SITE_URL   = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').replace(/\/$/, '');
+const PAGE_TITLE = 'Your Free Keto Book Is On Its Way! | KetoJourney';
+const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being delivered right now.';
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{PAGE_TITLE}</title>
+  <meta name="description" content={PAGE_DESC}/>
+  <meta name="robots" content="noindex"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="/icon-72.png"/>
+  <meta name="theme-color" content="#FF5C7A"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    html { scroll-behavior:smooth; }
+    a { color:inherit; text-decoration:none; }
+    img { display:block; max-width:100%; }
+    :root {
+      --bg:#FAF6F1; --bg-alt:#F2EDE5; --ink:#16110F; --ink-soft:#4A4340;
+      --muted:#8A8077; --line:#E5DED2; --accent:#FF5C7A; --accent-2:#B6FF3C;
+      --card:#FFFFFF; --green:#22c55e;
+      --display:'Bricolage Grotesque',system-ui,sans-serif;
+      --serif:'Instrument Serif',serif;
+      --body:'Geist',system-ui,sans-serif;
+    }
+    body { font-family:var(--body); background:var(--bg); color:var(--ink); overflow-x:hidden; min-height:100vh; }
+
+    /* NAV */
+    .nav { position:sticky; top:0; z-index:100; background:rgba(250,246,241,.94); backdrop-filter:blur(14px); border-bottom:1px solid var(--line); padding:16px 32px; display:flex; align-items:center; justify-content:space-between; }
+    .nav-logo { display:flex; align-items:center; gap:10px; }
+    .nav-logo-mark { width:34px; height:34px; background:var(--ink); border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:var(--display); font-weight:800; font-size:.9rem; color:var(--accent-2); }
+    .nav-logo-text { font-family:var(--display); font-weight:800; font-size:1rem; }
+    .nav-cta { background:var(--accent); color:#fff; padding:8px 18px; border-radius:999px; font-size:.85rem; font-weight:700; font-family:var(--display); transition:opacity .15s; }
+    .nav-cta:hover { opacity:.88; }
+    @media(max-width:640px){ .nav{padding:14px 18px;} }
+
+    /* CONFETTI CANVAS */
+    #confettiCanvas { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:200; }
+
+    /* SUCCESS HERO */
+    .success-hero { max-width:680px; margin:0 auto; padding:72px 32px 56px; text-align:center; }
+    .check-ring { width:88px; height:88px; margin:0 auto 28px; position:relative; }
+    .check-ring svg { width:88px; height:88px; }
+    .check-circle { fill:none; stroke:var(--green); stroke-width:3; stroke-dasharray:251; stroke-dashoffset:251; animation:drawCircle .7s ease forwards .2s; }
+    .check-mark { fill:none; stroke:var(--green); stroke-width:3.5; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:48; stroke-dashoffset:48; animation:drawCheck .4s ease forwards .9s; }
+    @keyframes drawCircle { to { stroke-dashoffset:0; } }
+    @keyframes drawCheck  { to { stroke-dashoffset:0; } }
+
+    .success-eyebrow { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.16em; color:var(--green); margin-bottom:14px; }
+    .success-title { font-family:var(--display); font-size:clamp(2rem,5vw,3rem); font-weight:800; color:var(--ink); line-height:1.1; margin-bottom:16px; }
+    .success-title em { font-family:var(--serif); font-style:italic; color:var(--accent); }
+    .success-sub { font-size:1rem; color:var(--ink-soft); line-height:1.75; max-width:500px; margin:0 auto; }
+
+    /* SPAM GUIDE CARD */
+    .spam-card { max-width:640px; margin:0 auto 64px; background:var(--card); border:1px solid var(--line); border-radius:22px; padding:32px 36px; box-shadow:0 4px 28px rgba(22,17,15,.07); }
+    @media(max-width:600px){ .spam-card{padding:24px 20px; margin:0 16px 48px;} }
+    .spam-card-title { font-family:var(--display); font-size:1.05rem; font-weight:800; color:var(--ink); margin-bottom:22px; display:flex; align-items:center; gap:10px; }
+    .spam-steps { display:flex; flex-direction:column; gap:16px; }
+    .spam-step { display:flex; align-items:flex-start; gap:14px; }
+    .spam-step-num { width:32px; height:32px; min-width:32px; border-radius:50%; background:rgba(255,92,122,.1); border:1.5px solid rgba(255,92,122,.25); display:flex; align-items:center; justify-content:center; font-family:var(--display); font-size:.82rem; font-weight:800; color:var(--accent); }
+    .spam-step-body { padding-top:4px; }
+    .spam-step-label { font-family:var(--display); font-size:.92rem; font-weight:700; color:var(--ink); margin-bottom:3px; }
+    .spam-step-desc { font-size:.83rem; color:var(--muted); line-height:1.6; }
+    .spam-step-desc strong { color:var(--ink-soft); }
+    .spam-tip { margin-top:20px; padding:12px 16px; background:rgba(182,255,60,.1); border:1px solid rgba(182,255,60,.3); border-radius:12px; font-size:.82rem; color:var(--ink-soft); line-height:1.6; }
+    .spam-tip strong { color:var(--ink); }
+
+    /* DIVIDER */
+    .divider { max-width:640px; margin:0 auto 64px; display:flex; align-items:center; gap:16px; padding:0 32px; }
+    @media(max-width:600px){ .divider{padding:0 16px;} }
+    .divider-line { flex:1; height:1px; background:var(--line); }
+    .divider-text { font-size:.76rem; font-weight:700; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); white-space:nowrap; }
+
+    /* FREE PLAN CTA */
+    .plan-section { max-width:1000px; margin:0 auto; padding:0 32px 80px; }
+    @media(max-width:600px){ .plan-section{padding:0 16px 60px;} }
+    .plan-eyebrow { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.16em; color:var(--accent); margin-bottom:12px; text-align:center; }
+    .plan-title { font-family:var(--display); font-size:clamp(1.8rem,4vw,2.8rem); font-weight:800; color:var(--ink); text-align:center; line-height:1.15; margin-bottom:14px; }
+    .plan-title em { font-family:var(--serif); font-style:italic; color:var(--accent); }
+    .plan-sub { font-size:.97rem; color:var(--ink-soft); line-height:1.75; text-align:center; max-width:560px; margin:0 auto 48px; }
+
+    .plan-card { background:var(--ink); border-radius:28px; padding:48px 44px; display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:center; position:relative; overflow:hidden; }
+    @media(max-width:760px){ .plan-card{grid-template-columns:1fr; gap:32px; padding:36px 28px;} }
+    .plan-card::before { content:''; position:absolute; top:-60px; right:-60px; width:300px; height:300px; background:radial-gradient(circle, rgba(255,92,122,.18) 0%, transparent 70%); pointer-events:none; }
+    .plan-card::after  { content:''; position:absolute; bottom:-80px; left:-40px; width:260px; height:260px; background:radial-gradient(circle, rgba(182,255,60,.12) 0%, transparent 70%); pointer-events:none; }
+
+    .plan-left .plan-badge { display:inline-flex; align-items:center; gap:7px; background:rgba(255,92,122,.18); border:1px solid rgba(255,92,122,.3); border-radius:999px; padding:6px 14px; font-size:.72rem; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.1em; margin-bottom:20px; }
+    .plan-left h3 { font-family:var(--display); font-size:clamp(1.5rem,3vw,2rem); font-weight:800; color:#fff; line-height:1.2; margin-bottom:14px; }
+    .plan-left p { font-size:.9rem; color:rgba(255,255,255,.6); line-height:1.75; margin-bottom:28px; }
+    .plan-price-row { display:flex; align-items:baseline; gap:8px; margin-bottom:28px; }
+    .plan-price-big { font-family:var(--display); font-size:2.6rem; font-weight:800; color:#fff; }
+    .plan-price-sub { font-size:.88rem; color:rgba(255,255,255,.45); }
+
+    .plan-cta-btn { display:inline-flex; align-items:center; gap:8px; padding:16px 30px; background:var(--accent); color:#fff; font-family:var(--display); font-weight:800; font-size:1rem; border-radius:999px; transition:opacity .15s, transform .15s; }
+    .plan-cta-btn:hover { opacity:.9; transform:translateY(-2px); }
+    .plan-cta-note { margin-top:12px; font-size:.77rem; color:rgba(255,255,255,.38); }
+
+    .plan-right { position:relative; z-index:1; }
+    .plan-features { display:flex; flex-direction:column; gap:14px; }
+    .plan-feature { display:flex; align-items:flex-start; gap:12px; }
+    .plan-feature-check { width:22px; height:22px; min-width:22px; border-radius:50%; background:rgba(182,255,60,.15); border:1.5px solid rgba(182,255,60,.35); display:flex; align-items:center; justify-content:center; margin-top:1px; }
+    .plan-feature-check svg { width:11px; height:11px; }
+    .plan-feature-body .feat-name { font-family:var(--display); font-size:.9rem; font-weight:700; color:#fff; margin-bottom:2px; }
+    .plan-feature-body .feat-desc { font-size:.8rem; color:rgba(255,255,255,.5); line-height:1.5; }
+
+    /* SOCIAL PROOF STRIP */
+    .proof-strip { max-width:700px; margin:0 auto 80px; padding:0 32px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+    @media(max-width:600px){ .proof-strip{padding:0 16px;} }
+    .proof-pill { display:flex; align-items:center; gap:6px; background:var(--card); border:1px solid var(--line); border-radius:999px; padding:8px 16px; font-size:.82rem; color:var(--ink-soft); }
+    .proof-pill strong { color:var(--ink); font-weight:700; }
+
+    /* FOOTER */
+    .footer { border-top:1px solid var(--line); padding:24px 32px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+    .footer-copy { font-size:.8rem; color:var(--muted); }
+    .footer-links { display:flex; gap:20px; }
+    .footer-links a { font-size:.8rem; color:var(--muted); transition:color .15s; }
+    .footer-links a:hover { color:var(--ink); }
+
+    /* Fade-up entrance */
+    @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+    .fade-up { opacity:0; animation:fadeUp .6s ease forwards; }
+    .delay-1 { animation-delay:.15s; }
+    .delay-2 { animation-delay:.3s; }
+    .delay-3 { animation-delay:.5s; }
+    .delay-4 { animation-delay:.7s; }
+    .delay-5 { animation-delay:.9s; }
+  </style>
+</head>
+<body>
+
+<canvas id="confettiCanvas"></canvas>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <div class="nav-logo-mark">K</div>
+    <span class="nav-logo-text">KetoJourney</span>
+  </a>
+  <a href="/start" class="nav-cta">Start Free Trial →</a>
+</nav>
+
+<!-- ── SUCCESS HERO ── -->
+<section class="success-hero">
+  <div class="check-ring fade-up">
+    <svg viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle class="check-circle" cx="44" cy="44" r="40"/>
+      <path class="check-mark" d="M27 45l12 12 22-24"/>
+    </svg>
+  </div>
+  <p class="success-eyebrow fade-up delay-1">Your copy is on its way</p>
+  <h1 class="success-title fade-up delay-1">Your Free Book<br/>Is <em>Heading to Your Inbox!</em></h1>
+  <p class="success-sub fade-up delay-2">We just sent 80+ keto recipes straight to your email. It should arrive within the next couple of minutes.</p>
+</section>
+
+<!-- ── SPAM GUIDE ── -->
+<div class="spam-card fade-up delay-2">
+  <div class="spam-card-title">
+    <span>📬</span> Make sure you receive it
+  </div>
+  <div class="spam-steps">
+    <div class="spam-step">
+      <div class="spam-step-num">1</div>
+      <div class="spam-step-body">
+        <div class="spam-step-label">Open your inbox now</div>
+        <div class="spam-step-desc">Look for an email from <strong>KetoJourney</strong> with the subject line <strong>"📖 Your free keto recipe book is here!"</strong></div>
+      </div>
+    </div>
+    <div class="spam-step">
+      <div class="spam-step-num">2</div>
+      <div class="spam-step-body">
+        <div class="spam-step-label">Check your spam or promotions folder</div>
+        <div class="spam-step-desc">Email filters sometimes misroute new senders. If you see it in spam, open it — don't worry, it's us!</div>
+      </div>
+    </div>
+    <div class="spam-step">
+      <div class="spam-step-num">3</div>
+      <div class="spam-step-body">
+        <div class="spam-step-label">Mark it as "Not Spam"</div>
+        <div class="spam-step-desc">This one step ensures all future recipes, tips, and meal plans land directly in your inbox — not the junk folder.</div>
+      </div>
+    </div>
+  </div>
+  <div class="spam-tip">
+    <strong>Gmail tip:</strong> Open the email → click the three-dot menu (⋮) → select <strong>"Mark as not spam"</strong> or move it to your Primary tab. Done!
+  </div>
+</div>
+
+<!-- ── DIVIDER ── -->
+<div class="divider fade-up delay-3">
+  <div class="divider-line"></div>
+  <div class="divider-text">While you wait, discover what's next</div>
+  <div class="divider-line"></div>
+</div>
+
+<!-- ── FREE PLAN INVITATION ── -->
+<section class="plan-section">
+  <p class="plan-eyebrow fade-up delay-3">Take your journey further</p>
+  <h2 class="plan-title fade-up delay-3">The Recipes Are Just the<br/><em>Beginning</em></h2>
+  <p class="plan-sub fade-up delay-3">Thousands of people are already using KetoJourney to stay on track, build habits, and hit their goals. Your free book gets you started — the app gets you there.</p>
+
+  <div class="plan-card fade-up delay-4">
+    <div class="plan-left">
+      <div class="plan-badge">🚀 7-Day Free Trial</div>
+      <h3>Your Personal Keto Coaching Plan — Free for a Week</h3>
+      <p>No credit card required. No risk. Just a full-featured keto coaching app to guide you step by step through your first 7 days — and beyond.</p>
+      <div class="plan-price-row">
+        <span class="plan-price-big">Free</span>
+        <span class="plan-price-sub">for 7 days, then from $12/mo</span>
+      </div>
+      <a href="/start" class="plan-cta-btn">
+        Start My Free 7-Day Trial →
+      </a>
+      <p class="plan-cta-note">Cancel anytime. No card needed to start.</p>
+    </div>
+
+    <div class="plan-right">
+      <div class="plan-features">
+        <div class="plan-feature">
+          <div class="plan-feature-check">
+            <svg viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-5" stroke="#B6FF3C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="plan-feature-body">
+            <div class="feat-name">500+ Keto Recipes</div>
+            <div class="feat-desc">Breakfast, lunch, dinner, snacks, desserts — all with full macros and shopping lists.</div>
+          </div>
+        </div>
+        <div class="plan-feature">
+          <div class="plan-feature-check">
+            <svg viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-5" stroke="#B6FF3C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="plan-feature-body">
+            <div class="feat-name">Daily Coaching Plan</div>
+            <div class="feat-desc">Structured day-by-day tasks, check-ins, and habits that actually build results.</div>
+          </div>
+        </div>
+        <div class="plan-feature">
+          <div class="plan-feature-check">
+            <svg viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-5" stroke="#B6FF3C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="plan-feature-body">
+            <div class="feat-name">Smart Food Logging</div>
+            <div class="feat-desc">Log meals in seconds with barcode scanning and AI food photo analysis.</div>
+          </div>
+        </div>
+        <div class="plan-feature">
+          <div class="plan-feature-check">
+            <svg viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-5" stroke="#B6FF3C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="plan-feature-body">
+            <div class="feat-name">Progress Tracking</div>
+            <div class="feat-desc">Weight charts, body measurements, streaks, and milestones to keep you motivated.</div>
+          </div>
+        </div>
+        <div class="plan-feature">
+          <div class="plan-feature-check">
+            <svg viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-5" stroke="#B6FF3C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="plan-feature-body">
+            <div class="feat-name">Personalized Meal Plans</div>
+            <div class="feat-desc">Weekly meal planners, keto calculator, and fasting timer — all in one place.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SOCIAL PROOF ── -->
+<div class="proof-strip fade-up delay-5">
+  <div class="proof-pill">⭐ <strong>4.9/5</strong> average rating</div>
+  <div class="proof-pill">👥 <strong>12,000+</strong> active members</div>
+  <div class="proof-pill">🏆 <strong>No credit card</strong> to start</div>
+  <div class="proof-pill">🔒 <strong>Cancel anytime</strong></div>
+</div>
+
+<footer class="footer">
+  <span class="footer-copy">© {new Date().getFullYear()} KetoJourney. All rights reserved.</span>
+  <div class="footer-links">
+    <a href="/privacy-policy">Privacy</a>
+    <a href="/terms">Terms</a>
+    <a href="/free-book">Back to Free Book</a>
+  </div>
+</footer>
+
+<script is:inline>
+(function () {
+  /* ── Confetti ── */
+  var canvas = document.getElementById('confettiCanvas');
+  var ctx    = canvas.getContext('2d');
+  var W = canvas.width  = window.innerWidth;
+  var H = canvas.height = window.innerHeight;
+  var particles = [];
+  var colors = ['#FF5C7A','#B6FF3C','#FFD700','#60a5fa','#f97316','#a78bfa'];
+
+  for (var i = 0; i < 140; i++) {
+    particles.push({
+      x: Math.random() * W,
+      y: -20 - Math.random() * 160,
+      r: 5 + Math.random() * 7,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rot: Math.random() * 360,
+      vx: (Math.random() - .5) * 2.8,
+      vy: 2.2 + Math.random() * 3.5,
+      vrot: (Math.random() - .5) * 6,
+      shape: Math.random() < .4 ? 'circle' : 'rect',
+      opacity: 1
+    });
+  }
+
+  var frame = 0;
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    frame++;
+    var allDone = true;
+    particles.forEach(function (p) {
+      if (p.y < H + 20) allDone = false;
+      p.x   += p.vx;
+      p.y   += p.vy;
+      p.rot += p.vrot;
+      p.vy  += .04; /* gravity */
+      if (p.y > H * .6) p.opacity = Math.max(0, p.opacity - .012);
+      ctx.save();
+      ctx.globalAlpha = p.opacity;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot * Math.PI / 180);
+      ctx.fillStyle = p.color;
+      if (p.shape === 'circle') {
+        ctx.beginPath(); ctx.arc(0, 0, p.r, 0, Math.PI * 2); ctx.fill();
+      } else {
+        ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r);
+      }
+      ctx.restore();
+    });
+    if (!allDone && frame < 300) requestAnimationFrame(draw);
+    else ctx.clearRect(0, 0, W, H);
+  }
+  /* Slight delay so user sees the animation after page load */
+  setTimeout(draw, 400);
+}());
+</script>
+
+</body>
+</html>
