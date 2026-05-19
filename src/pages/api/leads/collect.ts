@@ -26,14 +26,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
     // Upsert — silently accept already-subscribed emails (no error shown to user)
-    await supabase.from('leads').upsert(
+    const { error: dbError } = await supabase.from('leads').upsert(
       { email: cleanEmail, name: cleanName, source: 'free_book' },
       { onConflict: 'email', ignoreDuplicates: false }
     );
+    if (dbError) console.error('[leads/collect] db upsert:', cleanEmail, dbError.message);
 
-    // Send the free book email
+    // Send the free book email — throws on Resend error so the caller sees it
     const { sendFreeBookEmail } = await import('../../../lib/email');
-    await sendFreeBookEmail(cleanEmail, cleanName || undefined);
+    try {
+      await sendFreeBookEmail(cleanEmail, cleanName || undefined);
+    } catch (emailErr) {
+      console.error('[leads/collect] email send failed:', cleanEmail, emailErr);
+      // Lead is saved; tell the user something went wrong so they know to retry
+      return json({ error: 'Your email was saved but we could not deliver the book right now. Please try again in a moment.' }, 500);
+    }
 
     return json({ success: true });
   } catch (err) {

@@ -5,13 +5,13 @@
 import { Resend } from 'resend';
 
 function getResend() {
-  const key = import.meta.env.RESEND_API_KEY;
+  const key = process.env.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
   if (!key) throw new Error('RESEND_API_KEY not configured');
   return new Resend(key);
 }
 
-const FROM = import.meta.env.EMAIL_FROM || 'Keto Journey <onboarding@resend.dev>';
-const APP_URL = import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun';
+const FROM = process.env.EMAIL_FROM || import.meta.env.EMAIL_FROM || 'Keto Journey <onboarding@resend.dev>';
+const APP_URL = process.env.PUBLIC_APP_URL || import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun';
 
 function unsubHeaders(path: string) {
   const url = `${APP_URL}${path}`;
@@ -574,13 +574,15 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${prehead
   const html = freeBookLayout(content, '7 keto recipes under 5g net carbs — yours free 🥑');
 
   const resend = getResend();
-  return resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from: FROM,
     to,
     subject: '📖 Your free keto recipe book is here!',
     html,
     headers: H_LEAD(),
   });
+  if (error) throw new Error(`Resend sendFreeBookEmail failed: ${error.message}`);
+  return data;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
