@@ -76,56 +76,197 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
     .spam-tip strong { color:var(--ink); }
 
     /* ── DIVIDER ── */
-    .divider { max-width:860px; margin:0 auto 64px; display:flex; align-items:center; gap:16px; padding:0 32px; }
+    .divider { max-width:1000px; margin:0 auto 64px; display:flex; align-items:center; gap:16px; padding:0 32px; }
     @media(max-width:600px){ .divider{ padding:0 16px; } }
     .divider-line { flex:1; height:1px; background:var(--line); }
     .divider-text { font-size:.76rem; font-weight:700; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); white-space:nowrap; }
 
-    /* ── FREE PLAN SECTION ── */
+    /* ── PLAN SECTION ── */
     .plan-section { max-width:1080px; margin:0 auto; padding:0 32px 80px; }
     @media(max-width:600px){ .plan-section{ padding:0 16px 60px; } }
     .plan-eyebrow { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.16em; color:var(--accent); margin-bottom:12px; text-align:center; }
     .plan-title { font-family:var(--display); font-size:clamp(1.8rem,4vw,2.8rem); font-weight:800; color:var(--ink); text-align:center; line-height:1.15; margin-bottom:14px; }
     .plan-title em { font-family:var(--serif); font-style:italic; color:var(--accent); }
-    .plan-sub { font-size:.97rem; color:var(--ink-soft); line-height:1.75; text-align:center; max-width:560px; margin:0 auto 56px; }
+    .plan-sub { font-size:.97rem; color:var(--ink-soft); line-height:1.75; text-align:center; max-width:560px; margin:0 auto 52px; }
 
-    /* ── STORIES GRID ── */
-    .stories-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; margin-bottom:56px; }
-    @media(max-width:900px){ .stories-grid{ grid-template-columns:repeat(2,1fr); gap:16px; } }
-    @media(max-width:480px){ .stories-grid{ grid-template-columns:1fr 1fr; gap:12px; } }
+    /* ─────────────────────────────────────────
+       STORIES CAROUSEL
+    ───────────────────────────────────────── */
+    .carousel-wrap { position:relative; margin-bottom:56px; }
 
-    .story-card { background:var(--card); border:1px solid var(--line); border-radius:22px; overflow:hidden; display:flex; flex-direction:column; transition:transform .25s, box-shadow .25s; }
-    .story-card:hover { transform:translateY(-5px); box-shadow:0 20px 48px rgba(22,17,15,.1); }
+    /* Outer card shell */
+    .carousel-shell {
+      border-radius:28px;
+      overflow:hidden;
+      box-shadow:0 16px 64px rgba(22,17,15,.13);
+      background:var(--card);
+      border:1px solid var(--line);
+      position:relative;
+    }
 
-    /* Portrait image slot — 3:4 ratio, 400×533 px recommended */
-    .story-img-wrap { position:relative; width:100%; aspect-ratio:3/4; overflow:hidden; background:var(--bg-alt); flex-shrink:0; }
-    .story-img { width:100%; height:100%; object-fit:cover; transition:transform .4s ease; }
-    .story-card:hover .story-img { transform:scale(1.04); }
-    /* Gradient overlay at bottom of image */
-    .story-img-overlay { position:absolute; inset:0; background:linear-gradient(to top, rgba(22,17,15,.72) 0%, rgba(22,17,15,.2) 45%, transparent 70%); pointer-events:none; }
-    /* Result badge pinned to bottom-left of image */
-    .story-result-badge { position:absolute; bottom:12px; left:12px; display:inline-flex; align-items:center; gap:5px; padding:5px 11px; background:var(--accent); border-radius:999px; font-family:var(--display); font-size:.76rem; font-weight:800; color:#fff; letter-spacing:.02em; }
-    /* Placeholder shown when image is missing */
-    .story-img-ph { position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px; background:linear-gradient(145deg, var(--bg-alt), var(--line)); }
-    .story-img-ph-icon { font-size:2.6rem; }
-    .story-img-ph-label { font-size:.72rem; font-weight:600; color:var(--muted); text-align:center; padding:0 12px; }
+    /* Slides container — all slides stacked, only active visible */
+    .carousel-slides { position:relative; width:100%; }
 
-    /* Story body */
-    .story-body { padding:18px 18px 20px; flex:1; display:flex; flex-direction:column; gap:8px; }
-    .story-name-row { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
-    .story-name { font-family:var(--display); font-size:1rem; font-weight:800; color:var(--ink); }
-    .story-age  { font-size:.76rem; font-weight:600; color:var(--muted); }
-    .story-plan-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; background:rgba(255,92,122,.07); border:1px solid rgba(255,92,122,.18); border-radius:999px; font-size:.7rem; font-weight:700; color:var(--accent); width:fit-content; }
-    .story-quote { font-size:.82rem; color:var(--ink-soft); line-height:1.65; flex:1; font-style:italic; }
-    .story-quote::before { content:'"'; color:var(--accent); font-size:1.1rem; font-style:normal; }
-    .story-quote::after  { content:'"'; color:var(--accent); font-size:1.1rem; font-style:normal; }
-    .story-stat { display:flex; align-items:center; gap:7px; padding-top:10px; border-top:1px solid var(--line); }
-    .story-stat-val { font-family:var(--display); font-size:1.05rem; font-weight:800; color:var(--green); }
-    .story-stat-label { font-size:.74rem; color:var(--muted); line-height:1.3; }
-    @media(max-width:480px){
-      .story-body{ padding:14px 14px 16px; gap:6px; }
-      .story-name { font-size:.9rem; }
-      .story-quote { font-size:.78rem; }
+    .carousel-slide {
+      display:grid;
+      grid-template-columns:420px 1fr;
+      min-height:520px;
+      position:absolute;
+      inset:0;
+      opacity:0;
+      transform:translateX(40px);
+      transition:opacity .6s ease, transform .6s ease;
+      pointer-events:none;
+      z-index:0;
+    }
+    /* First slide sets the natural height */
+    .carousel-slide:first-child { position:relative; }
+    .carousel-slide.active {
+      opacity:1;
+      transform:translateX(0);
+      pointer-events:auto;
+      z-index:1;
+    }
+    .carousel-slide.exit-left {
+      opacity:0;
+      transform:translateX(-40px);
+      z-index:0;
+    }
+    @media(max-width:860px){ .carousel-slide{ grid-template-columns:320px 1fr; } }
+    @media(max-width:680px){
+      .carousel-slide{ grid-template-columns:1fr; min-height:auto; }
+      .carousel-slide:first-child { position:relative; }
+    }
+
+    /* ── Image column ── */
+    .slide-img-col {
+      position:relative;
+      overflow:hidden;
+      background:var(--bg-alt);
+      /* IMAGE SLOT: portrait photo 560×700 px minimum (displayed up to ~420 px wide, full card height) */
+    }
+    .slide-img {
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      object-position:top center;
+      display:block;
+      transition:transform 8s ease;
+    }
+    .carousel-slide.active .slide-img { transform:scale(1.04); }
+    /* Gradient right-edge fade into story content */
+    .slide-img-col::after {
+      content:'';
+      position:absolute;
+      inset:0;
+      background:linear-gradient(to right, transparent 55%, var(--card) 100%),
+                 linear-gradient(to top, rgba(22,17,15,.55) 0%, transparent 40%);
+      pointer-events:none;
+    }
+    /* Placeholder when image missing */
+    .slide-img-ph {
+      position:absolute; inset:0; display:none;
+      flex-direction:column; align-items:center; justify-content:center; gap:12px;
+      background:linear-gradient(145deg,#EEE8E0,#DDD5C8);
+    }
+    .slide-img-ph-icon  { font-size:3.5rem; }
+    .slide-img-ph-label { font-size:.76rem; font-weight:600; color:var(--muted); text-align:center; padding:0 16px; line-height:1.5; }
+    /* Result badge bottom-left of image */
+    .slide-result-badge {
+      position:absolute; bottom:20px; left:20px; z-index:2;
+      display:inline-flex; align-items:center; gap:6px;
+      padding:7px 16px; background:var(--accent); border-radius:999px;
+      font-family:var(--display); font-size:.86rem; font-weight:800; color:#fff;
+      box-shadow:0 4px 16px rgba(255,92,122,.4);
+    }
+    @media(max-width:680px){
+      .slide-img-col { aspect-ratio:4/3; height:auto; }
+      .slide-img-col::after { background:linear-gradient(to top, rgba(22,17,15,.55) 0%, transparent 50%); }
+    }
+
+    /* ── Story column ── */
+    .slide-story-col {
+      padding:52px 48px 48px 44px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      gap:20px;
+    }
+    @media(max-width:860px){ .slide-story-col{ padding:40px 32px 36px 28px; gap:16px; } }
+    @media(max-width:680px){ .slide-story-col{ padding:28px 24px 32px; gap:14px; } }
+
+    .slide-plan-badge {
+      display:inline-flex; align-items:center; gap:5px;
+      padding:5px 13px; background:rgba(255,92,122,.07);
+      border:1px solid rgba(255,92,122,.2); border-radius:999px;
+      font-size:.72rem; font-weight:700; color:var(--accent); width:fit-content;
+    }
+    .slide-name-row { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+    .slide-name { font-family:var(--display); font-size:clamp(1.5rem,3vw,2rem); font-weight:800; color:var(--ink); line-height:1.1; }
+    .slide-age  { font-size:.9rem; font-weight:600; color:var(--muted); }
+
+    .slide-stars { color:var(--accent); font-size:.9rem; letter-spacing:2px; }
+
+    .slide-quote {
+      font-family:var(--serif); font-style:italic;
+      font-size:clamp(1rem,1.8vw,1.2rem); color:var(--ink-soft);
+      line-height:1.75; position:relative; padding-left:20px;
+    }
+    .slide-quote::before {
+      content:'"';
+      position:absolute; left:0; top:-4px;
+      font-family:var(--serif); font-size:2.4rem; color:var(--accent);
+      line-height:1; font-style:normal;
+    }
+
+    .slide-stats { display:flex; gap:28px; flex-wrap:wrap; }
+    .slide-stat { display:flex; flex-direction:column; gap:3px; }
+    .slide-stat-val { font-family:var(--display); font-size:1.5rem; font-weight:800; color:var(--green); line-height:1; }
+    .slide-stat-label { font-size:.75rem; color:var(--muted); line-height:1.4; }
+
+    .slide-divider { width:48px; height:3px; background:var(--accent); border-radius:99px; }
+
+    /* ── Progress bar (time indicator) ── */
+    .carousel-progress {
+      height:3px;
+      background:var(--line);
+      border-radius:0 0 28px 28px;
+      overflow:hidden;
+    }
+    .carousel-progress-bar {
+      height:100%;
+      background:linear-gradient(to right, var(--accent), #ff8fa3);
+      width:0%;
+      transition:width linear;
+    }
+
+    /* ── Controls ── */
+    .carousel-controls {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:16px;
+      margin-top:20px;
+    }
+    .carousel-btn {
+      width:40px; height:40px; border-radius:50%;
+      border:1.5px solid var(--line);
+      background:var(--card);
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; transition:all .18s;
+      color:var(--ink-soft);
+    }
+    .carousel-btn:hover { border-color:var(--accent); color:var(--accent); background:rgba(255,92,122,.05); transform:scale(1.08); }
+    .carousel-btn svg { width:16px; height:16px; }
+
+    .carousel-dots { display:flex; align-items:center; gap:8px; }
+    .carousel-dot {
+      width:8px; height:8px; border-radius:50%;
+      background:var(--line); border:none; cursor:pointer;
+      transition:all .25s; padding:0;
+    }
+    .carousel-dot.active {
+      background:var(--accent); width:24px; border-radius:4px;
     }
 
     /* ── PLAN CARD (dark CTA) ── */
@@ -152,7 +293,7 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
     .plan-feature-body .feat-name { font-family:var(--display); font-size:.9rem; font-weight:700; color:#fff; margin-bottom:2px; }
     .plan-feature-body .feat-desc { font-size:.8rem; color:rgba(255,255,255,.5); line-height:1.5; }
 
-    /* ── SOCIAL PROOF STRIP ── */
+    /* ── SOCIAL PROOF ── */
     .proof-strip { max-width:700px; margin:0 auto 80px; padding:0 32px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
     @media(max-width:600px){ .proof-strip{ padding:0 16px; } }
     .proof-pill { display:flex; align-items:center; gap:6px; background:var(--card); border:1px solid var(--line); border-radius:999px; padding:8px 16px; font-size:.82rem; color:var(--ink-soft); }
@@ -191,9 +332,9 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
 <!-- ── SUCCESS HERO ── -->
 <section class="success-hero">
   <div class="check-ring fade-up">
-    <svg viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 88 88" fill="none">
       <circle class="check-circle" cx="44" cy="44" r="40"/>
-      <path  class="check-mark"   d="M27 45l12 12 22-24"/>
+      <path   class="check-mark"   d="M27 45l12 12 22-24"/>
     </svg>
   </div>
   <p class="success-eyebrow fade-up delay-1">Your copy is on its way</p>
@@ -203,11 +344,8 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
 
 <!-- ── SPAM GUIDE CARD ── -->
 <div class="spam-card fade-up delay-2">
-  <div class="spam-card-title">
-    <span>📬</span> Make sure you receive it
-  </div>
+  <div class="spam-card-title"><span>📬</span> Make sure you receive it</div>
   <div class="spam-steps">
-
     <div class="spam-step">
       <div class="spam-step-num">1</div>
       <div class="spam-step-body">
@@ -215,7 +353,6 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
         <div class="spam-step-desc">Look for an email from <strong>KetoJourney</strong> with the subject line <strong>"📖 Your free keto recipe book is here!"</strong></div>
       </div>
     </div>
-
     <div class="spam-step">
       <div class="spam-step-num">2</div>
       <div class="spam-step-body">
@@ -228,7 +365,6 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
         </div>
       </div>
     </div>
-
     <div class="spam-step">
       <div class="spam-step-num">3</div>
       <div class="spam-step-body">
@@ -236,7 +372,6 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
         <div class="spam-step-desc">This one step ensures all future recipes, tips, and meal plans land where you'll see them — not buried in a tab.</div>
       </div>
     </div>
-
   </div>
   <div class="spam-tip">
     <strong>Gmail tip:</strong> If the email landed in <em>Promotions</em> — drag it to your <strong>Primary</strong> tab and click <strong>"Yes"</strong> when Gmail asks if you'd like to do this for future messages. If it's in <em>Spam</em>, open it → click <strong>"Not Spam"</strong>. Done!
@@ -256,139 +391,211 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
   <h2 class="plan-title fade-up delay-3">The Recipes Are Just the<br/><em>Beginning</em></h2>
   <p class="plan-sub fade-up delay-3">Thousands of people are already using KetoJourney to stay on track, build habits, and hit their goals. Your free book gets you started — the app gets you there.</p>
 
-  <!-- ── SUCCESS STORIES GRID ── -->
-  <div class="stories-grid fade-up delay-4">
+  <!-- ──────────────────────────────────────
+       STORIES CAROUSEL
+       IMAGE SLOTS (portrait, min 560×700 px):
+         /public/images/story-sarah.jpg
+         /public/images/story-james.jpg
+         /public/images/story-maria.jpg
+         /public/images/story-david.jpg
+  ─────────────────────────────────────── -->
+  <div class="carousel-wrap fade-up delay-4">
+    <div class="carousel-shell" id="carouselShell">
+      <div class="carousel-slides" id="carouselSlides">
 
-    <!-- Story 1 — Sarah -->
-    <!-- IMAGE SLOT: /public/images/story-sarah.jpg — portrait photo, 400×533 px (3:4), woman smiling, after-transformation vibe -->
-    <div class="story-card">
-      <div class="story-img-wrap">
-        <img
-          src="/images/story-sarah.jpg"
-          alt="Sarah M. — lost 22 lbs in 8 weeks"
-          class="story-img"
-          loading="lazy"
-          onerror="this.style.display='none'; this.closest('.story-img-wrap').querySelector('.story-img-ph').style.display='flex';"
-        />
-        <div class="story-img-ph">
-          <div class="story-img-ph-icon">👩</div>
-          <div class="story-img-ph-label">Add photo:<br/>story-sarah.jpg</div>
+        <!-- SLIDE 1 — Sarah -->
+        <div class="carousel-slide active" data-index="0">
+          <div class="slide-img-col">
+            <img
+              src="/images/story-sarah.jpg"
+              alt="Sarah M. — Lost 22 lbs in 8 weeks"
+              class="slide-img"
+              loading="eager"
+              onerror="this.style.display='none';this.closest('.slide-img-col').querySelector('.slide-img-ph').style.display='flex';"
+            />
+            <div class="slide-img-ph">
+              <div class="slide-img-ph-icon">👩</div>
+              <div class="slide-img-ph-label">Add photo:<br/>story-sarah.jpg<br/>(min 560×700 px)</div>
+            </div>
+            <div class="slide-result-badge">−22 lbs</div>
+          </div>
+          <div class="slide-story-col">
+            <span class="slide-plan-badge">✦ 30-Day Basic Plan</span>
+            <div class="slide-name-row">
+              <span class="slide-name">Sarah M.</span>
+              <span class="slide-age">34 years old</span>
+            </div>
+            <div class="slide-stars">★★★★★</div>
+            <div class="slide-divider"></div>
+            <p class="slide-quote">I started keto completely lost. The daily plan told me exactly what to eat and when — I just had to follow it. Week 4, I cried stepping on the scale. That number changed my life.</p>
+            <div class="slide-stats">
+              <div class="slide-stat">
+                <span class="slide-stat-val">−22 lbs</span>
+                <span class="slide-stat-label">total lost</span>
+              </div>
+              <div class="slide-stat">
+                <span class="slide-stat-val">8 weeks</span>
+                <span class="slide-stat-label">to reach goal</span>
+              </div>
+              <div class="slide-stat">
+                <span class="slide-stat-val">56 days</span>
+                <span class="slide-stat-label">perfect streak</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="story-img-overlay"></div>
-        <div class="story-result-badge">−22 lbs</div>
+
+        <!-- SLIDE 2 — James -->
+        <div class="carousel-slide" data-index="1">
+          <div class="slide-img-col">
+            <img
+              src="/images/story-james.jpg"
+              alt="James T. — Lost 35 lbs in 12 weeks"
+              class="slide-img"
+              loading="lazy"
+              onerror="this.style.display='none';this.closest('.slide-img-col').querySelector('.slide-img-ph').style.display='flex';"
+            />
+            <div class="slide-img-ph">
+              <div class="slide-img-ph-icon">👨</div>
+              <div class="slide-img-ph-label">Add photo:<br/>story-james.jpg<br/>(min 560×700 px)</div>
+            </div>
+            <div class="slide-result-badge">−35 lbs</div>
+          </div>
+          <div class="slide-story-col">
+            <span class="slide-plan-badge">✦ 90-Day Pro Plan</span>
+            <div class="slide-name-row">
+              <span class="slide-name">James T.</span>
+              <span class="slide-age">41 years old</span>
+            </div>
+            <div class="slide-stars">★★★★★</div>
+            <div class="slide-divider"></div>
+            <p class="slide-quote">I was skeptical — I've tried every diet out there. The food log and AI coach made the real difference. I finally understood what my body needed instead of just guessing and failing.</p>
+            <div class="slide-stats">
+              <div class="slide-stat">
+                <span class="slide-stat-val">−35 lbs</span>
+                <span class="slide-stat-label">total lost</span>
+              </div>
+              <div class="slide-stat">
+                <span class="slide-stat-val">12 weeks</span>
+                <span class="slide-stat-label">consistent</span>
+              </div>
+              <div class="slide-stat">
+                <span class="slide-stat-val">0</span>
+                <span class="slide-stat-label">cheat days</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SLIDE 3 — Maria -->
+        <div class="carousel-slide" data-index="2">
+          <div class="slide-img-col">
+            <img
+              src="/images/story-maria.jpg"
+              alt="Maria L. — Lost 18 lbs in 6 weeks"
+              class="slide-img"
+              loading="lazy"
+              onerror="this.style.display='none';this.closest('.slide-img-col').querySelector('.slide-img-ph').style.display='flex';"
+            />
+            <div class="slide-img-ph">
+              <div class="slide-img-ph-icon">👩</div>
+              <div class="slide-img-ph-label">Add photo:<br/>story-maria.jpg<br/>(min 560×700 px)</div>
+            </div>
+            <div class="slide-result-badge">−18 lbs</div>
+          </div>
+          <div class="slide-story-col">
+            <span class="slide-plan-badge">✦ 30-Day Basic Plan</span>
+            <div class="slide-name-row">
+              <span class="slide-name">Maria L.</span>
+              <span class="slide-age">28 years old</span>
+            </div>
+            <div class="slide-stars">★★★★★</div>
+            <div class="slide-divider"></div>
+            <p class="slide-quote">As a busy mum I thought keto was impossible. The meal planner and shopping lists changed everything — I batch-cooked Sundays and had meals ready all week. Now I'm back to my pre-baby weight.</p>
+            <div class="slide-stats">
+              <div class="slide-stat">
+                <span class="slide-stat-val">−18 lbs</span>
+                <span class="slide-stat-label">total lost</span>
+              </div>
+              <div class="slide-stat">
+                <span class="slide-stat-val">6 weeks</span>
+                <span class="slide-stat-label">to goal weight</span>
+              </div>
+              <div class="slide-stat">
+                <span class="slide-stat-val">Pre-baby</span>
+                <span class="slide-stat-label">weight achieved</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SLIDE 4 — David -->
+        <div class="carousel-slide" data-index="3">
+          <div class="slide-img-col">
+            <img
+              src="/images/story-david.jpg"
+              alt="David K. — Lost 41 lbs in 16 weeks"
+              class="slide-img"
+              loading="lazy"
+              onerror="this.style.display='none';this.closest('.slide-img-col').querySelector('.slide-img-ph').style.display='flex';"
+            />
+            <div class="slide-img-ph">
+              <div class="slide-img-ph-icon">👨</div>
+              <div class="slide-img-ph-label">Add photo:<br/>story-david.jpg<br/>(min 560×700 px)</div>
+            </div>
+            <div class="slide-result-badge">−41 lbs</div>
+          </div>
+          <div class="slide-story-col">
+            <span class="slide-plan-badge">✦ 360-Day Elite Plan</span>
+            <div class="slide-name-row">
+              <span class="slide-name">David K.</span>
+              <span class="slide-age">52 years old</span>
+            </div>
+            <div class="slide-stars">★★★★★</div>
+            <div class="slide-divider"></div>
+            <p class="slide-quote">I'd been overweight for 20 years. My doctor said my results were remarkable. The streak system kept me going on the hard days — I never wanted to break the chain. Now I'm off blood pressure meds.</p>
+            <div class="slide-stats">
+              <div class="slide-stat">
+                <span class="slide-stat-val">−41 lbs</span>
+                <span class="slide-stat-label">total lost</span>
+              </div>
+              <div class="slide-stat">
+                <span class="slide-stat-val">16 weeks</span>
+                <span class="slide-stat-label">to transform</span>
+              </div>
+              <div class="slide-stat">
+                <span class="slide-stat-val">Med-free</span>
+                <span class="slide-stat-label">blood pressure</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /carousel-slides -->
+
+      <!-- Progress bar -->
+      <div class="carousel-progress">
+        <div class="carousel-progress-bar" id="progressBar"></div>
       </div>
-      <div class="story-body">
-        <div class="story-name-row">
-          <span class="story-name">Sarah M.</span>
-          <span class="story-age">34 years old</span>
-        </div>
-        <span class="story-plan-badge">30-Day Basic Plan</span>
-        <p class="story-quote">I started keto completely lost. The daily plan told me exactly what to eat and when — I just had to follow it. Week 4 I cried stepping on the scale.</p>
-        <div class="story-stat">
-          <span class="story-stat-val">8 weeks</span>
-          <span class="story-stat-label">to reach her<br/>goal weight</span>
-        </div>
+    </div><!-- /carousel-shell -->
+
+    <!-- Controls below the card -->
+    <div class="carousel-controls">
+      <button class="carousel-btn" id="prevBtn" aria-label="Previous story">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 3L6 8l4 5"/></svg>
+      </button>
+      <div class="carousel-dots" id="carouselDots">
+        <button class="carousel-dot active" data-dot="0" aria-label="Story 1"></button>
+        <button class="carousel-dot"        data-dot="1" aria-label="Story 2"></button>
+        <button class="carousel-dot"        data-dot="2" aria-label="Story 3"></button>
+        <button class="carousel-dot"        data-dot="3" aria-label="Story 4"></button>
       </div>
+      <button class="carousel-btn" id="nextBtn" aria-label="Next story">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3l4 5-4 5"/></svg>
+      </button>
     </div>
-
-    <!-- Story 2 — James -->
-    <!-- IMAGE SLOT: /public/images/story-james.jpg — portrait photo, 400×533 px (3:4), man, confident look, progress transformation -->
-    <div class="story-card">
-      <div class="story-img-wrap">
-        <img
-          src="/images/story-james.jpg"
-          alt="James T. — lost 35 lbs in 12 weeks"
-          class="story-img"
-          loading="lazy"
-          onerror="this.style.display='none'; this.closest('.story-img-wrap').querySelector('.story-img-ph').style.display='flex';"
-        />
-        <div class="story-img-ph">
-          <div class="story-img-ph-icon">👨</div>
-          <div class="story-img-ph-label">Add photo:<br/>story-james.jpg</div>
-        </div>
-        <div class="story-img-overlay"></div>
-        <div class="story-result-badge">−35 lbs</div>
-      </div>
-      <div class="story-body">
-        <div class="story-name-row">
-          <span class="story-name">James T.</span>
-          <span class="story-age">41 years old</span>
-        </div>
-        <span class="story-plan-badge">90-Day Pro Plan</span>
-        <p class="story-quote">I was skeptical — I've tried every diet. The food log and AI coach made the difference. I finally understood what my body needed instead of just guessing.</p>
-        <div class="story-stat">
-          <span class="story-stat-val">12 weeks</span>
-          <span class="story-stat-label">consistent streak,<br/>zero cheat days</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Story 3 — Maria -->
-    <!-- IMAGE SLOT: /public/images/story-maria.jpg — portrait photo, 400×533 px (3:4), woman, warm smile, kitchen or outdoor setting -->
-    <div class="story-card">
-      <div class="story-img-wrap">
-        <img
-          src="/images/story-maria.jpg"
-          alt="Maria L. — lost 18 lbs in 6 weeks"
-          class="story-img"
-          loading="lazy"
-          onerror="this.style.display='none'; this.closest('.story-img-wrap').querySelector('.story-img-ph').style.display='flex';"
-        />
-        <div class="story-img-ph">
-          <div class="story-img-ph-icon">👩</div>
-          <div class="story-img-ph-label">Add photo:<br/>story-maria.jpg</div>
-        </div>
-        <div class="story-img-overlay"></div>
-        <div class="story-result-badge">−18 lbs</div>
-      </div>
-      <div class="story-body">
-        <div class="story-name-row">
-          <span class="story-name">Maria L.</span>
-          <span class="story-age">28 years old</span>
-        </div>
-        <span class="story-plan-badge">30-Day Basic Plan</span>
-        <p class="story-quote">As a busy mum I thought keto was impossible. The meal planner and shopping lists changed everything — I batch-cooked Sundays and had meals ready all week.</p>
-        <div class="story-stat">
-          <span class="story-stat-val">6 weeks</span>
-          <span class="story-stat-label">back to her<br/>pre-baby weight</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Story 4 — David -->
-    <!-- IMAGE SLOT: /public/images/story-david.jpg — portrait photo, 400×533 px (3:4), older man, confident, healthy look -->
-    <div class="story-card">
-      <div class="story-img-wrap">
-        <img
-          src="/images/story-david.jpg"
-          alt="David K. — lost 41 lbs in 16 weeks"
-          class="story-img"
-          loading="lazy"
-          onerror="this.style.display='none'; this.closest('.story-img-wrap').querySelector('.story-img-ph').style.display='flex';"
-        />
-        <div class="story-img-ph">
-          <div class="story-img-ph-icon">👨</div>
-          <div class="story-img-ph-label">Add photo:<br/>story-david.jpg</div>
-        </div>
-        <div class="story-img-overlay"></div>
-        <div class="story-result-badge">−41 lbs</div>
-      </div>
-      <div class="story-body">
-        <div class="story-name-row">
-          <span class="story-name">David K.</span>
-          <span class="story-age">52 years old</span>
-        </div>
-        <span class="story-plan-badge">360-Day Elite Plan</span>
-        <p class="story-quote">I'd been overweight for 20 years. My doctor said my results were remarkable. The streak system kept me going on the hard days — I never wanted to break the chain.</p>
-        <div class="story-stat">
-          <span class="story-stat-val">16 weeks</span>
-          <span class="story-stat-label">off blood pressure<br/>medication</span>
-        </div>
-      </div>
-    </div>
-
   </div>
-  <!-- END STORIES GRID -->
+  <!-- END CAROUSEL -->
 
   <!-- ── COACHING PLAN CARD ── -->
   <div class="plan-card fade-up delay-5">
@@ -403,7 +610,6 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
       <a href="/start" class="plan-cta-btn">Start My Free 7-Day Trial →</a>
       <p class="plan-cta-note">Cancel anytime. No card needed to start.</p>
     </div>
-
     <div class="plan-right">
       <div class="plan-features">
         <div class="plan-feature">
@@ -475,6 +681,7 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
 
 <script is:inline>
 (function () {
+
   /* ── Confetti ── */
   var canvas = document.getElementById('confettiCanvas');
   var ctx    = canvas.getContext('2d');
@@ -485,43 +692,129 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
   var particles = [];
   for (var i = 0; i < 150; i++) {
     particles.push({
-      x: Math.random() * W,
-      y: -20 - Math.random() * 180,
+      x: Math.random() * W, y: -20 - Math.random() * 180,
       r: 5 + Math.random() * 7,
       color: colors[Math.floor(Math.random() * colors.length)],
-      rot: Math.random() * 360,
-      vx: (Math.random() - .5) * 2.8,
-      vy: 2.2 + Math.random() * 3.5,
-      vrot: (Math.random() - .5) * 6,
-      shape: Math.random() < .4 ? 'circle' : 'rect',
-      opacity: 1
+      rot: Math.random() * 360, vx: (Math.random() - .5) * 2.8,
+      vy: 2.2 + Math.random() * 3.5, vrot: (Math.random() - .5) * 6,
+      shape: Math.random() < .4 ? 'circle' : 'rect', opacity: 1
     });
   }
-  var frame = 0;
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-    frame++;
-    var allDone = true;
+  var cf = 0;
+  function drawConfetti() {
+    ctx.clearRect(0, 0, W, H); cf++;
+    var done = true;
     particles.forEach(function(p) {
-      if (p.y < H + 20) allDone = false;
+      if (p.y < H + 20) done = false;
       p.x += p.vx; p.y += p.vy; p.rot += p.vrot; p.vy += .04;
       if (p.y > H * .6) p.opacity = Math.max(0, p.opacity - .012);
-      ctx.save();
-      ctx.globalAlpha = p.opacity;
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.rot * Math.PI / 180);
+      ctx.save(); ctx.globalAlpha = p.opacity;
+      ctx.translate(p.x, p.y); ctx.rotate(p.rot * Math.PI / 180);
       ctx.fillStyle = p.color;
-      if (p.shape === 'circle') {
-        ctx.beginPath(); ctx.arc(0, 0, p.r, 0, Math.PI * 2); ctx.fill();
-      } else {
-        ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r);
-      }
+      if (p.shape === 'circle') { ctx.beginPath(); ctx.arc(0,0,p.r,0,Math.PI*2); ctx.fill(); }
+      else { ctx.fillRect(-p.r, -p.r/2, p.r*2, p.r); }
       ctx.restore();
     });
-    if (!allDone && frame < 320) requestAnimationFrame(draw);
+    if (!done && cf < 320) requestAnimationFrame(drawConfetti);
     else ctx.clearRect(0, 0, W, H);
   }
-  setTimeout(draw, 400);
+  setTimeout(drawConfetti, 400);
+
+  /* ── Carousel ── */
+  var INTERVAL = 4000;
+  var slides   = document.querySelectorAll('.carousel-slide');
+  var dots     = document.querySelectorAll('.carousel-dot');
+  var bar      = document.getElementById('progressBar');
+  var shell    = document.getElementById('carouselShell');
+  var current  = 0;
+  var total    = slides.length;
+  var timer    = null;
+  var barTimer = null;
+
+  function goTo(idx, dir) {
+    var prev = current;
+    current  = (idx + total) % total;
+    if (prev === current) return;
+
+    /* Animate exit */
+    slides[prev].classList.remove('active');
+    slides[prev].classList.add('exit-left');
+
+    /* Animate enter — reset position first, then set active */
+    slides[current].style.transform = dir === 'prev' ? 'translateX(-40px)' : 'translateX(40px)';
+    slides[current].style.opacity   = '0';
+    slides[current].offsetHeight;   /* force reflow */
+    slides[current].style.transform = '';
+    slides[current].style.opacity   = '';
+    slides[current].classList.add('active');
+
+    /* Clean up exit class after transition */
+    var exitEl = slides[prev];
+    setTimeout(function() { exitEl.classList.remove('exit-left'); }, 650);
+
+    /* Update dots */
+    dots.forEach(function(d, i) { d.classList.toggle('active', i === current); });
+
+    /* Restart progress bar */
+    restartBar();
+  }
+
+  function next() { goTo(current + 1, 'next'); }
+  function prev() { goTo(current - 1, 'prev'); }
+
+  function startAuto() {
+    clearInterval(timer);
+    timer = setInterval(next, INTERVAL);
+  }
+  function stopAuto() {
+    clearInterval(timer);
+    clearTimeout(barTimer);
+  }
+
+  function restartBar() {
+    if (!bar) return;
+    bar.style.transition = 'none';
+    bar.style.width      = '0%';
+    bar.offsetHeight;
+    bar.style.transition = 'width ' + INTERVAL + 'ms linear';
+    bar.style.width      = '100%';
+  }
+
+  /* Init */
+  restartBar();
+  startAuto();
+
+  /* Pause on hover */
+  if (shell) {
+    shell.addEventListener('mouseenter', function() { stopAuto(); bar.style.transition = 'none'; });
+    shell.addEventListener('mouseleave', function() { restartBar(); startAuto(); });
+  }
+
+  /* Buttons */
+  document.getElementById('nextBtn').addEventListener('click', function() { stopAuto(); next(); startAuto(); });
+  document.getElementById('prevBtn').addEventListener('click', function() { stopAuto(); prev(); startAuto(); });
+
+  /* Dot nav */
+  dots.forEach(function(dot) {
+    dot.addEventListener('click', function() {
+      var idx = parseInt(dot.getAttribute('data-dot'), 10);
+      stopAuto(); goTo(idx, idx > current ? 'next' : 'prev'); startAuto();
+    });
+  });
+
+  /* Touch swipe */
+  var touchX = 0;
+  if (shell) {
+    shell.addEventListener('touchstart', function(e) { touchX = e.touches[0].clientX; }, { passive:true });
+    shell.addEventListener('touchend', function(e) {
+      var dx = e.changedTouches[0].clientX - touchX;
+      if (Math.abs(dx) < 40) return;
+      stopAuto();
+      if (dx < 0) next(); else prev();
+      startAuto();
+    });
+  }
+
 }());
 </script>
 
