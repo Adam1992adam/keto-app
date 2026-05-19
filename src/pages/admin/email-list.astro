@@ -122,6 +122,21 @@ const allJson = JSON.stringify(all);
 
     .count-info{font-size:.8rem;color:var(--soft);margin-bottom:.5rem;}
     @media(max-width:700px){.search-input{width:100%;}.controls{flex-direction:column;align-items:stretch;}.export-btn{margin-left:0;}}
+
+    /* Delete confirmation inline */
+    .del-confirm{display:none;gap:.3rem;align-items:center;}
+    .del-confirm.open{display:flex;}
+    .del-yes{padding:.3rem .6rem;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);color:#ef9494;}
+    .del-yes:hover{background:rgba(239,68,68,.35);}
+    .del-no{padding:.3rem .6rem;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;background:var(--muted);border:1px solid var(--border);color:var(--soft);}
+    .del-no:hover{background:var(--card2);color:var(--text);}
+    .del-btn{padding:.3rem .7rem;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#ef9494;}
+    .del-btn:hover{background:rgba(239,68,68,.22);}
+
+    /* Toast */
+    .el-toast{position:fixed;bottom:1.5rem;right:1.5rem;padding:.8rem 1.2rem;border-radius:10px;font-size:.85rem;font-weight:600;z-index:999;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none;background:var(--card);border:1px solid var(--border2);color:var(--text);}
+    .el-toast.show{transform:translateY(0);opacity:1;}
+    .el-toast.err{border-color:rgba(239,68,68,.4);color:#ef9494;}
   </style>
 </head>
 <body>
@@ -211,13 +226,13 @@ const allJson = JSON.stringify(all);
             </td>
             <td style="font-size:.78rem;color:var(--soft);">{row.info}</td>
             <td class="date-cell">{new Date(row.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</td>
-            <td>
-              <button
-                onclick={`deleteContact('${row.id}','${row.source}','${row.email.replace(/'/g, "\\'")}')`}
-                style="padding:.3rem .7rem;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#ef9494;transition:background .15s;"
-                onmouseover="this.style.background='rgba(239,68,68,.2)'"
-                onmouseout="this.style.background='rgba(239,68,68,.1)'"
-              >Delete</button>
+            <td style="white-space:nowrap;">
+              <button class="del-btn" data-del-id={row.id} data-del-source={row.source} data-del-email={row.email}>Delete</button>
+              <span class="del-confirm" id={`dc-${row.id}`}>
+                <span style="font-size:.72rem;color:var(--soft);">Sure?</span>
+                <button class="del-yes" data-confirm-id={row.id} data-confirm-source={row.source}>Yes</button>
+                <button class="del-no" data-cancel-id={row.id}>No</button>
+              </span>
             </td>
           </tr>
         ))}
@@ -228,46 +243,43 @@ const allJson = JSON.stringify(all);
 
 </div>
 
+<div class="el-toast" id="elToast"></div>
+
 <script is:inline define:vars={{ allJson }}>
 var ALL = JSON.parse(allJson);
 var currentFilter = 'all';
-var currentSearch = '';
 
-function setFilter(f, btn) {
-  currentFilter = f;
-  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
-  btn.classList.add('active');
-  filterTable();
+/* ── Toast ── */
+function showToast(msg, isErr) {
+  var t = document.getElementById('elToast');
+  t.textContent = msg;
+  t.className = 'el-toast' + (isErr ? ' err' : '') + ' show';
+  setTimeout(function() { t.classList.remove('show'); }, 3500);
 }
 
-function filterTable() {
-  currentSearch = document.getElementById('searchInput').value.toLowerCase().trim();
-  var rows = document.querySelectorAll('#tableBody tr');
+/* ── Filter ── */
+function applyFilter() {
+  var q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+  var rows = document.querySelectorAll('#tableBody tr[data-source]');
   var shown = 0;
   rows.forEach(function(row) {
     var source = row.getAttribute('data-source');
     var status = row.getAttribute('data-status');
-    var email  = row.getAttribute('data-email');
-    var name   = row.getAttribute('data-name');
-    var matchFilter = currentFilter === 'all'
-      || currentFilter === source
-      || (currentFilter === 'active' && status === 'active');
-    var matchSearch = !currentSearch
-      || email.includes(currentSearch)
-      || name.includes(currentSearch);
-    var visible = matchFilter && matchSearch;
-    row.style.display = visible ? '' : 'none';
-    if (visible) shown++;
+    var email  = row.getAttribute('data-email') || '';
+    var name   = row.getAttribute('data-name')  || '';
+    var mf = currentFilter === 'all'
+          || currentFilter === source
+          || (currentFilter === 'active' && status === 'active');
+    var ms = !q || email.indexOf(q) !== -1 || name.indexOf(q) !== -1;
+    row.style.display = (mf && ms) ? '' : 'none';
+    if (mf && ms) shown++;
   });
   document.getElementById('countInfo').textContent = 'Showing ' + shown + ' contacts';
   document.getElementById('emptyMsg').style.display = shown === 0 ? 'block' : 'none';
 }
 
-function deleteContact(id, source, email) {
-  var msg = source === 'app'
-    ? 'PERMANENTLY DELETE app user "' + email + '"?\n\nThis erases ALL their data (subscription, journey, recipes, posts) and cannot be undone.'
-    : 'Delete lead "' + email + '" from the free book subscriber list?';
-  if (!confirm(msg)) return;
+/* ── Delete ── */
+function doDelete(id, source) {
   var endpoint = source === 'app' ? '/api/admin/delete-user' : '/api/admin/delete-lead';
   var body = source === 'app' ? { userId: id } : { id: id };
   fetch(endpoint, {
@@ -275,37 +287,103 @@ function deleteContact(id, source, email) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.success) {
-        var row = document.querySelector('#tableBody tr[data-id="' + id + '"]');
-        if (row) { row.style.opacity = '0'; row.style.transition = 'opacity .3s'; setTimeout(function() { row.remove(); filterTable(); }, 300); }
-      } else { alert('Error: ' + (data.error || 'Could not delete')); }
-    })
-    .catch(function() { alert('Network error'); });
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      var row = document.querySelector('#tableBody tr[data-id="' + id + '"]');
+      if (row) {
+        row.style.transition = 'opacity .3s';
+        row.style.opacity = '0';
+        setTimeout(function() { row.remove(); applyFilter(); }, 320);
+      }
+      showToast('Deleted successfully', false);
+    } else {
+      showToast('Error: ' + (data.error || 'Could not delete'), true);
+      resetConfirm(id);
+    }
+  })
+  .catch(function() { showToast('Network error', true); resetConfirm(id); });
 }
 
+function resetConfirm(id) {
+  var dc = document.getElementById('dc-' + id);
+  var btn = document.querySelector('[data-del-id="' + id + '"]');
+  if (dc)  dc.classList.remove('open');
+  if (btn) btn.style.display = '';
+}
+
+/* ── Export CSV ── */
 function exportCSV() {
-  var rows = document.querySelectorAll('#tableBody tr');
+  var rows = document.querySelectorAll('#tableBody tr[data-source]');
   var lines = ['Email,Name,Source,Status,Plan,Info,Joined'];
   rows.forEach(function(row) {
     if (row.style.display === 'none') return;
     var cells = row.querySelectorAll('td');
-    var email  = (cells[0]?.textContent || '').trim();
-    var name   = (cells[1]?.textContent || '').trim().replace(/,/g, ' ');
+    var email  = (cells[0] ? cells[0].textContent : '').trim();
+    var name   = (cells[1] ? cells[1].textContent : '').trim().replace(/,/g, ' ');
     var source = row.getAttribute('data-source');
     var status = row.getAttribute('data-status');
-    var info   = (cells[4]?.textContent || '').trim().replace(/,/g, ' ');
-    var joined = (cells[5]?.textContent || '').trim();
-    var plan   = source === 'app' ? (ALL.find(function(u) { return u.email.toLowerCase() === email.toLowerCase(); }) || {}).tier || '' : '';
+    var info   = (cells[4] ? cells[4].textContent : '').trim().replace(/,/g, ' ');
+    var joined = (cells[5] ? cells[5].textContent : '').trim();
+    var rec    = ALL.find(function(u) { return u.email.toLowerCase() === email.toLowerCase(); });
+    var plan   = rec ? (rec.tier || '') : '';
     lines.push([email, name, source, status, plan, info, joined].join(','));
   });
   var blob = new Blob([lines.join('\n')], { type: 'text/csv' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'email-list-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.download = 'email-list-' + new Date().toISOString().slice(0, 10) + '.csv';
   a.click();
 }
+
+/* ── Wire up event listeners ── */
+document.addEventListener('DOMContentLoaded', function() {
+
+  /* Search */
+  document.getElementById('searchInput').addEventListener('input', applyFilter);
+
+  /* Filter buttons */
+  document.querySelectorAll('.filter-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      currentFilter = btn.getAttribute('data-filter');
+      document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      applyFilter();
+    });
+  });
+
+  /* Export */
+  document.querySelector('.export-btn').addEventListener('click', exportCSV);
+
+  /* Delete — step 1: show confirm */
+  document.querySelectorAll('.del-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var id = btn.getAttribute('data-del-id');
+      btn.style.display = 'none';
+      var dc = document.getElementById('dc-' + id);
+      if (dc) dc.classList.add('open');
+    });
+  });
+
+  /* Delete — step 2a: confirmed */
+  document.querySelectorAll('.del-yes').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var id     = btn.getAttribute('data-confirm-id');
+      var source = btn.getAttribute('data-confirm-source');
+      btn.textContent = '…';
+      btn.disabled = true;
+      doDelete(id, source);
+    });
+  });
+
+  /* Delete — step 2b: cancelled */
+  document.querySelectorAll('.del-no').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var id = btn.getAttribute('data-cancel-id');
+      resetConfirm(id);
+    });
+  });
+});
 </script>
 
 </body>

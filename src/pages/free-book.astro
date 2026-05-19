@@ -566,7 +566,7 @@ const PAGE_DESC  = 'Get our free keto recipe collection: 80+ beginner-friendly r
       .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
       .then(function (res) {
         if (res.ok) {
-          show(msg, '✅ Check your inbox — the recipe book is on its way!', 'success');
+          show(msg, '✅ Book sent! Check your inbox (and your spam folder — mark it as "Not Spam" to make sure future recipes reach you).', 'success');
           if (nameEl) nameEl.value = '';
           emailEl.value      = '';
           btn.textContent    = 'Sent! ✓';
