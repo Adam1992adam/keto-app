@@ -482,27 +482,28 @@ export async function sendWinbackEmail(to: string, name: string, daysMissed: num
 // ─────────────────────────────────────────────────────────────────────────────
 export async function sendFreeBookEmail(to: string, name?: string) {
   const greeting = name ? `Hi ${name},` : 'Hi there,';
-  const recipes = [
-    { name: 'Bacon & Egg Cups', time: '15 min', cal: 280, net: 1, icon: '🥚', desc: 'Crispy bacon-lined muffin tin cups filled with a baked egg. Zero carb, zero effort.' },
-    { name: 'Avocado Tuna Boats', time: '10 min', cal: 320, net: 2, icon: '🥑', desc: 'Halved avocados stuffed with tuna, mayo, and lemon. Perfect for lunch.' },
-    { name: 'Creamy Garlic Butter Chicken', time: '25 min', cal: 490, net: 3, icon: '🍗', desc: 'Pan-seared chicken thighs in a rich parmesan cream sauce.' },
-    { name: 'Cauliflower Fried Rice', time: '20 min', cal: 210, net: 5, icon: '🍚', desc: 'Riced cauliflower stir-fried with eggs, soy sauce, and sesame oil.' },
-    { name: 'Keto Cheesecake Bites', time: '30 min + chill', cal: 180, net: 3, icon: '🍰', desc: 'No-bake cream cheese bites on an almond crust. Sweetened with erythritol.' },
-    { name: 'BLT Lettuce Wraps', time: '10 min', cal: 240, net: 2, icon: '🥬', desc: 'Crispy bacon, tomato, and mayo wrapped in crisp romaine leaves.' },
-    { name: 'Zucchini Noodles & Pesto', time: '15 min', cal: 310, net: 4, icon: '🍝', desc: 'Spiralized zucchini tossed with basil pesto and pine nuts.' },
+  const DOWNLOAD_URL = 'https://drive.google.com/uc?export=download&id=120rBvSRnhjLFarrKsBLTL0u0K4OxdBJb';
+
+  const previews = [
+    { name: 'Keto Green Detox Smoothie',   time: '5 min',  cal: 210, net: 3, icon: '🥬', desc: 'Spinach, avocado, cucumber, and coconut milk blended into a creamy energising drink.' },
+    { name: 'Berry Protein Blast',          time: '5 min',  cal: 260, net: 4, icon: '🫐', desc: 'Mixed berries, vanilla protein powder, and almond milk — perfect post-workout.' },
+    { name: 'Almond Butter Fat Bombs',      time: '10 min', cal: 150, net: 2, icon: '💣', desc: 'Almond butter and coconut oil rolled into bites — a satisfying high-fat snack in minutes.' },
+    { name: 'Spicy Parmesan Crisps',        time: '12 min', cal: 130, net: 1, icon: '🧀', desc: 'Baked parmesan rounds with chilli flakes — crunchy, savoury, and zero-guilt.' },
+    { name: 'Creamy Avocado Shake',         time: '5 min',  cal: 290, net: 3, icon: '🥑', desc: 'Avocado, heavy cream, and vanilla blended into an ultra-creamy keto shake.' },
+    { name: 'Cucumber Cream Cheese Bites',  time: '8 min',  cal: 110, net: 1, icon: '🥒', desc: 'Sliced cucumber topped with herbed cream cheese — the easiest snack in the book.' },
   ];
 
-  const recipeCards = recipes.map(r => `
-    <tr><td style="padding:8px 0;">
+  const previewCards = previews.map(r => `
+    <tr><td style="padding:7px 0;">
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#FAF6F1;border:1px solid #F0D4D9;border-radius:14px;">
         <tr>
-          <td style="padding:14px 16px;width:44px;vertical-align:top;font-size:26px;">${r.icon}</td>
-          <td style="padding:14px 8px 14px 0;vertical-align:top;">
-            <p style="margin:0 0 2px;font-size:14px;font-weight:800;color:#16110F;">${r.name}</p>
-            <p style="margin:0 0 5px;font-size:12px;color:#8A8077;">⏱ ${r.time}</p>
+          <td style="padding:12px 14px;width:40px;vertical-align:top;font-size:24px;">${r.icon}</td>
+          <td style="padding:12px 8px 12px 0;vertical-align:top;">
+            <p style="margin:0 0 2px;font-size:13px;font-weight:800;color:#16110F;">${r.name}</p>
+            <p style="margin:0 0 4px;font-size:11px;color:#8A8077;">⏱ ${r.time}</p>
             <p style="margin:0;font-size:12px;color:#4A4340;line-height:1.5;">${r.desc}</p>
           </td>
-          <td style="padding:14px 16px;vertical-align:top;text-align:right;white-space:nowrap;">
+          <td style="padding:12px 14px;vertical-align:top;text-align:right;white-space:nowrap;">
             <p style="margin:0;font-size:12px;font-weight:700;color:#FF5C7A;">${r.cal} cal</p>
             <p style="margin:0;font-size:11px;color:#8A8077;">${r.net}g net carbs</p>
           </td>
@@ -515,7 +516,7 @@ export async function sendFreeBookEmail(to: string, name?: string) {
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Your Free Keto Recipe Book</title>
+<title>Your Free Keto Smoothies &amp; Snacks Book</title>
 </head>
 <body style="margin:0;padding:0;background:#FAF6F1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;">
 ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${preheader}&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>` : ''}
@@ -545,39 +546,41 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${prehead
 
   const content = `
     <p style="margin:0 0 20px;font-size:15px;color:#4A4340;">${greeting}</p>
+
     <div style="text-align:center;margin-bottom:28px;">
-      <div style="font-size:52px;">📖</div>
-      <h1 style="margin:12px 0 6px;font-family:Georgia,serif;font-size:26px;font-weight:900;color:#16110F;line-height:1.2;">Your Free Keto Recipe Book</h1>
-      <p style="margin:0;font-size:15px;color:#4A4340;">7 delicious recipes · under 5g net carbs each · ready in 30 min or less</p>
+      <div style="font-size:48px;margin-bottom:12px;">🥤</div>
+      <h1 style="margin:0 0 8px;font-family:Georgia,serif;font-size:26px;font-weight:900;color:#16110F;line-height:1.2;">Your Free Keto Smoothies &amp; Snacks Book is Ready!</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#4A4340;">50+ recipes · under 5g net carbs each · full macros included</p>
+      <a href="${DOWNLOAD_URL}" style="display:inline-block;padding:16px 40px;background:#FF5C7A;color:#ffffff;font-weight:800;font-size:16px;border-radius:14px;text-decoration:none;letter-spacing:.01em;">
+        ⬇️ Download Your Free Book
+      </a>
+      <p style="margin:10px 0 0;font-size:12px;color:#8A8077;">Click the button — your PDF downloads immediately</p>
     </div>
 
-    <div style="padding:14px 18px;background:linear-gradient(135deg,rgba(255,92,122,.12),rgba(52,211,153,.06));border:1px solid rgba(255,92,122,.25);border-radius:14px;margin-bottom:24px;">
-      <p style="margin:0;font-size:14px;color:#B6FF3C;line-height:1.6;">
-        ✅ <strong>No fluff.</strong> Every recipe below is keto-verified, macro-tracked, and takes 30 minutes or less.
-      </p>
-    </div>
+    <hr style="border:none;border-top:1px solid #F0D4D9;margin:0 0 24px;"/>
 
+    <p style="margin:0 0 14px;font-size:14px;font-weight:800;color:#16110F;">A taste of what's inside:</p>
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
-      ${recipeCards}
+      ${previewCards}
     </table>
 
     <div style="padding:20px 24px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:16px;text-align:center;margin-bottom:8px;">
-      <p style="margin:0 0 6px;font-size:18px;font-weight:900;color:#f59e0b;">Want 500+ more recipes like these?</p>
+      <p style="margin:0 0 6px;font-size:17px;font-weight:900;color:#f59e0b;">Want 500+ more recipes &amp; a full coaching plan?</p>
       <p style="margin:0 0 16px;font-size:14px;color:#4A4340;line-height:1.6;">
-        Get a full 30-day keto meal plan, daily coaching, AI food scanner, progress tracking, and more — <strong style="color:#f59e0b;">free for 7 days.</strong>
+        Get a complete 30-day keto meal plan, daily coaching, AI food scanner, progress tracking, and more — <strong style="color:#f59e0b;">free for 7 days.</strong>
       </p>
       <a href="${APP_URL}/start" style="display:inline-block;padding:14px 32px;background:#FF5C7A;color:#fff;font-weight:800;font-size:15px;border-radius:12px;text-decoration:none;">
         Start My Free 7-Day Trial →
       </a>
     </div>`;
 
-  const html = freeBookLayout(content, '7 keto recipes under 5g net carbs — yours free 🥑');
+  const html = freeBookLayout(content, 'Your keto smoothies & snacks book is ready — download it now 🥤');
 
   const resend = getResend();
   const { data, error } = await resend.emails.send({
     from: FROM,
     to,
-    subject: '📖 Your free keto recipe book is here!',
+    subject: '⬇️ Your free keto smoothies & snacks book is here!',
     html,
     headers: H_LEAD(),
   });

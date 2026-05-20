@@ -1,8 +1,8 @@
 ---
 export const prerender = true;
 const SITE_URL  = (import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun').replace(/\/$/, '');
-const PAGE_TITLE = 'Free Keto Recipe Book — 80+ Recipes Under 5g Net Carbs | KetoJourney';
-const PAGE_DESC  = 'Get our free keto recipe collection: 80+ beginner-friendly recipes with full macros, shopping lists, and meal prep tips. Completely free — sent to your inbox instantly.';
+const PAGE_TITLE = 'Free Keto Smoothies & Snacks Book — 50+ Recipes Under 5g Net Carbs | KetoJourney';
+const PAGE_DESC  = 'Get our free keto smoothie & snack recipe book: 50+ delicious recipes with full macros, prep tips, and ingredient swaps. Completely free — sent to your inbox instantly.';
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -14,7 +14,7 @@ const PAGE_DESC  = 'Get our free keto recipe collection: 80+ beginner-friendly r
   <meta property="og:title"       content={PAGE_TITLE}/>
   <meta property="og:description" content={PAGE_DESC}/>
   <meta property="og:type"        content="website"/>
-  <meta property="og:image"       content={`${SITE_URL}/images/free-book-cover.png`}/>
+  <meta property="og:image"       content={`${SITE_URL}/images/free-book-cover.jpg`}/>
   <link rel="icon" type="image/png" sizes="32x32" href="/icon-72.png"/>
   <meta name="theme-color" content="#FF5C7A"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -80,7 +80,7 @@ const PAGE_DESC  = 'Get our free keto recipe collection: 80+ beginner-friendly r
     /* BOOK COVER SLOT */
     .hero-visual { position:relative; display:flex; justify-content:center; }
     .book-cover-wrap { position:relative; width:100%; max-width:380px; }
-    /* IMAGE SLOT: /public/images/free-book-cover.png — book cover mockup · 760×988 px (2× for retina) */
+    /* IMAGE SLOT: /public/images/free-book-cover.jpg — book cover mockup · 760×988 px (2× for retina) */
     .book-cover-img { width:100%; border-radius:20px; box-shadow:0 32px 72px rgba(22,17,15,.18), 0 8px 20px rgba(22,17,15,.1); }
     .book-cover-ph { width:100%; aspect-ratio:3/4; background:linear-gradient(145deg,var(--ink) 0%,#2D1F1A 100%); border-radius:20px; box-shadow:0 32px 72px rgba(22,17,15,.18); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; color:#fff; padding:32px; text-align:center; }
     .book-cover-ph-icon { font-size:3.5rem; }
@@ -206,8 +206,8 @@ const PAGE_DESC  = 'Get our free keto recipe collection: 80+ beginner-friendly r
 <section class="hero" id="get-book">
   <div class="hero-left">
     <div class="hero-badge">📖 Free Recipe Book</div>
-    <h1 class="hero-title">80+ Keto Recipes,<br/><em>Completely Free</em></h1>
-    <p class="hero-sub">Breakfasts, lunches, dinners, snacks, and desserts — every recipe under 5g net carbs, with full macros, shopping lists, and step-by-step guides. Sent straight to your inbox.</p>
+    <h1 class="hero-title">50+ Keto Smoothie &amp; Snack Recipes,<br/><em>Completely Free</em></h1>
+    <p class="hero-sub">Creamy low-carb smoothies and satisfying keto snacks — every recipe under 5g net carbs, with full macros, prep tips, and ingredient swap guides. Sent straight to your inbox.</p>
 
     <div class="form-card">
       <p class="form-card-label">Get your free copy →</p>
@@ -228,30 +228,30 @@ const PAGE_DESC  = 'Get our free keto recipe collection: 80+ beginner-friendly r
 
     <div class="trust-row">
       <span class="trust-item">Sent to your inbox</span>
-      <span class="trust-item">80+ recipes</span>
+      <span class="trust-item">50+ recipes</span>
       <span class="trust-item">No credit card</span>
     </div>
   </div>
 
-  <!-- IMAGE SLOT: /public/images/free-book-cover.png
+  <!-- IMAGE SLOT: /public/images/free-book-cover.jpg
        Size: 760×988 px (displayed at 380×494 px, 2× for retina)
        Content: book cover / mockup showing the recipe book -->
   <div class="hero-visual">
     <div class="book-cover-wrap">
       <img
-        src="/images/free-book-cover.png"
-        alt="KetoJourney Free Recipe Book — 80+ Keto Recipes"
+        src="/images/free-book-cover.jpg"
+        alt="KetoJourney Free Keto Smoothies &amp; Snacks Book"
         class="book-cover-img"
         loading="eager"
         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
       />
       <div class="book-cover-ph" style="display:none;">
         <div class="book-cover-ph-icon">📖</div>
-        <div class="book-cover-ph-title">Free Keto Recipe Book</div>
-        <div class="book-cover-ph-sub">80+ recipes · Full macros · Free</div>
+        <div class="book-cover-ph-title">Free Keto Smoothies &amp; Snacks Book</div>
+        <div class="book-cover-ph-sub">50+ recipes · Full macros · Free</div>
       </div>
       <div class="book-badge">
-        <span class="book-badge-top">80+</span>
+        <span class="book-badge-top">50+</span>
         <span class="book-badge-num">Free</span>
         <span class="book-badge-bot">Recipes</span>
       </div>
@@ -267,11 +267,11 @@ const PAGE_DESC  = 'Get our free keto recipe collection: 80+ beginner-friendly r
       <div class="proof-label">Subscribers</div>
     </div>
     <div class="proof-stat">
-      <div class="proof-num">80+</div>
+      <div class="proof-num">50+</div>
       <div class="proof-label">Recipes</div>
     </div>
     <div class="proof-stat">
-      <div class="proof-num">5</div>
+      <div class="proof-num">2</div>
       <div class="proof-label">Categories</div>
     </div>
     <div class="proof-stat">
@@ -284,66 +284,54 @@ const PAGE_DESC  = 'Get our free keto recipe collection: 80+ beginner-friendly r
 <!-- ── CATEGORIES ── -->
 <section class="cats-section">
   <p class="section-eyebrow">Inside the free book</p>
-  <h2 class="section-title">Every Meal,<br/><em>Every Day</em> — Covered</h2>
-  <div class="cats-grid">
+  <h2 class="section-title">Two Categories,<br/><em>Dozens of Favourites</em></h2>
+  <div class="cats-grid" style="grid-template-columns:repeat(4,1fr);">
 
-    <!-- IMAGE SLOT: /public/images/free-book-cat-breakfast.jpg · 320×200 px -->
+    <!-- IMAGE SLOT: /public/images/free-book-cat-green-smoothies.jpg · 320×200 px -->
     <div class="cat-card">
-      <img src="/images/free-book-cat-breakfast.jpg" alt="Keto Breakfast Recipes" class="cat-img"
+      <img src="/images/free-book-cat-green-smoothies.jpg" alt="Keto Green Smoothies" class="cat-img"
         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" loading="lazy"/>
-      <div class="cat-img-ph" style="display:none;">🥚</div>
+      <div class="cat-img-ph" style="display:none;">🥬</div>
       <div class="cat-body">
-        <div class="cat-name">Breakfast</div>
-        <div class="cat-count">18 recipes</div>
-        <div class="cat-examples">Egg cups · Pancakes · Smoothies</div>
+        <div class="cat-name">Green Smoothies</div>
+        <div class="cat-count">Smoothies</div>
+        <div class="cat-examples">Spinach · Avocado · Cucumber blends</div>
       </div>
     </div>
 
-    <!-- IMAGE SLOT: /public/images/free-book-cat-lunch.jpg · 320×200 px -->
+    <!-- IMAGE SLOT: /public/images/free-book-cat-berry-shakes.jpg · 320×200 px -->
     <div class="cat-card">
-      <img src="/images/free-book-cat-lunch.jpg" alt="Keto Lunch Recipes" class="cat-img"
+      <img src="/images/free-book-cat-berry-shakes.jpg" alt="Keto Berry & Protein Shakes" class="cat-img"
         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" loading="lazy"/>
-      <div class="cat-img-ph" style="display:none;">🥗</div>
+      <div class="cat-img-ph" style="display:none;">🫐</div>
       <div class="cat-body">
-        <div class="cat-name">Lunch</div>
-        <div class="cat-count">16 recipes</div>
-        <div class="cat-examples">Wraps · Salads · Soups</div>
+        <div class="cat-name">Berry &amp; Protein Shakes</div>
+        <div class="cat-count">Smoothies</div>
+        <div class="cat-examples">Berries · Protein · Creamy shakes</div>
       </div>
     </div>
 
-    <!-- IMAGE SLOT: /public/images/free-book-cat-dinner.jpg · 320×200 px -->
+    <!-- IMAGE SLOT: /public/images/free-book-cat-savory-snacks.jpg · 320×200 px -->
     <div class="cat-card">
-      <img src="/images/free-book-cat-dinner.jpg" alt="Keto Dinner Recipes" class="cat-img"
-        onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" loading="lazy"/>
-      <div class="cat-img-ph" style="display:none;">🍗</div>
-      <div class="cat-body">
-        <div class="cat-name">Dinner</div>
-        <div class="cat-count">22 recipes</div>
-        <div class="cat-examples">Chicken · Beef · Seafood</div>
-      </div>
-    </div>
-
-    <!-- IMAGE SLOT: /public/images/free-book-cat-snacks.jpg · 320×200 px -->
-    <div class="cat-card">
-      <img src="/images/free-book-cat-snacks.jpg" alt="Keto Snack Recipes" class="cat-img"
+      <img src="/images/free-book-cat-savory-snacks.jpg" alt="Keto Savory Snacks" class="cat-img"
         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" loading="lazy"/>
       <div class="cat-img-ph" style="display:none;">🧀</div>
       <div class="cat-body">
-        <div class="cat-name">Snacks</div>
-        <div class="cat-count">12 recipes</div>
-        <div class="cat-examples">Fat bombs · Dips · Bars</div>
+        <div class="cat-name">Savory Snacks</div>
+        <div class="cat-count">Snacks</div>
+        <div class="cat-examples">Cheese crisps · Dips · Nut mixes</div>
       </div>
     </div>
 
-    <!-- IMAGE SLOT: /public/images/free-book-cat-desserts.jpg · 320×200 px -->
+    <!-- IMAGE SLOT: /public/images/free-book-cat-sweet-snacks.jpg · 320×200 px -->
     <div class="cat-card">
-      <img src="/images/free-book-cat-desserts.jpg" alt="Keto Dessert Recipes" class="cat-img"
+      <img src="/images/free-book-cat-sweet-snacks.jpg" alt="Keto Sweet Snacks" class="cat-img"
         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" loading="lazy"/>
-      <div class="cat-img-ph" style="display:none;">🍰</div>
+      <div class="cat-img-ph" style="display:none;">💣</div>
       <div class="cat-body">
-        <div class="cat-name">Desserts</div>
-        <div class="cat-count">14 recipes</div>
-        <div class="cat-examples">Cheesecakes · Mousse · Cookies</div>
+        <div class="cat-name">Sweet Fat Bombs</div>
+        <div class="cat-count">Snacks</div>
+        <div class="cat-examples">Fat bombs · Bars · Energy bites</div>
       </div>
     </div>
 
@@ -357,51 +345,51 @@ const PAGE_DESC  = 'Get our free keto recipe collection: 80+ beginner-friendly r
     <h2 class="section-title">A Few Recipes You'll Love</h2>
     <div class="featured-grid">
 
-      <!-- IMAGE SLOT: /public/images/free-book-feat-1.jpg · 480×320 px — Bacon & Egg Cups -->
+      <!-- IMAGE SLOT: /public/images/free-book-feat-1.jpg · 480×320 px — Keto Green Detox Smoothie -->
       <div class="feat-card">
-        <img src="/images/free-book-feat-1.jpg" alt="Bacon and Egg Cups" class="feat-img"
+        <img src="/images/free-book-feat-1.jpg" alt="Keto Green Detox Smoothie" class="feat-img"
           onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" loading="lazy"/>
-        <div class="feat-img-ph" style="display:none;">🥚</div>
+        <div class="feat-img-ph" style="display:none;">🥬</div>
         <div class="feat-body">
-          <div class="feat-name">Bacon &amp; Egg Cups</div>
-          <div class="feat-macros">⏱ 15 min · 280 kcal · 18g protein</div>
-          <span class="feat-tag">1g net carbs</span>
-        </div>
-      </div>
-
-      <!-- IMAGE SLOT: /public/images/free-book-feat-2.jpg · 480×320 px — Garlic Butter Chicken -->
-      <div class="feat-card">
-        <img src="/images/free-book-feat-2.jpg" alt="Garlic Butter Chicken" class="feat-img"
-          onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" loading="lazy"/>
-        <div class="feat-img-ph" style="display:none;">🍗</div>
-        <div class="feat-body">
-          <div class="feat-name">Garlic Butter Chicken</div>
-          <div class="feat-macros">⏱ 25 min · 490 kcal · 38g protein</div>
+          <div class="feat-name">Keto Green Detox Smoothie</div>
+          <div class="feat-macros">⏱ 5 min · 210 kcal · 8g protein</div>
           <span class="feat-tag">3g net carbs</span>
         </div>
       </div>
 
-      <!-- IMAGE SLOT: /public/images/free-book-feat-3.jpg · 480×320 px — No-Bake Cheesecake Bites -->
+      <!-- IMAGE SLOT: /public/images/free-book-feat-2.jpg · 480×320 px — Almond Butter Fat Bombs -->
       <div class="feat-card">
-        <img src="/images/free-book-feat-3.jpg" alt="No-Bake Cheesecake Bites" class="feat-img"
+        <img src="/images/free-book-feat-2.jpg" alt="Almond Butter Fat Bombs" class="feat-img"
           onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" loading="lazy"/>
-        <div class="feat-img-ph" style="display:none;">🍰</div>
+        <div class="feat-img-ph" style="display:none;">💣</div>
         <div class="feat-body">
-          <div class="feat-name">No-Bake Cheesecake Bites</div>
-          <div class="feat-macros">⏱ 30 min · 180 kcal · 5g protein</div>
-          <span class="feat-tag">3g net carbs</span>
+          <div class="feat-name">Almond Butter Fat Bombs</div>
+          <div class="feat-macros">⏱ 10 min · 150 kcal · 4g protein</div>
+          <span class="feat-tag">2g net carbs</span>
         </div>
       </div>
 
-      <!-- IMAGE SLOT: /public/images/free-book-feat-4.jpg · 480×320 px — Zucchini Pesto Noodles -->
+      <!-- IMAGE SLOT: /public/images/free-book-feat-3.jpg · 480×320 px — Berry Protein Shake -->
       <div class="feat-card">
-        <img src="/images/free-book-feat-4.jpg" alt="Zucchini Pesto Noodles" class="feat-img"
+        <img src="/images/free-book-feat-3.jpg" alt="Berry Protein Shake" class="feat-img"
           onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" loading="lazy"/>
-        <div class="feat-img-ph" style="display:none;">🍝</div>
+        <div class="feat-img-ph" style="display:none;">🫐</div>
         <div class="feat-body">
-          <div class="feat-name">Zucchini Pesto Noodles</div>
-          <div class="feat-macros">⏱ 15 min · 310 kcal · 9g protein</div>
+          <div class="feat-name">Berry Protein Shake</div>
+          <div class="feat-macros">⏱ 5 min · 260 kcal · 22g protein</div>
           <span class="feat-tag">4g net carbs</span>
+        </div>
+      </div>
+
+      <!-- IMAGE SLOT: /public/images/free-book-feat-4.jpg · 480×320 px — Spicy Parmesan Crisps -->
+      <div class="feat-card">
+        <img src="/images/free-book-feat-4.jpg" alt="Spicy Parmesan Crisps" class="feat-img"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" loading="lazy"/>
+        <div class="feat-img-ph" style="display:none;">🧀</div>
+        <div class="feat-body">
+          <div class="feat-name">Spicy Parmesan Crisps</div>
+          <div class="feat-macros">⏱ 12 min · 130 kcal · 9g protein</div>
+          <span class="feat-tag">1g net carbs</span>
         </div>
       </div>
 
@@ -415,29 +403,29 @@ const PAGE_DESC  = 'Get our free keto recipe collection: 80+ beginner-friendly r
   <h2 class="section-title">Everything in<br/><em>Your Free Book</em></h2>
   <div class="included-grid">
     <div class="inc-card">
-      <div class="inc-icon">🍽️</div>
-      <div class="inc-title">80+ Full Recipes</div>
-      <div class="inc-desc">Breakfast through dessert — every recipe tested, every macro verified.</div>
+      <div class="inc-icon">🥤</div>
+      <div class="inc-title">50+ Full Recipes</div>
+      <div class="inc-desc">Smoothies and snacks — every recipe tested and every macro verified.</div>
     </div>
     <div class="inc-card">
       <div class="inc-icon">📊</div>
       <div class="inc-title">Full Macros</div>
-      <div class="inc-desc">Calories, protein, fat, and net carbs listed for every single dish.</div>
+      <div class="inc-desc">Calories, protein, fat, and net carbs listed for every single recipe.</div>
     </div>
     <div class="inc-card">
-      <div class="inc-icon">🛒</div>
-      <div class="inc-title">Shopping Lists</div>
-      <div class="inc-desc">Organized by category so your grocery run takes 20 minutes, not an hour.</div>
+      <div class="inc-icon">🔄</div>
+      <div class="inc-title">Ingredient Swaps</div>
+      <div class="inc-desc">Alternative ingredients for every recipe so you can work with what you have.</div>
     </div>
     <div class="inc-card">
       <div class="inc-icon">⏱️</div>
-      <div class="inc-title">30 Min or Less</div>
-      <div class="inc-desc">Every recipe is designed for real life — no complex techniques required.</div>
+      <div class="inc-title">5–15 Min Recipes</div>
+      <div class="inc-desc">Quick smoothies and grab-and-go snacks designed for real, busy days.</div>
     </div>
     <div class="inc-card">
-      <div class="inc-icon">🥗</div>
-      <div class="inc-title">Meal Prep Tips</div>
-      <div class="inc-desc">Batch-cook guidance so you always have a keto meal ready to go.</div>
+      <div class="inc-icon">💡</div>
+      <div class="inc-title">Prep Tips</div>
+      <div class="inc-desc">Batch-prep smoothie packs and snack portions to stay on track all week.</div>
     </div>
     <div class="inc-card">
       <div class="inc-icon">⚡</div>
@@ -456,7 +444,7 @@ const PAGE_DESC  = 'Get our free keto recipe collection: 80+ beginner-friendly r
 
       <div class="testi-card">
         <div class="testi-stars">★★★★★</div>
-        <p class="testi-text">"I downloaded this thinking it would be the usual bland keto food — completely wrong. The garlic butter chicken is now on our weekly rotation and my whole family eats it."</p>
+        <p class="testi-text">"I was skeptical about keto smoothies but the green detox blend is incredible. I have it every morning now and I don't miss my old sugar-loaded shakes at all."</p>
         <div class="testi-author">
           <div class="testi-avatar">👩</div>
           <div>
@@ -468,7 +456,7 @@ const PAGE_DESC  = 'Get our free keto recipe collection: 80+ beginner-friendly r
 
       <div class="testi-card">
         <div class="testi-stars">★★★★★</div>
-        <p class="testi-text">"The shopping lists alone saved me so much time. I was always buying random stuff at the grocery store and ending up with nothing to cook. This fixed that."</p>
+        <p class="testi-text">"The fat bomb recipes are a lifesaver between meals. I make a batch on Sunday and they keep me from reaching for junk all week. The macros listed are spot-on too."</p>
         <div class="testi-author">
           <div class="testi-avatar">👨</div>
           <div>
@@ -480,7 +468,7 @@ const PAGE_DESC  = 'Get our free keto recipe collection: 80+ beginner-friendly r
 
       <div class="testi-card">
         <div class="testi-stars">★★★★★</div>
-        <p class="testi-text">"I've tried every keto resource out there. This is the first one where I actually made most of the recipes. The macros are accurate and everything tastes good."</p>
+        <p class="testi-text">"Finally a snack book where everything actually tastes good. The parmesan crisps and the berry protein shake are my go-to combo after workouts. Completely changed my routine."</p>
         <div class="testi-author">
           <div class="testi-avatar">👩</div>
           <div>
@@ -498,7 +486,7 @@ const PAGE_DESC  = 'Get our free keto recipe collection: 80+ beginner-friendly r
 <section class="second-cta" id="download">
   <p class="section-eyebrow">Still here?</p>
   <h2>Get Your Free Copy Now</h2>
-  <p>80+ recipes, full macros, shopping lists — delivered instantly to your inbox.</p>
+  <p>50+ smoothie &amp; snack recipes, full macros, prep tips — delivered instantly to your inbox.</p>
   <div class="second-form-card">
     <div class="form-fields">
       <div class="field-wrap">
@@ -521,7 +509,7 @@ const PAGE_DESC  = 'Get our free keto recipe collection: 80+ beginner-friendly r
   <div class="bottom-cta">
     <div class="bottom-cta-text">
       <h2>Want 500+ more recipes &amp; a full coaching plan?</h2>
-      <p>The free book is just the start. Get personalized meal plans, daily coaching, AI tracking, and 500+ recipes — free for 7 days.</p>
+      <p>The free book is just the start. Get personalized meal plans, daily coaching, AI tracking, and 500+ recipes including full smoothie &amp; snack collections — free for 7 days.</p>
     </div>
     <a href="/start" class="bottom-cta-btn">Start Free 7-Day Trial →</a>
   </div>
