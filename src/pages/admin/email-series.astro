@@ -1,0 +1,442 @@
+---
+import { createClient } from '@supabase/supabase-js';
+
+const adminSession = Astro.cookies.get('admin-session')?.value;
+if (adminSession !== 'authenticated') return Astro.redirect('/admin-login');
+
+const env = (Astro.locals as any)?.runtime?.env || {};
+const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL || env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL;
+const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+const db = createClient(SUPABASE_URL, SERVICE_KEY);
+
+const { data: seriesRaw } = await db
+  .from('lead_email_series')
+  .select('*')
+  .order('step_order');
+
+const series = seriesRaw || [];
+const APP_URL = process.env.PUBLIC_APP_URL || import.meta.env.PUBLIC_APP_URL || 'https://ketojourney.fun';
+const seriesJson = JSON.stringify(series);
+const appUrlJson = JSON.stringify(APP_URL);
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Email Series · Admin</title>
+  <meta name="robots" content="noindex,nofollow"/>
+  <style>
+    :root{--bg:#060d09;--bg2:#0a1510;--card:#0d1a0f;--card2:#111f13;--border:rgba(255,92,122,.12);--border2:rgba(255,92,122,.25);--text:#dfeedd;--soft:#4d7055;--muted:#233328;--accent:#FF5C7A;--accent2:#B6FF3C;--gold:#f59e0b;--red:#ef4444;--blue:#3b82f6;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);}
+    a{color:var(--accent);text-decoration:none;}a:hover{text-decoration:underline;}
+
+    .admin-nav{background:var(--card);border-bottom:1px solid var(--border);padding:.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;gap:1rem;flex-wrap:wrap;}
+    .nav-brand{display:flex;align-items:center;gap:.6rem;}
+    .nav-logo{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),#ff8fa3);border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.9rem;color:#fff;}
+    .nav-title{font-size:1rem;font-weight:800;color:var(--text);}
+    .nav-links{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;}
+    .nav-link{font-size:.82rem;font-weight:600;color:var(--soft);padding:.4rem .8rem;border-radius:8px;transition:all .2s;}
+    .nav-link:hover,.nav-link.active{color:var(--text);background:var(--muted);text-decoration:none;}
+
+    .page{max-width:1100px;margin:0 auto;padding:2rem 1.5rem 5rem;}
+    .page-header{margin-bottom:1.5rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+    .page-title{font-size:1.8rem;font-weight:900;color:var(--text);}
+    .page-sub{font-size:.85rem;color:var(--soft);margin-top:.3rem;}
+
+    .add-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.6rem 1.2rem;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:.88rem;font-weight:700;cursor:pointer;transition:opacity .15s;}
+    .add-btn:hover{opacity:.88;}
+
+    /* Series list */
+    .series-list{display:flex;flex-direction:column;gap:12px;}
+
+    .email-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.25rem 1.5rem;display:grid;grid-template-columns:auto 1fr auto;gap:1.25rem;align-items:center;}
+    .email-card.inactive{opacity:.55;}
+    .step-badge{width:44px;height:44px;border-radius:12px;background:var(--muted);display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:900;color:var(--soft);flex-shrink:0;}
+    .step-badge.active-badge{background:rgba(255,92,122,.15);color:var(--accent);}
+    .email-info{min-width:0;}
+    .email-name{font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:.2rem;}
+    .email-subject{font-size:.82rem;color:var(--soft);margin-bottom:.3rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .email-meta{font-size:.74rem;color:var(--muted);display:flex;gap:.75rem;flex-wrap:wrap;}
+    .meta-pill{display:inline-flex;align-items:center;gap:.25rem;padding:.15rem .55rem;border-radius:6px;background:var(--card2);border:1px solid var(--border);}
+    .meta-pill.green{background:rgba(182,255,60,.08);border-color:rgba(182,255,60,.2);color:var(--accent2);}
+    .meta-pill.red{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.2);color:#ef9494;}
+    .email-actions{display:flex;gap:.5rem;flex-shrink:0;flex-wrap:wrap;}
+
+    .btn{display:inline-flex;align-items:center;gap:.3rem;padding:.38rem .8rem;border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer;transition:all .15s;border:none;white-space:nowrap;}
+    .btn-edit{background:rgba(59,130,246,.12);color:#93c5fd;border:1px solid rgba(59,130,246,.2);}
+    .btn-edit:hover{background:rgba(59,130,246,.2);}
+    .btn-preview{background:rgba(182,255,60,.08);color:var(--accent2);border:1px solid rgba(182,255,60,.2);}
+    .btn-preview:hover{background:rgba(182,255,60,.15);}
+    .btn-toggle{background:var(--card2);color:var(--soft);border:1px solid var(--border);}
+    .btn-toggle:hover{background:var(--muted);color:var(--text);}
+    .btn-danger{background:rgba(239,68,68,.08);color:#ef9494;border:1px solid rgba(239,68,68,.2);}
+    .btn-danger:hover{background:rgba(239,68,68,.18);}
+    .btn-save{background:var(--accent);color:#fff;}
+    .btn-save:hover{opacity:.88;}
+    .btn-cancel{background:var(--card2);color:var(--soft);border:1px solid var(--border);}
+    .btn-cancel:hover{background:var(--muted);color:var(--text);}
+
+    /* Modals */
+    .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto;}
+    .modal-bg.open{display:flex;}
+    .modal{background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:2rem;width:100%;max-width:720px;margin:auto;}
+    .modal-title{font-size:1.15rem;font-weight:800;color:var(--text);margin-bottom:1.5rem;}
+
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
+    .form-row.full{grid-template-columns:1fr;}
+    .form-group{display:flex;flex-direction:column;gap:.35rem;}
+    .form-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);}
+    .form-input{padding:.6rem .9rem;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:.875rem;font-family:inherit;outline:none;transition:border-color .15s;}
+    .form-input:focus{border-color:var(--accent);}
+    .form-textarea{padding:.6rem .9rem;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:.8rem;font-family:'Courier New',Courier,monospace;outline:none;resize:vertical;min-height:260px;line-height:1.5;transition:border-color .15s;}
+    .form-textarea:focus{border-color:var(--accent);}
+    .form-hint{font-size:.72rem;color:var(--muted);margin-top:.2rem;}
+    .form-actions{display:flex;gap:.75rem;margin-top:1.5rem;justify-content:flex-end;}
+    .form-actions .btn{padding:.6rem 1.25rem;}
+
+    .toggle-row{display:flex;align-items:center;gap:.75rem;}
+    .toggle-label{font-size:.82rem;color:var(--soft);}
+    .toggle-check{width:18px;height:18px;cursor:pointer;accent-color:var(--accent);}
+
+    /* Preview modal */
+    .preview-modal{max-width:640px;}
+    .preview-frame{width:100%;height:560px;border:none;border-radius:12px;background:#fff;margin-top:.5rem;}
+
+    /* Empty */
+    .empty-state{text-align:center;padding:4rem 2rem;color:var(--soft);}
+    .empty-icon{font-size:3rem;margin-bottom:1rem;}
+
+    /* Toast */
+    .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:.9rem 1.4rem;font-size:.875rem;font-weight:600;color:var(--text);z-index:400;transform:translateY(100px);opacity:0;transition:all .3s;pointer-events:none;}
+    .toast.show{transform:translateY(0);opacity:1;}
+    .toast.ok{border-color:rgba(182,255,60,.4);color:var(--accent2);}
+    .toast.err{border-color:rgba(239,68,68,.4);color:#ef9494;}
+
+    @media(max-width:640px){.email-card{grid-template-columns:1fr;}.email-actions{flex-direction:row;}.form-row{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+
+<nav class="admin-nav">
+  <div class="nav-brand">
+    <div class="nav-logo">K</div>
+    <span class="nav-title">Email Series</span>
+  </div>
+  <div class="nav-links">
+    <a href="/admin" class="nav-link">Dashboard</a>
+    <a href="/admin/leads" class="nav-link">Leads</a>
+    <a href="/admin/email-list" class="nav-link">Email List</a>
+    <a href="/admin/email-series" class="nav-link active">Email Series</a>
+    <a href="/admin/blog" class="nav-link">Blog</a>
+    <a href="/" class="nav-link">← Site</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">📧 Nurture Email Series</div>
+      <div class="page-sub">Manage the automated email sequence sent to free-book subscribers. Changes take effect on the next cron run.</div>
+    </div>
+    <button class="add-btn" id="addBtn">+ Add Email</button>
+  </div>
+
+  <!-- Series list -->
+  <div class="series-list" id="seriesList">
+    {series.length === 0 && (
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <p>No emails in the series yet.<br/>Click "Add Email" to create the first one.</p>
+      </div>
+    )}
+    {series.map((row: any) => (
+      <div class={`email-card${row.is_active ? '' : ' inactive'}`} data-id={row.id}>
+        <div class={`step-badge${row.is_active ? ' active-badge' : ''}`}>#{row.step_order}</div>
+        <div class="email-info">
+          <div class="email-name">{row.name}</div>
+          <div class="email-subject">"{row.subject}"</div>
+          <div class="email-meta">
+            <span class="meta-pill">⏱ Day {row.delay_days}</span>
+            {row.is_active
+              ? <span class="meta-pill green">● Active</span>
+              : <span class="meta-pill red">○ Paused</span>
+            }
+            {row.preheader && <span class="meta-pill" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{row.preheader}</span>}
+          </div>
+        </div>
+        <div class="email-actions">
+          <button class="btn btn-preview" data-preview-id={row.id}>👁 Preview</button>
+          <button class="btn btn-edit" data-edit-id={row.id}>✏ Edit</button>
+          <button class="btn btn-toggle" data-toggle-id={row.id} data-active={row.is_active ? 'true' : 'false'}>
+            {row.is_active ? '⏸ Pause' : '▶ Resume'}
+          </button>
+          <button class="btn btn-danger" data-delete-id={row.id}>🗑</button>
+        </div>
+      </div>
+    ))}
+  </div>
+
+</div>
+
+<!-- ── Edit / Add Modal ── -->
+<div class="modal-bg" id="editModal">
+  <div class="modal">
+    <div class="modal-title" id="editModalTitle">Add Email</div>
+    <input type="hidden" id="editId"/>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="editName">Name (internal label)</label>
+        <input id="editName" class="form-input" placeholder="e.g. Nurture 1 — Recipes"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="editOrder">Step Order</label>
+        <input id="editOrder" class="form-input" type="number" min="1" placeholder="1"/>
+      </div>
+    </div>
+    <div class="form-row full">
+      <div class="form-group">
+        <label class="form-label" for="editSubject">Subject Line</label>
+        <input id="editSubject" class="form-input" placeholder="Did you try the keto recipes? 🍳"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="editPreheader">Preheader (inbox preview text)</label>
+        <input id="editPreheader" class="form-input" placeholder="Brief teaser shown in inbox"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="editDelay">Send on Day (after signup)</label>
+        <input id="editDelay" class="form-input" type="number" min="0" placeholder="2"/>
+        <span class="form-hint">Day 0 = immediate, Day 2 = 2 days after signup, etc.</span>
+      </div>
+    </div>
+    <div class="form-row full">
+      <div class="form-group">
+        <label class="form-label" for="editBody">Email Body (HTML — content inside the card)</label>
+        <textarea id="editBody" class="form-textarea" placeholder="<h1>Your heading</h1>&#10;<p>Your message here...</p>&#10;&#10;Use {{APP_URL}} as a placeholder for the site URL."></textarea>
+        <span class="form-hint">HTML placed inside the email card. Use <code style="font-size:.7rem;background:var(--card2);padding:.1rem .3rem;border-radius:3px;">{"{{APP_URL}}"}</code> for links. Click Preview to see the rendered result.</span>
+      </div>
+    </div>
+    <div class="toggle-row" style="margin-bottom:.5rem;">
+      <input type="checkbox" id="editActive" class="toggle-check" checked/>
+      <label class="toggle-label" for="editActive">Active (include in nurture sequence)</label>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-cancel" id="editCancelBtn">Cancel</button>
+      <button class="btn btn-preview" id="editPreviewBtn">👁 Preview</button>
+      <button class="btn btn-save" id="editSaveBtn">Save Email</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Preview Modal ── -->
+<div class="modal-bg" id="previewModal">
+  <div class="modal preview-modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <div class="modal-title" style="margin:0;" id="previewTitle">Email Preview</div>
+      <button class="btn btn-cancel" id="previewCloseBtn">✕ Close</button>
+    </div>
+    <iframe id="previewFrame" class="preview-frame" title="Email Preview"></iframe>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script is:inline define:vars={{ seriesJson, appUrlJson }}>
+var SERIES = JSON.parse(seriesJson);
+var APP_URL = JSON.parse(appUrlJson);
+
+/* ── Toast ── */
+function toast(msg, type) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + (type || '') + ' show';
+  setTimeout(function() { el.classList.remove('show'); }, 3000);
+}
+
+/* ── Render preview HTML (wraps body in nurture email shell) ── */
+function buildPreviewHtml(body, subject, preheader) {
+  var content = (body || '').replace(/\{\{APP_URL\}\}/g, APP_URL);
+  var pre = preheader
+    ? '<div style="display:none;max-height:0;overflow:hidden;">' + preheader + '&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>'
+    : '';
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>'
+    + '<body style="margin:0;padding:0;background:#FAF6F1;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,sans-serif;">'
+    + pre
+    + '<table width="100%" cellpadding="0" cellspacing="0" style="background:#FAF6F1;">'
+    + '<tr><td align="center" style="padding:32px 16px;">'
+    + '<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">'
+    + '<tr><td style="padding-bottom:20px;text-align:center;">'
+    + '<table cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr>'
+    + '<td style="background:#FF5C7A;border-radius:10px;width:32px;height:32px;text-align:center;vertical-align:middle;"><span style="font-size:16px;line-height:32px;">🌿</span></td>'
+    + '<td style="padding-left:9px;vertical-align:middle;"><span style="font-family:Georgia,serif;font-size:19px;font-weight:900;color:#16110F;">Keto Journey</span></td>'
+    + '</tr></table></td></tr>'
+    + '<tr><td style="background:#FFFFFF;border:1px solid #E5DED2;border-radius:20px;padding:36px 32px;">' + content + '</td></tr>'
+    + '<tr><td style="padding:20px 0 8px;text-align:center;">'
+    + '<p style="margin:0;font-size:11px;color:#8A8077;">You requested our free recipe book · <a href="' + APP_URL + '/free-book" style="color:#FF5C7A;text-decoration:none;">Unsubscribe</a></p>'
+    + '</td></tr></table></td></tr></table></body></html>';
+}
+
+function showPreview(body, subject, preheader) {
+  var frame = document.getElementById('previewFrame');
+  var title = document.getElementById('previewTitle');
+  title.textContent = subject || 'Email Preview';
+  frame.srcdoc = buildPreviewHtml(body, subject, preheader);
+  document.getElementById('previewModal').classList.add('open');
+}
+
+/* ── Edit modal ── */
+var editModal = document.getElementById('editModal');
+
+function openAdd() {
+  document.getElementById('editModalTitle').textContent = 'Add Email';
+  document.getElementById('editId').value = '';
+  document.getElementById('editName').value = '';
+  document.getElementById('editOrder').value = String(SERIES.length + 1);
+  document.getElementById('editSubject').value = '';
+  document.getElementById('editPreheader').value = '';
+  document.getElementById('editDelay').value = '';
+  document.getElementById('editBody').value = '';
+  document.getElementById('editActive').checked = true;
+  editModal.classList.add('open');
+}
+
+function openEdit(id) {
+  var row = SERIES.find(function(s) { return s.id === id; });
+  if (!row) return;
+  document.getElementById('editModalTitle').textContent = 'Edit — ' + row.name;
+  document.getElementById('editId').value = row.id;
+  document.getElementById('editName').value = row.name || '';
+  document.getElementById('editOrder').value = String(row.step_order);
+  document.getElementById('editSubject').value = row.subject || '';
+  document.getElementById('editPreheader').value = row.preheader || '';
+  document.getElementById('editDelay').value = String(row.delay_days);
+  document.getElementById('editBody').value = row.html_body || '';
+  document.getElementById('editActive').checked = !!row.is_active;
+  editModal.classList.add('open');
+}
+
+function closeEdit() { editModal.classList.remove('open'); }
+
+function getFormData() {
+  return {
+    id:         document.getElementById('editId').value,
+    name:       document.getElementById('editName').value.trim(),
+    step_order: parseInt(document.getElementById('editOrder').value) || 1,
+    subject:    document.getElementById('editSubject').value.trim(),
+    preheader:  document.getElementById('editPreheader').value.trim(),
+    delay_days: parseInt(document.getElementById('editDelay').value) || 0,
+    html_body:  document.getElementById('editBody').value,
+    is_active:  document.getElementById('editActive').checked,
+  };
+}
+
+async function saveEmail() {
+  var data = getFormData();
+  if (!data.name || !data.subject) { toast('Name and subject are required', 'err'); return; }
+  var btn = document.getElementById('editSaveBtn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  try {
+    var method, url;
+    if (data.id) {
+      method = 'PATCH'; url = '/api/admin/email-series/' + data.id;
+    } else {
+      method = 'POST'; url = '/api/admin/email-series';
+    }
+    var res = await fetch(url, {
+      method: method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    var json = await res.json();
+    if (!res.ok) { toast('Error: ' + (json.error || 'Save failed'), 'err'); return; }
+    toast('Saved successfully', 'ok');
+    setTimeout(function() { window.location.reload(); }, 800);
+  } catch (e) {
+    toast('Network error', 'err');
+  } finally {
+    btn.textContent = 'Save Email'; btn.disabled = false;
+  }
+}
+
+async function toggleActive(id, currentlyActive) {
+  try {
+    var res = await fetch('/api/admin/email-series/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: !currentlyActive }),
+    });
+    if (!res.ok) { toast('Could not update', 'err'); return; }
+    toast(currentlyActive ? 'Email paused' : 'Email resumed', 'ok');
+    setTimeout(function() { window.location.reload(); }, 600);
+  } catch (e) { toast('Network error', 'err'); }
+}
+
+async function deleteEmail(id) {
+  if (!confirm('Delete this email? This cannot be undone.')) return;
+  try {
+    var res = await fetch('/api/admin/email-series/' + id, { method: 'DELETE' });
+    if (!res.ok) { toast('Could not delete', 'err'); return; }
+    toast('Deleted', 'ok');
+    setTimeout(function() { window.location.reload(); }, 600);
+  } catch (e) { toast('Network error', 'err'); }
+}
+
+/* ── Wire events ── */
+document.addEventListener('DOMContentLoaded', function() {
+
+  document.getElementById('addBtn').addEventListener('click', openAdd);
+  document.getElementById('editCancelBtn').addEventListener('click', closeEdit);
+  document.getElementById('editSaveBtn').addEventListener('click', saveEmail);
+
+  document.getElementById('editPreviewBtn').addEventListener('click', function() {
+    var d = getFormData();
+    showPreview(d.html_body, d.subject, d.preheader);
+  });
+
+  document.getElementById('previewCloseBtn').addEventListener('click', function() {
+    document.getElementById('previewModal').classList.remove('open');
+  });
+
+  /* Close modals on backdrop click */
+  [document.getElementById('editModal'), document.getElementById('previewModal')].forEach(function(m) {
+    m.addEventListener('click', function(e) {
+      if (e.target === m) m.classList.remove('open');
+    });
+  });
+
+  /* Edit buttons */
+  document.querySelectorAll('[data-edit-id]').forEach(function(btn) {
+    btn.addEventListener('click', function() { openEdit(btn.getAttribute('data-edit-id')); });
+  });
+
+  /* Preview buttons (on cards) */
+  document.querySelectorAll('[data-preview-id]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var id = btn.getAttribute('data-preview-id');
+      var row = SERIES.find(function(s) { return s.id === id; });
+      if (row) showPreview(row.html_body, row.subject, row.preheader);
+    });
+  });
+
+  /* Toggle active */
+  document.querySelectorAll('[data-toggle-id]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var id = btn.getAttribute('data-toggle-id');
+      var active = btn.getAttribute('data-active') === 'true';
+      toggleActive(id, active);
+    });
+  });
+
+  /* Delete */
+  document.querySelectorAll('[data-delete-id]').forEach(function(btn) {
+    btn.addEventListener('click', function() { deleteEmail(btn.getAttribute('data-delete-id')); });
+  });
+});
+</script>
+
+</body>
+</html>
