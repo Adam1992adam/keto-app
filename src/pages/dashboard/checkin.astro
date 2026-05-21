@@ -112,13 +112,18 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
 
     /* ── LAYOUT ── */
     .app-shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
-    .ci-main{display:flex;flex-direction:column;min-width:0;}
+    .ci-main{display:flex;flex-direction:column;min-width:0;padding-top:0!important;}
     .ci-body{max-width:1100px;margin:0 auto;width:100%;padding:0 32px 100px;}
     @media(max-width:1100px){.app-shell{grid-template-columns:1fr;}.ci-body{padding:0 18px 60px;}}
     @media(max-width:900px){.ci-main{padding-bottom:5.5rem;}}
 
-    /* ── MOOD HERO ── */
-    .mh{position:relative;background:var(--ink);color:var(--bg);overflow:hidden;}
+    /* ── MOOD HERO — always dark, immune to dark-mode theme override ── */
+    .mh{
+      position:relative;overflow:hidden;
+      /* Pin hero vars to light-mode values so the dark background is always dark */
+      --bg:#FAF6F1;--bg-alt:#F2EDE5;--ink:#16110F;--muted:#8A8077;--line:#E5DED2;
+      background:#16110F;color:#FAF6F1;
+    }
     .mh-glow{position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,color-mix(in oklab,var(--accent) 40%,transparent),transparent 65%);filter:blur(70px);bottom:-300px;right:-200px;z-index:0;pointer-events:none;transition:background .35s;}
     .mh-glow.amazing{background:radial-gradient(circle,color-mix(in oklab,var(--accent-2) 50%,transparent),transparent 65%);}
     .mh-glow.good{background:radial-gradient(circle,color-mix(in oklab,var(--accent-3) 50%,transparent),transparent 65%);}
@@ -130,13 +135,13 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
     .mh-eyebrow::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--accent-2);box-shadow:0 0 0 4px color-mix(in oklab,var(--accent-2) 25%,transparent);}
     .mh-greet{font-family:var(--display);font-size:clamp(40px,6vw,88px);line-height:0.92;letter-spacing:-0.045em;font-weight:700;text-wrap:balance;max-width:18ch;}
     .mh-greet em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--accent);}
-    .mh-date{margin-top:18px;font-family:var(--serif);font-style:italic;font-size:18px;color:color-mix(in oklab,var(--bg) 70%,transparent);}
-    .mh-mood{margin-top:44px;padding-top:32px;border-top:1px solid color-mix(in oklab,var(--bg) 18%,transparent);}
-    .mh-mood-label{font-family:var(--mono);font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:color-mix(in oklab,var(--bg) 60%,transparent);margin-bottom:16px;}
+    .mh-date{margin-top:18px;font-family:var(--serif);font-style:italic;font-size:18px;color:color-mix(in oklab,#FAF6F1 70%,transparent);}
+    .mh-mood{margin-top:44px;padding-top:32px;border-top:1px solid color-mix(in oklab,#FAF6F1 18%,transparent);}
+    .mh-mood-label{font-family:var(--mono);font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:color-mix(in oklab,#FAF6F1 60%,transparent);margin-bottom:16px;}
     .mh-mood-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
-    .mood-btn{background:color-mix(in oklab,var(--bg) 8%,transparent);border:1px solid color-mix(in oklab,var(--bg) 14%,transparent);border-radius:18px;padding:22px 14px 18px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
-    .mood-btn:hover{background:color-mix(in oklab,var(--bg) 14%,transparent);transform:translateY(-2px);}
-    .mood-btn.on{background:var(--bg);color:var(--ink);border-color:var(--bg);box-shadow:0 20px 40px -20px rgba(0,0,0,0.5);}
+    .mood-btn{background:color-mix(in oklab,#FAF6F1 8%,transparent);border:1px solid color-mix(in oklab,#FAF6F1 14%,transparent);border-radius:18px;padding:22px 14px 18px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+    .mood-btn:hover{background:color-mix(in oklab,#FAF6F1 14%,transparent);transform:translateY(-2px);}
+    .mood-btn.on{background:#FAF6F1;color:#16110F;border-color:#FAF6F1;box-shadow:0 20px 40px -20px rgba(0,0,0,0.5);}
     .mood-emoji{font-size:36px;line-height:1;margin-bottom:10px;transition:transform .2s;}
     .mood-btn.on .mood-emoji{transform:scale(1.1);}
     .mood-label{font-family:var(--display);font-size:14px;font-weight:600;letter-spacing:-0.01em;}
@@ -154,24 +159,28 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
     .cards-head .ch-meta{font-family:var(--mono);font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);}
     .cards-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;}
     .ci-card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;}
-    .ci-card.dark{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+    /* Dark card: pin vars to light-mode so background is always dark */
+    .ci-card.dark{
+      --bg:#FAF6F1;--bg-alt:#F2EDE5;--ink:#16110F;--muted:#8A8077;--line:#E5DED2;
+      background:#16110F;color:#FAF6F1;border-color:#16110F;
+    }
     .ci-card.alt{background:var(--bg-alt);}
     .ci-card.span4{grid-column:span 4;}
     .ci-card.span6{grid-column:span 6;}
     .ci-card.span12{grid-column:span 12;}
     .ci-label{font-family:var(--mono);font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
-    .ci-card.dark .ci-label{color:color-mix(in oklab,var(--bg) 60%,transparent);}
+    .ci-card.dark .ci-label{color:color-mix(in oklab,#FAF6F1 60%,transparent);}
     .ci-q{font-family:var(--display);font-size:20px;font-weight:600;letter-spacing:-0.02em;line-height:1.15;margin-bottom:4px;}
     .ci-q em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--accent);}
     .ci-sub{font-size:13px;color:var(--muted);font-family:var(--serif);font-style:italic;margin-bottom:18px;}
-    .ci-card.dark .ci-sub{color:color-mix(in oklab,var(--bg) 60%,transparent);}
+    .ci-card.dark .ci-sub{color:color-mix(in oklab,#FAF6F1 60%,transparent);}
     .ci-bigval{font-family:var(--display);font-size:56px;font-weight:700;letter-spacing:-0.04em;line-height:0.9;}
     .ci-bigval em{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--accent);font-size:22px;margin-left:2px;}
     .weight-stepper{display:flex;align-items:center;gap:14px;margin-top:14px;}
     .weight-stepper button{width:38px;height:38px;border-radius:50%;background:var(--bg-alt);border:1px solid var(--line);font-size:18px;font-weight:700;transition:background .15s,color .15s;}
     .weight-stepper button:hover{background:var(--ink);color:var(--bg);}
-    .ci-card.dark .weight-stepper button{background:color-mix(in oklab,var(--bg) 12%,transparent);border-color:color-mix(in oklab,var(--bg) 18%,transparent);color:var(--bg);}
-    .ci-card.dark .weight-stepper button:hover{background:var(--accent-2);color:var(--ink);}
+    .ci-card.dark .weight-stepper button{background:color-mix(in oklab,#FAF6F1 12%,transparent);border-color:color-mix(in oklab,#FAF6F1 18%,transparent);color:#FAF6F1;}
+    .ci-card.dark .weight-stepper button:hover{background:var(--accent-2);color:#16110F;}
     .weight-delta{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;color:var(--accent-2);margin-top:12px;}
 
     /* ── SLIDER ── */
@@ -180,6 +189,9 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
     .ci-slider input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--ink);margin-top:-8px;border:3px solid var(--bg);box-shadow:0 2px 6px rgba(0,0,0,0.25);}
     .ci-slider input[type="range"]::-moz-range-track{height:6px;background:linear-gradient(90deg,var(--c,var(--accent)) 0%,var(--c,var(--accent)) var(--pct,50%),var(--bg-alt) var(--pct,50%),var(--bg-alt) 100%);border-radius:3px;}
     .ci-slider input[type="range"]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--ink);border:3px solid var(--bg);box-shadow:0 2px 6px rgba(0,0,0,0.25);}
+    /* Dark card slider: transparent track fill behind filled portion */
+    .ci-card.dark .ci-slider input[type="range"]::-webkit-slider-runnable-track{background:linear-gradient(90deg,var(--c,var(--accent)) 0%,var(--c,var(--accent)) var(--pct,50%),color-mix(in oklab,#FAF6F1 14%,transparent) var(--pct,50%),color-mix(in oklab,#FAF6F1 14%,transparent) 100%);}
+    .ci-card.dark .ci-slider input[type="range"]::-webkit-slider-thumb{background:#FAF6F1;border-color:#16110F;}
     .ci-slider-labels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-top:4px;}
     .slider-val{font-family:var(--display);font-size:36px;font-weight:700;letter-spacing:-0.03em;line-height:1;margin:4px 0 12px;}
     .slider-val .max{font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:500;margin-left:4px;}
@@ -248,7 +260,10 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
     /* ── SUBMIT ── */
     .submit-wrap{margin-top:60px;padding-bottom:40px;}
     .submit-row{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;align-items:stretch;}
-    .insight-card{background:var(--ink);color:var(--bg);border-radius:24px;padding:28px;position:relative;overflow:hidden;}
+    .insight-card{
+      --bg:#FAF6F1;--ink:#16110F;
+      background:#16110F;color:#FAF6F1;border-radius:24px;padding:28px;position:relative;overflow:hidden;
+    }
     .insight-glow{position:absolute;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,color-mix(in oklab,var(--accent) 50%,transparent),transparent 65%);filter:blur(50px);bottom:-180px;right:-120px;pointer-events:none;}
     .insight-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent-2);display:inline-flex;align-items:center;gap:8px;margin-bottom:18px;position:relative;z-index:1;}
     .insight-eyebrow::before{content:'✦';color:var(--accent-2);font-size:14px;}
@@ -273,7 +288,7 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
     .ci-toast em{color:var(--accent-2);font-family:var(--serif);font-style:italic;font-weight:400;}
 
     /* ── SUCCESS OVERLAY ── */
-    .success-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(250,246,241,.97);backdrop-filter:blur(20px);flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;}
+    .success-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(250,246,241,.97);backdrop-filter:blur(20px);flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;color:#16110F;}
     .success-overlay.show{display:flex;animation:fadeIn .4s ease both;}
     @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
     @keyframes bounceIn{0%{transform:scale(0);}70%{transform:scale(1.15);}100%{transform:scale(1);}}
@@ -288,7 +303,7 @@ const sleepQualPct   = Math.round(prefillSleepQuality / 10 * 100);
 <body>
 <div class="app-shell">
 <Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="checkin" />
-<main class="ci-main">
+<main class="ci-main rv-pg-main">
 
   <!-- ── MOOD HERO ── -->
   <section class="mh">
