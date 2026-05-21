@@ -4,13 +4,14 @@ import sanitizeHtml from 'sanitize-html';
 
 const BLOG_SANITIZE: sanitizeHtml.IOptions = {
   allowedTags: ['h1','h2','h3','h4','p','strong','em','u','s','blockquote',
-                'ul','ol','li','a','img','hr','br',
+                'ul','ol','li','a','img','hr','br','div','span',
                 'table','thead','tbody','tr','td','th'],
   allowedAttributes: {
     a:   ['href','target','rel'],
     img: ['src','alt','width','height'],
     td:  ['colspan','rowspan'],
     th:  ['colspan','rowspan'],
+    '*': ['style','class'],
   },
   allowedSchemes: ['https','http','mailto'],
   transformTags: {
@@ -56,13 +57,17 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     updated_at: now,
   };
 
-  if (published) row.published_at = now;
-
   let result;
   if (id) {
+    // Preserve original published_at — only stamp it once on first publish
+    if (published) {
+      const { data: existing } = await db.from('blog_posts').select('published_at').eq('id', id).maybeSingle();
+      row.published_at = existing?.published_at || now;
+    }
     result = await db.from('blog_posts').update(row).eq('id', id).select('id').single();
   } else {
     row.created_at = now;
+    if (published) row.published_at = now;
     result = await db.from('blog_posts').insert(row).select('id').single();
   }
 

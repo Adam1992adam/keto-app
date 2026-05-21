@@ -202,6 +202,18 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
     .toc-item a { font-size:.84rem; color:var(--ink-soft); transition:color .15s; display:block; padding:2px 0; border-left:2px solid transparent; padding-left:10px; }
     .toc-item a:hover { color:var(--accent); border-left-color:var(--accent); }
 
+    /* INLINE TOC */
+    .toc-inline { background:var(--bg-alt); border:1px solid var(--line); border-radius:16px; margin-bottom:32px; overflow:hidden; }
+    .toc-inline summary { padding:14px 20px; font-family:var(--display); font-size:.88rem; font-weight:700; color:var(--ink); cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; user-select:none; }
+    .toc-inline summary::-webkit-details-marker { display:none; }
+    .toc-inline summary::after { content:'▸'; font-size:.82rem; color:var(--muted); transition:transform .2s; display:inline-block; }
+    .toc-inline[open] summary::after { transform:rotate(90deg); }
+    .toc-inline-inner { padding:4px 20px 16px; border-top:1px solid var(--line); }
+    .toc-inline-list { list-style:none; display:flex; flex-direction:column; gap:4px; margin-top:10px; }
+    .toc-inline-list li a { font-size:.85rem; color:var(--ink-soft); display:block; padding:3px 0 3px 12px; border-left:2px solid transparent; transition:all .15s; text-decoration:none; }
+    .toc-inline-list li a:hover { color:var(--accent); border-left-color:var(--accent); }
+    .toc-inline-list li a.h3-link { padding-left:28px; font-size:.8rem; color:var(--muted); }
+
     /* LEAD CARD — dark download CTA (sidebar) */
     .lead-card { background:linear-gradient(135deg,#0d1a0f,#0a1a12); border:1.5px solid rgba(255,92,122,.3); border-radius:20px; padding:24px; }
     .lead-card-eyebrow { font-size:.68rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#B6FF3C; margin-bottom:8px; }
@@ -314,6 +326,14 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
       }
     </div>
 
+    <!-- Collapsible Table of Contents (auto-generated, hidden until headings found) -->
+    <details class="toc-inline" id="tocInline" style="display:none">
+      <summary>In this article</summary>
+      <div class="toc-inline-inner">
+        <ul class="toc-inline-list" id="tocInlineList"></ul>
+      </div>
+    </details>
+
     <!-- Article body -->
     <article class="prose" set:html={contentHtml}/>
 
@@ -403,12 +423,6 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
       <a href="/free-book" class="cta-btn cta-btn-outline">Get Free Recipe Book</a>
     </div>
 
-    <!-- Table of contents (auto-generated from headings) -->
-    <div class="sidebar-card" id="tocCard" style="display:none">
-      <div class="sidebar-card-title">In this article</div>
-      <ul class="toc-list" id="tocList"></ul>
-    </div>
-
     <!-- Share -->
     <div class="sidebar-card">
       <div class="sidebar-card-title">Share this article</div>
@@ -445,12 +459,12 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
   update();
 })();
 
-/* Table of contents + active scroll tracking */
+/* Inline collapsible Table of Contents + active scroll tracking */
 (function() {
-  var prose   = document.querySelector('.prose');
-  var tocCard = document.getElementById('tocCard');
-  var tocList = document.getElementById('tocList');
-  if (!prose || !tocCard || !tocList) return;
+  var prose     = document.querySelector('.prose');
+  var tocInline = document.getElementById('tocInline');
+  var tocList   = document.getElementById('tocInlineList');
+  if (!prose || !tocInline || !tocList) return;
   var headings = prose.querySelectorAll('h2, h3');
   if (headings.length < 2) return;
   var anchors = [];
@@ -458,15 +472,14 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
     var id = 'h-' + i;
     h.id = id;
     var li = document.createElement('li');
-    li.className = 'toc-item';
     var a = document.createElement('a');
     a.href = '#' + id;
     a.textContent = h.textContent;
-    if (h.tagName === 'H3') a.style.paddingLeft = '22px';
+    if (h.tagName === 'H3') a.className = 'h3-link';
     li.appendChild(a); tocList.appendChild(li);
     anchors.push({ el: h, link: a });
   });
-  tocCard.style.display = 'block';
+  tocInline.style.display = 'block';
   /* Active item tracking */
   function onScroll() {
     var scrollY = window.scrollY + 120;
