@@ -424,6 +424,15 @@ const mealsForClient = todayMeals.map(m => ({
 }));
 const habitsForClient = dashHabits.map(h => ({ id: h.id, title: h.title, icon: h.icon || '' }));
 const doneHabitsForClient = (habitDoneRaw || []).map(h => h.habit_id);
+const mealMacrosForClient = todayMeals.reduce((acc: any, m: any) => {
+  if (m.recipe) acc[m.meal_type] = {
+    cal:   m.recipe.calories || 0,
+    prot:  parseFloat(m.recipe.protein   || '0'),
+    fat:   parseFloat(m.recipe.fat       || '0'),
+    carbs: parseFloat(m.recipe.net_carbs || '0'),
+  };
+  return acc;
+}, {});
 const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${dailyTip.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${dailyTip.icon}</svg>`;
 ---
 <!DOCTYPE html>
@@ -566,9 +575,9 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
             <text x="90" y="113" text-anchor="middle" class="rv-ring-goal">of {goalCal}</text>
           </svg>
           <div class="rv-ring-legend">
-            <span class="rv-rl"><span class="rv-rl-dot" style="background:#FF5C7A"></span>Fat {fatPct}%</span>
-            <span class="rv-rl"><span class="rv-rl-dot" style="background:#FF914D"></span>Protein {protPct}%</span>
-            <span class="rv-rl"><span class="rv-rl-dot" style="background:#B6FF3C"></span>Carbs {carbPct}%</span>
+            <span class="rv-rl" id="rvLegFat"><span class="rv-rl-dot" style="background:#FF5C7A"></span>Fat {fatPct}%</span>
+            <span class="rv-rl" id="rvLegProt"><span class="rv-rl-dot" style="background:#FF914D"></span>Protein {protPct}%</span>
+            <span class="rv-rl" id="rvLegCarb"><span class="rv-rl-dot" style="background:#B6FF3C"></span>Carbs {carbPct}%</span>
           </div>
         </div>
       </div>
@@ -713,8 +722,8 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
         </form>
       </div>
 
-      <!-- 6 · AI Coach ────────────────────────────────────────── span 4 -->
-      <div class="rv-card rv-coach">
+      <!-- 6 · AI Coach ── hidden ──────────────────────────────── span 4 -->
+      <div class="rv-card rv-coach" style="display:none">
         <div class="rv-coach-glow"></div>
         <div class="rv-card-head">
           <h2 class="rv-card-title rv-coach-title">AI Coach</h2>
@@ -1479,18 +1488,23 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
 
 <!-- ═══════════════════════════ SCRIPTS ══════════════════════════════ -->
 <script is:inline define:vars={{
-  rvFatPct:      fatPct,
-  rvProtPct:     protPct,
-  rvCarbPct:     carbPct,
-  rvConsumedCal: totalConsumed.calories,
-  rvGoalCal:     goalCal,
-  rvFasting:     fastingData,
-  rvDoneMeals:   completedMealTypesArr,
-  rvDoneHabits:  doneHabitsForClient,
-  rvWater:       waterGlasses,
-  rvWUnit:       wUnit,
-  rvDay:         currentDay,
-  rvStreak:      streakDays,
+  rvFatPct:         fatPct,
+  rvProtPct:        protPct,
+  rvCarbPct:        carbPct,
+  rvConsumedCal:    totalConsumed.calories,
+  rvGoalCal:        goalCal,
+  rvGoalProt:       goalProt,
+  rvGoalFat:        goalFat,
+  rvGoalCarb:       goalCarb,
+  rvFoodLogMacros:  { cal: foodLogMacros.calories, prot: foodLogMacros.protein, fat: foodLogMacros.fat, carbs: foodLogMacros.net_carbs },
+  rvMealMacros:     mealMacrosForClient,
+  rvFasting:        fastingData,
+  rvDoneMeals:      completedMealTypesArr,
+  rvDoneHabits:     doneHabitsForClient,
+  rvWater:          waterGlasses,
+  rvWUnit:          wUnit,
+  rvDay:            currentDay,
+  rvStreak:         streakDays,
 }}>
 (function () {
   /* ── Ring animation ───────────────────────────────────── */
@@ -1571,6 +1585,41 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
 
   /* ── Meal completion ────────────────────────────────── */
   var doneMeals = new Set(rvDoneMeals);
+  var C1 = 439.82, C2 = 351.86, C3 = 263.89;
+
+  function updateMacroDisplay() {
+    var cal = rvFoodLogMacros.cal, prot = rvFoodLogMacros.prot;
+    var fat = rvFoodLogMacros.fat, carbs = rvFoodLogMacros.carbs;
+    doneMeals.forEach(function(mt) {
+      var m = rvMealMacros[mt];
+      if (!m) return;
+      cal   += m.cal;
+      prot  += m.prot;
+      fat   += m.fat;
+      carbs += m.carbs;
+    });
+    var fatPct  = rvGoalFat  > 0 ? Math.min(100, Math.round((fat   / rvGoalFat)  * 100)) : 0;
+    var protPct = rvGoalProt > 0 ? Math.min(100, Math.round((prot  / rvGoalProt) * 100)) : 0;
+    var carbPct = rvGoalCarb > 0 ? Math.min(100, Math.round((carbs / rvGoalCarb) * 100)) : 0;
+    /* rings */
+    var r1 = document.getElementById('ring-fat');
+    var r2 = document.getElementById('ring-prot');
+    var r3 = document.getElementById('ring-carb');
+    if (r1) r1.style.strokeDashoffset = String(C1 * (1 - fatPct  / 100));
+    if (r2) r2.style.strokeDashoffset = String(C2 * (1 - protPct / 100));
+    if (r3) r3.style.strokeDashoffset = String(C3 * (1 - carbPct / 100));
+    /* centre calorie label */
+    var kcalEl = document.getElementById('rvKcal');
+    if (kcalEl) kcalEl.textContent = String(Math.round(cal));
+    /* legend */
+    var lf = document.getElementById('rvLegFat');
+    var lp = document.getElementById('rvLegProt');
+    var lc = document.getElementById('rvLegCarb');
+    if (lf) lf.lastChild.textContent = 'Fat '     + fatPct  + '%';
+    if (lp) lp.lastChild.textContent = 'Protein ' + protPct + '%';
+    if (lc) lc.lastChild.textContent = 'Carbs '   + carbPct + '%';
+  }
+
   document.addEventListener('click', function(e) {
     var btn = e.target.closest('.rv-meal-check');
     if (!btn) return;
@@ -1583,6 +1632,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
     btn.innerHTML = nowDone
       ? '<svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#B6FF3C"/><polyline points="9 12 11 14 15 10" fill="none" stroke="#16110F" stroke-width="2.2" stroke-linecap="round"/></svg>'
       : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C4BAB1" stroke-width="1.8"><circle cx="12" cy="12" r="10"/></svg>';
+    updateMacroDisplay();
     fetch('/api/meals/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
