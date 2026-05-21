@@ -19,6 +19,10 @@ const { data: post } = await db
 
 if (!post) return Astro.redirect('/blog');
 
+// Prevent Vercel Edge Cache from serving stale content after edits
+Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+Astro.response.headers.set('Pragma', 'no-cache');
+
 // Related posts (same category, excluding current)
 const { data: relatedRaw } = await db
   .from('blog_posts')
@@ -202,17 +206,33 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
     .toc-item a { font-size:.84rem; color:var(--ink-soft); transition:color .15s; display:block; padding:2px 0; border-left:2px solid transparent; padding-left:10px; }
     .toc-item a:hover { color:var(--accent); border-left-color:var(--accent); }
 
-    /* INLINE TOC */
-    .toc-inline { background:var(--bg-alt); border:1px solid var(--line); border-radius:16px; margin-bottom:32px; overflow:hidden; }
-    .toc-inline summary { padding:14px 20px; font-family:var(--display); font-size:.88rem; font-weight:700; color:var(--ink); cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; user-select:none; }
-    .toc-inline summary::-webkit-details-marker { display:none; }
-    .toc-inline summary::after { content:'▸'; font-size:.82rem; color:var(--muted); transition:transform .2s; display:inline-block; }
-    .toc-inline[open] summary::after { transform:rotate(90deg); }
-    .toc-inline-inner { padding:4px 20px 16px; border-top:1px solid var(--line); }
-    .toc-inline-list { list-style:none; display:flex; flex-direction:column; gap:4px; margin-top:10px; }
-    .toc-inline-list li a { font-size:.85rem; color:var(--ink-soft); display:block; padding:3px 0 3px 12px; border-left:2px solid transparent; transition:all .15s; text-decoration:none; }
-    .toc-inline-list li a:hover { color:var(--accent); border-left-color:var(--accent); }
-    .toc-inline-list li a.h3-link { padding-left:28px; font-size:.8rem; color:var(--muted); }
+    /* TABLE OF CONTENTS — inline collapsible */
+    .toc-wrap { margin-bottom:36px; }
+    .toc-details { background:var(--card); border:1.5px solid var(--line); border-radius:18px; overflow:hidden; transition:border-color .2s, box-shadow .2s; }
+    .toc-details[open] { border-color:rgba(255,92,122,.28); box-shadow:0 4px 24px rgba(255,92,122,.07); }
+    .toc-summary { list-style:none; padding:14px 18px; display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; }
+    .toc-summary::-webkit-details-marker { display:none; }
+    .toc-sum-ic { width:30px; height:30px; border-radius:8px; background:rgba(255,92,122,.1); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .toc-sum-ic svg { width:14px; height:14px; stroke:var(--accent); }
+    .toc-sum-title { font-family:var(--display); font-size:.9rem; font-weight:700; color:var(--ink); flex:1; }
+    .toc-sum-count { font-size:.7rem; font-weight:700; color:var(--accent); background:rgba(255,92,122,.08); border:1px solid rgba(255,92,122,.18); border-radius:999px; padding:2px 10px; white-space:nowrap; }
+    .toc-sum-arrow { width:16px; height:16px; stroke:var(--muted); transition:transform .22s ease; flex-shrink:0; }
+    .toc-details[open] .toc-sum-arrow { transform:rotate(90deg); }
+    .toc-body { border-top:1px solid var(--line); padding:10px 14px 14px; }
+    .toc-ol { list-style:none; counter-reset:toc-h2; margin:0; padding:0; display:flex; flex-direction:column; gap:1px; }
+    .toc-ol > li { counter-increment:toc-h2; }
+    .toc-ol > li > a { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:10px; font-size:.86rem; font-weight:500; color:var(--ink-soft); text-decoration:none; transition:all .15s; }
+    .toc-ol > li > a:hover { background:rgba(255,92,122,.06); color:var(--accent); }
+    .toc-ol > li > a.toc-active { color:var(--accent); background:rgba(255,92,122,.07); font-weight:600; }
+    .toc-num { min-width:24px; height:24px; border-radius:7px; background:var(--bg-alt); border:1px solid var(--line); display:inline-flex; align-items:center; justify-content:center; font-size:.66rem; font-weight:700; color:var(--muted); flex-shrink:0; font-family:var(--display); transition:all .15s; }
+    .toc-ol > li > a.toc-active .toc-num { background:rgba(255,92,122,.12); border-color:rgba(255,92,122,.22); color:var(--accent); }
+    .toc-h3s { list-style:none; padding:2px 0 4px 34px; margin:0; display:flex; flex-direction:column; gap:1px; }
+    .toc-h3s li a { display:flex; align-items:center; gap:7px; padding:5px 10px; border-radius:8px; font-size:.8rem; color:var(--muted); text-decoration:none; transition:all .15s; }
+    .toc-h3s li a::before { content:''; width:5px; height:5px; border-radius:50%; background:var(--line); flex-shrink:0; transition:background .15s; }
+    .toc-h3s li a:hover { color:var(--ink-soft); background:rgba(255,92,122,.04); }
+    .toc-h3s li a:hover::before { background:var(--accent); }
+    .toc-h3s li a.toc-active { color:var(--accent); font-weight:500; }
+    .toc-h3s li a.toc-active::before { background:var(--accent); }
 
     /* LEAD CARD — dark download CTA (sidebar) */
     .lead-card { background:linear-gradient(135deg,#0d1a0f,#0a1a12); border:1.5px solid rgba(255,92,122,.3); border-radius:20px; padding:24px; }
@@ -326,13 +346,22 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
       }
     </div>
 
-    <!-- Collapsible Table of Contents (auto-generated, hidden until headings found) -->
-    <details class="toc-inline" id="tocInline" style="display:none">
-      <summary>In this article</summary>
-      <div class="toc-inline-inner">
-        <ul class="toc-inline-list" id="tocInlineList"></ul>
-      </div>
-    </details>
+    <!-- Collapsible Table of Contents (SEO-friendly <nav>, hidden until headings found) -->
+    <nav class="toc-wrap" aria-label="Table of contents" id="tocWrap" style="display:none">
+      <details class="toc-details" id="tocDetails">
+        <summary class="toc-summary">
+          <span class="toc-sum-ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </span>
+          <span class="toc-sum-title">In this article</span>
+          <span class="toc-sum-count" id="tocCount"></span>
+          <svg class="toc-sum-arrow" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </summary>
+        <div class="toc-body">
+          <ol class="toc-ol" id="tocOl"></ol>
+        </div>
+      </details>
+    </nav>
 
     <!-- Article body -->
     <article class="prose" set:html={contentHtml}/>
@@ -459,42 +488,84 @@ const publishedDate = post.published_at ? new Date(post.published_at).toISOStrin
   update();
 })();
 
-/* Inline collapsible Table of Contents + active scroll tracking */
+/* Table of Contents — numbered sections, slug IDs, scroll spy */
 (function() {
-  var prose     = document.querySelector('.prose');
-  var tocInline = document.getElementById('tocInline');
-  var tocList   = document.getElementById('tocInlineList');
-  if (!prose || !tocInline || !tocList) return;
+  var prose  = document.querySelector('.prose');
+  var wrap   = document.getElementById('tocWrap');
+  var ol     = document.getElementById('tocOl');
+  var countEl = document.getElementById('tocCount');
+  if (!prose || !wrap || !ol) return;
   var headings = prose.querySelectorAll('h2, h3');
   if (headings.length < 2) return;
-  var anchors = [];
-  headings.forEach(function(h, i) {
-    var id = 'h-' + i;
+
+  /* Slug-based IDs for SEO-friendly anchor links */
+  function slugify(text) {
+    return (text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
+  }
+  var usedIds = {};
+  function uniqueId(base) {
+    var id = base || 'section'; var n = 1;
+    while (usedIds[id]) { id = base + '-' + (++n); }
+    usedIds[id] = true; return id;
+  }
+
+  var allLinks = [];
+  var currentLi = null;
+  var currentH3ul = null;
+  var h2Count = 0;
+
+  headings.forEach(function(h) {
+    var id = uniqueId(slugify(h.textContent));
     h.id = id;
-    var li = document.createElement('li');
-    var a = document.createElement('a');
-    a.href = '#' + id;
-    a.textContent = h.textContent;
-    if (h.tagName === 'H3') a.className = 'h3-link';
-    li.appendChild(a); tocList.appendChild(li);
-    anchors.push({ el: h, link: a });
+
+    if (h.tagName === 'H2') {
+      h2Count++;
+      currentLi = document.createElement('li');
+
+      var numSpan = document.createElement('span');
+      numSpan.className = 'toc-num';
+      numSpan.textContent = h2Count < 10 ? '0' + h2Count : String(h2Count);
+
+      var a = document.createElement('a');
+      a.href = '#' + id;
+      a.appendChild(numSpan);
+      a.appendChild(document.createTextNode(h.textContent));
+
+      currentLi.appendChild(a);
+      ol.appendChild(currentLi);
+      currentH3ul = null;
+      allLinks.push({ el: h, link: a });
+
+    } else if (h.tagName === 'H3') {
+      if (!currentH3ul) {
+        currentH3ul = document.createElement('ul');
+        currentH3ul.className = 'toc-h3s';
+        if (currentLi) currentLi.appendChild(currentH3ul);
+        else ol.appendChild(currentH3ul);
+      }
+      var li3 = document.createElement('li');
+      var a3 = document.createElement('a');
+      a3.href = '#' + id;
+      a3.textContent = h.textContent;
+      li3.appendChild(a3);
+      currentH3ul.appendChild(li3);
+      allLinks.push({ el: h, link: a3 });
+    }
   });
-  tocInline.style.display = 'block';
-  /* Active item tracking */
+
+  if (!h2Count) return;
+  if (countEl) countEl.textContent = h2Count + (h2Count === 1 ? ' section' : ' sections');
+  wrap.style.display = 'block';
+
+  /* Scroll spy */
   function onScroll() {
-    var scrollY = window.scrollY + 120;
+    var scrollY = window.scrollY + 140;
     var active = null;
-    for (var i = 0; i < anchors.length; i++) {
-      if (anchors[i].el.getBoundingClientRect().top + window.scrollY <= scrollY) active = anchors[i];
+    for (var i = 0; i < allLinks.length; i++) {
+      if (allLinks[i].el.getBoundingClientRect().top + window.scrollY <= scrollY) active = allLinks[i];
     }
-    anchors.forEach(function(a) {
-      a.link.style.color = '';
-      a.link.style.borderLeftColor = '';
-    });
-    if (active) {
-      active.link.style.color = 'var(--accent)';
-      active.link.style.borderLeftColor = 'var(--accent)';
-    }
+    allLinks.forEach(function(item) { item.link.classList.remove('toc-active'); });
+    if (active) active.link.classList.add('toc-active');
   }
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
