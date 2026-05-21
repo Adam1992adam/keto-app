@@ -10,7 +10,8 @@ if ('redirect' in auth) return Astro.redirect(auth.redirect);
 const { user, profile, db } = auth;
 const lang = normaliseLang(Astro.cookies.get('keto-lang')?.value);
 const t = getTranslator(lang);
-const planType = profile.subscription_tier || 'basic_30';
+const planType  = profile.subscription_tier || 'basic_30';
+const tierLabel = planType === 'elite_12' ? 'Elite' : planType === 'pro_6' ? 'Pro' : 'Basic';
 
 await updateCurrentDay(user.id).catch(() => null);
 
@@ -331,7 +332,7 @@ const wcPointsJson = JSON.stringify(wcPoints.map(p => ({ x: p.x, y: p.y, day: p.
 <body>
 
 <div class="pg-shell">
-  <Sidebar activeId="progress" />
+  <Sidebar userName={userName} planType={planType} tierLabel={tierLabel} currentDay={currentDay} avatarUrl={profile.avatar_url} activePage="progress" />
   <main class="pg-main rv-pg-main">
 
     <!-- ═══════════════════════════ HERO ════════════════════════════════ -->
