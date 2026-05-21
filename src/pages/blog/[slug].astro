@@ -31,7 +31,18 @@ const related = relatedRaw || [];
 
 const rawContent = (post.content || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
 const isHtml = rawContent.startsWith('<');
-const contentHtml = isHtml ? rawContent : await marked.parse(rawContent);
+// If HTML paragraphs contain raw Markdown heading syntax (## / #), extract text and re-parse
+const textOnly = isHtml
+  ? rawContent
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n').replace(/<\/div>/gi, '\n\n')
+    .replace(/<\/h[1-6]>/gi, '\n\n').replace(/<\/li>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, '\n\n').trim()
+  : rawContent;
+const needsReparse = isHtml && /^#{1,6} /m.test(textOnly);
+const contentHtml = (!isHtml || needsReparse) ? await marked.parse(textOnly) : rawContent;
 
 const pageTitle = post.seo_title || post.title;
 const pageDesc  = post.seo_description || post.excerpt || '';

@@ -287,6 +287,11 @@ const existingContent = isEdit ? (post.content || '') : '';
   <button class="tb-btn" onmousedown="event.preventDefault()" onclick="fmt('justifyLeft')"   title="Align left">⬛L</button>
   <button class="tb-btn" onmousedown="event.preventDefault()" onclick="fmt('justifyCenter')" title="Centre">⬛C</button>
 
+  <div class="tb-sep"></div>
+
+  <!-- Markdown conversion -->
+  <button class="tb-btn" onmousedown="event.preventDefault()" onclick="reformatAsMarkdown()" title="Re-parse content as Markdown (fixes ## headings, **bold**, etc.)">↻ Fix Markdown</button>
+
   <div class="tb-spacer"></div>
 
   <span class="tb-wordcount" id="wordCount">0 words</span>
@@ -482,6 +487,15 @@ var savedRange = null; // remember cursor before link dialog
 ═══════════════════════════════════════════ */
 var savedBlockRange = null;
 
+/* Save selection when editor loses focus — more reliable than mousedown on <select> */
+editor.addEventListener('blur', function() {
+  var sel = window.getSelection();
+  if (sel && sel.rangeCount && editor.contains(sel.anchorNode)) {
+    savedBlockRange = sel.getRangeAt(0).cloneRange();
+  }
+});
+
+/* Also save on mousedown as an earlier backup */
 blockSel.addEventListener('mousedown', function() {
   var sel = window.getSelection();
   if (sel && sel.rangeCount && editor.contains(sel.anchorNode)) {
@@ -680,11 +694,17 @@ editor.addEventListener('paste', function(e) {
     tmp.querySelectorAll('meta,style,script,link').forEach(function(el) { el.remove(); });
     document.execCommand('insertHTML', false, tmp.innerHTML);
   } else {
-    /* Plain text — split on double newlines into paragraphs */
-    var paras = plain.split(/\n{2,}/);
-    var htmlOut = paras.map(function(p) {
-      return '<p>' + p.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') + '</p>';
-    }).join('');
+    /* Plain text — parse as Markdown so ## headings, **bold**, etc. work correctly */
+    var htmlOut;
+    if (typeof marked !== 'undefined') {
+      htmlOut = marked.parse(plain);
+    } else {
+      /* Fallback if marked hasn't loaded yet */
+      var paras = plain.split(/\n{2,}/);
+      htmlOut = paras.map(function(p) {
+        return '<p>' + p.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>') + '</p>';
+      }).join('');
+    }
     document.execCommand('insertHTML', false, htmlOut);
   }
   updateWordCount();
@@ -885,6 +905,29 @@ window.savePost = function(publish) {
     saveStatus.textContent = 'Save failed — check connection';
     saveStatus.className = 'save-status err';
   });
+};
+
+/* ═══════════════════════════════════════════
+   FIX MARKDOWN — convert ## headings etc.
+═══════════════════════════════════════════ */
+window.reformatAsMarkdown = function() {
+  if (typeof marked === 'undefined') { alert('Markdown parser not loaded yet. Please wait a moment and try again.'); return; }
+  if (!confirm('Re-parse the article as Markdown?\n\n## Heading → H2\n**bold** → bold\n*italic* → italic\netc.\n\nThis is useful if you pasted content that still shows ## symbols. Proceed?')) return;
+
+  /* Extract text while preserving block newlines */
+  var clone = editor.cloneNode(true);
+  clone.querySelectorAll('br').forEach(function(br) { br.replaceWith('\n'); });
+  clone.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6, blockquote').forEach(function(el) {
+    el.insertAdjacentText('afterend', '\n\n');
+  });
+  clone.querySelectorAll('li').forEach(function(el) {
+    el.insertAdjacentText('afterend', '\n');
+  });
+  var text = (clone.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
+  if (!text) return;
+
+  editor.innerHTML = marked.parse(text);
+  updateWordCount();
 };
 
 /* ═══════════════════════════════════════════
