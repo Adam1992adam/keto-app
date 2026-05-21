@@ -86,6 +86,8 @@ try {
     .eq('user_id', user.id).eq('completed_date', today),
   db.from('step_logs').select('steps, goal')
     .eq('user_id', user.id).eq('logged_date', today).maybeSingle(),
+  db.from('ketone_logs').select('ketone_mmol, measurement_type, logged_date')
+    .eq('user_id', user.id).order('logged_date', { ascending: false }).limit(5),
   ]);
 } catch (e) {
   console.error('[Dashboard] DB unavailable (batch 2):', e);
@@ -107,11 +109,21 @@ const [
   { data: habitsRaw },
   { data: habitDoneRaw },
   { data: todayStepLog },
+  { data: ketoneLogs },
 ] = batch2;
 
 const todaySteps   = (todayStepLog as any)?.steps || 0;
 const stepsGoal    = (todayStepLog as any)?.goal  || 10000;
 const stepsPct     = Math.min(100, Math.round((todaySteps / stepsGoal) * 100));
+
+const ktLogs5      = (ketoneLogs as any[]) || [];
+const latestKetone = ktLogs5.length > 0 ? Math.round(parseFloat(ktLogs5[0].ketone_mmol) * 10) / 10 : null;
+const ktZone       = latestKetone === null ? 'none' : latestKetone < 0.5 ? 'below' : latestKetone < 1.5 ? 'light' : latestKetone < 3.0 ? 'optimal' : latestKetone < 5.0 ? 'deep' : 'therapeutic';
+const ktLabel      = ktZone === 'none' ? 'No reading yet' : ktZone === 'below' ? 'Below Ketosis' : ktZone === 'light' ? 'Light Ketosis' : ktZone === 'optimal' ? 'Optimal Ketosis' : ktZone === 'deep' ? 'Deep Ketosis' : 'Therapeutic';
+const ktColor      = ktZone === 'none' ? '#8A8077' : ktZone === 'below' ? '#6b7280' : ktZone === 'light' ? '#3b82f6' : ktZone === 'optimal' ? '#FF5C7A' : ktZone === 'deep' ? '#8b5cf6' : '#f59e0b';
+const ktEmoji      = ktZone === 'optimal' ? '🔥' : ktZone === 'deep' ? '💜' : ktZone === 'light' ? '✨' : ktZone === 'below' ? '💤' : ktZone === 'none' ? '📊' : '⚡';
+const ktPct        = latestKetone !== null ? Math.min(100, Math.round((latestKetone / 5) * 100)) : 0;
+const ktRecent     = ktLogs5.slice(0, 3);
 
 const [rawMeals, smartInsights] = await Promise.all([
   (rawMealsDirect && rawMealsDirect.length > 0)
@@ -799,6 +811,59 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
         )}
       </div>
 
+      <!-- 9b · Ketone Tracker ──────────────────────────────── span 4 -->
+      <div class="rv-card rv-ketones">
+        <div class="rv-card-head">
+          <h2 class="rv-card-title">Ketone Tracker</h2>
+          <a href="/dashboard/ketones" class="rv-card-link">Details →</a>
+        </div>
+
+        <!-- Big reading + zone pill -->
+        <div class="rv-kt-main">
+          <span class="rv-kt-emoji">{ktEmoji}</span>
+          <div class="rv-kt-value-block">
+            <div class="rv-kt-value-row">
+              <span class="rv-kt-value" style={`color:${ktColor}`}>{latestKetone !== null ? String(latestKetone) : '—'}</span>
+              {latestKetone !== null && <span class="rv-kt-unit">mmol/L</span>}
+            </div>
+            <span class="rv-kt-zone" style={`color:${ktColor};background:${ktColor}18;border-color:${ktColor}30`}>{ktLabel}</span>
+          </div>
+        </div>
+
+        <!-- Zone bar -->
+        <div class="rv-kt-bar-wrap">
+          <div class="rv-kt-bar">
+            <div class="rv-kt-needle" style={`left:${ktPct}%;border-color:${ktColor}`}></div>
+          </div>
+          <div class="rv-kt-ticks">
+            <span>0</span><span>0.5</span><span>1.5</span><span>3.0</span><span>5+</span>
+          </div>
+        </div>
+
+        <!-- Recent readings -->
+        {ktRecent.length > 0 && (
+          <div class="rv-kt-recents">
+            {ktRecent.map((r: any) => (
+              <div class="rv-kt-r-row">
+                <span class="rv-kt-r-type">{r.measurement_type || 'blood'}</span>
+                <span class="rv-kt-r-val">{(Math.round(parseFloat(r.ketone_mmol) * 10) / 10).toFixed(1)} mmol/L</span>
+                <span class="rv-kt-r-date">{new Date(r.logged_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {ktRecent.length === 0 && (
+          <p class="rv-kt-empty">Log your first reading below</p>
+        )}
+
+        <!-- Quick log -->
+        <form class="rv-kt-form" id="rvKtForm">
+          <input type="number" step="0.1" min="0" max="30" placeholder="mmol/L"
+            class="rv-kt-input" id="rvKtInput" autocomplete="off"/>
+          <button type="submit" class="rv-kt-btn">Log</button>
+        </form>
+      </div>
+
       <!-- 10 · Tasks ─────────────────────────────────────────── span 8 -->
       <div class="rv-card rv-tasks" id="tour-tasks">
         <div class="rv-card-head">
@@ -1099,6 +1164,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   .rv-coach   { grid-column: span 4; }
   .rv-water   { grid-column: span 4; }
   .rv-rotd    { grid-column: span 4; }
+  .rv-ketones { grid-column: span 4; }
   .rv-tasks   { grid-column: span 8; }
   .rv-steps   { grid-column: span 4; }
   .rv-insight { grid-column: span 4; }
@@ -1417,6 +1483,32 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   .rv-steps-log { font-size: 0.75rem; color: var(--rv-muted); text-decoration: none; font-family: var(--rv-display); }
   .rv-steps-log:hover { color: var(--rv-accent); }
 
+  /* ── Ketone Tracker card ── */
+  .rv-ketones { display: flex; flex-direction: column; }
+  .rv-kt-main { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .rv-kt-emoji { font-size: 2rem; line-height: 1; flex-shrink: 0; }
+  .rv-kt-value-block { display: flex; flex-direction: column; gap: 5px; }
+  .rv-kt-value-row { display: flex; align-items: baseline; gap: 4px; }
+  .rv-kt-value { font-family: var(--rv-display); font-size: 2.2rem; font-weight: 800; line-height: 1; }
+  .rv-kt-unit { font-size: 0.8rem; color: var(--rv-muted); font-family: var(--rv-display); font-weight: 500; }
+  .rv-kt-zone { display: inline-block; font-size: 0.68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 10px; border-radius: 99px; border: 1px solid transparent; }
+  .rv-kt-bar-wrap { margin-bottom: 12px; }
+  .rv-kt-bar { position: relative; height: 8px; border-radius: 99px; background: linear-gradient(to right, #6b7280 0%, #3b82f6 20%, #FF5C7A 55%, #8b5cf6 80%, #f59e0b 100%); overflow: visible; }
+  .rv-kt-needle { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 14px; height: 14px; border-radius: 50%; background: var(--rv-card); border: 3px solid currentColor; box-shadow: 0 1px 6px rgba(0,0,0,.18); transition: left .5s ease; }
+  .rv-kt-ticks { display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.62rem; color: var(--rv-muted); font-family: 'Geist Mono', monospace; padding: 0 2px; }
+  .rv-kt-recents { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .rv-kt-r-row { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; }
+  .rv-kt-r-type { background: var(--rv-bg-alt); color: var(--rv-muted); padding: 1px 7px; border-radius: 5px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; flex-shrink: 0; }
+  .rv-kt-r-val { font-weight: 700; color: var(--rv-ink); font-family: var(--rv-display); }
+  .rv-kt-r-date { margin-left: auto; color: var(--rv-muted); font-size: 0.7rem; }
+  .rv-kt-empty { font-size: 0.8rem; color: var(--rv-muted); margin-bottom: 12px; text-align: center; padding: 8px 0; }
+  .rv-kt-form { display: flex; gap: 6px; margin-top: auto; }
+  .rv-kt-input { flex: 1; background: var(--rv-bg-alt); border: 1px solid var(--rv-line); border-radius: 10px; padding: .45rem .65rem; font-size: .85rem; color: var(--rv-ink); outline: none; font-family: var(--rv-display); }
+  .rv-kt-input:focus { border-color: var(--rv-accent); }
+  .rv-kt-btn { background: var(--rv-accent); color: #fff; border: none; border-radius: 10px; padding: .45rem .9rem; font-size: .82rem; font-weight: 700; cursor: pointer; font-family: var(--rv-display); white-space: nowrap; transition: opacity .15s; }
+  .rv-kt-btn:hover { opacity: .85; }
+  .rv-kt-btn:disabled { opacity: .5; cursor: default; }
+
   /* ── misc ── */
   .rv-empty-state { font-size: 0.82rem; color: var(--rv-muted); text-align: center; padding: 20px 0; margin: 0; font-family: var(--rv-display); }
   .rv-empty-state a { color: var(--rv-accent); text-decoration: none; }
@@ -1455,6 +1547,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
     .rv-coach   { grid-column: span 3; }
     .rv-water   { grid-column: span 3; }
     .rv-rotd    { grid-column: span 3; }
+    .rv-ketones { grid-column: span 3; }
     .rv-tasks   { grid-column: span 4; }
     .rv-steps   { grid-column: span 2; }
     .rv-insight { grid-column: span 3; }
@@ -1472,6 +1565,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
     .rv-coach   { grid-column: span 1; }
     .rv-water   { grid-column: span 1; }
     .rv-rotd    { grid-column: span 1; }
+    .rv-ketones { grid-column: span 1; }
     .rv-tasks   { grid-column: span 2; }
     .rv-steps   { grid-column: span 2; }
     .rv-insight { grid-column: span 2; }
@@ -1482,7 +1576,7 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
   @media (max-width: 420px) {
     .rv-grid { grid-template-columns: 1fr; }
     .rv-hero, .rv-meals, .rv-habits, .rv-fasting, .rv-weight,
-    .rv-coach, .rv-water, .rv-rotd, .rv-tasks, .rv-steps, .rv-insight { grid-column: span 1; }
+    .rv-coach, .rv-water, .rv-rotd, .rv-ketones, .rv-tasks, .rv-steps, .rv-insight { grid-column: span 1; }
   }
 </style>
 
@@ -1722,6 +1816,34 @@ const tipSvgStr = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" s
       body: JSON.stringify({ delta: delta }),
     });
   });
+
+  /* ── Ketone quick-log form ───────────────────────────── */
+  var ktForm = document.getElementById('rvKtForm');
+  if (ktForm) {
+    ktForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var inp = document.getElementById('rvKtInput');
+      var val = parseFloat(inp.value);
+      if (isNaN(val) || val < 0 || val > 30) return;
+      var btn = ktForm.querySelector('.rv-kt-btn');
+      btn.disabled = true;
+      btn.textContent = '…';
+      fetch('/api/ketones/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ketone_mmol: val }),
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.success) {
+          inp.value = '';
+          if (window.showToast) window.showToast('Ketone reading logged!', 'success');
+          else setTimeout(function() { location.reload(); }, 600);
+        }
+      }).catch(function() {}).finally(function() {
+        btn.disabled = false;
+        btn.textContent = 'Log';
+      });
+    });
+  }
 
   /* ── Weight log form ─────────────────────────────────── */
   var wForm = document.getElementById('rvWeightForm');
