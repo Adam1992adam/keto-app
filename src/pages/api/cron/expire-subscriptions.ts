@@ -22,36 +22,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // @ts-ignore
     const env = runtime?.env || {};
     
-    const CRON_SECRET = process.env.CRON_SECRET || import.meta.env.CRON_SECRET || env.CRON_SECRET;
-    
-    if (!CRON_SECRET) {
-      console.error('❌ CRON_SECRET not found in environment');
-      console.log('Available env keys:', Object.keys(env));
-      
-      return new Response(JSON.stringify({ 
-        success: false,
-        error: 'CRON_SECRET not configured',
-        debug: {
-          hasRuntime: !!runtime,
-          hasEnv: !!env,
-          envKeys: Object.keys(env)
-        }
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // Verify authorization header
-    const expectedAuth = `Bearer ${CRON_SECRET}`;
-    if (authHeader !== expectedAuth) {
-      console.error('❌ Unauthorized. Expected:', expectedAuth.substring(0, 20) + '...');
-      console.error('❌ Received:', authHeader ? authHeader.substring(0, 20) + '...' : 'none');
-      
-      return new Response(JSON.stringify({ 
-        success: false,
-        error: 'Unauthorized'
-      }), {
+    const CRON_SECRET   = process.env.CRON_SECRET || import.meta.env.CRON_SECRET || env.CRON_SECRET;
+    const VERCEL_BYPASS = process.env.VERCEL_AUTOMATION_BYPASS_SECRET || env.VERCEL_AUTOMATION_BYPASS_SECRET;
+    const validAuth = (CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`) ||
+                      (VERCEL_BYPASS && authHeader === `Bearer ${VERCEL_BYPASS}`);
+    if (!validAuth) {
+      console.error('❌ Unauthorized cron request');
+      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }
       });

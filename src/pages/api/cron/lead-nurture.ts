@@ -42,11 +42,11 @@ const FALLBACK_STEPS: Array<{ minDays: number; fn: string }> = [
 export const GET: APIRoute = async ({ request, locals }) => {
   const authHeader = request.headers.get('authorization');
   const env = (locals as any)?.runtime?.env || {};
-  const CRON_SECRET = process.env.CRON_SECRET || import.meta.env.CRON_SECRET || env.CRON_SECRET;
-
-  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
-    return json({ error: 'Forbidden' }, 403);
-  }
+  const CRON_SECRET    = process.env.CRON_SECRET || import.meta.env.CRON_SECRET || env.CRON_SECRET;
+  const VERCEL_BYPASS  = process.env.VERCEL_AUTOMATION_BYPASS_SECRET || env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  const validAuth = (CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`) ||
+                    (VERCEL_BYPASS && authHeader === `Bearer ${VERCEL_BYPASS}`);
+  if (!validAuth) return json({ error: 'Forbidden' }, 403);
 
   const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL || env.PUBLIC_SUPABASE_URL;
   const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
@@ -69,7 +69,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // DB-driven mode: each row is one step (0-indexed by step_order)
     for (let idx = 0; idx < series.length; idx++) {
       const row = series[idx];
-      const cutoff = new Date(now.getTime() - row.delay_days * 86400000).toISOString();
+      // Use end-of-day cutoff: a lead created any time on day N gets their
+      // email on day N+delay_days, regardless of signup hour vs cron hour.
+      const cutoffDate = new Date(now);
+      cutoffDate.setUTCDate(cutoffDate.getUTCDate() - row.delay_days);
+      cutoffDate.setUTCHours(23, 59, 59, 999);
+      const cutoff = cutoffDate.toISOString();
 
       const { data: leads } = await db
         .from('leads')
@@ -115,7 +120,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const emailLib = await import('../../../lib/email');
     for (let step = 0; step < FALLBACK_STEPS.length; step++) {
       const { minDays, fn } = FALLBACK_STEPS[step];
-      const cutoff = new Date(now.getTime() - minDays * 86400000).toISOString();
+      const cd = new Date(now);
+      cd.setUTCDate(cd.getUTCDate() - minDays);
+      cd.setUTCHours(23, 59, 59, 999);
+      const cutoff = cd.toISOString();
       const { data: leads } = await db
         .from('leads')
         .select('id, email')

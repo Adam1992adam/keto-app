@@ -18,11 +18,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const authHeader = request.headers.get('authorization');
   // @ts-ignore
   const env = locals?.runtime?.env || {};
-  const CRON_SECRET = process.env.CRON_SECRET || import.meta.env.CRON_SECRET || env.CRON_SECRET;
-
-  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
-    return json({ error: 'Forbidden' }, 403);
-  }
+  const CRON_SECRET   = process.env.CRON_SECRET || import.meta.env.CRON_SECRET || env.CRON_SECRET;
+  const VERCEL_BYPASS = process.env.VERCEL_AUTOMATION_BYPASS_SECRET || env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  const validAuth = (CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`) ||
+                    (VERCEL_BYPASS && authHeader === `Bearer ${VERCEL_BYPASS}`);
+  if (!validAuth) return json({ error: 'Forbidden' }, 403);
 
   const url      = new URL(request.url);
   const morning  = url.searchParams.get('morning') !== 'false';

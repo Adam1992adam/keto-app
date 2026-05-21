@@ -19,11 +19,11 @@ const STEPS: Array<{ minDays: number; fn: string }> = [
 export const GET: APIRoute = async ({ request, locals }) => {
   const authHeader = request.headers.get('authorization');
   const env = (locals as any)?.runtime?.env || {};
-  const CRON_SECRET = process.env.CRON_SECRET || import.meta.env.CRON_SECRET || env.CRON_SECRET;
-
-  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
-    return json({ error: 'Forbidden' }, 403);
-  }
+  const CRON_SECRET   = process.env.CRON_SECRET || import.meta.env.CRON_SECRET || env.CRON_SECRET;
+  const VERCEL_BYPASS = process.env.VERCEL_AUTOMATION_BYPASS_SECRET || env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  const validAuth = (CRON_SECRET && authHeader === `Bearer ${CRON_SECRET}`) ||
+                    (VERCEL_BYPASS && authHeader === `Bearer ${VERCEL_BYPASS}`);
+  if (!validAuth) return json({ error: 'Forbidden' }, 403);
 
   const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL || import.meta.env.PUBLIC_SUPABASE_URL || env.PUBLIC_SUPABASE_URL;
   const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
