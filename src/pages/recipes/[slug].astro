@@ -275,6 +275,49 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
     .footer-links a { font-size:.8rem; color:var(--muted); transition:color .15s; }
     .footer-links a:hover { color:var(--ink); }
 
+    /* PRINT BUTTON */
+    .recipe-actions { display:flex; gap:10px; margin:0 0 28px; }
+    .print-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 18px; border:1.5px solid var(--line); border-radius:999px; background:var(--card); color:var(--ink-soft); font-size:.8rem; font-weight:600; cursor:pointer; font-family:var(--body); transition:all .15s; }
+    .print-btn:hover { border-color:var(--accent); color:var(--accent); background:rgba(255,92,122,.04); }
+
+    /* MID-PAGE LEAD CAPTURE CARD */
+    .mid-lead { background:linear-gradient(135deg,#1a0a10 0%,#0d0a1a 50%,#0a1a0f 100%); border:1.5px solid rgba(255,92,122,.35); border-radius:24px; padding:36px; margin:44px 0; display:grid; grid-template-columns:1fr 1fr; gap:36px; align-items:center; position:relative; overflow:hidden; }
+    .mid-lead::before { content:''; position:absolute; top:-80px; right:-80px; width:220px; height:220px; border-radius:50%; background:radial-gradient(circle,rgba(255,92,122,.18),transparent 70%); pointer-events:none; }
+    .mid-lead::after  { content:''; position:absolute; bottom:-60px; left:-60px; width:160px; height:160px; border-radius:50%; background:radial-gradient(circle,rgba(182,255,60,.1),transparent 70%); pointer-events:none; }
+    @media(max-width:680px){ .mid-lead{grid-template-columns:1fr;padding:28px 22px;gap:24px;} }
+    .ml-badge { display:inline-flex; align-items:center; gap:6px; background:rgba(255,92,122,.15); border:1px solid rgba(255,92,122,.3); border-radius:999px; padding:5px 13px; font-size:.7rem; font-weight:700; color:#FF5C7A; text-transform:uppercase; letter-spacing:.1em; margin-bottom:14px; }
+    .ml-title { font-family:var(--display); font-size:1.3rem; font-weight:800; color:#fff; line-height:1.25; margin-bottom:10px; }
+    .ml-sub { font-size:.85rem; color:rgba(255,255,255,.55); line-height:1.65; margin-bottom:16px; }
+    .ml-perks { list-style:none; display:flex; flex-direction:column; gap:7px; }
+    .ml-perks li { font-size:.82rem; color:rgba(255,255,255,.6); display:flex; align-items:center; gap:8px; }
+    .ml-perks li::before { content:'✓'; color:#B6FF3C; font-weight:800; font-size:.75rem; flex-shrink:0; }
+    .ml-form { display:flex; flex-direction:column; gap:10px; position:relative; z-index:1; }
+    .ml-field { display:flex; flex-direction:column; gap:4px; }
+    .ml-label { font-size:.74rem; font-weight:600; color:rgba(255,255,255,.5); }
+    .ml-input { padding:12px 14px; background:rgba(255,255,255,.08); border:1.5px solid rgba(255,255,255,.15); border-radius:12px; color:#fff; font-size:.92rem; font-family:var(--body); outline:none; transition:border-color .2s; }
+    .ml-input::placeholder { color:rgba(255,255,255,.3); }
+    .ml-input:focus { border-color:#FF5C7A; background:rgba(255,255,255,.12); }
+    .ml-btn { padding:14px 20px; background:linear-gradient(135deg,#FF5C7A,#ff3d60); border:none; border-radius:12px; color:#fff; font-size:.95rem; font-weight:800; font-family:var(--display); cursor:pointer; transition:opacity .2s,transform .15s; }
+    .ml-btn:hover { opacity:.9; transform:translateY(-1px); }
+    .ml-btn:disabled { opacity:.6; cursor:not-allowed; transform:none; }
+    .ml-note { font-size:.7rem; color:rgba(255,255,255,.28); text-align:center; }
+    .ml-msg { font-size:.83rem; font-weight:600; padding:9px 12px; border-radius:8px; display:none; }
+    .ml-msg.ok  { display:block; background:rgba(182,255,60,.1); border:1px solid rgba(182,255,60,.25); color:#B6FF3C; }
+    .ml-msg.err { display:block; background:rgba(255,92,122,.1); border:1px solid rgba(255,92,122,.25); color:#ff8fa3; }
+
+    /* PRINT STYLES */
+    @media print {
+      .nav,.sidebar,.exit-overlay,.bottom-cta,.related,.related-articles,
+      .inline-lead,.mid-lead,.rate-section,.comments-section,footer,
+      .recipe-actions,.print-btn,.lead-card,.sidebar-cta { display:none !important; }
+      body { background:#fff; }
+      .page { display:block; padding:0; max-width:100%; }
+      .recipe-cover { max-height:280px; border-radius:8px; }
+      .step-item, .ing-item { break-inside:avoid; }
+      .nutrition-bar { break-inside:avoid; }
+      .info-strip { break-inside:avoid; }
+    }
+
     /* RATING DISPLAY (hero) */
     .rating-row { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
     .rating-stars-disp { display:flex; gap:2px; }
@@ -431,24 +474,9 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
       </div>
     </div>
 
-    <!-- Nutrition highlights -->
-    <div class="nutrition-bar">
-      <div class="nutr highlight">
-        <div class="nutr-val">{recipe.calories}<span class="nutr-unit"> kcal</span></div>
-        <div class="nutr-label">Calories</div>
-      </div>
-      <div class="nutr">
-        <div class="nutr-val">{recipe.net_carbs}<span class="nutr-unit">g</span></div>
-        <div class="nutr-label">Net Carbs</div>
-      </div>
-      <div class="nutr">
-        <div class="nutr-val">{recipe.protein}<span class="nutr-unit">g</span></div>
-        <div class="nutr-label">Protein</div>
-      </div>
-      <div class="nutr">
-        <div class="nutr-val">{recipe.fat}<span class="nutr-unit">g</span></div>
-        <div class="nutr-label">Fat</div>
-      </div>
+    <!-- Print button -->
+    <div class="recipe-actions">
+      <button class="print-btn" onclick="window.print()">🖨️ Print Recipe</button>
     </div>
 
     <!-- Ingredients -->
@@ -470,6 +498,33 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
       </>
     )}
 
+    <!-- Mid-page lead capture -->
+    <div class="mid-lead">
+      <div>
+        <div class="ml-badge">📖 Free Recipe Book</div>
+        <div class="ml-title">50+ Keto Smoothie &amp; Snack Recipes — Download Free</div>
+        <p class="ml-sub">Creamy smoothies &amp; satisfying snacks. Full macros included, all under 5g net carbs.</p>
+        <ul class="ml-perks">
+          <li>50+ beginner-friendly recipes</li>
+          <li>Full nutrition on every recipe</li>
+          <li>Ingredient swap guide included</li>
+        </ul>
+      </div>
+      <div class="ml-form" id="mlForm">
+        <div class="ml-msg" id="mlMsg"></div>
+        <div class="ml-field">
+          <label class="ml-label" for="mlName">First Name</label>
+          <input class="ml-input" type="text" id="mlName" placeholder="Jane" autocomplete="given-name"/>
+        </div>
+        <div class="ml-field">
+          <label class="ml-label" for="mlEmail">Email Address</label>
+          <input class="ml-input" type="email" id="mlEmail" placeholder="you@example.com" autocomplete="email"/>
+        </div>
+        <button class="ml-btn" id="mlBtn" type="button">Download Free Book →</button>
+        <p class="ml-note">No spam, ever. Unsubscribe anytime.</p>
+      </div>
+    </div>
+
     <!-- Instructions -->
     {instructions.length > 0 && (
       <>
@@ -488,6 +543,26 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
         </ol>
       </>
     )}
+
+    <!-- Nutrition highlights -->
+    <div class="nutrition-bar">
+      <div class="nutr highlight">
+        <div class="nutr-val">{recipe.calories}<span class="nutr-unit"> kcal</span></div>
+        <div class="nutr-label">Calories</div>
+      </div>
+      <div class="nutr">
+        <div class="nutr-val">{recipe.net_carbs}<span class="nutr-unit">g</span></div>
+        <div class="nutr-label">Net Carbs</div>
+      </div>
+      <div class="nutr">
+        <div class="nutr-val">{recipe.protein}<span class="nutr-unit">g</span></div>
+        <div class="nutr-label">Protein</div>
+      </div>
+      <div class="nutr">
+        <div class="nutr-val">{recipe.fat}<span class="nutr-unit">g</span></div>
+        <div class="nutr-label">Fat</div>
+      </div>
+    </div>
 
     <!-- Tags -->
     {recipe.tags && recipe.tags.length > 0 && (
@@ -558,10 +633,13 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
     <!-- Inline lead capture (mobile only) -->
     <div class="inline-lead">
       <p style="font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#FF5C7A;margin-bottom:6px;">📖 Free Recipe Book</p>
-      <div class="inline-lead-title">7 more keto recipes, completely free</div>
-      <p class="inline-lead-sub">Full macros included · Under 5g net carbs · Ready in 30 min or less</p>
-      <a href="/free-book" class="inline-lead-dl">Get Free Recipes →</a>
-      <p class="inline-lead-note">Free email recipes · No account needed</p>
+      <div class="inline-lead-title">50+ keto smoothie &amp; snack recipes — download free</div>
+      <p class="inline-lead-sub">Creamy smoothies &amp; satisfying snacks · Full macros · Under 5g net carbs each</p>
+      <div id="ilMsg" style="display:none;font-size:.8rem;font-weight:600;padding:8px 12px;border-radius:8px;margin-bottom:10px;"></div>
+      <input class="cf-input" type="text" id="ilName" placeholder="First name" autocomplete="given-name" style="margin-bottom:8px;width:100%;background:#fff;"/>
+      <input class="cf-input" type="email" id="ilEmail" placeholder="your@email.com" autocomplete="email" style="margin-bottom:12px;width:100%;background:#fff;"/>
+      <button id="ilBtn" class="inline-lead-dl" type="button" style="width:100%;justify-content:center;">Download Free Book →</button>
+      <p class="inline-lead-note">No spam, ever. Unsubscribe anytime.</p>
     </div>
 
     <!-- Bottom CTA -->
@@ -852,19 +930,104 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
 }());
 </script>
 
+<!-- LEAD CAPTURE FORMS SCRIPT -->
+<script is:inline>
+(function () {
+  function submitLead(name, email, btnEl, msgEl, onSuccess) {
+    btnEl.disabled    = true;
+    btnEl.textContent = 'Sending…';
+    fetch('/api/leads/collect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, email: email })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.success) {
+        if (onSuccess) onSuccess();
+        else window.location.href = '/free-book-success';
+      } else {
+        showMsg(msgEl, d.error || 'Something went wrong. Please try again.', false);
+        btnEl.disabled    = false;
+        btnEl.textContent = 'Download Free Book →';
+      }
+    })
+    .catch(function () {
+      showMsg(msgEl, 'Network error. Please try again.', false);
+      btnEl.disabled    = false;
+      btnEl.textContent = 'Download Free Book →';
+    });
+  }
+
+  function showMsg(el, text, ok) {
+    if (!el) return;
+    el.textContent   = text;
+    el.style.display = 'block';
+    el.style.background   = ok ? 'rgba(182,255,60,.1)' : 'rgba(255,92,122,.1)';
+    el.style.border       = ok ? '1px solid rgba(182,255,60,.25)' : '1px solid rgba(255,92,122,.25)';
+    el.style.color        = ok ? '#B6FF3C' : '#ff8fa3';
+    el.style.borderRadius = '8px';
+    el.style.padding      = '9px 12px';
+  }
+
+  /* ── Mid-page form ── */
+  var mlBtn   = document.getElementById('mlBtn');
+  var mlName  = document.getElementById('mlName');
+  var mlEmail = document.getElementById('mlEmail');
+  var mlMsg   = document.getElementById('mlMsg');
+
+  if (mlBtn) mlBtn.addEventListener('click', function () {
+    var name  = mlName  ? mlName.value.trim()  : '';
+    var email = mlEmail ? mlEmail.value.trim() : '';
+    if (!email || !email.includes('@')) {
+      showMsg(mlMsg, 'Please enter a valid email address.', false); return;
+    }
+    submitLead(name, email, mlBtn, mlMsg, function () {
+      window.location.href = '/free-book-success';
+    });
+  });
+
+  /* ── Mobile inline form ── */
+  var ilBtn   = document.getElementById('ilBtn');
+  var ilName  = document.getElementById('ilName');
+  var ilEmail = document.getElementById('ilEmail');
+  var ilMsg   = document.getElementById('ilMsg');
+
+  if (ilBtn) ilBtn.addEventListener('click', function () {
+    var name  = ilName  ? ilName.value.trim()  : '';
+    var email = ilEmail ? ilEmail.value.trim() : '';
+    if (!email || !email.includes('@')) {
+      if (ilMsg) {
+        ilMsg.textContent   = 'Please enter a valid email address.';
+        ilMsg.style.display = 'block';
+        ilMsg.style.background   = 'rgba(255,92,122,.1)';
+        ilMsg.style.border       = '1px solid rgba(255,92,122,.25)';
+        ilMsg.style.color        = '#dc2626';
+        ilMsg.style.borderRadius = '8px';
+        ilMsg.style.padding      = '9px 12px';
+      }
+      return;
+    }
+    submitLead(name, email, ilBtn, ilMsg, function () {
+      window.location.href = '/free-book-success';
+    });
+  });
+}());
+</script>
+
 <!-- EXIT-INTENT POPUP -->
 <div id="exitPopup" class="exit-overlay" role="dialog" aria-modal="true" aria-label="Free Recipe Book offer">
   <div class="exit-card">
     <button class="exit-close" id="exitClose" aria-label="Close">×</button>
     <p class="exit-eyebrow">Wait — before you go</p>
     <div class="exit-badge">📖 Free Recipe Book</div>
-    <h2 class="exit-title">80+ Keto Recipes,<br/>Completely Free</h2>
-    <p class="exit-sub">Breakfasts, lunches, dinners, and desserts — all under 5g net carbs, with full macros and shopping lists included.</p>
+    <h2 class="exit-title">50+ Keto Smoothie &amp; Snack Recipes,<br/>Completely Free</h2>
+    <p class="exit-sub">Creamy green smoothies, berry shakes, savory bites &amp; sweet snacks — all under 5g net carbs, with full macros included.</p>
     <ul class="exit-perks">
-      <li>80+ beginner-friendly recipes</li>
+      <li>50+ smoothie &amp; snack recipes</li>
       <li>Under 5g net carbs per recipe</li>
-      <li>Full nutrition breakdown on every dish</li>
-      <li>Shopping lists &amp; meal prep tips</li>
+      <li>Full nutrition breakdown included</li>
+      <li>Perfect for keto beginners</li>
     </ul>
     <a href="/free-book" class="exit-cta">Get the Free Book →</a>
     <button class="exit-dismiss" id="exitDismiss">No thanks, I'll keep reading</button>
