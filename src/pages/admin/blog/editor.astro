@@ -108,8 +108,8 @@ const existingContent = isEdit ? (post.content || '') : '';
     /* Match published article prose styles exactly */
     #editor h1 { font-family:-apple-system,BlinkMacSystemFont,'Bricolage Grotesque',sans-serif; font-size:2rem; font-weight:800; color:var(--prose-ink); line-height:1.2; margin:2em 0 .7em; }
     #editor h2 { font-family:-apple-system,BlinkMacSystemFont,'Bricolage Grotesque',sans-serif; font-size:1.6rem; font-weight:800; color:var(--prose-ink); line-height:1.2; margin:2.2em 0 .65em; padding-left:16px; border-left:4px solid #FF5C7A; }
-    #editor h3 { font-family:-apple-system,BlinkMacSystemFont,'Bricolage Grotesque',sans-serif; font-size:1.15rem; font-weight:700; color:#FF5C7A; line-height:1.2; margin:1.8em 0 .5em; }
-    #editor h4 { font-family:-apple-system,BlinkMacSystemFont,'Bricolage Grotesque',sans-serif; font-size:.9rem; font-weight:700; color:var(--prose-ink); margin:1.4em 0 .4em; text-transform:uppercase; letter-spacing:.04em; }
+    #editor h3 { font-family:-apple-system,BlinkMacSystemFont,'Bricolage Grotesque',sans-serif; font-size:1.4rem; font-weight:700; color:#FF5C7A; line-height:1.2; margin:1.8em 0 .5em; }
+    #editor h4 { font-family:-apple-system,BlinkMacSystemFont,'Bricolage Grotesque',sans-serif; font-size:1.1rem; font-weight:700; color:var(--prose-ink); margin:1.4em 0 .4em; text-transform:uppercase; letter-spacing:.04em; }
     #editor p { margin:0 0 1.25em; }
     #editor p:first-child { font-size:1.1rem; color:var(--prose-ink); }
     #editor ul, #editor ol { padding-left:1.6em; margin:0 0 1.3em; }
@@ -202,8 +202,8 @@ const existingContent = isEdit ? (post.content || '') : '';
     .fp-prose { font-family:'Georgia',serif; font-size:1.05rem; line-height:1.82; color:#4A4340; }
     .fp-prose h1 { font-family:-apple-system,sans-serif; font-size:2rem; font-weight:800; color:#16110F; margin:1.5rem 0 .7rem; }
     .fp-prose h2 { font-family:-apple-system,sans-serif; font-size:1.6rem; font-weight:800; color:#16110F; margin:2rem 0 .6rem; border-left:4px solid #FF5C7A; padding-left:16px; }
-    .fp-prose h3 { font-family:-apple-system,sans-serif; font-size:1.15rem; font-weight:700; color:#FF5C7A; margin:1.6rem 0 .45rem; }
-    .fp-prose h4 { font-family:-apple-system,sans-serif; font-size:.9rem; font-weight:700; color:#16110F; margin:1.2rem 0 .35rem; text-transform:uppercase; letter-spacing:.06em; }
+    .fp-prose h3 { font-family:-apple-system,sans-serif; font-size:1.4rem; font-weight:700; color:#FF5C7A; margin:1.6rem 0 .45rem; }
+    .fp-prose h4 { font-family:-apple-system,sans-serif; font-size:1.1rem; font-weight:700; color:#16110F; margin:1.2rem 0 .35rem; text-transform:uppercase; letter-spacing:.06em; }
     .fp-prose p { margin:0 0 1.25em; }
     .fp-prose p:first-of-type { font-size:1.1rem; color:#16110F; }
     .fp-prose ul,.fp-prose ol { padding-left:1.5em; margin:0 0 1.2em; }
@@ -507,79 +507,19 @@ blockSel.addEventListener('change', function() {
   applyBlock(blockSel.value);
 });
 
-/* Find the direct block-level child of #editor that contains a node */
-function getBlockInEditor(node) {
-  var n = (node && node.nodeType === 3) ? node.parentNode : node;
-  while (n && n.parentNode && n.parentNode !== editor) {
-    n = n.parentNode;
-  }
-  return (n && n !== editor) ? n : null;
-}
-
 window.applyBlock = function(tag) {
   editor.focus();
-
   /* Restore selection saved before dropdown stole focus */
-  var sel = window.getSelection();
   if (savedBlockRange) {
+    var sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(savedBlockRange);
     savedBlockRange = null;
   }
-
-  var range = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
-  var block = range ? getBlockInEditor(range.startContainer) : null;
-
-  if (!block) {
-    /* No block found — append a new element */
-    var newEl = document.createElement(tag === 'p' ? 'p' : tag);
-    newEl.innerHTML = '​';
-    editor.appendChild(newEl);
-    placeCursorIn(newEl);
-    updateToolbarState();
-    return;
-  }
-
-  /* Already the right tag — nothing to do */
-  if (block.nodeName.toLowerCase() === tag) {
-    updateToolbarState();
-    return;
-  }
-
-  if (tag === 'blockquote') {
-    /* Wrap block content in <blockquote><p>…</p></blockquote> */
-    var bq = document.createElement('blockquote');
-    var inner = document.createElement('p');
-    inner.innerHTML = block.innerHTML || '​';
-    bq.appendChild(inner);
-    editor.replaceChild(bq, block);
-    placeCursorIn(inner);
-  } else if (block.nodeName.toLowerCase() === 'blockquote') {
-    /* Unwrap blockquote → target tag */
-    var innerP = block.querySelector('p');
-    var newEl2 = document.createElement(tag);
-    newEl2.innerHTML = (innerP ? innerP.innerHTML : block.innerHTML) || '​';
-    editor.replaceChild(newEl2, block);
-    placeCursorIn(newEl2);
-  } else {
-    /* Simple tag swap (p ↔ h1/h2/h3/h4) */
-    var newEl3 = document.createElement(tag);
-    newEl3.innerHTML = block.innerHTML || '​';
-    editor.replaceChild(newEl3, block);
-    placeCursorIn(newEl3);
-  }
-
+  /* formatBlock is the native cross-browser command — works without manual DOM replacement */
+  document.execCommand('formatBlock', false, tag);
   updateToolbarState();
 };
-
-function placeCursorIn(el) {
-  var sel = window.getSelection();
-  var r = document.createRange();
-  r.selectNodeContents(el);
-  r.collapse(false); /* cursor at end */
-  sel.removeAllRanges();
-  sel.addRange(r);
-}
 
 /* Update dropdown + button states when cursor moves */
 document.addEventListener('selectionchange', function() {
