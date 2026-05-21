@@ -160,15 +160,6 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
     .info-val { font-family:var(--display); font-size:1.1rem; font-weight:800; color:var(--ink); }
     .info-label { font-size:.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-top:2px; }
 
-    /* NUTRITION */
-    .nutrition-bar { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:32px; }
-    .nutr { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 10px; text-align:center; }
-    .nutr-val { font-family:var(--display); font-size:1.4rem; font-weight:800; color:var(--ink); }
-    .nutr-unit { font-size:.75rem; color:var(--muted); }
-    .nutr-label { font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-top:3px; }
-    .nutr.highlight { background:var(--accent); border-color:var(--accent); }
-    .nutr.highlight .nutr-val, .nutr.highlight .nutr-unit, .nutr.highlight .nutr-label { color:#fff; }
-
     /* SECTIONS */
     .section-head { margin-bottom:22px; }
     .section-label { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.16em; color:var(--accent); display:block; margin-bottom:6px; }
@@ -225,14 +216,6 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
     .inline-lead-note { font-size:.72rem; color:#8aab90; margin-top:10px; }
     @media(min-width:901px){ .inline-lead{ display:none; } }
 
-    .nutr-full { display:flex; flex-direction:column; gap:8px; }
-    .nutr-row { display:flex; align-items:center; justify-content:space-between; font-size:.84rem; }
-    .nutr-row-label { color:var(--ink-soft); }
-    .nutr-row-val { font-weight:700; color:var(--ink); }
-    .nutr-row.sub { padding-left:14px; }
-    .nutr-row.sub .nutr-row-label { color:var(--muted); font-size:.8rem; }
-    .nutr-divider { height:1px; background:var(--line); }
-
     /* RELATED ARTICLES */
     .related-articles { margin-top:52px; padding-top:44px; border-top:1px solid var(--line); }
     .related-articles-title { font-family:var(--display); font-size:1.25rem; font-weight:800; color:var(--ink); margin-bottom:20px; }
@@ -280,6 +263,31 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
     .print-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 18px; border:1.5px solid var(--line); border-radius:999px; background:var(--card); color:var(--ink-soft); font-size:.8rem; font-weight:600; cursor:pointer; font-family:var(--body); transition:all .15s; }
     .print-btn:hover { border-color:var(--accent); color:var(--accent); background:rgba(255,92,122,.04); }
 
+    /* NUTRITION CARD — full-width inline at end of recipe */
+    .nutr-card { background:var(--card); border:1.5px solid var(--line); border-radius:22px; padding:28px 32px; margin:36px 0 0; }
+    .nutr-card-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+    .nutr-card-title { font-family:var(--display); font-size:1.1rem; font-weight:800; color:var(--ink); }
+    .nutr-card-serving { font-size:.75rem; color:var(--muted); background:var(--bg-alt); border:1px solid var(--line); border-radius:999px; padding:3px 12px; }
+    .nutr-card-grid { display:grid; grid-template-columns:1fr 1fr; gap:0; }
+    @media(min-width:600px){ .nutr-card-grid{ grid-template-columns:1fr 1fr 1fr; } }
+    .nutr-card-row { display:flex; align-items:center; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--line); font-size:.9rem; }
+    .nutr-card-row:last-child { border-bottom:none; }
+    .nutr-card-col { display:flex; flex-direction:column; gap:1px; padding:0 16px 0 0; border-right:1px solid var(--line); }
+    .nutr-card-col:last-child { border-right:none; }
+    .nutr-card-col-label { font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; }
+    .nutr-card-col-val { font-family:var(--display); font-size:1.35rem; font-weight:800; color:var(--ink); }
+    .nutr-card-col-val span { font-size:.8rem; font-weight:500; color:var(--muted); }
+    .nutr-card-col.accent .nutr-card-col-label { color:rgba(255,92,122,.7); }
+    .nutr-card-col.accent .nutr-card-col-val { color:var(--accent); }
+    .nutr-card-divider { height:1px; background:var(--line); margin:16px 0; }
+    .nutr-card-detail { display:flex; flex-direction:column; gap:0; }
+    .nutr-card-detail-row { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--line); font-size:.87rem; }
+    .nutr-card-detail-row:last-child { border-bottom:none; }
+    .nutr-card-detail-row.sub { padding-left:16px; }
+    .nutr-card-detail-row.sub .nutr-row-label { color:var(--muted); font-size:.82rem; }
+    .nutr-card-detail-row .nutr-row-val { font-weight:700; color:var(--ink); }
+    .nutr-card-detail-row .nutr-row-val.accent { color:var(--accent); font-weight:800; }
+
     /* MID-PAGE LEAD CAPTURE CARD */
     .mid-lead { background:linear-gradient(135deg,#1a0a10 0%,#0d0a1a 50%,#0a1a0f 100%); border:1.5px solid rgba(255,92,122,.35); border-radius:24px; padding:36px; margin:44px 0; display:grid; grid-template-columns:1fr 1fr; gap:36px; align-items:center; position:relative; overflow:hidden; }
     .mid-lead::before { content:''; position:absolute; top:-80px; right:-80px; width:220px; height:220px; border-radius:50%; background:radial-gradient(circle,rgba(255,92,122,.18),transparent 70%); pointer-events:none; }
@@ -310,6 +318,7 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
       .nav,.sidebar,.exit-overlay,.bottom-cta,.related,.related-articles,
       .inline-lead,.mid-lead,.rate-section,.comments-section,footer,
       .recipe-actions,.print-btn,.lead-card,.sidebar-cta { display:none !important; }
+      .nutr-card { border:1px solid #ccc; border-radius:8px; }
       body { background:#fff; }
       .page { display:block; padding:0; max-width:100%; }
       .recipe-cover { max-height:280px; border-radius:8px; }
@@ -544,32 +553,46 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
       </>
     )}
 
-    <!-- Nutrition highlights -->
-    <div class="nutrition-bar">
-      <div class="nutr highlight">
-        <div class="nutr-val">{recipe.calories}<span class="nutr-unit"> kcal</span></div>
-        <div class="nutr-label">Calories</div>
-      </div>
-      <div class="nutr">
-        <div class="nutr-val">{recipe.net_carbs}<span class="nutr-unit">g</span></div>
-        <div class="nutr-label">Net Carbs</div>
-      </div>
-      <div class="nutr">
-        <div class="nutr-val">{recipe.protein}<span class="nutr-unit">g</span></div>
-        <div class="nutr-label">Protein</div>
-      </div>
-      <div class="nutr">
-        <div class="nutr-val">{recipe.fat}<span class="nutr-unit">g</span></div>
-        <div class="nutr-label">Fat</div>
-      </div>
-    </div>
-
     <!-- Tags -->
     {recipe.tags && recipe.tags.length > 0 && (
       <div class="tags">
         {recipe.tags.map((tag: string) => <span class="tag">#{tag}</span>)}
       </div>
     )}
+
+    <!-- Nutrition per serving — full-width card -->
+    <div class="nutr-card">
+      <div class="nutr-card-head">
+        <span class="nutr-card-title">Nutrition per serving</span>
+        <span class="nutr-card-serving">1 serving · {recipe.servings} total</span>
+      </div>
+      <div class="nutr-card-grid">
+        <div class="nutr-card-col accent">
+          <span class="nutr-card-col-label">Calories</span>
+          <div class="nutr-card-col-val">{recipe.calories}<span> kcal</span></div>
+        </div>
+        <div class="nutr-card-col">
+          <span class="nutr-card-col-label">Net Carbs</span>
+          <div class="nutr-card-col-val">{recipe.net_carbs}<span>g</span></div>
+        </div>
+        <div class="nutr-card-col">
+          <span class="nutr-card-col-label">Protein</span>
+          <div class="nutr-card-col-val">{recipe.protein}<span>g</span></div>
+        </div>
+        <div class="nutr-card-col">
+          <span class="nutr-card-col-label">Fat</span>
+          <div class="nutr-card-col-val">{recipe.fat}<span>g</span></div>
+        </div>
+        <div class="nutr-card-col">
+          <span class="nutr-card-col-label">Total Carbs</span>
+          <div class="nutr-card-col-val">{recipe.carbs}<span>g</span></div>
+        </div>
+        <div class="nutr-card-col">
+          <span class="nutr-card-col-label">Fiber</span>
+          <div class="nutr-card-col-val">{recipe.fiber}<span>g</span></div>
+        </div>
+      </div>
+    </div>
 
     <!-- ── RATE THIS RECIPE ── -->
     <div class="rate-section">
@@ -721,21 +744,6 @@ const ogImage   = recipe.cover_image_url || `${SITE_URL}/api/og?title=${encodeUR
       <p class="cta-sub">Personalized keto meal plans with shopping lists — tailored to your goals.</p>
       <a href="/start" class="cta-btn cta-btn-primary">Start Free Trial</a>
       <a href="/free-book" class="cta-btn cta-btn-outline">Get Free Recipe Book</a>
-    </div>
-
-    <!-- Full nutrition -->
-    <div class="sidebar-card">
-      <div class="sidebar-title">Nutrition per serving</div>
-      <div class="nutr-full">
-        <div class="nutr-row"><span class="nutr-row-label">Calories</span><span class="nutr-row-val">{recipe.calories} kcal</span></div>
-        <div class="nutr-divider"></div>
-        <div class="nutr-row"><span class="nutr-row-label">Total Carbs</span><span class="nutr-row-val">{recipe.carbs}g</span></div>
-        <div class="nutr-row sub"><span class="nutr-row-label">— Fiber</span><span class="nutr-row-val">{recipe.fiber}g</span></div>
-        <div class="nutr-row sub"><span class="nutr-row-label">— Net Carbs</span><span class="nutr-row-val" style="color:var(--accent);font-weight:800">{recipe.net_carbs}g</span></div>
-        <div class="nutr-divider"></div>
-        <div class="nutr-row"><span class="nutr-row-label">Protein</span><span class="nutr-row-val">{recipe.protein}g</span></div>
-        <div class="nutr-row"><span class="nutr-row-label">Fat</span><span class="nutr-row-val">{recipe.fat}g</span></div>
-      </div>
     </div>
 
   </aside>
