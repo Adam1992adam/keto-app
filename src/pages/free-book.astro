@@ -41,124 +41,45 @@ const PAGE_DESC  = 'Get our free keto smoothie & snack recipe book: 52 delicious
     input { font-family: inherit; }
 
     /* ============================================================
-       BOOK COVER (3D CSS)
+       BOOK COVER (image-based, 3D tilt)
        ============================================================ */
-    .bc-wrap {
-      perspective: 1600px;
-      display: inline-block;
-    }
-    .bc-wrap.floating .bc-book {
-      animation: bcfloat 6s ease-in-out infinite;
-    }
     @keyframes bcfloat {
       0%, 100% { translate: 0 0; }
       50%       { translate: 0 -14px; }
     }
-    .bc-book {
+    .bc-img-wrap {
+      perspective: 1600px;
+      display: inline-block;
       position: relative;
-      transform-style: preserve-3d;
+    }
+    .bc-img-inner {
+      position: relative;
       transform: rotateY(-22deg) rotateX(4deg);
-      filter: drop-shadow(0 40px 60px rgba(22,17,15,.38));
+      filter: drop-shadow(0 40px 60px rgba(22,17,15,.42));
     }
-    .bc-book.lg { width: 320px; height: 460px; }
-    .bc-book.md { width: 220px; height: 316px; }
-    .bc-book.sm { width: 140px; height: 200px; }
-
-    .bc-cover {
-      position: absolute; inset: 0;
+    .bc-img-wrap.floating .bc-img-inner {
+      animation: bcfloat 6s ease-in-out infinite;
+    }
+    .bc-img-inner img {
+      display: block;
+      width: 300px;
+      height: auto;
       border-radius: 3px 10px 10px 3px;
-      background: #16110F;
-      overflow: hidden;
-      backface-visibility: hidden;
+      position: relative;
+      z-index: 2;
     }
-    .bc-cover-glow {
-      position: absolute; inset: 0;
-      background:
-        radial-gradient(circle at 30% 20%, color-mix(in oklab, #FF5C7A 38%, transparent), transparent 55%),
-        radial-gradient(circle at 75% 80%, color-mix(in oklab, #FF914D 22%, transparent), transparent 45%);
-    }
-    .bc-cover-content {
-      position: relative; z-index: 2;
-      height: 100%;
-      display: flex; flex-direction: column;
-      padding: 20px 18px 16px;
-      color: #fff;
-    }
-    .bc-badge {
-      position: absolute; top: 14px; right: 14px;
-      width: 52px; height: 52px;
-      border-radius: 50%;
-      background: #B6FF3C;
-      color: #16110F;
-      display: grid; place-items: center;
-      font-family: var(--mono); font-size: 8px; font-weight: 700; letter-spacing: 0.1em;
-      text-transform: uppercase; text-align: center;
-      line-height: 1.2;
-      transform: rotate(12deg);
-    }
-    .bc-badge.sm { width: 34px; height: 34px; font-size: 5px; right: 10px; top: 10px; }
-    .bc-eyebrow {
-      font-family: var(--mono); font-size: 8px; letter-spacing: 0.22em; text-transform: uppercase;
-      color: rgba(255,255,255,.52);
-      margin-bottom: 6px;
-    }
-    .bc-book.lg .bc-eyebrow { font-size: 8px; }
-    .bc-big {
-      font-family: var(--display); font-weight: 800;
-      color: #fff;
-      line-height: 0.85;
-      letter-spacing: -0.06em;
-    }
-    .bc-book.lg .bc-big { font-size: 110px; }
-    .bc-book.md .bc-big { font-size: 76px; }
-    .bc-book.sm .bc-big { font-size: 48px; }
-    .bc-sub {
-      font-family: var(--serif); font-style: italic;
-      color: rgba(255,255,255,.78);
-      line-height: 1.25;
-      margin-top: 4px;
-    }
-    .bc-book.lg .bc-sub { font-size: 22px; }
-    .bc-book.md .bc-sub { font-size: 15px; }
-    .bc-book.sm .bc-sub { font-size: 9px; }
-    .bc-rule { border: none; border-top: 1px solid rgba(255,255,255,.2); margin: auto 0 14px; }
-    .bc-meta {
-      font-family: var(--mono); font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase;
-      color: rgba(255,255,255,.45);
-    }
-    .bc-book.sm .bc-meta { font-size: 6px; }
-
-    .bc-spine {
-      position: absolute; top: 0; bottom: 0; left: 0;
-      background: #0d0a09;
-      transform-origin: left;
-      transform: rotateY(-90deg) translateZ(0px);
-      border-radius: 3px 0 0 3px;
-    }
-    .bc-book.lg .bc-spine { width: 14px; transform: rotateY(-90deg) translateX(-14px); }
-    .bc-book.md .bc-spine { width: 10px; transform: rotateY(-90deg) translateX(-10px); }
-    .bc-book.sm .bc-spine { width: 7px; transform: rotateY(-90deg) translateX(-7px); }
-
-    .bc-pages {
-      position: absolute; top: 2px; bottom: 2px; right: -2px;
+    .bc-img-pages {
+      position: absolute;
+      top: 2px; bottom: 2px; right: -12px;
+      width: 12px;
       background: repeating-linear-gradient(
         to right,
         #f0ebe4 0px, #f0ebe4 1px,
         #e8e1d6 1px, #e8e1d6 2px
       );
+      border-radius: 0 2px 2px 0;
+      z-index: 1;
     }
-    .bc-book.lg .bc-pages { width: 14px; }
-    .bc-book.md .bc-pages { width: 10px; }
-    .bc-book.sm .bc-pages { width: 7px; }
-
-    .bc-back {
-      position: absolute; inset: 0;
-      background: #0d0a09;
-      border-radius: 3px 10px 10px 3px;
-      transform: translateZ(-14px);
-    }
-    .bc-book.md .bc-back { transform: translateZ(-10px); }
-    .bc-book.sm .bc-back { transform: translateZ(-7px); }
 
     /* ============================================================
        HERO
@@ -723,26 +644,12 @@ const PAGE_DESC  = 'Get our free keto smoothie & snack recipe book: 52 delicious
     .st-inner { max-width: 1360px; margin: 0 auto; display: grid; grid-template-columns: auto 1fr auto; gap: 24px; align-items: center; }
 
     .st-book { position: relative; display: inline-block; }
-    .st-book-3d {
-      width: 44px; height: 62px;
-      background: var(--ink);
-      border-radius: 2px 6px 6px 2px;
-      position: relative;
+    .st-book img {
+      width: 44px; height: auto;
+      border-radius: 2px 5px 5px 2px;
+      display: block;
       transform: perspective(300px) rotateY(-18deg) rotateX(3deg);
-      box-shadow: -3px 3px 8px rgba(0,0,0,.4);
-    }
-    .st-book-3d::before {
-      content: '50+';
-      position: absolute; inset: 0;
-      display: grid; place-items: center;
-      font-family: var(--display); font-weight: 800; font-size: 11px;
-      background: radial-gradient(circle at 40% 30%, color-mix(in oklab, var(--accent) 38%, var(--ink)), var(--ink));
-      color: #fff; border-radius: inherit;
-    }
-    .st-book-3d::after {
-      content: ''; position: absolute; top: 2px; bottom: 2px; right: -4px;
-      width: 4px;
-      background: repeating-linear-gradient(to right, #d0c9bf 0, #d0c9bf 0.5px, #e8e1d6 0.5px, #e8e1d6 1px);
+      box-shadow: -3px 3px 10px rgba(0,0,0,.5);
     }
 
     .st-form { display: flex; gap: 8px; }
@@ -893,23 +800,11 @@ const PAGE_DESC  = 'Get our free keto smoothie & snack recipe book: 52 delicious
           <div class="v">14<em>recipes</em></div>
         </div>
 
-        <!-- 3D Book Cover -->
-        <div class="bc-wrap floating">
-          <div class="bc-book lg">
-            <div class="bc-back"></div>
-            <div class="bc-pages"></div>
-            <div class="bc-spine"></div>
-            <div class="bc-cover">
-              <div class="bc-cover-glow"></div>
-              <div class="bc-cover-content">
-                <div class="bc-badge">FREE PDF</div>
-                <div class="bc-eyebrow">KETO JOURNEY</div>
-                <div class="bc-big">50+</div>
-                <div class="bc-sub">Smoothies &amp; Snacks</div>
-                <hr class="bc-rule"/>
-                <div class="bc-meta">POUR · BLEND · BITE / by Mira K.</div>
-              </div>
-            </div>
+        <!-- Book Cover Image -->
+        <div class="bc-img-wrap floating">
+          <div class="bc-img-inner">
+            <div class="bc-img-pages"></div>
+            <img src="/images/free-book-cover.jpg" alt="50+ Keto Smoothies &amp; Snacks — Free Book"/>
           </div>
         </div>
       </div>
@@ -1388,7 +1283,7 @@ const PAGE_DESC  = 'Get our free keto smoothie & snack recipe book: 52 delicious
   <div class="st" id="stickyBar">
     <div class="st-inner">
       <div class="st-book">
-        <div class="st-book-3d"></div>
+        <img src="/images/free-book-cover.jpg" alt="Free book cover"/>
       </div>
 
       <div id="stFormWrap">
