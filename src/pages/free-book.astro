@@ -1339,14 +1339,17 @@ const PAGE_DESC  = 'Get our free keto smoothie & snack recipe book: 52 delicious
 
       async function submitLead(name, email) {
         try {
+          localStorage.setItem('kj_firstName', name);
+          localStorage.setItem('kj_email', email);
+        } catch(e) {}
+        try {
           var res = await fetch('/api/leads/collect', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: name, email: email })
           });
-          if (res.ok) {
-            window.location.href = '/free-book-success';
-          }
+          var dest = '/free-book-success?name=' + encodeURIComponent(name) + '&email=' + encodeURIComponent(email);
+          window.location.href = dest;
         } catch (err) {
           window.location.href = '/free-book-success';
         }

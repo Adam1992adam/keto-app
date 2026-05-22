@@ -1,6 +1,6 @@
 ---
 export const prerender = true;
-const PAGE_TITLE = 'Your Free Keto Book Is On Its Way! | KetoJourney';
+const PAGE_TITLE = 'Your book is on the way — Keto Journey';
 const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being delivered right now.';
 ---
 <!DOCTYPE html>
@@ -15,710 +15,999 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
   <meta name="theme-color" content="#FF5C7A"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
-    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-    html { scroll-behavior:smooth; }
-    a { color:inherit; text-decoration:none; }
-    img { display:block; max-width:100%; }
     :root {
-      --bg:#FAF6F1; --bg-alt:#F2EDE5; --ink:#16110F; --ink-soft:#4A4340;
-      --muted:#8A8077; --line:#E5DED2; --accent:#FF5C7A; --accent-2:#B6FF3C;
-      --card:#FFFFFF; --green:#22c55e;
-      --display:'Bricolage Grotesque',system-ui,sans-serif;
-      --serif:'Instrument Serif',serif;
-      --body:'Geist',system-ui,sans-serif;
+      --bg: #FAF6F1; --bg-alt: #F2EDE5; --ink: #16110F; --ink-soft: #4A4340;
+      --muted: #8A8077; --line: #E5DED2;
+      --accent: #FF5C7A; --accent-2: #B6FF3C; --accent-3: #FF914D; --card: #FFFFFF;
+      --green: #22c55e;
+      --display: 'Bricolage Grotesque', system-ui, sans-serif;
+      --serif: 'Instrument Serif', serif;
+      --body: 'Geist', system-ui, sans-serif;
+      --mono: 'Geist Mono', monospace;
     }
-    body { font-family:var(--body); background:var(--bg); color:var(--ink); overflow-x:hidden; min-height:100vh; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    html, body { background: var(--bg); color: var(--ink); font-family: var(--body); -webkit-font-smoothing: antialiased; }
+    body { overflow-x: hidden; }
+    a { color: inherit; text-decoration: none; }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+    img { display: block; max-width: 100%; }
+    ::selection { background: var(--accent); color: #fff; }
+    input { font-family: inherit; }
 
-    /* ── NAV ── */
-    .nav { position:sticky; top:0; z-index:100; background:rgba(250,246,241,.94); backdrop-filter:blur(14px); border-bottom:1px solid var(--line); padding:16px 32px; display:flex; align-items:center; justify-content:space-between; }
-    .nav-logo { display:flex; align-items:center; gap:10px; }
-    .nav-logo-mark { width:34px; height:34px; background:var(--ink); border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:var(--display); font-weight:800; font-size:.9rem; color:var(--accent-2); }
-    .nav-logo-text { font-family:var(--display); font-weight:800; font-size:1rem; }
-    .nav-cta { background:var(--accent); color:#fff; padding:8px 18px; border-radius:999px; font-size:.85rem; font-weight:700; font-family:var(--display); transition:opacity .15s; }
-    .nav-cta:hover { opacity:.88; }
-    @media(max-width:640px){ .nav{ padding:14px 18px; } }
+    /* ============================================================
+       CONFETTI CANVAS
+       ============================================================ */
+    #confettiCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 200; }
 
-    /* ── CONFETTI ── */
-    #confettiCanvas { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:200; }
-
-    /* ── SUCCESS HERO ── */
-    .success-hero { max-width:680px; margin:0 auto; padding:72px 32px 56px; text-align:center; }
-    .check-ring { width:88px; height:88px; margin:0 auto 28px; }
-    .check-ring svg { width:88px; height:88px; }
-    .check-circle { fill:none; stroke:var(--green); stroke-width:3; stroke-dasharray:251; stroke-dashoffset:251; animation:drawCircle .7s ease forwards .2s; }
-    .check-mark   { fill:none; stroke:var(--green); stroke-width:3.5; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:48; stroke-dashoffset:48; animation:drawCheck .4s ease forwards .9s; }
-    @keyframes drawCircle { to { stroke-dashoffset:0; } }
-    @keyframes drawCheck  { to { stroke-dashoffset:0; } }
-    .success-eyebrow { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.16em; color:var(--green); margin-bottom:14px; }
-    .success-title { font-family:var(--display); font-size:clamp(2rem,5vw,3rem); font-weight:800; color:var(--ink); line-height:1.1; margin-bottom:16px; }
-    .success-title em { font-family:var(--serif); font-style:italic; color:var(--accent); }
-    .success-sub { font-size:1rem; color:var(--ink-soft); line-height:1.75; max-width:500px; margin:0 auto; }
-
-    /* ── SPAM GUIDE CARD ── */
-    .spam-card { max-width:640px; margin:0 auto 64px; background:var(--card); border:1px solid var(--line); border-radius:22px; padding:32px 36px; box-shadow:0 4px 28px rgba(22,17,15,.07); }
-    @media(max-width:600px){ .spam-card{ padding:24px 20px; margin:0 16px 48px; } }
-    .spam-card-title { font-family:var(--display); font-size:1.05rem; font-weight:800; color:var(--ink); margin-bottom:22px; display:flex; align-items:center; gap:10px; }
-    .spam-steps { display:flex; flex-direction:column; gap:16px; }
-    .spam-step { display:flex; align-items:flex-start; gap:14px; }
-    .spam-step-num { width:32px; height:32px; min-width:32px; border-radius:50%; background:rgba(255,92,122,.1); border:1.5px solid rgba(255,92,122,.25); display:flex; align-items:center; justify-content:center; font-family:var(--display); font-size:.82rem; font-weight:800; color:var(--accent); }
-    .spam-step-body { padding-top:4px; }
-    .spam-step-label { font-family:var(--display); font-size:.92rem; font-weight:700; color:var(--ink); margin-bottom:3px; }
-    .spam-step-desc { font-size:.83rem; color:var(--muted); line-height:1.65; }
-    .spam-step-desc strong { color:var(--ink-soft); }
-    .spam-tabs-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
-    .spam-tab-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:999px; font-size:.76rem; font-weight:600; }
-    .spam-tab-badge.spam    { background:rgba(239,68,68,.08);  border:1px solid rgba(239,68,68,.2);  color:#dc2626; }
-    .spam-tab-badge.promo   { background:rgba(59,130,246,.08); border:1px solid rgba(59,130,246,.22); color:#2563eb; }
-    .spam-tab-badge.updates { background:rgba(168,85,247,.08); border:1px solid rgba(168,85,247,.22); color:#7c3aed; }
-    .spam-tip { margin-top:20px; padding:12px 16px; background:rgba(182,255,60,.1); border:1px solid rgba(182,255,60,.3); border-radius:12px; font-size:.82rem; color:var(--ink-soft); line-height:1.65; }
-    .spam-tip strong { color:var(--ink); }
-
-    /* ── DIVIDER ── */
-    .divider { max-width:1000px; margin:0 auto 64px; display:flex; align-items:center; gap:16px; padding:0 32px; }
-    @media(max-width:600px){ .divider{ padding:0 16px; } }
-    .divider-line { flex:1; height:1px; background:var(--line); }
-    .divider-text { font-size:.76rem; font-weight:700; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); white-space:nowrap; }
-
-    /* ── PLAN SECTION ── */
-    .plan-section { max-width:1080px; margin:0 auto; padding:0 32px 80px; }
-    @media(max-width:600px){ .plan-section{ padding:0 16px 60px; } }
-    .plan-eyebrow { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.16em; color:var(--accent); margin-bottom:12px; text-align:center; }
-    .plan-title { font-family:var(--display); font-size:clamp(1.8rem,4vw,2.8rem); font-weight:800; color:var(--ink); text-align:center; line-height:1.15; margin-bottom:14px; }
-    .plan-title em { font-family:var(--serif); font-style:italic; color:var(--accent); }
-    .plan-sub { font-size:.97rem; color:var(--ink-soft); line-height:1.75; text-align:center; max-width:560px; margin:0 auto 52px; }
-
-    /* ─────────────────────────────────────────
-       STORIES CAROUSEL
-    ───────────────────────────────────────── */
-    .carousel-wrap { position:relative; margin-bottom:56px; }
-
-    /* Outer card shell */
-    .carousel-shell {
-      border-radius:28px;
-      overflow:hidden;
-      box-shadow:0 16px 64px rgba(22,17,15,.13);
-      background:var(--card);
-      border:1px solid var(--line);
-      position:relative;
+    /* ============================================================
+       CONFIRM — dark hero
+       ============================================================ */
+    .cf {
+      position: relative;
+      background: var(--ink);
+      color: var(--bg);
+      overflow: hidden;
+      min-height: 100vh;
+      padding: 28px 32px 72px;
+    }
+    .cf::before {
+      content: ''; position: absolute;
+      width: 820px; height: 820px; border-radius: 50%;
+      background: radial-gradient(circle, color-mix(in oklab, var(--accent) 45%, transparent), transparent 65%);
+      filter: blur(90px);
+      top: -380px; right: -240px; pointer-events: none;
+    }
+    .cf::after {
+      content: ''; position: absolute;
+      width: 640px; height: 640px; border-radius: 50%;
+      background: radial-gradient(circle, color-mix(in oklab, var(--accent-2) 26%, transparent), transparent 65%);
+      filter: blur(80px);
+      bottom: -340px; left: -200px; pointer-events: none;
     }
 
-    /* Slides container — all slides stacked, only active visible */
-    .carousel-slides { position:relative; width:100%; }
+    .cf-nav {
+      position: relative; z-index: 5;
+      max-width: 1360px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      padding-bottom: 24px;
+    }
+    .cf-logo { display: flex; align-items: center; gap: 10px; }
+    .cf-logo .mark { width: 32px; height: 32px; border-radius: 9px; background: var(--bg); color: var(--ink); display: grid; place-items: center; font-weight: 800; font-size: 14px; }
+    .cf-logo .name { font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: -0.01em; color: var(--bg); }
+    .cf-nav-r { display: flex; gap: 18px; align-items: center; font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: color-mix(in oklab, var(--bg) 65%, transparent); }
+    .cf-nav-r a:hover { color: var(--bg); }
+    .cf-nav-r .login { background: var(--accent-2); color: var(--ink); padding: 9px 14px; border-radius: 999px; font-weight: 700; }
 
-    .carousel-slide {
-      display:grid;
-      grid-template-columns:420px 1fr;
-      min-height:520px;
-      position:absolute;
-      inset:0;
-      opacity:0;
-      transform:translateX(40px);
-      transition:opacity .6s ease, transform .6s ease;
-      pointer-events:none;
-      z-index:0;
-    }
-    /* First slide sets the natural height */
-    .carousel-slide:first-child { position:relative; }
-    .carousel-slide.active {
-      opacity:1;
-      transform:translateX(0);
-      pointer-events:auto;
-      z-index:1;
-    }
-    .carousel-slide.exit-left {
-      opacity:0;
-      transform:translateX(-40px);
-      z-index:0;
-    }
-    @media(max-width:860px){ .carousel-slide{ grid-template-columns:320px 1fr; } }
-    @media(max-width:680px){
-      .carousel-slide{ grid-template-columns:1fr; min-height:auto; }
-      .carousel-slide:first-child { position:relative; }
+    .cf-inner {
+      position: relative; z-index: 2;
+      max-width: 1360px; margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      gap: 64px; align-items: center;
+      padding-top: 32px;
     }
 
-    /* ── Image column ── */
-    .slide-img-col {
-      position:relative;
-      overflow:hidden;
-      background:var(--bg-alt);
-      /* IMAGE SLOT: portrait photo 560×700 px minimum (displayed up to ~420 px wide, full card height) */
+    .cf-status {
+      display: inline-flex; align-items: center; gap: 12px;
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--accent-2); margin-bottom: 24px;
+      padding: 9px 14px;
+      background: color-mix(in oklab, var(--accent-2) 12%, transparent);
+      border: 1px solid color-mix(in oklab, var(--accent-2) 28%, transparent);
+      border-radius: 999px;
     }
-    .slide-img {
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      object-position:top center;
-      display:block;
-      transition:transform 8s ease;
+    .cf-status .pulse { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--accent-2); }
+    .cf-status .pulse::after {
+      content: ''; position: absolute; inset: -4px;
+      border-radius: 50%; background: var(--accent-2); opacity: 0.4;
+      animation: cfpulse 1.6s ease-out infinite;
     }
-    .carousel-slide.active .slide-img { transform:scale(1.04); }
-    /* Gradient right-edge fade into story content */
-    .slide-img-col::after {
-      content:'';
-      position:absolute;
-      inset:0;
-      background:linear-gradient(to right, transparent 55%, var(--card) 100%),
-                 linear-gradient(to top, rgba(22,17,15,.55) 0%, transparent 40%);
-      pointer-events:none;
-    }
-    /* Placeholder when image missing */
-    .slide-img-ph {
-      position:absolute; inset:0; display:none;
-      flex-direction:column; align-items:center; justify-content:center; gap:12px;
-      background:linear-gradient(145deg,#EEE8E0,#DDD5C8);
-    }
-    .slide-img-ph-icon  { font-size:3.5rem; }
-    .slide-img-ph-label { font-size:.76rem; font-weight:600; color:var(--muted); text-align:center; padding:0 16px; line-height:1.5; }
-    /* Result badge bottom-left of image */
-    .slide-result-badge {
-      position:absolute; bottom:20px; left:20px; z-index:2;
-      display:inline-flex; align-items:center; gap:6px;
-      padding:7px 16px; background:var(--accent); border-radius:999px;
-      font-family:var(--display); font-size:.86rem; font-weight:800; color:#fff;
-      box-shadow:0 4px 16px rgba(255,92,122,.4);
-    }
-    @media(max-width:680px){
-      .slide-img-col { aspect-ratio:4/3; height:auto; }
-      .slide-img-col::after { background:linear-gradient(to top, rgba(22,17,15,.55) 0%, transparent 50%); }
+    @keyframes cfpulse {
+      0% { transform: scale(0.6); opacity: 0.6; }
+      100% { transform: scale(2.4); opacity: 0; }
     }
 
-    /* ── Story column ── */
-    .slide-story-col {
-      padding:52px 48px 48px 44px;
-      display:flex;
-      flex-direction:column;
-      justify-content:center;
-      gap:20px;
+    .cf-h {
+      font-family: var(--display);
+      font-size: clamp(54px, 7vw, 108px);
+      line-height: 1; letter-spacing: -0.05em; font-weight: 600;
+      max-width: 16ch; text-wrap: balance; margin-bottom: 28px;
     }
-    @media(max-width:860px){ .slide-story-col{ padding:40px 32px 36px 28px; gap:16px; } }
-    @media(max-width:680px){ .slide-story-col{ padding:28px 24px 32px; gap:14px; } }
-
-    .slide-plan-badge {
-      display:inline-flex; align-items:center; gap:5px;
-      padding:5px 13px; background:rgba(255,92,122,.07);
-      border:1px solid rgba(255,92,122,.2); border-radius:999px;
-      font-size:.72rem; font-weight:700; color:var(--accent); width:fit-content;
-    }
-    .slide-name-row { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
-    .slide-name { font-family:var(--display); font-size:clamp(1.5rem,3vw,2rem); font-weight:800; color:var(--ink); line-height:1.1; }
-    .slide-age  { font-size:.9rem; font-weight:600; color:var(--muted); }
-
-    .slide-stars { color:var(--accent); font-size:.9rem; letter-spacing:2px; }
-
-    .slide-quote {
-      font-family:var(--serif); font-style:italic;
-      font-size:clamp(1rem,1.8vw,1.2rem); color:var(--ink-soft);
-      line-height:1.75; position:relative; padding-left:20px;
-    }
-    .slide-quote::before {
-      content:'"';
-      position:absolute; left:0; top:-4px;
-      font-family:var(--serif); font-size:2.4rem; color:var(--accent);
-      line-height:1; font-style:normal;
+    .cf-h em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
+    .cf-h .stamp {
+      display: inline-block; background: var(--accent-2); color: var(--ink);
+      font-family: var(--display); font-weight: 700;
+      padding: 0 0.1em 0.05em; transform: rotate(-2deg); line-height: 0.9;
     }
 
-    .slide-stats { display:flex; gap:28px; flex-wrap:wrap; }
-    .slide-stat { display:flex; flex-direction:column; gap:3px; }
-    .slide-stat-val { font-family:var(--display); font-size:1.5rem; font-weight:800; color:var(--green); line-height:1; }
-    .slide-stat-label { font-size:.75rem; color:var(--muted); line-height:1.4; }
-
-    .slide-divider { width:48px; height:3px; background:var(--accent); border-radius:99px; }
-
-    /* ── Progress bar (time indicator) ── */
-    .carousel-progress {
-      height:3px;
-      background:var(--line);
-      border-radius:0 0 28px 28px;
-      overflow:hidden;
+    .cf-sub {
+      font-family: var(--serif); font-style: italic;
+      font-size: clamp(18px, 1.5vw, 22px);
+      color: color-mix(in oklab, var(--bg) 78%, transparent);
+      max-width: 52ch; line-height: 1.5; margin-bottom: 32px; text-wrap: pretty;
     }
-    .carousel-progress-bar {
-      height:100%;
-      background:linear-gradient(to right, var(--accent), #ff8fa3);
-      width:0%;
-      transition:width linear;
+    .cf-sub b { font-family: var(--body); font-style: normal; font-weight: 600; color: var(--bg); }
+    .cf-sub mark { background: transparent; color: var(--accent-2); font-family: var(--mono); font-style: normal; font-size: 0.85em; letter-spacing: 0.08em; font-weight: 600; }
+
+    .cf-eta {
+      background: color-mix(in oklab, var(--bg) 6%, transparent);
+      border: 1px solid color-mix(in oklab, var(--bg) 14%, transparent);
+      border-radius: 22px; padding: 22px 24px; margin-bottom: 28px;
+      max-width: 580px;
+      display: grid; grid-template-columns: auto 1fr auto; gap: 22px; align-items: center;
+    }
+    .cf-eta-icon {
+      width: 60px; height: 60px; border-radius: 16px;
+      background: var(--accent); color: #fff;
+      display: grid; place-items: center; font-size: 24px; font-weight: 700; position: relative;
+    }
+    .cf-eta-icon::before {
+      content: ''; position: absolute; inset: -4px; border-radius: 20px;
+      border: 1px dashed color-mix(in oklab, var(--accent) 55%, transparent);
+      animation: cfrotate 14s linear infinite;
+    }
+    @keyframes cfrotate { 100% { transform: rotate(360deg); } }
+    .cf-eta-l { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: color-mix(in oklab, var(--bg) 60%, transparent); margin-bottom: 4px; }
+    .cf-eta-v { font-family: var(--display); font-size: 22px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.15; }
+    .cf-eta-v b { color: var(--accent-2); font-family: var(--mono); font-size: 14px; letter-spacing: 0.06em; margin-left: 6px; padding: 2px 8px; border-radius: 4px; background: color-mix(in oklab, var(--accent-2) 14%, transparent); }
+    .cf-eta-progress { margin-top: 10px; height: 4px; background: color-mix(in oklab, var(--bg) 12%, transparent); border-radius: 999px; overflow: hidden; }
+    .cf-eta-progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%); border-radius: 999px; width: 0%; transition: width 1s linear; }
+    .cf-eta-cta { background: var(--bg); color: var(--ink); padding: 11px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+    .cf-eta-cta:hover { background: var(--accent-2); }
+
+    .cf-steps {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      border-radius: 20px; overflow: hidden;
+      border: 1px solid color-mix(in oklab, var(--bg) 12%, transparent);
+      background: color-mix(in oklab, var(--bg) 5%, transparent);
+    }
+    .cf-step { padding: 22px; border-right: 1px solid color-mix(in oklab, var(--bg) 12%, transparent); display: flex; flex-direction: column; gap: 10px; }
+    .cf-step:last-child { border-right: none; }
+    .cf-step .n { font-family: var(--display); font-size: 36px; font-weight: 700; line-height: 0.85; letter-spacing: -0.04em; color: var(--accent-2); }
+    .cf-step .n::before { content: 'STEP '; font-family: var(--mono); font-style: normal; font-weight: 600; font-size: 9px; letter-spacing: 0.2em; color: color-mix(in oklab, var(--bg) 50%, transparent); display: block; margin-bottom: 6px; }
+    .cf-step .t { font-family: var(--display); font-size: 16px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+    .cf-step .b { font-family: var(--serif); font-style: italic; font-size: 13.5px; color: color-mix(in oklab, var(--bg) 72%, transparent); line-height: 1.45; }
+    .cf-step .b b { font-family: var(--body); font-style: normal; font-weight: 600; color: var(--bg); }
+
+    .cf-stage { position: relative; display: grid; place-items: center; min-height: 560px; }
+    .cf-envelope {
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -42%) rotate(-4deg);
+      width: 340px; height: 220px;
+      background: linear-gradient(155deg, #F2E8D8 0%, #E6DAC4 100%);
+      border-radius: 4px;
+      box-shadow: 0 30px 60px -20px rgba(0,0,0,0.5); z-index: 1;
+    }
+    .cf-envelope::before {
+      content: ''; position: absolute; left: 0; right: 0; top: 0;
+      height: 60%;
+      background: linear-gradient(180deg, #FBF5E6 0%, #F2E8D8 100%);
+      clip-path: polygon(0 0, 100% 0, 50% 100%);
+    }
+    .cf-envelope .seal {
+      position: absolute; left: 50%; top: 56%; transform: translate(-50%, -50%);
+      width: 50px; height: 50px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      font-family: var(--display); font-size: 14px; font-weight: 700;
+      display: grid; place-items: center; z-index: 3;
+      box-shadow: 0 4px 12px -2px rgba(0,0,0,0.3);
+    }
+    .cf-envelope .stamp-rect {
+      position: absolute; top: 14px; right: 14px;
+      width: 60px; height: 40px;
+      background: var(--accent-2);
+      border: 2px dashed color-mix(in oklab, var(--ink) 60%, transparent);
+      font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: 0.14em; color: var(--ink);
+      display: grid; place-items: center; text-align: center; line-height: 1.2; padding: 2px;
+    }
+    .cf-envelope .addr {
+      position: absolute; left: 24px; bottom: 22px;
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; color: var(--ink-soft); line-height: 1.6;
+    }
+    .cf-envelope .addr b { font-family: var(--display); font-size: 13px; letter-spacing: -0.01em; color: var(--ink); display: block; text-transform: none; font-weight: 600; }
+
+    .cf-book-peek {
+      position: absolute; left: 50%; top: 30%;
+      transform: translate(-44%, -50%) rotate(-12deg);
+      z-index: 4;
+      animation: cfbookin 1.2s cubic-bezier(.25,1.4,.5,1) both;
+    }
+    @keyframes cfbookin {
+      0% { transform: translate(-44%, 30%) rotate(-22deg); opacity: 0; }
+      100% { transform: translate(-44%, -50%) rotate(-12deg); opacity: 1; }
+    }
+    .cf-book-img {
+      width: 220px; height: auto;
+      border-radius: 3px 10px 10px 3px;
+      filter: drop-shadow(0 24px 40px rgba(0,0,0,.5));
+      transform: perspective(800px) rotateY(-8deg) rotateX(3deg);
+      display: block;
     }
 
-    /* ── Controls ── */
-    .carousel-controls {
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:16px;
-      margin-top:20px;
+    .cf-receipt {
+      position: absolute; bottom: 4%; right: 0;
+      background: var(--bg); color: var(--ink);
+      border-radius: 14px; padding: 16px 18px;
+      width: 230px;
+      font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; line-height: 1.6;
+      z-index: 5; transform: rotate(3deg);
+      box-shadow: 0 16px 36px -12px rgba(0,0,0,0.5);
     }
-    .carousel-btn {
-      width:40px; height:40px; border-radius:50%;
-      border:1.5px solid var(--line);
-      background:var(--card);
-      display:flex; align-items:center; justify-content:center;
-      cursor:pointer; transition:all .18s;
-      color:var(--ink-soft);
+    .cf-receipt::before {
+      content: ''; position: absolute; left: 0; right: 0; top: -8px; height: 8px;
+      background: var(--bg);
+      clip-path: polygon(0 100%, 4px 0, 8px 100%, 12px 0, 16px 100%, 20px 0, 24px 100%, 28px 0, 32px 100%, 36px 0, 40px 100%, 44px 0, 48px 100%, 52px 0, 56px 100%, 60px 0, 64px 100%, 68px 0, 72px 100%, 76px 0, 80px 100%, 84px 0, 88px 100%, 92px 0, 96px 100%, 100px 0, 100% 100%);
     }
-    .carousel-btn:hover { border-color:var(--accent); color:var(--accent); background:rgba(255,92,122,.05); transform:scale(1.08); }
-    .carousel-btn svg { width:16px; height:16px; }
-
-    .carousel-dots { display:flex; align-items:center; gap:8px; }
-    .carousel-dot {
-      width:8px; height:8px; border-radius:50%;
-      background:var(--line); border:none; cursor:pointer;
-      transition:all .25s; padding:0;
+    .cf-receipt::after {
+      content: ''; position: absolute; left: 0; right: 0; bottom: -8px; height: 8px;
+      background: var(--bg);
+      clip-path: polygon(0 0, 4px 100%, 8px 0, 12px 100%, 16px 0, 20px 100%, 24px 0, 28px 100%, 32px 0, 36px 100%, 40px 0, 44px 100%, 48px 0, 52px 100%, 56px 0, 60px 100%, 64px 0, 68px 100%, 72px 0, 76px 100%, 80px 0, 84px 100%, 88px 0, 92px 100%, 96px 0, 100% 0, 100% 0);
     }
-    .carousel-dot.active {
-      background:var(--accent); width:24px; border-radius:4px;
+    .cf-receipt .tt { font-family: var(--display); font-size: 13px; font-weight: 700; letter-spacing: -0.015em; color: var(--ink); text-transform: none; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px dashed var(--line); }
+    .cf-receipt .row { display: flex; justify-content: space-between; color: var(--muted); text-transform: uppercase; }
+    .cf-receipt .row b { color: var(--ink); font-weight: 600; }
+    .cf-receipt .row.total { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); font-family: var(--display); text-transform: none; font-size: 13px; letter-spacing: -0.01em; color: var(--ink); font-weight: 600; }
+    .cf-receipt .row.total b { color: var(--accent); }
+
+    .cf-confetti { position: absolute; font-size: 18px; color: var(--accent-2); z-index: 3; animation: cff 6s ease-in-out infinite; }
+    .cf-confetti.c1 { top: 14%; left: 10%; }
+    .cf-confetti.c2 { top: 20%; right: 14%; color: var(--accent); }
+    .cf-confetti.c3 { bottom: 26%; left: 8%; color: var(--accent-3); }
+    .cf-confetti.c4 { top: 50%; right: 8%; }
+    @keyframes cff { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-12px) rotate(20deg); } }
+
+    @media (max-width: 1100px) {
+      .cf { padding: 22px 18px 60px; }
+      .cf-inner { grid-template-columns: 1fr; gap: 36px; }
+      .cf-stage { min-height: 380px; }
+      .cf-steps { grid-template-columns: 1fr; }
+      .cf-step { border-right: none; border-bottom: 1px solid color-mix(in oklab, var(--bg) 12%, transparent); }
+      .cf-step:last-child { border-bottom: none; }
+      .cf-eta { grid-template-columns: 1fr; gap: 14px; }
+      .cf-receipt { display: none; }
     }
 
-    /* ── PLAN CARD (dark CTA) ── */
-    .plan-card { background:var(--ink); border-radius:28px; padding:48px 44px; display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:center; position:relative; overflow:hidden; }
-    @media(max-width:760px){ .plan-card{ grid-template-columns:1fr; gap:32px; padding:36px 28px; } }
-    .plan-card::before { content:''; position:absolute; top:-60px; right:-60px; width:300px; height:300px; background:radial-gradient(circle, rgba(255,92,122,.18) 0%, transparent 70%); pointer-events:none; }
-    .plan-card::after  { content:''; position:absolute; bottom:-80px; left:-40px; width:260px; height:260px; background:radial-gradient(circle, rgba(182,255,60,.12) 0%, transparent 70%); pointer-events:none; }
+    /* ============================================================
+       SNEAK — "while you wait" recipe
+       ============================================================ */
+    .sn { max-width: 1360px; margin: 0 auto; padding: 96px 32px 32px; }
+    .sn-head { display: flex; align-items: end; gap: 32px; margin-bottom: 36px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+    .sn-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; display: inline-flex; align-items: center; gap: 10px; }
+    .sn-eyebrow .pip { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 22%, transparent); }
+    .sn-head h2 { font-family: var(--display); font-size: clamp(38px, 4.8vw, 68px); line-height: 0.94; letter-spacing: -0.045em; font-weight: 600; max-width: 18ch; text-wrap: balance; }
+    .sn-head h2 em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
+    .sn-head .meta { margin-left: auto; font-family: var(--serif); font-style: italic; font-size: 16px; color: var(--ink-soft); max-width: 32ch; text-align: right; line-height: 1.5; }
+    .sn-head .meta b { font-family: var(--body); font-style: normal; font-weight: 600; color: var(--ink); }
 
-    .plan-left .plan-badge { display:inline-flex; align-items:center; gap:7px; background:rgba(255,92,122,.18); border:1px solid rgba(255,92,122,.3); border-radius:999px; padding:6px 14px; font-size:.72rem; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.1em; margin-bottom:20px; }
-    .plan-left h3 { font-family:var(--display); font-size:clamp(1.5rem,3vw,2rem); font-weight:800; color:#fff; line-height:1.2; margin-bottom:14px; }
-    .plan-left p  { font-size:.9rem; color:rgba(255,255,255,.6); line-height:1.75; margin-bottom:28px; }
-    .plan-price-row { display:flex; align-items:baseline; gap:8px; margin-bottom:28px; }
-    .plan-price-big { font-family:var(--display); font-size:2.6rem; font-weight:800; color:#fff; }
-    .plan-price-sub { font-size:.88rem; color:rgba(255,255,255,.45); }
-    .plan-cta-btn { display:inline-flex; align-items:center; gap:8px; padding:16px 30px; background:var(--accent); color:#fff; font-family:var(--display); font-weight:800; font-size:1rem; border-radius:999px; transition:opacity .15s, transform .15s; }
-    .plan-cta-btn:hover { opacity:.9; transform:translateY(-2px); }
-    .plan-cta-note { margin-top:12px; font-size:.77rem; color:rgba(255,255,255,.38); }
+    .sn-card { background: var(--card); border: 1px solid var(--line); border-radius: 28px; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr) 360px; position: relative; }
+    .sn-body { padding: 36px; display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+    .sn-rcat { font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent); }
+    .sn-rname { font-family: var(--display); font-size: clamp(34px, 4vw, 54px); font-weight: 600; letter-spacing: -0.04em; line-height: 0.95; text-wrap: balance; max-width: 18ch; }
+    .sn-rname em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
+    .sn-rsub { font-family: var(--serif); font-style: italic; font-size: 17px; color: var(--ink-soft); line-height: 1.45; max-width: 50ch; }
 
-    .plan-right { position:relative; z-index:1; }
-    .plan-features { display:flex; flex-direction:column; gap:14px; }
-    .plan-feature { display:flex; align-items:flex-start; gap:12px; }
-    .plan-feature-check { width:22px; height:22px; min-width:22px; border-radius:50%; background:rgba(182,255,60,.15); border:1.5px solid rgba(182,255,60,.35); display:flex; align-items:center; justify-content:center; margin-top:1px; }
-    .plan-feature-check svg { width:11px; height:11px; }
-    .plan-feature-body .feat-name { font-family:var(--display); font-size:.9rem; font-weight:700; color:#fff; margin-bottom:2px; }
-    .plan-feature-body .feat-desc { font-size:.8rem; color:rgba(255,255,255,.5); line-height:1.5; }
+    .sn-stats { display: grid; grid-template-columns: repeat(4, 1fr); padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .sn-stat { padding: 0 14px; border-right: 1px solid var(--line); }
+    .sn-stat:first-child { padding-left: 0; }
+    .sn-stat:last-child { border-right: none; padding-right: 0; }
+    .sn-stat .v { font-family: var(--display); font-size: 24px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; }
+    .sn-stat .v em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); font-size: 13px; margin-left: 2px; }
+    .sn-stat .l { font-family: var(--mono); font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
 
-    /* ── SOCIAL PROOF ── */
-    .proof-strip { max-width:700px; margin:0 auto 80px; padding:0 32px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
-    @media(max-width:600px){ .proof-strip{ padding:0 16px; } }
-    .proof-pill { display:flex; align-items:center; gap:6px; background:var(--card); border:1px solid var(--line); border-radius:999px; padding:8px 16px; font-size:.82rem; color:var(--ink-soft); }
-    .proof-pill strong { color:var(--ink); font-weight:700; }
+    .sn-two { display: grid; grid-template-columns: 1fr 1.2fr; gap: 32px; margin-top: 4px; }
+    .sn-col-h { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+    .sn-ingr { list-style: none; padding: 0; margin: 0; }
+    .sn-ingr li { display: grid; grid-template-columns: 64px 1fr; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 14.5px; align-items: baseline; }
+    .sn-ingr li:last-child { border-bottom: none; }
+    .sn-ingr li .q { font-family: var(--mono); color: var(--accent); font-weight: 600; font-size: 13px; letter-spacing: 0.02em; }
 
-    /* ── FOOTER ── */
-    .footer { border-top:1px solid var(--line); padding:24px 32px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
-    .footer-copy  { font-size:.8rem; color:var(--muted); }
-    .footer-links { display:flex; gap:20px; }
-    .footer-links a { font-size:.8rem; color:var(--muted); transition:color .15s; }
-    .footer-links a:hover { color:var(--ink); }
+    .sn-step { display: grid; grid-template-columns: 32px 1fr; gap: 14px; padding: 10px 0; border-bottom: 1px dashed var(--line); }
+    .sn-step:last-of-type { border-bottom: none; }
+    .sn-step .n { font-family: var(--display); font-size: 18px; font-weight: 600; letter-spacing: -0.03em; color: var(--accent); line-height: 1; padding-top: 2px; }
+    .sn-step .b { font-size: 14.5px; line-height: 1.5; color: var(--ink-soft); }
+    .sn-step .b b { color: var(--ink); font-weight: 600; }
 
-    /* ── ANIMATIONS ── */
-    @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
-    .fade-up { opacity:0; animation:fadeUp .6s ease forwards; }
-    .delay-1 { animation-delay:.15s; }
-    .delay-2 { animation-delay:.3s; }
-    .delay-3 { animation-delay:.5s; }
-    .delay-4 { animation-delay:.7s; }
-    .delay-5 { animation-delay:.9s; }
+    .sn-tip { background: color-mix(in oklab, var(--accent-2) 22%, var(--bg)); border-left: 3px solid var(--accent-2); border-radius: 12px; padding: 16px 18px; font-family: var(--serif); font-style: italic; font-size: 14.5px; line-height: 1.5; color: var(--ink-soft); text-wrap: pretty; margin-top: 8px; }
+    .sn-tip b { font-family: var(--body); font-style: normal; font-weight: 600; color: var(--ink); text-transform: uppercase; letter-spacing: 0.18em; font-size: 10px; display: block; margin-bottom: 6px; }
+
+    .sn-art { position: relative; background: radial-gradient(circle at 50% 35%, color-mix(in oklab, var(--accent) 60%, transparent), transparent 60%), linear-gradient(160deg, var(--accent) 0%, var(--accent-3) 100%); padding: 36px 28px; display: flex; flex-direction: column; justify-content: end; gap: 24px; }
+    .sn-art-stamp { position: absolute; top: 24px; left: 24px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; background: var(--ink); color: var(--accent-2); padding: 6px 10px; border-radius: 4px; }
+    .sn-art-page { position: absolute; top: 24px; right: 24px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.18em; color: color-mix(in oklab, var(--bg) 80%, transparent); }
+
+    .sn-glass-wrap { position: relative; width: 100%; aspect-ratio: 3/4; max-height: 320px; margin: 0 auto; }
+    .sn-glass { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 60%; height: 75%; border-radius: 14px 14px 24px 24px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.22); overflow: hidden; backdrop-filter: blur(2px); }
+    .sn-glass::before { content: ''; position: absolute; left: 8%; right: 8%; top: 8%; bottom: 0; background: linear-gradient(180deg, #5B3324 0%, #3F2218 100%); border-radius: 10px 10px 18px 18px; }
+    .sn-glass::after { content: ''; position: absolute; left: 22%; top: 18%; width: 22%; height: 30%; background: rgba(255,255,255,0.22); border-radius: 50%; filter: blur(3px); }
+    .sn-foam { position: absolute; left: 8%; right: 8%; top: 0; height: 14%; background: #F2E3D1; border-radius: 50% 50% 6px 6px / 70% 70% 6px 6px; z-index: 2; }
+    .sn-straw { position: absolute; left: 56%; top: -10%; bottom: 40%; width: 6px; background: var(--accent-2); border-radius: 4px; transform: rotate(10deg); transform-origin: top; z-index: 3; }
+
+    .sn-art-foot { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 10px; }
+    .sn-art-foot .tt { font-family: var(--display); font-size: 22px; font-weight: 600; letter-spacing: -0.025em; color: #fff; line-height: 1.1; }
+    .sn-art-foot .tt em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent-2); }
+    .sn-art-foot .sub { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: color-mix(in oklab, var(--bg) 80%, transparent); }
+
+    @media (max-width: 1100px) {
+      .sn { padding: 60px 18px 32px; }
+      .sn-head { flex-direction: column; align-items: start; gap: 16px; }
+      .sn-head .meta { margin-left: 0; text-align: left; }
+      .sn-card { grid-template-columns: 1fr; }
+      .sn-two { grid-template-columns: 1fr; gap: 24px; }
+      .sn-body { padding: 28px 22px; }
+    }
+
+    /* ============================================================
+       CAROUSEL
+       ============================================================ */
+    .carousel-section { max-width: 1360px; margin: 0 auto; padding: 64px 32px 32px; }
+    .carousel-section-head { text-align: center; margin-bottom: 36px; }
+    .carousel-section-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; display: inline-flex; align-items: center; gap: 10px; }
+    .carousel-section-eyebrow .pip { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 22%, transparent); }
+    .carousel-section h2 { font-family: var(--display); font-size: clamp(32px, 4vw, 56px); line-height: 0.95; letter-spacing: -0.045em; font-weight: 600; text-wrap: balance; }
+    .carousel-section h2 em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
+
+    .carousel-wrap { position: relative; margin-bottom: 40px; }
+    .carousel-shell { border-radius: 28px; overflow: hidden; box-shadow: 0 16px 64px rgba(22,17,15,.13); background: var(--card); border: 1px solid var(--line); position: relative; }
+    .carousel-slides { position: relative; width: 100%; }
+    .carousel-slide { display: grid; grid-template-columns: 420px 1fr; min-height: 520px; position: absolute; inset: 0; opacity: 0; transform: translateX(40px); transition: opacity .6s ease, transform .6s ease; pointer-events: none; z-index: 0; }
+    .carousel-slide:first-child { position: relative; }
+    .carousel-slide.active { opacity: 1; transform: translateX(0); pointer-events: auto; z-index: 1; }
+    .carousel-slide.exit-left { opacity: 0; transform: translateX(-40px); z-index: 0; }
+
+    .slide-img-col { position: relative; overflow: hidden; background: var(--bg-alt); }
+    .slide-img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; transition: transform 8s ease; }
+    .carousel-slide.active .slide-img { transform: scale(1.04); }
+    .slide-img-col::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to right, transparent 55%, var(--card) 100%), linear-gradient(to top, rgba(22,17,15,.55) 0%, transparent 40%); pointer-events: none; }
+    .slide-img-ph { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: linear-gradient(145deg,#EEE8E0,#DDD5C8); }
+    .slide-img-ph-icon { font-size: 3.5rem; }
+    .slide-img-ph-label { font-size: .76rem; font-weight: 600; color: var(--muted); text-align: center; padding: 0 16px; line-height: 1.5; }
+    .slide-result-badge { position: absolute; bottom: 20px; left: 20px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; background: var(--accent); border-radius: 999px; font-family: var(--display); font-size: .86rem; font-weight: 800; color: #fff; box-shadow: 0 4px 16px rgba(255,92,122,.4); }
+
+    .slide-story-col { padding: 52px 48px 48px 44px; display: flex; flex-direction: column; justify-content: center; gap: 20px; }
+    .slide-plan-badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 13px; background: rgba(255,92,122,.07); border: 1px solid rgba(255,92,122,.2); border-radius: 999px; font-size: .72rem; font-weight: 700; color: var(--accent); width: fit-content; }
+    .slide-name-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .slide-name { font-family: var(--display); font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 800; color: var(--ink); line-height: 1.1; }
+    .slide-age { font-size: .9rem; font-weight: 600; color: var(--muted); }
+    .slide-stars { color: var(--accent); font-size: .9rem; letter-spacing: 2px; }
+    .slide-quote { font-family: var(--serif); font-style: italic; font-size: clamp(1rem, 1.8vw, 1.2rem); color: var(--ink-soft); line-height: 1.75; position: relative; padding-left: 20px; }
+    .slide-quote::before { content: '\201C'; position: absolute; left: 0; top: -4px; font-family: var(--serif); font-size: 2.4rem; color: var(--accent); line-height: 1; font-style: normal; }
+    .slide-stats { display: flex; gap: 28px; flex-wrap: wrap; }
+    .slide-stat { display: flex; flex-direction: column; gap: 3px; }
+    .slide-stat-val { font-family: var(--display); font-size: 1.5rem; font-weight: 800; color: var(--green); line-height: 1; }
+    .slide-stat-label { font-size: .75rem; color: var(--muted); line-height: 1.4; }
+    .slide-divider { width: 48px; height: 3px; background: var(--accent); border-radius: 99px; }
+
+    .carousel-progress { height: 3px; background: var(--line); border-radius: 0 0 28px 28px; overflow: hidden; }
+    .carousel-progress-bar { height: 100%; background: linear-gradient(to right, var(--accent), #ff8fa3); width: 0%; transition: width linear; }
+    .carousel-controls { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 20px; }
+    .carousel-btn { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--card); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .18s; color: var(--ink-soft); }
+    .carousel-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(255,92,122,.05); transform: scale(1.08); }
+    .carousel-btn svg { width: 16px; height: 16px; }
+    .carousel-dots { display: flex; align-items: center; gap: 8px; }
+    .carousel-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); border: none; cursor: pointer; transition: all .25s; padding: 0; }
+    .carousel-dot.active { background: var(--accent); width: 24px; border-radius: 4px; }
+
+    @media (max-width: 860px) {
+      .carousel-slide { grid-template-columns: 320px 1fr; }
+      .slide-story-col { padding: 40px 32px 36px 28px; gap: 16px; }
+    }
+    @media (max-width: 680px) {
+      .carousel-section { padding: 48px 18px 24px; }
+      .carousel-slide { grid-template-columns: 1fr; min-height: auto; }
+      .carousel-slide:first-child { position: relative; }
+      .slide-img-col { aspect-ratio: 4/3; height: auto; }
+      .slide-img-col::after { background: linear-gradient(to top, rgba(22,17,15,.55) 0%, transparent 50%); }
+      .slide-story-col { padding: 28px 24px 32px; gap: 14px; }
+    }
+
+    /* ============================================================
+       UPGRADE — app CTA
+       ============================================================ */
+    .up { background: var(--bg-alt); padding: 96px 32px; margin-top: 64px; }
+    .up-inner { max-width: 1360px; margin: 0 auto; }
+    .up-card { background: var(--ink); color: var(--bg); border-radius: 32px; padding: 56px; position: relative; overflow: hidden; }
+    .up-card::before { content: ''; position: absolute; width: 720px; height: 720px; border-radius: 50%; background: radial-gradient(circle, color-mix(in oklab, var(--accent) 38%, transparent), transparent 65%); filter: blur(80px); top: -340px; right: -200px; pointer-events: none; }
+    .up-card::after { content: ''; position: absolute; width: 540px; height: 540px; border-radius: 50%; background: radial-gradient(circle, color-mix(in oklab, var(--accent-2) 22%, transparent), transparent 65%); filter: blur(80px); bottom: -300px; left: -180px; pointer-events: none; }
+    .up-inner-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 56px; align-items: center; }
+    .up-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 16px; display: inline-flex; align-items: center; gap: 10px; }
+    .up-eyebrow .pip { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent-2) 22%, transparent); }
+    .up-tag { background: var(--accent-2); color: var(--ink); font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; padding: 5px 10px; border-radius: 4px; font-weight: 700; display: inline-block; margin-bottom: 12px; }
+    .up-h { font-family: var(--display); font-size: clamp(38px, 4.4vw, 64px); line-height: 0.95; letter-spacing: -0.045em; font-weight: 600; margin-bottom: 18px; text-wrap: balance; max-width: 16ch; }
+    .up-h em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
+    .up-sub { font-family: var(--serif); font-style: italic; font-size: 18px; line-height: 1.55; color: color-mix(in oklab, var(--bg) 78%, transparent); max-width: 44ch; margin-bottom: 32px; }
+    .up-sub b { font-family: var(--body); font-style: normal; font-weight: 600; color: var(--bg); }
+    .up-cta { display: flex; gap: 10px; flex-wrap: wrap; }
+    .up-cta .primary { background: var(--accent-2); color: var(--ink); padding: 14px 22px; border-radius: 999px; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: all .15s; }
+    .up-cta .primary:hover { background: var(--bg); transform: translateY(-2px); }
+    .up-cta .ghost { color: color-mix(in oklab, var(--bg) 80%, transparent); padding: 14px 20px; border-radius: 999px; font-size: 14px; font-weight: 500; border: 1px solid color-mix(in oklab, var(--bg) 18%, transparent); }
+    .up-cta .ghost:hover { background: color-mix(in oklab, var(--bg) 8%, transparent); color: var(--bg); }
+    .up-trust { font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: color-mix(in oklab, var(--bg) 55%, transparent); margin-top: 18px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+    .up-trust .check { color: var(--accent-2); }
+    .up-trust .sep { opacity: 0.5; }
+    .up-features { display: flex; flex-direction: column; gap: 14px; }
+    .up-feat { background: color-mix(in oklab, var(--bg) 5%, transparent); border: 1px solid color-mix(in oklab, var(--bg) 12%, transparent); border-radius: 18px; padding: 20px 22px; display: grid; grid-template-columns: 56px 1fr; gap: 16px; align-items: center; transition: transform .15s, border-color .15s; }
+    .up-feat:hover { transform: translateX(4px); border-color: color-mix(in oklab, var(--bg) 28%, transparent); }
+    .up-feat .glyph { width: 44px; height: 44px; border-radius: 12px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 18px; font-weight: 700; }
+    .up-feat:nth-child(2) .glyph { background: var(--accent-2); color: var(--ink); }
+    .up-feat:nth-child(3) .glyph { background: var(--accent-3); }
+    .up-feat .l { font-family: var(--mono); font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: color-mix(in oklab, var(--bg) 55%, transparent); margin-bottom: 4px; }
+    .up-feat .t { font-family: var(--display); font-size: 16px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+    .up-feat .s { font-family: var(--serif); font-style: italic; font-size: 13px; color: color-mix(in oklab, var(--bg) 72%, transparent); margin-top: 4px; line-height: 1.4; }
+
+    @media (max-width: 1100px) {
+      .up { padding: 60px 18px; }
+      .up-card { padding: 32px 24px; }
+      .up-inner-grid { grid-template-columns: 1fr; gap: 32px; }
+    }
+
+    /* ============================================================
+       THANKS — Mira's letter
+       ============================================================ */
+    .th { max-width: 1100px; margin: 0 auto; padding: 96px 32px 24px; }
+    .th-inner { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 48px; align-items: start; }
+    .th-portrait { position: relative; aspect-ratio: 1; border-radius: 24px; overflow: hidden; background: radial-gradient(circle at 50% 35%, color-mix(in oklab, var(--accent-3) 60%, transparent), transparent 60%), linear-gradient(160deg, var(--bg-alt) 0%, color-mix(in oklab, var(--accent) 25%, var(--bg-alt)) 100%); }
+    .th-portrait svg { position: absolute; left: 10%; right: 10%; bottom: 0; top: 8%; width: 80%; }
+    .th-portrait .ribbon { position: absolute; top: 14px; left: 14px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; background: var(--ink); color: var(--accent-2); padding: 5px 9px; border-radius: 4px; }
+    .th-letter { font-family: var(--serif); font-size: 21px; line-height: 1.55; color: var(--ink); }
+    .th-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; font-style: normal; display: inline-flex; align-items: center; gap: 10px; }
+    .th-eyebrow .pip { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 22%, transparent); }
+    .th-letter h2 { font-family: var(--display); font-style: normal; font-weight: 600; font-size: clamp(34px, 4vw, 54px); letter-spacing: -0.045em; line-height: 0.96; margin-bottom: 24px; max-width: 16ch; text-wrap: balance; }
+    .th-letter h2 em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
+    .th-letter p { margin-bottom: 16px; text-wrap: pretty; max-width: 56ch; font-style: italic; }
+    .th-letter p:first-of-type::first-letter { font-size: 3.2em; float: left; line-height: 0.9; padding: 5px 8px 0 0; font-family: var(--display); font-weight: 600; color: var(--accent); font-style: normal; }
+    .th-letter b { font-family: var(--body); font-style: normal; font-weight: 600; color: var(--ink); font-size: 17px; }
+    .th-letter mark { background: color-mix(in oklab, var(--accent-2) 35%, transparent); color: var(--ink); padding: 0 4px; border-radius: 3px; font-style: normal; font-family: var(--body); font-size: 17px; }
+    .th-sign { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 14px; }
+    .th-sig { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 28px; color: var(--accent); line-height: 1; }
+    .th-sig-l { font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+    .th-sig-l strong { color: var(--ink); font-weight: 700; }
+
+    @media (max-width: 760px) {
+      .th { padding: 56px 18px 16px; }
+      .th-inner { grid-template-columns: 1fr; gap: 24px; }
+      .th-portrait { max-width: 200px; }
+      .th-letter { font-size: 18px; }
+    }
+
+    /* ============================================================
+       FOOTER — help card + links
+       ============================================================ */
+    .ft-wrap { max-width: 1360px; margin: 64px auto 0; padding: 0 32px 56px; }
+    .ft-help { background: var(--bg-alt); border-radius: 22px; padding: 32px 36px; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 36px; align-items: center; }
+    .ft-help h3 { font-family: var(--display); font-size: clamp(22px, 2.6vw, 32px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.05; margin-bottom: 8px; max-width: 18ch; text-wrap: balance; }
+    .ft-help h3 em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent); }
+    .ft-help p { font-family: var(--serif); font-style: italic; font-size: 15.5px; color: var(--ink-soft); line-height: 1.5; max-width: 50ch; }
+    .ft-help p b { font-family: var(--body); font-style: normal; font-weight: 600; color: var(--ink); }
+    .ft-help-cta { display: flex; gap: 10px; flex-wrap: wrap; align-self: end; justify-self: end; }
+    .ft-help-cta .primary { background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 999px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+    .ft-help-cta .primary:hover { background: var(--accent); }
+    .ft-help-cta .ghost { color: var(--ink-soft); padding: 12px 18px; border-radius: 999px; font-size: 13px; font-weight: 500; border: 1px solid var(--line); background: var(--card); }
+    .ft-help-cta .ghost:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    .ft-foot { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 18px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); flex-wrap: wrap; }
+    .ft-foot .logo { font-family: var(--display); font-weight: 700; font-size: 13px; letter-spacing: -0.01em; color: var(--ink); text-transform: none; display: flex; align-items: center; gap: 8px; }
+    .ft-foot .logo .m { width: 22px; height: 22px; border-radius: 6px; background: var(--ink); color: var(--accent-2); display: grid; place-items: center; font-size: 11px; font-weight: 800; }
+    .ft-foot .links { display: flex; gap: 16px; }
+    .ft-foot a:hover { color: var(--ink); }
+
+    @media (max-width: 760px) {
+      .ft-wrap { padding: 0 18px 48px; }
+      .ft-help { grid-template-columns: 1fr; padding: 24px; gap: 16px; }
+      .ft-help-cta { justify-self: start; }
+    }
+
+    /* ============================================================
+       ANIMATIONS
+       ============================================================ */
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-up { opacity: 0; animation: fadeUp .6s ease forwards; }
+    .delay-1 { animation-delay: .15s; }
+    .delay-2 { animation-delay: .3s; }
+    .delay-3 { animation-delay: .5s; }
   </style>
 </head>
 <body>
 
 <canvas id="confettiCanvas"></canvas>
 
-<!-- ── NAV ── -->
-<nav class="nav">
-  <a href="/" class="nav-logo">
-    <div class="nav-logo-mark">K</div>
-    <span class="nav-logo-text">KetoJourney</span>
-  </a>
-  <a href="/start" class="nav-cta">Start Free Trial →</a>
-</nav>
+<!-- ================================================================
+     CONFIRM — dark hero
+     ================================================================ -->
+<section class="cf">
+  <nav class="cf-nav">
+    <a href="/" class="cf-logo">
+      <div class="mark">K</div>
+      <div class="name">KETOJOURNEY</div>
+    </a>
+    <div class="cf-nav-r">
+      <a href="/dashboard/recipes">Recipes</a>
+      <a href="/dashboard/ai-coach">Coach</a>
+      <a href="/login" class="login">Sign in</a>
+    </div>
+  </nav>
 
-<!-- ── SUCCESS HERO ── -->
-<section class="success-hero">
-  <div class="check-ring fade-up">
-    <svg viewBox="0 0 88 88" fill="none">
-      <circle class="check-circle" cx="44" cy="44" r="40"/>
-      <path   class="check-mark"   d="M27 45l12 12 22-24"/>
-    </svg>
+  <div class="cf-inner">
+    <div class="fade-up">
+      <div class="cf-status">
+        <span class="pulse"></span>
+        BOOK DISPATCHED · SUCCESS
+      </div>
+
+      <h1 class="cf-h">
+        Thanks, <span id="cfName">friend</span>. <em>It's</em> <span class="stamp">on its way.</span>
+      </h1>
+
+      <p class="cf-sub">
+        Your copy of <b>50+ Keto Smoothies &amp; Snacks</b> is queued and headed for <mark id="cfEmail">your inbox</mark> right now. While you wait the sixty-odd seconds for it to land — three small things so you actually <i>get</i> it.
+      </p>
+
+      <div class="cf-eta">
+        <div class="cf-eta-icon">✈</div>
+        <div>
+          <div class="cf-eta-l">DELIVERING IN</div>
+          <div class="cf-eta-v" id="etaText">~ 72 seconds <b>EN ROUTE</b></div>
+          <div class="cf-eta-progress">
+            <div class="cf-eta-progress-bar" id="etaBar"></div>
+          </div>
+        </div>
+        <a class="cf-eta-cta" href="https://mail.google.com/mail/u/0/#search/from%3Aketojourney" target="_blank" rel="noopener">Open Gmail ↗</a>
+      </div>
+
+      <div class="cf-steps">
+        <div class="cf-step">
+          <div class="n">01</div>
+          <div class="t">Check your inbox</div>
+          <div class="b">From <b>mira@ketojourney.fun</b>, subject "Your book is here."</div>
+        </div>
+        <div class="cf-step">
+          <div class="n">02</div>
+          <div class="t">Not there? Peek in Promotions</div>
+          <div class="b">Gmail loves to file us there. Drag to <b>Primary</b> and you'll never miss the Friday Letter.</div>
+        </div>
+        <div class="cf-step">
+          <div class="n">03</div>
+          <div class="t">Add Mira to contacts</div>
+          <div class="b">Right-click the sender → <b>Add to contacts</b>. One-second move, big deliverability win.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cf-stage fade-up delay-1">
+      <span class="cf-confetti c1">✦</span>
+      <span class="cf-confetti c2">✶</span>
+      <span class="cf-confetti c3">◆</span>
+      <span class="cf-confetti c4">✦</span>
+
+      <div class="cf-envelope">
+        <div class="stamp-rect">FREE<br/>PDF</div>
+        <div class="seal">M</div>
+        <div class="addr">
+          TO<br/>
+          <b id="envelopeName">Friend</b>
+          <span id="envelopeEmail"></span>
+        </div>
+      </div>
+
+      <div class="cf-book-peek">
+        <img src="/images/free-book-cover.jpg" alt="50+ Keto Smoothies &amp; Snacks" class="cf-book-img"/>
+      </div>
+
+      <div class="cf-receipt">
+        <div class="tt">Delivery slip</div>
+        <div class="row"><span>FROM</span><b>MIRA K.</b></div>
+        <div class="row"><span>QTY</span><b>1 × PDF</b></div>
+        <div class="row"><span>PAGES</span><b>86</b></div>
+        <div class="row"><span>RECIPES</span><b>52</b></div>
+        <div class="row total"><span>Total</span><b>$0.00</b></div>
+      </div>
+    </div>
   </div>
-  <p class="success-eyebrow fade-up delay-1">Your copy is on its way</p>
-  <h1 class="success-title fade-up delay-1">Your Free Book Is<br/><em>Heading to Your Inbox!</em></h1>
-  <p class="success-sub fade-up delay-2">We just sent 80+ keto recipes straight to your email. It should arrive within the next couple of minutes.</p>
 </section>
 
-<!-- ── SPAM GUIDE CARD ── -->
-<div class="spam-card fade-up delay-2">
-  <div class="spam-card-title"><span>📬</span> Make sure you receive it</div>
-  <div class="spam-steps">
-    <div class="spam-step">
-      <div class="spam-step-num">1</div>
-      <div class="spam-step-body">
-        <div class="spam-step-label">Open your inbox now</div>
-        <div class="spam-step-desc">Look for an email from <strong>KetoJourney</strong> with the subject line <strong>"📖 Your free keto recipe book is here!"</strong></div>
+<!-- ================================================================
+     SNEAK — "while you wait" recipe
+     ================================================================ -->
+<section>
+  <div class="sn fade-up delay-2">
+    <div class="sn-head">
+      <div>
+        <div class="sn-eyebrow"><span class="pip"></span>WHILE YOU WAIT · ONE RECIPE, RIGHT NOW</div>
+        <h2>The <em>fan favourite</em>, on us — no PDF required.</h2>
       </div>
+      <p class="meta">If you've got a blender and four minutes, the most popular recipe from the book is below. <b>Save this tab</b> — it stays free, even if the PDF lives in your archive.</p>
     </div>
-    <div class="spam-step">
-      <div class="spam-step-num">2</div>
-      <div class="spam-step-body">
-        <div class="spam-step-label">Check these folders if you don't see it</div>
-        <div class="spam-step-desc">Email filters sometimes misroute new senders. Look in:</div>
-        <div class="spam-tabs-row">
-          <span class="spam-tab-badge spam">🚫 Spam</span>
-          <span class="spam-tab-badge promo">🏷 Promotions</span>
-          <span class="spam-tab-badge updates">🔔 Updates</span>
+
+    <div class="sn-card">
+      <div class="sn-body">
+        <div class="sn-rcat">RECIPE #04 · CHAPTER ONE · MORNING SMOOTHIES</div>
+        <div class="sn-rname">Choc-almond <em>power</em> blend</div>
+        <div class="sn-rsub">The one Mira makes when there's nothing in the fridge but cold-brew and intentions. Designed to keep you full from 8am to 1pm.</div>
+
+        <div class="sn-stats">
+          <div class="sn-stat"><div class="v">4<em>min</em></div><div class="l">Total time</div></div>
+          <div class="sn-stat"><div class="v">320<em>kcal</em></div><div class="l">Per serve</div></div>
+          <div class="sn-stat"><div class="v">32<em>g</em></div><div class="l">Fat</div></div>
+          <div class="sn-stat"><div class="v">4<em>g</em></div><div class="l">Net carbs</div></div>
         </div>
-      </div>
-    </div>
-    <div class="spam-step">
-      <div class="spam-step-num">3</div>
-      <div class="spam-step-body">
-        <div class="spam-step-label">Move it to your Primary inbox</div>
-        <div class="spam-step-desc">This one step ensures all future recipes, tips, and meal plans land where you'll see them — not buried in a tab.</div>
-      </div>
-    </div>
-  </div>
-  <div class="spam-tip">
-    <strong>Gmail tip:</strong> If the email landed in <em>Promotions</em> — drag it to your <strong>Primary</strong> tab and click <strong>"Yes"</strong> when Gmail asks if you'd like to do this for future messages. If it's in <em>Spam</em>, open it → click <strong>"Not Spam"</strong>. Done!
-  </div>
-</div>
 
-<!-- ── DIVIDER ── -->
-<div class="divider fade-up delay-3">
-  <div class="divider-line"></div>
-  <div class="divider-text">While you wait, discover what's next</div>
-  <div class="divider-line"></div>
-</div>
-
-<!-- ── PLAN SECTION ── -->
-<section class="plan-section">
-  <p class="plan-eyebrow fade-up delay-3">Take your journey further</p>
-  <h2 class="plan-title fade-up delay-3">The Recipes Are Just the<br/><em>Beginning</em></h2>
-  <p class="plan-sub fade-up delay-3">Thousands of people are already using KetoJourney to stay on track, build habits, and hit their goals. Your free book gets you started — the app gets you there.</p>
-
-  <!-- ──────────────────────────────────────
-       STORIES CAROUSEL
-       IMAGE SLOTS (portrait, min 560×700 px):
-         /public/images/story-sarah.jpg
-         /public/images/story-james.jpg
-         /public/images/story-maria.jpg
-         /public/images/story-david.jpg
-  ─────────────────────────────────────── -->
-  <div class="carousel-wrap fade-up delay-4">
-    <div class="carousel-shell" id="carouselShell">
-      <div class="carousel-slides" id="carouselSlides">
-
-        <!-- SLIDE 1 — Sarah -->
-        <div class="carousel-slide active" data-index="0">
-          <div class="slide-img-col">
-            <img
-              src="/images/story-sarah.jpg"
-              alt="Sarah M. — Lost 22 lbs in 8 weeks"
-              class="slide-img"
-              loading="eager"
-              onerror="this.style.display='none';this.closest('.slide-img-col').querySelector('.slide-img-ph').style.display='flex';"
-            />
-            <div class="slide-img-ph">
-              <div class="slide-img-ph-icon">👩</div>
-              <div class="slide-img-ph-label">Add photo:<br/>story-sarah.jpg<br/>(min 560×700 px)</div>
-            </div>
-            <div class="slide-result-badge">−22 lbs</div>
+        <div class="sn-two">
+          <div>
+            <div class="sn-col-h">INGREDIENTS · 1 SERVE</div>
+            <ul class="sn-ingr">
+              <li><span class="q">240 ml</span><span>Unsweetened almond milk, <b>cold</b></span></li>
+              <li><span class="q">2 tbsp</span><span>Almond butter, runny</span></li>
+              <li><span class="q">1 tbsp</span><span>MCT oil</span></li>
+              <li><span class="q">1 tbsp</span><span>Unsweetened cocoa powder</span></li>
+              <li><span class="q">½ tsp</span><span>Cinnamon</span></li>
+              <li><span class="q">pinch</span><span>Flaky sea salt</span></li>
+              <li><span class="q">4 cubes</span><span>Ice</span></li>
+            </ul>
           </div>
-          <div class="slide-story-col">
-            <span class="slide-plan-badge">✦ 30-Day Basic Plan</span>
-            <div class="slide-name-row">
-              <span class="slide-name">Sarah M.</span>
-              <span class="slide-age">34 years old</span>
+          <div>
+            <div class="sn-col-h">METHOD · 4 STEPS</div>
+            <div class="sn-step">
+              <div class="n">1</div>
+              <div class="b"><b>Wet ingredients first.</b> Pour the milk in, then nut butter and MCT. Keeps dry stuff from welding to the blades.</div>
             </div>
-            <div class="slide-stars">★★★★★</div>
-            <div class="slide-divider"></div>
-            <p class="slide-quote">I started keto completely lost. The daily plan told me exactly what to eat and when — I just had to follow it. Week 4, I cried stepping on the scale. That number changed my life.</p>
-            <div class="slide-stats">
-              <div class="slide-stat">
-                <span class="slide-stat-val">−22 lbs</span>
-                <span class="slide-stat-label">total lost</span>
-              </div>
-              <div class="slide-stat">
-                <span class="slide-stat-val">8 weeks</span>
-                <span class="slide-stat-label">to reach goal</span>
-              </div>
-              <div class="slide-stat">
-                <span class="slide-stat-val">56 days</span>
-                <span class="slide-stat-label">perfect streak</span>
-              </div>
+            <div class="sn-step">
+              <div class="n">2</div>
+              <div class="b"><b>Stack the dry.</b> Cocoa, cinnamon, salt, ice on top. <b>Don't skip the salt</b> — it's the difference between chocolate and dust.</div>
+            </div>
+            <div class="sn-step">
+              <div class="n">3</div>
+              <div class="b"><b>Blend 45 seconds.</b> Low to high. You're listening for the sound to change from rattle to smooth hum.</div>
+            </div>
+            <div class="sn-step">
+              <div class="n">4</div>
+              <div class="b"><b>Pour, salt the top.</b> A pinch of flaky salt is the move. That's it.</div>
+            </div>
+            <div class="sn-tip">
+              <b>MIRA'S NOTE</b>
+              Want it dessert-style? Add ½ tsp vanilla and a square of melted 90% chocolate after blending. Macros barely move.
             </div>
           </div>
         </div>
-
-        <!-- SLIDE 2 — James -->
-        <div class="carousel-slide" data-index="1">
-          <div class="slide-img-col">
-            <img
-              src="/images/story-james.jpg"
-              alt="James T. — Lost 35 lbs in 12 weeks"
-              class="slide-img"
-              loading="lazy"
-              onerror="this.style.display='none';this.closest('.slide-img-col').querySelector('.slide-img-ph').style.display='flex';"
-            />
-            <div class="slide-img-ph">
-              <div class="slide-img-ph-icon">👨</div>
-              <div class="slide-img-ph-label">Add photo:<br/>story-james.jpg<br/>(min 560×700 px)</div>
-            </div>
-            <div class="slide-result-badge">−35 lbs</div>
-          </div>
-          <div class="slide-story-col">
-            <span class="slide-plan-badge">✦ 90-Day Pro Plan</span>
-            <div class="slide-name-row">
-              <span class="slide-name">James T.</span>
-              <span class="slide-age">41 years old</span>
-            </div>
-            <div class="slide-stars">★★★★★</div>
-            <div class="slide-divider"></div>
-            <p class="slide-quote">I was skeptical — I've tried every diet out there. The food log and AI coach made the real difference. I finally understood what my body needed instead of just guessing and failing.</p>
-            <div class="slide-stats">
-              <div class="slide-stat">
-                <span class="slide-stat-val">−35 lbs</span>
-                <span class="slide-stat-label">total lost</span>
-              </div>
-              <div class="slide-stat">
-                <span class="slide-stat-val">12 weeks</span>
-                <span class="slide-stat-label">consistent</span>
-              </div>
-              <div class="slide-stat">
-                <span class="slide-stat-val">0</span>
-                <span class="slide-stat-label">cheat days</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- SLIDE 3 — Maria -->
-        <div class="carousel-slide" data-index="2">
-          <div class="slide-img-col">
-            <img
-              src="/images/story-maria.jpg"
-              alt="Maria L. — Lost 18 lbs in 6 weeks"
-              class="slide-img"
-              loading="lazy"
-              onerror="this.style.display='none';this.closest('.slide-img-col').querySelector('.slide-img-ph').style.display='flex';"
-            />
-            <div class="slide-img-ph">
-              <div class="slide-img-ph-icon">👩</div>
-              <div class="slide-img-ph-label">Add photo:<br/>story-maria.jpg<br/>(min 560×700 px)</div>
-            </div>
-            <div class="slide-result-badge">−18 lbs</div>
-          </div>
-          <div class="slide-story-col">
-            <span class="slide-plan-badge">✦ 30-Day Basic Plan</span>
-            <div class="slide-name-row">
-              <span class="slide-name">Maria L.</span>
-              <span class="slide-age">28 years old</span>
-            </div>
-            <div class="slide-stars">★★★★★</div>
-            <div class="slide-divider"></div>
-            <p class="slide-quote">As a busy mum I thought keto was impossible. The meal planner and shopping lists changed everything — I batch-cooked Sundays and had meals ready all week. Now I'm back to my pre-baby weight.</p>
-            <div class="slide-stats">
-              <div class="slide-stat">
-                <span class="slide-stat-val">−18 lbs</span>
-                <span class="slide-stat-label">total lost</span>
-              </div>
-              <div class="slide-stat">
-                <span class="slide-stat-val">6 weeks</span>
-                <span class="slide-stat-label">to goal weight</span>
-              </div>
-              <div class="slide-stat">
-                <span class="slide-stat-val">Pre-baby</span>
-                <span class="slide-stat-label">weight achieved</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- SLIDE 4 — David -->
-        <div class="carousel-slide" data-index="3">
-          <div class="slide-img-col">
-            <img
-              src="/images/story-david.jpg"
-              alt="David K. — Lost 41 lbs in 16 weeks"
-              class="slide-img"
-              loading="lazy"
-              onerror="this.style.display='none';this.closest('.slide-img-col').querySelector('.slide-img-ph').style.display='flex';"
-            />
-            <div class="slide-img-ph">
-              <div class="slide-img-ph-icon">👨</div>
-              <div class="slide-img-ph-label">Add photo:<br/>story-david.jpg<br/>(min 560×700 px)</div>
-            </div>
-            <div class="slide-result-badge">−41 lbs</div>
-          </div>
-          <div class="slide-story-col">
-            <span class="slide-plan-badge">✦ 360-Day Elite Plan</span>
-            <div class="slide-name-row">
-              <span class="slide-name">David K.</span>
-              <span class="slide-age">52 years old</span>
-            </div>
-            <div class="slide-stars">★★★★★</div>
-            <div class="slide-divider"></div>
-            <p class="slide-quote">I'd been overweight for 20 years. My doctor said my results were remarkable. The streak system kept me going on the hard days — I never wanted to break the chain. Now I'm off blood pressure meds.</p>
-            <div class="slide-stats">
-              <div class="slide-stat">
-                <span class="slide-stat-val">−41 lbs</span>
-                <span class="slide-stat-label">total lost</span>
-              </div>
-              <div class="slide-stat">
-                <span class="slide-stat-val">16 weeks</span>
-                <span class="slide-stat-label">to transform</span>
-              </div>
-              <div class="slide-stat">
-                <span class="slide-stat-val">Med-free</span>
-                <span class="slide-stat-label">blood pressure</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- /carousel-slides -->
-
-      <!-- Progress bar -->
-      <div class="carousel-progress">
-        <div class="carousel-progress-bar" id="progressBar"></div>
       </div>
-    </div><!-- /carousel-shell -->
 
-    <!-- Controls below the card -->
-    <div class="carousel-controls">
-      <button class="carousel-btn" id="prevBtn" aria-label="Previous story">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 3L6 8l4 5"/></svg>
-      </button>
-      <div class="carousel-dots" id="carouselDots">
-        <button class="carousel-dot active" data-dot="0" aria-label="Story 1"></button>
-        <button class="carousel-dot"        data-dot="1" aria-label="Story 2"></button>
-        <button class="carousel-dot"        data-dot="2" aria-label="Story 3"></button>
-        <button class="carousel-dot"        data-dot="3" aria-label="Story 4"></button>
-      </div>
-      <button class="carousel-btn" id="nextBtn" aria-label="Next story">
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3l4 5-4 5"/></svg>
-      </button>
-    </div>
-  </div>
-  <!-- END CAROUSEL -->
-
-  <!-- ── COACHING PLAN CARD ── -->
-  <div class="plan-card fade-up delay-5">
-    <div class="plan-left">
-      <div class="plan-badge">🚀 7-Day Free Trial</div>
-      <h3>Your Personal Keto Coaching Plan — Free for a Week</h3>
-      <p>No credit card required. No risk. Just a full-featured keto coaching app to guide you step by step through your first 7 days — and beyond.</p>
-      <div class="plan-price-row">
-        <span class="plan-price-big">Free</span>
-        <span class="plan-price-sub">for 7 days, then from $12/mo</span>
-      </div>
-      <a href="/start" class="plan-cta-btn">Start My Free 7-Day Trial →</a>
-      <p class="plan-cta-note">Cancel anytime. No card needed to start.</p>
-    </div>
-    <div class="plan-right">
-      <div class="plan-features">
-        <div class="plan-feature">
-          <div class="plan-feature-check">
-            <svg viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-5" stroke="#B6FF3C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </div>
-          <div class="plan-feature-body">
-            <div class="feat-name">500+ Keto Recipes</div>
-            <div class="feat-desc">Breakfast, lunch, dinner, snacks, desserts — all with full macros and shopping lists.</div>
-          </div>
+      <div class="sn-art">
+        <div class="sn-art-stamp">FIG. 04 · CHOC-ALMOND</div>
+        <div class="sn-art-page">PAGE 12–13</div>
+        <div class="sn-glass-wrap">
+          <div class="sn-foam"></div>
+          <div class="sn-glass"></div>
+          <div class="sn-straw"></div>
         </div>
-        <div class="plan-feature">
-          <div class="plan-feature-check">
-            <svg viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-5" stroke="#B6FF3C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </div>
-          <div class="plan-feature-body">
-            <div class="feat-name">Daily Coaching Plan</div>
-            <div class="feat-desc">Structured day-by-day tasks, check-ins, and habits that actually build results.</div>
-          </div>
-        </div>
-        <div class="plan-feature">
-          <div class="plan-feature-check">
-            <svg viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-5" stroke="#B6FF3C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </div>
-          <div class="plan-feature-body">
-            <div class="feat-name">Smart Food Logging</div>
-            <div class="feat-desc">Log meals in seconds with barcode scanning and AI food photo analysis.</div>
-          </div>
-        </div>
-        <div class="plan-feature">
-          <div class="plan-feature-check">
-            <svg viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-5" stroke="#B6FF3C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </div>
-          <div class="plan-feature-body">
-            <div class="feat-name">Progress Tracking</div>
-            <div class="feat-desc">Weight charts, body measurements, streaks, and milestones to keep you motivated.</div>
-          </div>
-        </div>
-        <div class="plan-feature">
-          <div class="plan-feature-check">
-            <svg viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5 4.5-5" stroke="#B6FF3C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </div>
-          <div class="plan-feature-body">
-            <div class="feat-name">Personalized Meal Plans</div>
-            <div class="feat-desc">Weekly meal planners, keto calculator, and fasting timer — all in one place.</div>
-          </div>
+        <div class="sn-art-foot">
+          <div class="tt">51 more <em>like this</em> in the book.</div>
+          <div class="sub">SMOOTHIES · SHAKES · BITES · FINISHERS</div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── SOCIAL PROOF STRIP ── -->
-<div class="proof-strip">
-  <div class="proof-pill">⭐ <strong>4.9/5</strong> average rating</div>
-  <div class="proof-pill">👥 <strong>12,000+</strong> active members</div>
-  <div class="proof-pill">🏆 <strong>No credit card</strong> to start</div>
-  <div class="proof-pill">🔒 <strong>Cancel anytime</strong></div>
-</div>
+<!-- ================================================================
+     CAROUSEL — reader stories
+     ================================================================ -->
+<section>
+  <div class="carousel-section fade-up delay-3">
+    <div class="carousel-section-head">
+      <div class="carousel-section-eyebrow"><span class="pip"></span>REAL RESULTS</div>
+      <h2>The people who started <em>exactly where you are.</em></h2>
+    </div>
 
-<footer class="footer">
-  <span class="footer-copy">© {new Date().getFullYear()} KetoJourney. All rights reserved.</span>
-  <div class="footer-links">
-    <a href="/privacy-policy">Privacy</a>
-    <a href="/terms">Terms</a>
-    <a href="/free-book">Back to Free Book</a>
+    <div class="carousel-wrap">
+      <div class="carousel-shell" id="carouselShell">
+        <div class="carousel-slides" id="carouselSlides">
+
+          <div class="carousel-slide active" data-index="0">
+            <div class="slide-img-col">
+              <img src="/images/story-sarah.jpg" alt="Sarah M." class="slide-img" loading="eager"
+                onerror="this.style.display='none';this.closest('.slide-img-col').querySelector('.slide-img-ph').style.display='flex';"/>
+              <div class="slide-img-ph"><div class="slide-img-ph-icon">👩</div><div class="slide-img-ph-label">story-sarah.jpg</div></div>
+              <div class="slide-result-badge">−22 lbs</div>
+            </div>
+            <div class="slide-story-col">
+              <span class="slide-plan-badge">✦ 30-Day Basic Plan</span>
+              <div class="slide-name-row"><span class="slide-name">Sarah M.</span><span class="slide-age">34 years old</span></div>
+              <div class="slide-stars">★★★★★</div>
+              <div class="slide-divider"></div>
+              <p class="slide-quote">I started keto completely lost. The daily plan told me exactly what to eat and when — I just had to follow it. Week 4, I cried stepping on the scale. That number changed my life.</p>
+              <div class="slide-stats">
+                <div class="slide-stat"><span class="slide-stat-val">−22 lbs</span><span class="slide-stat-label">total lost</span></div>
+                <div class="slide-stat"><span class="slide-stat-val">8 weeks</span><span class="slide-stat-label">to reach goal</span></div>
+                <div class="slide-stat"><span class="slide-stat-val">56 days</span><span class="slide-stat-label">perfect streak</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="carousel-slide" data-index="1">
+            <div class="slide-img-col">
+              <img src="/images/story-james.jpg" alt="James T." class="slide-img" loading="lazy"
+                onerror="this.style.display='none';this.closest('.slide-img-col').querySelector('.slide-img-ph').style.display='flex';"/>
+              <div class="slide-img-ph"><div class="slide-img-ph-icon">👨</div><div class="slide-img-ph-label">story-james.jpg</div></div>
+              <div class="slide-result-badge">−35 lbs</div>
+            </div>
+            <div class="slide-story-col">
+              <span class="slide-plan-badge">✦ 90-Day Pro Plan</span>
+              <div class="slide-name-row"><span class="slide-name">James T.</span><span class="slide-age">41 years old</span></div>
+              <div class="slide-stars">★★★★★</div>
+              <div class="slide-divider"></div>
+              <p class="slide-quote">I was skeptical — I've tried every diet out there. The food log and AI coach made the real difference. I finally understood what my body needed instead of just guessing and failing.</p>
+              <div class="slide-stats">
+                <div class="slide-stat"><span class="slide-stat-val">−35 lbs</span><span class="slide-stat-label">total lost</span></div>
+                <div class="slide-stat"><span class="slide-stat-val">12 weeks</span><span class="slide-stat-label">consistent</span></div>
+                <div class="slide-stat"><span class="slide-stat-val">0</span><span class="slide-stat-label">cheat days</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="carousel-slide" data-index="2">
+            <div class="slide-img-col">
+              <img src="/images/story-maria.jpg" alt="Maria L." class="slide-img" loading="lazy"
+                onerror="this.style.display='none';this.closest('.slide-img-col').querySelector('.slide-img-ph').style.display='flex';"/>
+              <div class="slide-img-ph"><div class="slide-img-ph-icon">👩</div><div class="slide-img-ph-label">story-maria.jpg</div></div>
+              <div class="slide-result-badge">−18 lbs</div>
+            </div>
+            <div class="slide-story-col">
+              <span class="slide-plan-badge">✦ 30-Day Basic Plan</span>
+              <div class="slide-name-row"><span class="slide-name">Maria L.</span><span class="slide-age">28 years old</span></div>
+              <div class="slide-stars">★★★★★</div>
+              <div class="slide-divider"></div>
+              <p class="slide-quote">As a busy mum I thought keto was impossible. The meal planner and shopping lists changed everything — I batch-cooked Sundays and had meals ready all week. Now I'm back to my pre-baby weight.</p>
+              <div class="slide-stats">
+                <div class="slide-stat"><span class="slide-stat-val">−18 lbs</span><span class="slide-stat-label">total lost</span></div>
+                <div class="slide-stat"><span class="slide-stat-val">6 weeks</span><span class="slide-stat-label">to goal weight</span></div>
+                <div class="slide-stat"><span class="slide-stat-val">Pre-baby</span><span class="slide-stat-label">weight achieved</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="carousel-slide" data-index="3">
+            <div class="slide-img-col">
+              <img src="/images/story-david.jpg" alt="David K." class="slide-img" loading="lazy"
+                onerror="this.style.display='none';this.closest('.slide-img-col').querySelector('.slide-img-ph').style.display='flex';"/>
+              <div class="slide-img-ph"><div class="slide-img-ph-icon">👨</div><div class="slide-img-ph-label">story-david.jpg</div></div>
+              <div class="slide-result-badge">−41 lbs</div>
+            </div>
+            <div class="slide-story-col">
+              <span class="slide-plan-badge">✦ 360-Day Elite Plan</span>
+              <div class="slide-name-row"><span class="slide-name">David K.</span><span class="slide-age">52 years old</span></div>
+              <div class="slide-stars">★★★★★</div>
+              <div class="slide-divider"></div>
+              <p class="slide-quote">I'd been overweight for 20 years. My doctor said my results were remarkable. The streak system kept me going on the hard days — I never wanted to break the chain. Now I'm off blood pressure meds.</p>
+              <div class="slide-stats">
+                <div class="slide-stat"><span class="slide-stat-val">−41 lbs</span><span class="slide-stat-label">total lost</span></div>
+                <div class="slide-stat"><span class="slide-stat-val">16 weeks</span><span class="slide-stat-label">to transform</span></div>
+                <div class="slide-stat"><span class="slide-stat-val">Med-free</span><span class="slide-stat-label">blood pressure</span></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="carousel-progress">
+          <div class="carousel-progress-bar" id="progressBar"></div>
+        </div>
+      </div>
+
+      <div class="carousel-controls">
+        <button class="carousel-btn" id="prevBtn" aria-label="Previous story">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 3L6 8l4 5"/></svg>
+        </button>
+        <div class="carousel-dots" id="carouselDots">
+          <button class="carousel-dot active" data-dot="0" aria-label="Story 1"></button>
+          <button class="carousel-dot" data-dot="1" aria-label="Story 2"></button>
+          <button class="carousel-dot" data-dot="2" aria-label="Story 3"></button>
+          <button class="carousel-dot" data-dot="3" aria-label="Story 4"></button>
+        </div>
+        <button class="carousel-btn" id="nextBtn" aria-label="Next story">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3l4 5-4 5"/></svg>
+        </button>
+      </div>
+    </div>
   </div>
-</footer>
+</section>
+
+<!-- ================================================================
+     UPGRADE — app CTA
+     ================================================================ -->
+<section class="up">
+  <div class="up-inner">
+    <div class="up-card">
+      <div class="up-inner-grid">
+        <div>
+          <div class="up-eyebrow"><span class="pip"></span>SINCE YOU'RE HERE · A SOFT INVITATION</div>
+          <div class="up-tag">14 DAYS FREE</div>
+          <h2 class="up-h">The book is the <em>tasting menu</em>. The app's the kitchen.</h2>
+          <p class="up-sub">
+            The PDF is yours forever. If you want the same recipes <b>woven into your actual day</b> — with macros that match what you've eaten so far, and a coach who reads your fridge — give the app a try. Two weeks free, no card needed.
+          </p>
+          <div class="up-cta">
+            <a class="primary" href="/signup">Start 14-day free trial <span>→</span></a>
+            <a class="ghost" href="/">Just look around first</a>
+          </div>
+          <div class="up-trust">
+            <span class="check">✓</span><span>NO CARD UNTIL DAY 15</span>
+            <span class="sep">·</span>
+            <span class="check">✓</span><span>CANCEL IN ONE TAP</span>
+            <span class="sep">·</span>
+            <span class="check">✓</span><span>YOUR BOOK STAYS YOURS</span>
+          </div>
+        </div>
+        <div class="up-features">
+          <div class="up-feat">
+            <div class="glyph">◐</div>
+            <div>
+              <div class="l">PERSONAL MACROS</div>
+              <div class="t">Built around your day</div>
+              <div class="s">The app reverse-fits every recipe to what you have left to spend.</div>
+            </div>
+          </div>
+          <div class="up-feat">
+            <div class="glyph">✦</div>
+            <div>
+              <div class="l">COACH</div>
+              <div class="t">Mira answers, in your kitchen</div>
+              <div class="s">Ask "what should I have at 3pm?" and get a real answer, not a chatbot one.</div>
+            </div>
+          </div>
+          <div class="up-feat">
+            <div class="glyph">◬</div>
+            <div>
+              <div class="l">COMMUNITY</div>
+              <div class="t">12,400 people doing the same thing</div>
+              <div class="s">Real check-ins from real readers. Find your day-cohort and walk together.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     THANKS — Mira's letter
+     ================================================================ -->
+<section>
+  <div class="th">
+    <div class="th-inner">
+      <div class="th-portrait">
+        <div class="ribbon">FROM MIRA</div>
+        <svg viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="thg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#16110F" stop-opacity="0.85"/>
+              <stop offset="100%" stop-color="#16110F" stop-opacity="0.5"/>
+            </linearGradient>
+          </defs>
+          <path d="M 26 38 Q 50 22 74 38 Q 76 56 70 78 Q 50 70 30 78 Q 24 56 26 38 Z" fill="#1E1815"/>
+          <circle cx="50" cy="40" r="16" fill="#E6BFA0"/>
+          <path d="M 34 36 Q 40 28 50 28 Q 60 28 66 36 Q 60 30 50 32 Q 40 30 34 36 Z" fill="#16110F"/>
+          <path d="M 18 90 Q 50 70 82 90 L 86 120 L 14 120 Z" fill="url(#thg)"/>
+        </svg>
+      </div>
+      <div class="th-letter">
+        <div class="th-eyebrow"><span class="pip"></span>A SHORT THANK-YOU</div>
+        <h2>Just <em>thank you</em>, really.</h2>
+        <p>I know an email address feels small, but it isn't — there's a real person on the other end of that inbox, and you trusted me with yours. I take that seriously.</p>
+        <p>The book is in the queue, and the Friday Letter shows up Friday mornings — a single recipe, a single reader question, and one line of something I'm thinking about. <b>You can leave whenever.</b></p>
+        <p><mark>If a recipe doesn't work for you, reply and tell me.</mark> I read every email. The book has gotten better twelve times because someone wrote back saying "this one's wrong" — so be honest.</p>
+        <div class="th-sign">
+          <div class="th-sig">— Mira</div>
+          <div class="th-sig-l"><strong>MIRA K.</strong><br/>FOUNDING COACH · KETO JOURNEY</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     FOOTER
+     ================================================================ -->
+<div class="ft-wrap">
+  <div class="ft-help">
+    <div>
+      <h3>Didn't get the <em>email</em>?</h3>
+      <p>Check spam and promotions first. If it's still nowhere after 5 minutes, <b>email Mira directly</b> and she'll send it from her account. Real human, usually replies within the day.</p>
+    </div>
+    <div class="ft-help-cta">
+      <a class="primary" href="mailto:mira@ketojourney.fun">Email Mira ↗</a>
+      <a class="ghost" href="/free-book">← Re-submit the form</a>
+    </div>
+  </div>
+  <div class="ft-foot">
+    <div class="logo"><div class="m">K</div>KETOJOURNEY</div>
+    <div class="links">
+      <a href="/privacy">Privacy</a>
+      <a href="/free-book">Free Book</a>
+      <a href="mailto:mira@ketojourney.fun">Contact</a>
+    </div>
+    <span>© 2026 · MADE IN LISBON</span>
+  </div>
+</div>
 
 <script is:inline>
 (function () {
 
+  /* ── Read name/email from URL params then localStorage ── */
+  var params   = new URLSearchParams(window.location.search);
+  var name     = params.get('name') || (function(){ try { return localStorage.getItem('kj_firstName'); } catch(e){ return null; } })() || 'friend';
+  var email    = params.get('email') || (function(){ try { return localStorage.getItem('kj_email'); } catch(e){ return null; } })() || '';
+
+  var cfName = document.getElementById('cfName');
+  if (cfName) cfName.textContent = name;
+  var cfEmail = document.getElementById('cfEmail');
+  if (cfEmail) cfEmail.textContent = email || 'your inbox';
+  var envName = document.getElementById('envelopeName');
+  if (envName) envName.textContent = name;
+  var envEmail = document.getElementById('envelopeEmail');
+  if (envEmail) envEmail.textContent = email;
+
+  /* ── ETA countdown ── */
+  var TOTAL = 72;
+  var seconds = TOTAL;
+  var etaText = document.getElementById('etaText');
+  var etaBar  = document.getElementById('etaBar');
+
+  function updateEta() {
+    if (!etaText) return;
+    if (seconds > 0) {
+      etaText.innerHTML = '~ ' + seconds + ' seconds <b>EN ROUTE</b>';
+    } else {
+      etaText.innerHTML = 'Should be there! <b>DELIVERED</b>';
+    }
+    if (etaBar) {
+      etaBar.style.width = ((TOTAL - seconds) / TOTAL * 100) + '%';
+    }
+  }
+
+  updateEta();
+  var etaTimer = setInterval(function () {
+    seconds = Math.max(0, seconds - 1);
+    updateEta();
+    if (seconds === 0) clearInterval(etaTimer);
+  }, 1000);
+
   /* ── Confetti ── */
   var canvas = document.getElementById('confettiCanvas');
-  var ctx    = canvas.getContext('2d');
-  canvas.width  = window.innerWidth;
-  canvas.height = window.innerHeight;
-  var W = canvas.width, H = canvas.height;
-  var colors = ['#FF5C7A','#B6FF3C','#FFD700','#60a5fa','#f97316','#a78bfa'];
-  var particles = [];
-  for (var i = 0; i < 150; i++) {
-    particles.push({
-      x: Math.random() * W, y: -20 - Math.random() * 180,
-      r: 5 + Math.random() * 7,
-      color: colors[Math.floor(Math.random() * colors.length)],
-      rot: Math.random() * 360, vx: (Math.random() - .5) * 2.8,
-      vy: 2.2 + Math.random() * 3.5, vrot: (Math.random() - .5) * 6,
-      shape: Math.random() < .4 ? 'circle' : 'rect', opacity: 1
-    });
+  if (canvas) {
+    var ctx = canvas.getContext('2d');
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    var W = canvas.width, H = canvas.height;
+    var colors = ['#FF5C7A','#B6FF3C','#FF914D','#60a5fa','#f97316','#a78bfa'];
+    var particles = [];
+    for (var i = 0; i < 140; i++) {
+      particles.push({
+        x: Math.random() * W, y: -20 - Math.random() * 180,
+        r: 5 + Math.random() * 7,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rot: Math.random() * 360, vx: (Math.random() - .5) * 2.8,
+        vy: 2.2 + Math.random() * 3.5, vrot: (Math.random() - .5) * 6,
+        shape: Math.random() < .4 ? 'circle' : 'rect', opacity: 1
+      });
+    }
+    var cf = 0;
+    function drawConfetti() {
+      ctx.clearRect(0, 0, W, H); cf++;
+      var done = true;
+      particles.forEach(function(p) {
+        if (p.y < H + 20) done = false;
+        p.x += p.vx; p.y += p.vy; p.rot += p.vrot; p.vy += .04;
+        if (p.y > H * .6) p.opacity = Math.max(0, p.opacity - .012);
+        ctx.save(); ctx.globalAlpha = p.opacity;
+        ctx.translate(p.x, p.y); ctx.rotate(p.rot * Math.PI / 180);
+        ctx.fillStyle = p.color;
+        if (p.shape === 'circle') { ctx.beginPath(); ctx.arc(0,0,p.r,0,Math.PI*2); ctx.fill(); }
+        else { ctx.fillRect(-p.r, -p.r/2, p.r*2, p.r); }
+        ctx.restore();
+      });
+      if (!done && cf < 320) requestAnimationFrame(drawConfetti);
+      else ctx.clearRect(0, 0, W, H);
+    }
+    setTimeout(drawConfetti, 400);
   }
-  var cf = 0;
-  function drawConfetti() {
-    ctx.clearRect(0, 0, W, H); cf++;
-    var done = true;
-    particles.forEach(function(p) {
-      if (p.y < H + 20) done = false;
-      p.x += p.vx; p.y += p.vy; p.rot += p.vrot; p.vy += .04;
-      if (p.y > H * .6) p.opacity = Math.max(0, p.opacity - .012);
-      ctx.save(); ctx.globalAlpha = p.opacity;
-      ctx.translate(p.x, p.y); ctx.rotate(p.rot * Math.PI / 180);
-      ctx.fillStyle = p.color;
-      if (p.shape === 'circle') { ctx.beginPath(); ctx.arc(0,0,p.r,0,Math.PI*2); ctx.fill(); }
-      else { ctx.fillRect(-p.r, -p.r/2, p.r*2, p.r); }
-      ctx.restore();
-    });
-    if (!done && cf < 320) requestAnimationFrame(drawConfetti);
-    else ctx.clearRect(0, 0, W, H);
-  }
-  setTimeout(drawConfetti, 400);
 
   /* ── Carousel ── */
   var INTERVAL = 4000;
@@ -729,47 +1018,29 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
   var current  = 0;
   var total    = slides.length;
   var timer    = null;
-  var barTimer = null;
 
   function goTo(idx, dir) {
     var prev = current;
     current  = (idx + total) % total;
     if (prev === current) return;
-
-    /* Animate exit */
     slides[prev].classList.remove('active');
     slides[prev].classList.add('exit-left');
-
-    /* Animate enter — reset position first, then set active */
     slides[current].style.transform = dir === 'prev' ? 'translateX(-40px)' : 'translateX(40px)';
     slides[current].style.opacity   = '0';
-    slides[current].offsetHeight;   /* force reflow */
+    slides[current].offsetHeight;
     slides[current].style.transform = '';
     slides[current].style.opacity   = '';
     slides[current].classList.add('active');
-
-    /* Clean up exit class after transition */
     var exitEl = slides[prev];
     setTimeout(function() { exitEl.classList.remove('exit-left'); }, 650);
-
-    /* Update dots */
     dots.forEach(function(d, i) { d.classList.toggle('active', i === current); });
-
-    /* Restart progress bar */
     restartBar();
   }
 
   function next() { goTo(current + 1, 'next'); }
   function prev() { goTo(current - 1, 'prev'); }
-
-  function startAuto() {
-    clearInterval(timer);
-    timer = setInterval(next, INTERVAL);
-  }
-  function stopAuto() {
-    clearInterval(timer);
-    clearTimeout(barTimer);
-  }
+  function startAuto() { clearInterval(timer); timer = setInterval(next, INTERVAL); }
+  function stopAuto()  { clearInterval(timer); }
 
   function restartBar() {
     if (!bar) return;
@@ -780,21 +1051,19 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
     bar.style.width      = '100%';
   }
 
-  /* Init */
   restartBar();
   startAuto();
 
-  /* Pause on hover */
   if (shell) {
-    shell.addEventListener('mouseenter', function() { stopAuto(); bar.style.transition = 'none'; });
+    shell.addEventListener('mouseenter', function() { stopAuto(); if (bar) { bar.style.transition = 'none'; } });
     shell.addEventListener('mouseleave', function() { restartBar(); startAuto(); });
   }
 
-  /* Buttons */
-  document.getElementById('nextBtn').addEventListener('click', function() { stopAuto(); next(); startAuto(); });
-  document.getElementById('prevBtn').addEventListener('click', function() { stopAuto(); prev(); startAuto(); });
+  var nextBtn = document.getElementById('nextBtn');
+  var prevBtn = document.getElementById('prevBtn');
+  if (nextBtn) nextBtn.addEventListener('click', function() { stopAuto(); next(); startAuto(); });
+  if (prevBtn) prevBtn.addEventListener('click', function() { stopAuto(); prev(); startAuto(); });
 
-  /* Dot nav */
   dots.forEach(function(dot) {
     dot.addEventListener('click', function() {
       var idx = parseInt(dot.getAttribute('data-dot'), 10);
@@ -802,10 +1071,9 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
     });
   });
 
-  /* Touch swipe */
   var touchX = 0;
   if (shell) {
-    shell.addEventListener('touchstart', function(e) { touchX = e.touches[0].clientX; }, { passive:true });
+    shell.addEventListener('touchstart', function(e) { touchX = e.touches[0].clientX; }, { passive: true });
     shell.addEventListener('touchend', function(e) {
       var dx = e.changedTouches[0].clientX - touchX;
       if (Math.abs(dx) < 40) return;
