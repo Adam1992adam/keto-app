@@ -313,18 +313,13 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
     .sn-tip { background: color-mix(in oklab, var(--accent-2) 22%, var(--bg)); border-left: 3px solid var(--accent-2); border-radius: 12px; padding: 16px 18px; font-family: var(--serif); font-style: italic; font-size: 14.5px; line-height: 1.5; color: var(--ink-soft); text-wrap: pretty; margin-top: 8px; }
     .sn-tip b { font-family: var(--body); font-style: normal; font-weight: 600; color: var(--ink); text-transform: uppercase; letter-spacing: 0.18em; font-size: 10px; display: block; margin-bottom: 6px; }
 
-    .sn-art { position: relative; background: radial-gradient(circle at 50% 35%, color-mix(in oklab, var(--accent) 60%, transparent), transparent 60%), linear-gradient(160deg, var(--accent) 0%, var(--accent-3) 100%); padding: 36px 28px; display: flex; flex-direction: column; justify-content: end; gap: 24px; }
-    .sn-art-stamp { position: absolute; top: 24px; left: 24px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; background: var(--ink); color: var(--accent-2); padding: 6px 10px; border-radius: 4px; }
-    .sn-art-page { position: absolute; top: 24px; right: 24px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.18em; color: color-mix(in oklab, var(--bg) 80%, transparent); }
+    .sn-art { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: end; }
+    .sn-art-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center center; z-index: 0; }
+    .sn-art-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(22,17,15,.85) 0%, rgba(22,17,15,.3) 50%, rgba(22,17,15,.15) 100%); z-index: 1; }
+    .sn-art-stamp { position: absolute; top: 24px; left: 24px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; background: var(--ink); color: var(--accent-2); padding: 6px 10px; border-radius: 4px; z-index: 2; }
+    .sn-art-page { position: absolute; top: 24px; right: 24px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.18em; color: rgba(255,255,255,0.7); z-index: 2; }
 
-    .sn-glass-wrap { position: relative; width: 100%; aspect-ratio: 3/4; max-height: 320px; margin: 0 auto; }
-    .sn-glass { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 60%; height: 75%; border-radius: 14px 14px 24px 24px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.22); overflow: hidden; backdrop-filter: blur(2px); }
-    .sn-glass::before { content: ''; position: absolute; left: 8%; right: 8%; top: 8%; bottom: 0; background: linear-gradient(180deg, #5B3324 0%, #3F2218 100%); border-radius: 10px 10px 18px 18px; }
-    .sn-glass::after { content: ''; position: absolute; left: 22%; top: 18%; width: 22%; height: 30%; background: rgba(255,255,255,0.22); border-radius: 50%; filter: blur(3px); }
-    .sn-foam { position: absolute; left: 8%; right: 8%; top: 0; height: 14%; background: #F2E3D1; border-radius: 50% 50% 6px 6px / 70% 70% 6px 6px; z-index: 2; }
-    .sn-straw { position: absolute; left: 56%; top: -10%; bottom: 40%; width: 6px; background: var(--accent-2); border-radius: 4px; transform: rotate(10deg); transform-origin: top; z-index: 3; }
-
-    .sn-art-foot { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 10px; }
+    .sn-art-foot { position: relative; z-index: 2; padding: 28px; display: flex; flex-direction: column; gap: 10px; }
     .sn-art-foot .tt { font-family: var(--display); font-size: 22px; font-weight: 600; letter-spacing: -0.025em; color: #fff; line-height: 1.1; }
     .sn-art-foot .tt em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--accent-2); }
     .sn-art-foot .sub { font-family: var(--mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: color-mix(in oklab, var(--bg) 80%, transparent); }
@@ -448,7 +443,7 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
     .th { max-width: 1100px; margin: 0 auto; padding: 96px 32px 24px; }
     .th-inner { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 48px; align-items: start; }
     .th-portrait { position: relative; aspect-ratio: 1; border-radius: 24px; overflow: hidden; background: var(--bg-alt); }
-    .th-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+    .th-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: center 15%; display: block; }
     .th-portrait .ribbon { position: absolute; top: 14px; left: 14px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; background: var(--ink); color: var(--accent-2); padding: 5px 9px; border-radius: 4px; }
     .th-letter { font-family: var(--serif); font-size: 21px; line-height: 1.55; color: var(--ink); }
     .th-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; font-style: normal; display: inline-flex; align-items: center; gap: 10px; }
@@ -671,13 +666,10 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
       </div>
 
       <div class="sn-art">
+        <img class="sn-art-img" src="/images/sneak-smoothie.jpg" alt="Choc-almond power blend smoothie"/>
+        <div class="sn-art-overlay"></div>
         <div class="sn-art-stamp">FIG. 04 · CHOC-ALMOND</div>
         <div class="sn-art-page">PAGE 12–13</div>
-        <div class="sn-glass-wrap">
-          <div class="sn-foam"></div>
-          <div class="sn-glass"></div>
-          <div class="sn-straw"></div>
-        </div>
         <div class="sn-art-foot">
           <div class="tt">51 more <em>like this</em> in the book.</div>
           <div class="sub">SMOOTHIES · SHAKES · BITES · FINISHERS</div>
