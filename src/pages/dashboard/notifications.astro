@@ -34,10 +34,25 @@ const p = existingPrefs || {
   water_start_time: '08:00', water_end_time: '22:00',
   weight_enabled:    true,  weight_day:     1,  weight_time: '07:00',
   streak_enabled:    true,  streak_time:    '21:00',
+  checkin_reminder: true, streak_warning: true, incomplete_tasks: true,
+  weight_reminder: true, fasting_active: true, weekly_review: true,
+  milestone: true, level_up: true,
 };
 
 const enabledCount = [p.breakfast_enabled, p.lunch_enabled, p.dinner_enabled,
   p.snack_enabled, p.water_enabled, p.weight_enabled, p.streak_enabled].filter(Boolean).length;
+
+const alertTypes = [
+  { key: 'checkin_reminder', icon: '📋', label: 'Daily Check-in Reminder',    desc: 'Get reminded to complete your daily check-in',          value: p.checkin_reminder !== false },
+  { key: 'streak_warning',   icon: '🔥', label: 'Streak at Risk Warning',      desc: 'Alert when your streak is about to break',              value: p.streak_warning !== false },
+  { key: 'incomplete_tasks', icon: '✅', label: 'Incomplete Tasks Reminder',   desc: 'Nudge when you have tasks left for the day',            value: p.incomplete_tasks !== false },
+  { key: 'weight_reminder',  icon: '⚖️', label: 'Weight Log Reminder',         desc: 'Prompt to log your weight if it has been a few days',   value: p.weight_reminder !== false },
+  { key: 'fasting_active',   icon: '⏱️', label: 'Fasting Tips',                desc: 'Receive tips and encouragement during active fasts',    value: p.fasting_active !== false },
+  { key: 'weekly_review',    icon: '📊', label: 'Weekly Review Prompt',        desc: 'Reminder to complete your weekly reflection',           value: p.weekly_review !== false },
+  { key: 'milestone',        icon: '🏅', label: 'Day Milestones',              desc: 'Celebrate reaching key journey milestones',             value: p.milestone !== false },
+  { key: 'level_up',         icon: '⭐', label: 'Level Up Celebrations',       desc: 'Notification when you gain a new XP level',             value: p.level_up !== false },
+];
+const alertEnabledCount = alertTypes.filter(a => a.value).length;
 
 const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 ---
@@ -602,6 +617,31 @@ const weekDays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','S
       </div>
     </div>
 
+    <!-- ── ALERT TYPES ── -->
+    <div class="section-card" style="animation-delay:.2s;">
+      <div class="section-head">
+        <div class="sh-icon" style="background:linear-gradient(135deg,#f97316,#ea580c);box-shadow:0 4px 10px rgba(249,115,22,.28);display:flex;align-items:center;justify-content:center;">🔔</div>
+        <div class="sh-title">Alert Types</div>
+        <span class="sh-chip" style="background:rgba(249,115,22,.1);border-color:rgba(249,115,22,.2);color:var(--orange);" id="alertChip">{alertEnabledCount} / 8 on</span>
+      </div>
+      <div class="section-body">
+        {alertTypes.map(a => (
+          <div class={`r-row ${!a.value ? 'off' : ''}`} id={`arow-${a.key}`}>
+            <div class="r-icon" style="background:var(--surface);display:flex;align-items:center;justify-content:center;">{a.icon}</div>
+            <div>
+              <div class="r-label">{a.label}</div>
+              <div class="r-desc">{a.desc}</div>
+            </div>
+            <div class="r-spacer"></div>
+            <button type="button" class={`tog ${a.value ? 'on' : ''}`}
+              data-akey={a.key} id={`atog-${a.key}`} aria-label={`Toggle ${a.label}`}>
+              <div class="tog-thumb"></div>
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+
     <!-- SAVE BAR -->
     <div class="save-bar">
       <div class="sb-info">
@@ -637,6 +677,17 @@ const state = {
   weight:    savedPrefs.weight_enabled,
 };
 
+const alertState = {
+  checkin_reminder: savedPrefs.checkin_reminder !== false,
+  streak_warning:   savedPrefs.streak_warning !== false,
+  incomplete_tasks: savedPrefs.incomplete_tasks !== false,
+  weight_reminder:  savedPrefs.weight_reminder !== false,
+  fasting_active:   savedPrefs.fasting_active !== false,
+  weekly_review:    savedPrefs.weekly_review !== false,
+  milestone:        savedPrefs.milestone !== false,
+  level_up:         savedPrefs.level_up !== false,
+};
+
 function setRowEnabled(key, enabled) {
   const row = document.getElementById(`row-${key}`);
   if (!row) return;
@@ -662,8 +713,8 @@ function setRowEnabled(key, enabled) {
   }
 }
 
-// Wire toggle buttons
-document.querySelectorAll('.tog').forEach(btn => {
+// Wire reminder toggle buttons
+document.querySelectorAll('.tog[data-key]').forEach(btn => {
   const key = btn.dataset.key;
   btn.addEventListener('click', () => {
     state[key] = !state[key];
@@ -674,6 +725,25 @@ document.querySelectorAll('.tog').forEach(btn => {
     markDirty();
   });
 });
+
+// Wire alert type toggle buttons
+document.querySelectorAll('[data-akey]').forEach(btn => {
+  const key = btn.dataset.akey;
+  btn.addEventListener('click', () => {
+    alertState[key] = !alertState[key];
+    alertState[key] ? btn.classList.add('on') : btn.classList.remove('on');
+    const row = document.getElementById(`arow-${key}`);
+    if (row) alertState[key] ? row.classList.remove('off') : row.classList.add('off');
+    updateAlertChip();
+    markDirty();
+  });
+});
+
+function updateAlertChip() {
+  var count = Object.values(alertState).filter(Boolean).length;
+  var chip = document.getElementById('alertChip');
+  if (chip) chip.textContent = `${count} / 8 on`;
+}
 
 // Also update time inputs on change → re-render timeline
 document.querySelectorAll('.t-input, .sg-select').forEach(el => {
@@ -895,11 +965,17 @@ document.getElementById('rForm')?.addEventListener('submit', async e => {
   };
 
   try {
-    const res = await fetch('/api/notifications/save', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error();
+    const [res1] = await Promise.all([
+      fetch('/api/notifications/save', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }),
+      fetch('/api/notifications/preferences', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(alertState),
+      }),
+    ]);
+    if (!res1.ok) throw new Error();
 
     localStorage.setItem('keto_notif_prefs', JSON.stringify(data));
 
@@ -916,7 +992,7 @@ document.getElementById('rForm')?.addEventListener('submit', async e => {
   } catch {
     showToast('❌ Failed to save. Try again.', 'error');
   } finally {
-    btn.disabled = false; btn.innerHTML = '💾 Save Settings';
+    btn.disabled = false; btn.innerHTML = '✓ Save Settings';
   }
 });
 
