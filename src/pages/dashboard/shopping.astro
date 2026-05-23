@@ -455,20 +455,6 @@ const myItems = customItems || [];
     <span style="margin-left:auto;font-size:.75rem;color:var(--soft);font-weight:600;">{filteredMealPlans.length} recipes · {totalItems} unique ingredients</span>
   </div>
 
-  <!-- THIS WEEK'S MEALS SUMMARY -->
-  {filteredMealPlans.length > 0 && (
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1rem 1.4rem;margin-bottom:1.25rem;">
-      <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin-bottom:.875rem;">This Week's Meals</div>
-      <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
-        {filteredMealPlans.map((meal) => (
-          <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:.4rem .75rem;flex-shrink:0;">
-            <span style="font-size:.65rem;font-weight:800;color:var(--green);text-transform:uppercase;margin-right:.35rem;">Day {meal.day_number}</span>
-            <span style="font-size:.72rem;color:var(--text);">{(meal.recipe && (meal.recipe as any).title) ? (meal.recipe as any).title : 'Meal'}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )}
 
   <!-- TOOLBAR -->
   <div class="toolbar">
