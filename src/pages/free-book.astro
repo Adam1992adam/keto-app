@@ -576,14 +576,14 @@ const PAGE_DESC  = 'Get our free keto smoothie & snack recipe book: 52 delicious
 
     .rv-card .who { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--line); }
     .rv-card .ava {
-      width: 36px; height: 36px; border-radius: 50%;
+      width: 42px; height: 42px; border-radius: 50%;
+      overflow: hidden; flex-shrink: 0;
       background: linear-gradient(135deg, var(--accent), var(--accent-3));
-      color: #fff; display: grid; place-items: center;
-      font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: -0.02em;
-      flex-shrink: 0;
+      border: 2px solid var(--line);
     }
-    .rv-card.lime .ava { background: linear-gradient(135deg, var(--accent-2), var(--accent-3)); color: var(--ink); }
-    .rv-card.orange .ava { background: linear-gradient(135deg, var(--accent-3), var(--accent)); }
+    .rv-card .ava img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
     .rv-card .nm { font-size: 14px; font-weight: 600; letter-spacing: -0.005em; }
     .rv-card .wh { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
 
@@ -1105,10 +1105,14 @@ const PAGE_DESC  = 'Get our free keto smoothie & snack recipe book: 52 delicious
       </div>
 
       <div class="rv-grid">
+
+        <!-- ── TESTIMONIAL 1 — replace src with your own photo, or leave the Unsplash URL ── -->
         <div class="rv-card rose">
           <div class="body">I'm a four-time keto quitter. The choc-almond one and the salted vanilla shake basically replaced breakfast for two weeks. First time I made it past day 9.</div>
           <div class="who">
-            <div class="ava">A</div>
+            <div class="ava">
+              <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=84&h=84&fit=crop&q=85" alt="Anaïs P." loading="lazy"/>
+            </div>
             <div>
               <div class="nm">Anaïs P.</div>
               <div class="wh">Paris · Day 24 reader</div>
@@ -1116,10 +1120,13 @@ const PAGE_DESC  = 'Get our free keto smoothie & snack recipe book: 52 delicious
           </div>
         </div>
 
+        <!-- ── TESTIMONIAL 2 — replace src with your own photo, or leave the Unsplash URL ── -->
         <div class="rv-card lime">
           <div class="body">The 'wet first' tip on page 13 saved my $50 blender. Genuinely. I'd been welding nut butter to the blades for six months.</div>
           <div class="who">
-            <div class="ava">M</div>
+            <div class="ava">
+              <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=84&h=84&fit=crop&q=85" alt="Marcus T." loading="lazy"/>
+            </div>
             <div>
               <div class="nm">Marcus T.</div>
               <div class="wh">Atlanta · Reader since Feb</div>
@@ -1127,10 +1134,13 @@ const PAGE_DESC  = 'Get our free keto smoothie & snack recipe book: 52 delicious
           </div>
         </div>
 
+        <!-- ── TESTIMONIAL 3 — replace src with your own photo, or leave the Unsplash URL ── -->
         <div class="rv-card orange">
           <div class="body">Was expecting a recycled PDF. Got a real little cookbook with macros that match my tracker to the gram. I keep going back to it.</div>
           <div class="who">
-            <div class="ava">S</div>
+            <div class="ava">
+              <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=84&h=84&fit=crop&q=85" alt="Sofía L." loading="lazy"/>
+            </div>
             <div>
               <div class="nm">Sofía L.</div>
               <div class="wh">Mexico City · Day 60</div>
@@ -1138,10 +1148,13 @@ const PAGE_DESC  = 'Get our free keto smoothie & snack recipe book: 52 delicious
           </div>
         </div>
 
+        <!-- ── TESTIMONIAL 4 — replace src with your own photo, or leave the Unsplash URL ── -->
         <div class="rv-card rose">
           <div class="body">The cheese-crisp chapter is dangerous. I've made it three times this week. Sending it to my mum.</div>
           <div class="who">
-            <div class="ava">P</div>
+            <div class="ava">
+              <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=84&h=84&fit=crop&q=85" alt="Priya R." loading="lazy"/>
+            </div>
             <div>
               <div class="nm">Priya R.</div>
               <div class="wh">London · Reader</div>
@@ -1149,16 +1162,22 @@ const PAGE_DESC  = 'Get our free keto smoothie & snack recipe book: 52 delicious
           </div>
         </div>
 
+        <!-- ── TESTIMONIAL 5 — replace src with your own photo, or leave the Unsplash URL ── -->
         <div class="rv-card lime">
           <div class="body">I print one recipe a day and tape it inside the cabinet. By the time I've worked through chapter one I'll have actually learned to cook keto. Wild.</div>
           <div class="who">
-            <div class="ava">S</div>
+            <div class="ava">
+              <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=84&h=84&fit=crop&q=85" alt="Sam O." loading="lazy"/>
+            </div>
             <div>
               <div class="nm">Sam O.</div>
               <div class="wh">Auckland · Day 14</div>
             </div>
           </div>
         </div>
+
+        <!-- ── ADD MORE TESTIMONIALS HERE — copy a rv-card block above and paste below ── -->
+
       </div>
     </div>
   </section>
