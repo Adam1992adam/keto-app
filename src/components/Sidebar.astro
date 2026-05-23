@@ -573,16 +573,29 @@ const activeId = activeMap[activePage] || activePage;
   function loadDrop() {
     if (loaded) return;
     loaded = true;
-    var CACHE = 'rv_notif_drop';
-    var TTL   = 60000;
+    var CACHE     = 'rv_notif_drop';
+    var GEN_CACHE = 'rv_notif_gen';
+    var TTL       = 60000;
     try {
       var c = JSON.parse(sessionStorage.getItem(CACHE) || 'null');
       if (c && Date.now() - c.ts < TTL) { renderDrop(c.notifs, c.tasks); setCount(c.unread); return; }
     } catch (e) {}
-    Promise.all([
+
+    /* Generate fresh notifications (max once per 2 min) */
+    var lastGen = 0;
+    try { lastGen = parseInt(sessionStorage.getItem(GEN_CACHE) || '0'); } catch(e) {}
+    var genPromise = (Date.now() - lastGen > 120000)
+      ? fetch('/api/notifications/generate', { method: 'POST', credentials: 'same-origin' })
+          .then(function() { try { sessionStorage.setItem(GEN_CACHE, String(Date.now())); } catch(e) {} })
+          .catch(function() {})
+      : Promise.resolve();
+
+    genPromise.then(function() {
+    return Promise.all([
       fetch('/api/notifications?limit=10', { credentials: 'same-origin' }).then(function(r){ return r.ok ? r.json() : null; }),
       fetch('/api/tasks/today',            { credentials: 'same-origin' }).then(function(r){ return r.ok ? r.json() : null; })
-    ]).then(function (res) {
+    ]);
+    }).then(function (res) {
       var nd = res[0] || {};
       var td = res[1] || {};
       var notifs = nd.notifications || [];
@@ -595,6 +608,7 @@ const activeId = activeMap[activePage] || activePage;
       if (ndBody) ndBody.innerHTML = '<div class="rv-nd-empty">Could not load</div>';
     });
   }
+
 
   function isDropOpen() { return drop && drop.style.display !== 'none'; }
   function openDrop()   { if (drop) { drop.style.display = 'block'; drop.classList.add('open'); } }
