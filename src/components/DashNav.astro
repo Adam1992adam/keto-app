@@ -19,7 +19,6 @@ import User         from 'lucide-astro/User';
 import HelpCircle   from 'lucide-astro/HelpCircle';
 import Crown        from 'lucide-astro/Crown';
 import Leaf         from 'lucide-astro/Leaf';
-import Bell         from 'lucide-astro/Bell';
 
 interface Props {
   userId:    string;
@@ -230,10 +229,6 @@ gtag('config', 'G-JRQ61VBZ4N');
       <Moon size={15} class="icon-moon" />
       <Sun  size={15} class="icon-sun"  />
     </button>
-
-    <a href="/dashboard/notifications" class={`dn-icon-btn${activePage === 'notifications' ? ' dn-bell--active' : ''}`} title="Notifications" aria-label="Notifications">
-      <Bell size={15} />
-    </a>
 
     <a href="/dashboard/profile" class="dn-avatar" title={userName}>
       {initials}
@@ -600,8 +595,6 @@ body {
 [data-theme="dark"] .icon-moon { display: none; }
 [data-theme="dark"] .icon-sun  { display: block; }
 
-/* Bell active state */
-.dn-bell--active { color: var(--rv-accent) !important; border-color: rgba(255,92,122,.3) !important; background: rgba(255,92,122,.08) !important; }
 
 /* Avatar */
 .dn-avatar {
