@@ -447,8 +447,8 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
        ============================================================ */
     .th { max-width: 1100px; margin: 0 auto; padding: 96px 32px 24px; }
     .th-inner { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 48px; align-items: start; }
-    .th-portrait { position: relative; aspect-ratio: 1; border-radius: 24px; overflow: hidden; background: radial-gradient(circle at 50% 35%, color-mix(in oklab, var(--accent-3) 60%, transparent), transparent 60%), linear-gradient(160deg, var(--bg-alt) 0%, color-mix(in oklab, var(--accent) 25%, var(--bg-alt)) 100%); }
-    .th-portrait svg { position: absolute; left: 10%; right: 10%; bottom: 0; top: 8%; width: 80%; }
+    .th-portrait { position: relative; aspect-ratio: 1; border-radius: 24px; overflow: hidden; background: var(--bg-alt); }
+    .th-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
     .th-portrait .ribbon { position: absolute; top: 14px; left: 14px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; background: var(--ink); color: var(--accent-2); padding: 5px 9px; border-radius: 4px; }
     .th-letter { font-family: var(--serif); font-size: 21px; line-height: 1.55; color: var(--ink); }
     .th-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; font-style: normal; display: inline-flex; align-items: center; gap: 10px; }
@@ -873,19 +873,8 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
   <div class="th">
     <div class="th-inner">
       <div class="th-portrait">
-        <div class="ribbon">FROM MIRA</div>
-        <svg viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="thg" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#16110F" stop-opacity="0.85"/>
-              <stop offset="100%" stop-color="#16110F" stop-opacity="0.5"/>
-            </linearGradient>
-          </defs>
-          <path d="M 26 38 Q 50 22 74 38 Q 76 56 70 78 Q 50 70 30 78 Q 24 56 26 38 Z" fill="#1E1815"/>
-          <circle cx="50" cy="40" r="16" fill="#E6BFA0"/>
-          <path d="M 34 36 Q 40 28 50 28 Q 60 28 66 36 Q 60 30 50 32 Q 40 30 34 36 Z" fill="#16110F"/>
-          <path d="M 18 90 Q 50 70 82 90 L 86 120 L 14 120 Z" fill="url(#thg)"/>
-        </svg>
+        <div class="ribbon">FROM OLIVIA</div>
+        <img src="/images/Olivia Hayes.jpg" alt="Olivia Hayes — Founding Coach, Keto Journey"/>
       </div>
       <div class="th-letter">
         <div class="th-eyebrow"><span class="pip"></span>A SHORT THANK-YOU</div>
@@ -894,8 +883,8 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
         <p>The book is in the queue, and the Friday Letter shows up Friday mornings — a single recipe, a single reader question, and one line of something I'm thinking about. <b>You can leave whenever.</b></p>
         <p><mark>If a recipe doesn't work for you, reply and tell me.</mark> I read every email. The book has gotten better twelve times because someone wrote back saying "this one's wrong" — so be honest.</p>
         <div class="th-sign">
-          <div class="th-sig">— Mira</div>
-          <div class="th-sig-l"><strong>MIRA K.</strong><br/>FOUNDING COACH · KETO JOURNEY</div>
+          <div class="th-sig">— Olivia</div>
+          <div class="th-sig-l"><strong>OLIVIA HAYES</strong><br/>FOUNDING COACH · KETO JOURNEY</div>
         </div>
       </div>
     </div>
@@ -909,10 +898,10 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
   <div class="ft-help">
     <div>
       <h3>Didn't get the <em>email</em>?</h3>
-      <p>Check spam and promotions first. If it's still nowhere after 5 minutes, <b>email Mira directly</b> and she'll send it from her account. Real human, usually replies within the day.</p>
+      <p>Check spam and promotions first. If it's still nowhere after 5 minutes, <b>email Olivia directly</b> and she'll send it from her account. Real human, usually replies within the day.</p>
     </div>
     <div class="ft-help-cta">
-      <a class="primary" href="mailto:mira@ketojourney.fun">Email Mira ↗</a>
+      <a class="primary" href="mailto:olivia@ketojourney.fun">Email Olivia ↗</a>
       <a class="ghost" href="/free-book">← Re-submit the form</a>
     </div>
   </div>
@@ -921,7 +910,7 @@ const PAGE_DESC  = 'Check your inbox — your free keto recipe book is being del
     <div class="links">
       <a href="/privacy">Privacy</a>
       <a href="/free-book">Free Book</a>
-      <a href="mailto:mira@ketojourney.fun">Contact</a>
+      <a href="mailto:olivia@ketojourney.fun">Contact</a>
     </div>
     <span>© 2026 · MADE IN LISBON</span>
   </div>
