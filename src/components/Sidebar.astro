@@ -483,28 +483,6 @@ const activeId = activeMap[activePage] || activePage;
     <span class="rv-dm-pill" id="rvDmPill"></span>
   </button>
 
-  <!-- Notification bell -->
-  <button class="rv-tbar-btn" id="rvBellBtn" aria-label="Notifications" style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;flex-shrink:0;">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;pointer-events:none;flex-shrink:0;">
-      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-      <path d="M13.73 21a2 2 0 01-3.46 0"/>
-    </svg>
-    <span class="rv-tbar-badge" id="rvBellBadge"></span>
-
-    <!-- Dropdown -->
-    <div class="rv-notif-drop" id="rvNotifDrop" style="display:none;">
-      <div class="rv-nd-head">
-        <span class="rv-nd-title">Notifications</span>
-        <a href="/dashboard/notifications" class="rv-nd-see-all">See all</a>
-      </div>
-      <div id="rvNdBody">
-        <div class="rv-nd-empty">Loading…</div>
-      </div>
-      <div class="rv-nd-footer">
-        <a href="/dashboard" class="rv-nd-dash-link">Go to dashboard →</a>
-      </div>
-    </div>
-  </button>
 </div>
 
 <script is:inline>
@@ -525,108 +503,6 @@ const activeId = activeMap[activePage] || activePage;
   var dmBtn = document.getElementById('rvDmBtn');
   if (dmBtn) dmBtn.addEventListener('click', function () { applyTheme(!dark); });
 
-  /* ── Notification dropdown ───────────────────────────────── */
-  var bellBtn  = document.getElementById('rvBellBtn');
-  var drop     = document.getElementById('rvNotifDrop');
-  var badge    = document.getElementById('rvBellBadge');
-  var ndBody   = document.getElementById('rvNdBody');
-  var loaded   = false;
-
-  var TASK_ICONS = { breakfast:'🍳', lunch:'🥗', dinner:'🍽️', snack:'🥑', water:'💧', weight:'⚖️', reflection:'📝' };
-
-  function setCount(n) {
-    if (!badge) return;
-    if (n > 0) { badge.textContent = n > 99 ? '99+' : String(n); badge.classList.add('visible'); }
-    else { badge.classList.remove('visible'); }
-  }
-
-  function renderDrop(notifs, tasks) {
-    var html = '';
-
-    if (notifs.length) {
-      html += '<div class="rv-nd-section">Notifications</div>';
-      notifs.slice(0, 5).forEach(function (n) {
-        var read = n.is_read;
-        html += '<div class="rv-nd-item">'
-          + '<span class="rv-nd-dot' + (read ? ' read' : '') + '"></span>'
-          + '<div class="rv-nd-body">'
-          + '<div class="rv-nd-lbl">' + (n.title || '') + '</div>'
-          + '<div class="rv-nd-sub">'  + (n.body  || '') + '</div>'
-          + '</div></div>';
-      });
-    } else {
-      html += '<div class="rv-nd-empty">No new notifications</div>';
-    }
-
-    if (tasks.length) {
-      html += '<div class="rv-nd-section">Pending tasks</div>';
-      tasks.slice(0, 5).forEach(function (t) {
-        var ic = TASK_ICONS[t.task_type] || '✅';
-        html += '<div class="rv-nd-task">'
-          + '<span class="rv-nd-task-ic">' + ic + '</span>'
-          + '<span class="rv-nd-task-nm">' + (t.task_title || t.task_type) + '</span>'
-          + (t.xp_earned ? '<span class="rv-nd-task-xp">+' + t.xp_earned + ' XP</span>' : '')
-          + '</div>';
-      });
-    }
-
-    if (ndBody) ndBody.innerHTML = html || '<div class="rv-nd-empty">All clear!</div>';
-  }
-
-  function loadDrop() {
-    if (loaded) return;
-    loaded = true;
-    var CACHE = 'rv_notif_drop';
-    var TTL   = 60000;
-    try {
-      var c = JSON.parse(sessionStorage.getItem(CACHE) || 'null');
-      if (c && Date.now() - c.ts < TTL) { renderDrop(c.notifs, c.tasks); setCount(c.unread); return; }
-    } catch (e) {}
-
-    Promise.all([
-      fetch('/api/notifications?limit=10', { credentials: 'same-origin' }).then(function(r){ return r.ok ? r.json() : null; }),
-      fetch('/api/tasks/today',            { credentials: 'same-origin' }).then(function(r){ return r.ok ? r.json() : null; })
-    ]).then(function (res) {
-      var nd = res[0] || {};
-      var td = res[1] || {};
-      var notifs = nd.notifications || [];
-      var tasks  = td.tasks || [];
-      var unread = nd.unreadCount || 0;
-      renderDrop(notifs, tasks);
-      setCount(unread);
-      try { sessionStorage.setItem(CACHE, JSON.stringify({ notifs: notifs, tasks: tasks, unread: unread, ts: Date.now() })); } catch (e) {}
-    }).catch(function () {
-      if (ndBody) ndBody.innerHTML = '<div class="rv-nd-empty">Could not load</div>';
-    });
-  }
-
-  function isDropOpen() { return drop && drop.style.display !== 'none'; }
-  function openDrop()   { if (drop) { drop.style.display = 'block'; drop.classList.add('open'); } }
-  function closeDrop()  { if (drop) { drop.style.display = 'none';  drop.classList.remove('open'); } }
-
-  if (bellBtn) {
-    bellBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      var wasOpen = isDropOpen();
-      if (wasOpen) { closeDrop(); } else { openDrop(); loadDrop(); }
-    });
-  }
-  document.addEventListener('click', function (e) {
-    if (isDropOpen() && bellBtn && !bellBtn.contains(e.target)) { closeDrop(); }
-  });
-
-  /* Quick badge count (separate from full dropdown load) */
-  try {
-    var bc = JSON.parse(sessionStorage.getItem('rv_notif_count') || 'null');
-    if (bc && Date.now() - bc.ts < 30000) { setCount(bc.count); return; }
-  } catch (e) {}
-  fetch('/api/notifications?limit=1', { credentials: 'same-origin' })
-    .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(d){
-      if (!d) return;
-      setCount(d.unreadCount || 0);
-      try { sessionStorage.setItem('rv_notif_count', JSON.stringify({ count: d.unreadCount || 0, ts: Date.now() })); } catch(e) {}
-    }).catch(function(){});
 })();
 
 // Mobile "More" sheet
