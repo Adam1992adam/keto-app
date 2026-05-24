@@ -459,14 +459,25 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
       inset: 0;
       border-radius: 32px;
       overflow: hidden;
-      background: var(--bg-alt);
+      background: linear-gradient(145deg, #fff4ee 0%, #fdeaf0 55%, #f2eefc 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .visual-photo img { width: 100%; height: 100%; object-fit: cover; filter: saturate(1.05); }
-    .visual-photo::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,.3) 100%);
+    /* Book cover inside hero visual */
+    .hv-book-wrap { perspective: 1400px; display: inline-block; position: relative; margin-top: -20px; }
+    .hv-book-inner {
+      position: relative;
+      transform: rotateY(-15deg) rotateX(3deg);
+      filter: drop-shadow(0 28px 48px rgba(22,17,15,.32));
+      animation: hv-float 5.5s ease-in-out infinite;
+    }
+    @keyframes hv-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -14px; } }
+    .hv-book-inner img { display: block; width: 270px; height: auto; border-radius: 3px 12px 12px 3px; position: relative; z-index: 2; }
+    .hv-book-pages {
+      position: absolute; top: 2px; bottom: 2px; right: -11px; width: 11px;
+      background: repeating-linear-gradient(to right, #f0ebe4 0, #f0ebe4 1px, #e8e1d6 1px, #e8e1d6 2px);
+      border-radius: 0 2px 2px 0; z-index: 1;
     }
 
     /* Activity rings card */
@@ -571,6 +582,7 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
       .stat-chip-1 { right: 10px; }
       .stat-chip-2 { left: 10px; }
       .ring-card { left: 10px; }
+      .hv-book-inner img { width: 200px; }
     }
 
     /* ══════════════════════════════════════
@@ -1722,7 +1734,13 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
     <!-- Right: visual -->
     <div class="hero-visual">
       <div class="visual-photo">
-        <img src="/images/home/hero-woman.jpg" onerror="this.src='https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=900&q=85'" alt="Active woman" loading="eager"/>
+        <!-- ── Book cover — replace /images/free-book-cover.jpg with your own image ── -->
+        <div class="hv-book-wrap">
+          <div class="hv-book-inner">
+            <div class="hv-book-pages"></div>
+            <img src="/images/free-book-cover.jpg" alt="Keto Smoothies &amp; Snacks Recipe Book" loading="eager"/>
+          </div>
+        </div>
       </div>
 
       <!-- Activity rings card -->
