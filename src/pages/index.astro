@@ -449,8 +449,8 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
     /* Hero visual column */
     .hero-visual {
       position: relative;
-      aspect-ratio: 1 / 1.05;
-      max-width: 580px;
+      aspect-ratio: 1 / 1.12;
+      max-width: 640px;
       margin-left: auto;
       width: 100%;
     }
@@ -459,25 +459,20 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
       inset: 0;
       border-radius: 32px;
       overflow: hidden;
-      background: linear-gradient(145deg, #fff4ee 0%, #fdeaf0 55%, #f2eefc 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
-    /* Book cover inside hero visual */
-    .hv-book-wrap { perspective: 1400px; display: inline-block; position: relative; margin-top: -20px; }
-    .hv-book-inner {
-      position: relative;
-      transform: rotateY(-15deg) rotateX(3deg);
-      filter: drop-shadow(0 28px 48px rgba(22,17,15,.32));
-      animation: hv-float 5.5s ease-in-out infinite;
+    .visual-photo > img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 20%;
     }
-    @keyframes hv-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -14px; } }
-    .hv-book-inner img { display: block; width: 270px; height: auto; border-radius: 3px 12px 12px 3px; position: relative; z-index: 2; }
-    .hv-book-pages {
-      position: absolute; top: 2px; bottom: 2px; right: -11px; width: 11px;
-      background: repeating-linear-gradient(to right, #f0ebe4 0, #f0ebe4 1px, #e8e1d6 1px, #e8e1d6 2px);
-      border-radius: 0 2px 2px 0; z-index: 1;
+    .visual-photo::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 32px;
+      background: linear-gradient(135deg, rgba(255,92,122,.10) 0%, rgba(22,17,15,.38) 100%);
+      pointer-events: none;
     }
 
     /* Activity rings card */
@@ -582,7 +577,6 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
       .stat-chip-1 { right: 10px; }
       .stat-chip-2 { left: 10px; }
       .ring-card { left: 10px; }
-      .hv-book-inner img { width: 200px; }
     }
 
     /* ══════════════════════════════════════
@@ -910,61 +904,78 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
       right: -200px;
       z-index: 0;
     }
-    .results-inner { max-width: 1440px; margin: 0 auto; position: relative; z-index: 2; }
-    .results-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      margin-bottom: 72px;
-      gap: 40px;
-    }
-    .results .section-kicker { color: var(--accent-2); }
-    .results .section-kicker::before { background: var(--accent-2); }
+    .results-inner { max-width: 1200px; margin: 0 auto; position: relative; z-index: 2; }
+    .results-head { text-align: center; margin-bottom: 64px; }
+    .results .section-kicker { color: var(--accent-2); justify-content: center; }
+    .results .section-kicker::before { display: none; }
+    .results .section-kicker::after { content: ''; display: inline-block; width: 40px; height: 1px; background: var(--accent-2); margin-left: 12px; vertical-align: middle; }
     .results .section-h2 { color: var(--bg); }
     .results .section-h2 em { color: var(--accent); }
-    .results-lede { font-size: 18px; line-height: 1.55; color: rgba(250,246,241,.7); max-width: 460px; }
-    .stories-grid {
+    /* Testimonial Carousel */
+    .tc-viewport { overflow: hidden; border-radius: 28px; }
+    .tc-track { display: flex; transition: transform .55s cubic-bezier(.4,0,.2,1); will-change: transform; }
+    .tc-slide {
+      min-width: 100%;
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 22px;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      align-items: stretch;
     }
-    .story {
+    .tc-photo { overflow: hidden; height: 540px; }
+    .tc-photo img { width: 100%; height: 100%; object-fit: cover; object-position: center 15%; display: block; }
+    .tc-body {
       background: rgba(255,255,255,.06);
       border: 1px solid rgba(250,246,241,.1);
-      border-radius: 28px;
-      padding: 32px;
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 24px;
-      align-items: start;
-      transition: background .3s, border-color .3s;
+      border-left: none;
+      border-radius: 0 24px 24px 0;
+      padding: 56px 52px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
-    .story:hover {
-      background: rgba(255,255,255,.1);
-      border-color: rgba(255,92,122,.4);
-    }
-    .story-img { width: 92px; height: 110px; border-radius: 18px; object-fit: cover; }
-    .story-stars { color: var(--accent); font-size: 14px; letter-spacing: 2px; margin-bottom: 12px; }
-    .story-quote {
-      font-family: var(--display);
-      font-size: 20px;
-      line-height: 1.3;
-      letter-spacing: -0.01em;
-      font-weight: 500;
+    .tc-stars { color: var(--accent); font-size: 18px; letter-spacing: 3px; margin-bottom: 20px; }
+    .tc-quote {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: clamp(20px, 2.2vw, 26px);
+      line-height: 1.45;
       color: var(--bg);
-      margin-bottom: 22px;
-      text-wrap: balance;
+      margin-bottom: 32px;
     }
-    .story-meta { display: flex; align-items: center; gap: 14px; }
-    .story-meta .sname { font-weight: 600; font-size: 14px; color: var(--bg); }
-    .story-meta .splan { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(250,246,241,.55); }
-    .story-loss { margin-left: auto; font-family: var(--display); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: var(--accent-2); }
+    .tc-quote::before { content: '\201C'; font-size: 1.4em; color: var(--accent); line-height: 0; vertical-align: -0.35em; margin-right: 4px; }
+    .tc-quote::after  { content: '\201D'; font-size: 1.4em; color: var(--accent); line-height: 0; vertical-align: -0.35em; margin-left: 4px; }
+    .tc-who { margin-bottom: 28px; }
+    .tc-name { font-family: var(--display); font-size: 20px; font-weight: 700; color: var(--bg); letter-spacing: -0.02em; }
+    .tc-age { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(250,246,241,.55); margin-top: 4px; }
+    .tc-stats { display: flex; gap: 32px; }
+    .tc-stat { display: flex; flex-direction: column; gap: 2px; }
+    .tc-num { font-family: var(--display); font-size: 32px; font-weight: 700; letter-spacing: -0.03em; color: var(--accent-2); line-height: 1; }
+    .tc-unit { font-size: 14px; color: rgba(250,246,241,.6); }
+    .tc-lbl { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(250,246,241,.45); margin-top: 2px; }
+    .tc-controls { display: flex; align-items: center; justify-content: center; gap: 20px; margin-top: 40px; }
+    .tc-arrow {
+      width: 48px; height: 48px; border-radius: 50%;
+      border: 1px solid rgba(250,246,241,.2);
+      background: rgba(255,255,255,.06);
+      color: var(--bg);
+      font-size: 18px;
+      cursor: pointer;
+      transition: background .2s, border-color .2s;
+      display: grid; place-items: center;
+    }
+    .tc-arrow:hover { background: var(--accent); border-color: var(--accent); }
+    .tc-dots { display: flex; gap: 8px; align-items: center; }
+    .tc-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      border: none; background: rgba(250,246,241,.3);
+      cursor: pointer; padding: 0; transition: background .2s, transform .2s;
+    }
+    .tc-dot.active { background: var(--accent); transform: scale(1.35); }
     @media (max-width: 980px) {
-      .results { padding: 90px 18px; }
-      .results-head { flex-direction: column; align-items: flex-start; }
-      .stories-grid { grid-template-columns: 1fr; }
-      .story { grid-template-columns: 1fr; padding: 24px; }
-      .story-img { width: 100%; height: 200px; }
+      .results { padding: 80px 18px; }
+      .tc-slide { grid-template-columns: 1fr; }
+      .tc-photo { height: 300px; }
+      .tc-body { border-left: 1px solid rgba(250,246,241,.1); border-top: none; border-radius: 0 0 24px 24px; padding: 36px 28px; }
     }
 
     /* ══════════════════════════════════════
@@ -1369,7 +1380,9 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
       flex-shrink: 0;
       font-family: var(--display);
       margin-left: -10px;
+      overflow: hidden;
     }
+    .avatar-init img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
     .avatar-stack .avatar-init:first-child { margin-left: 0; }
     .story-avatar {
       width: 92px;
@@ -1717,10 +1730,18 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
 
       <div class="hero-trust">
         <div class="avatar-stack">
-          <div class="avatar-init" style="background:#FF5C7A">S</div>
-          <div class="avatar-init" style="background:#FF914D">L</div>
-          <div class="avatar-init" style="background:#8b5cf6">E</div>
-          <div class="avatar-init" style="background:#0ea5e9">A</div>
+          <div class="avatar-init" style="background:#FF5C7A">
+            <img src="https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=40&h=40&fit=crop&crop=faces&q=80" alt="Sarah" onerror="this.style.display='none'"/>
+          </div>
+          <div class="avatar-init" style="background:#FF914D">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=40&h=40&fit=crop&crop=faces&q=80" alt="Layla" onerror="this.style.display='none'"/>
+          </div>
+          <div class="avatar-init" style="background:#8b5cf6">
+            <img src="https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=40&h=40&fit=crop&crop=faces&q=80" alt="Emma" onerror="this.style.display='none'"/>
+          </div>
+          <div class="avatar-init" style="background:#0ea5e9">
+            <img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e0?w=40&h=40&fit=crop&crop=faces&q=80" alt="Amina" onerror="this.style.display='none'"/>
+          </div>
         </div>
         <div>
           <div style="display:flex;gap:2px;color:var(--accent);font-size:12px">★★★★★</div>
@@ -1734,13 +1755,8 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
     <!-- Right: visual -->
     <div class="hero-visual">
       <div class="visual-photo">
-        <!-- ── Book cover — replace /images/free-book-cover.jpg with your own image ── -->
-        <div class="hv-book-wrap">
-          <div class="hv-book-inner">
-            <div class="hv-book-pages"></div>
-            <img src="/images/free-book-cover.jpg" alt="Keto Smoothies &amp; Snacks Recipe Book" loading="eager"/>
-          </div>
-        </div>
+        <!-- ── Replace src with your own happy customers photo ── -->
+        <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&h=960&fit=crop&q=85" alt="Women celebrating their weight loss success" loading="eager" onerror="this.style.display='none'"/>
       </div>
 
       <!-- Activity rings card -->
@@ -2372,101 +2388,165 @@ const OG_IMAGE         = `${SITE_URL}/api/og`;
 
 
 <!-- ══════════════════════════════════════
-     RESULTS (dark)
+     RESULTS — Testimonial Carousel (dark)
 ══════════════════════════════════════ -->
 <section class="results">
   <div class="results-glow"></div>
   <div class="results-inner">
+
     <div class="results-head">
-      <div>
-        <div class="section-kicker">REAL STORIES · NO STOCK PHOTOS</div>
-        <h2 class="section-h2">
-          People who <em>actually</em><br/>
-          showed up.
-        </h2>
+      <div class="section-kicker">REAL TRANSFORMATIONS · NO FILTERS</div>
+      <h2 class="section-h2">The people who started <em>exactly where you are.</em></h2>
+    </div>
+
+    <div class="tc-viewport">
+      <div class="tc-track" id="tcTrack">
+
+        <!-- ── SLIDE 1 — replace src with your own photo ── -->
+        <div class="tc-slide">
+          <div class="tc-photo">
+            <img src="https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=640&h=580&fit=crop&crop=faces&q=85" alt="Sarah M." loading="eager" onerror="this.style.display='none'"/>
+          </div>
+          <div class="tc-body">
+            <div class="tc-stars">★★★★★</div>
+            <p class="tc-quote">Lost 18 lbs in my first month without ever feeling starved. The structured plan took out all the guesswork.</p>
+            <div class="tc-who">
+              <div class="tc-name">Sarah M.</div>
+              <div class="tc-age">34 years old · Basic Plan</div>
+            </div>
+            <div class="tc-stats">
+              <div class="tc-stat">
+                <span class="tc-num">−18</span><span class="tc-unit"> lbs</span>
+                <span class="tc-lbl">Lost</span>
+              </div>
+              <div class="tc-stat">
+                <span class="tc-num">30</span><span class="tc-unit"> days</span>
+                <span class="tc-lbl">Journey</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── SLIDE 2 — replace src with your own photo ── -->
+        <div class="tc-slide">
+          <div class="tc-photo">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=640&h=580&fit=crop&crop=faces&q=85" alt="Layla K." loading="lazy" onerror="this.style.display='none'"/>
+          </div>
+          <div class="tc-body">
+            <div class="tc-stars">★★★★★</div>
+            <p class="tc-quote">The fasting timer and daily check-ins keep me accountable in a way no other app ever has. My doctor is shocked.</p>
+            <div class="tc-who">
+              <div class="tc-name">Layla K.</div>
+              <div class="tc-age">41 years old · Pro Plan</div>
+            </div>
+            <div class="tc-stats">
+              <div class="tc-stat">
+                <span class="tc-num">−31</span><span class="tc-unit"> lbs</span>
+                <span class="tc-lbl">Lost</span>
+              </div>
+              <div class="tc-stat">
+                <span class="tc-num">67</span><span class="tc-unit"> days</span>
+                <span class="tc-lbl">Journey</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── SLIDE 3 — replace src with your own photo ── -->
+        <div class="tc-slide">
+          <div class="tc-photo">
+            <img src="https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=640&h=580&fit=crop&crop=faces&q=85" alt="Emma L." loading="lazy" onerror="this.style.display='none'"/>
+          </div>
+          <div class="tc-body">
+            <div class="tc-stars">★★★★★</div>
+            <p class="tc-quote">The progress tracking kept me going. Seeing the chart move week after week made it feel real. I finally understood my own body.</p>
+            <div class="tc-who">
+              <div class="tc-name">Emma L.</div>
+              <div class="tc-age">29 years old · Elite Plan</div>
+            </div>
+            <div class="tc-stats">
+              <div class="tc-stat">
+                <span class="tc-num">−24</span><span class="tc-unit"> lbs</span>
+                <span class="tc-lbl">Lost</span>
+              </div>
+              <div class="tc-stat">
+                <span class="tc-num">90</span><span class="tc-unit"> days</span>
+                <span class="tc-lbl">Journey</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── SLIDE 4 — replace src with your own photo ── -->
+        <div class="tc-slide">
+          <div class="tc-photo">
+            <img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e0?w=640&h=580&fit=crop&crop=faces&q=85" alt="Amina B." loading="lazy" onerror="this.style.display='none'"/>
+          </div>
+          <div class="tc-body">
+            <div class="tc-stars">★★★★★</div>
+            <p class="tc-quote">Reached my goal weight in week 11. The progress charts showing ketones alongside weight loss were everything.</p>
+            <div class="tc-who">
+              <div class="tc-name">Amina B.</div>
+              <div class="tc-age">37 years old · Pro Plan</div>
+            </div>
+            <div class="tc-stats">
+              <div class="tc-stat">
+                <span class="tc-num">Goal</span>
+                <span class="tc-lbl">Reached</span>
+              </div>
+              <div class="tc-stat">
+                <span class="tc-num">11</span><span class="tc-unit"> weeks</span>
+                <span class="tc-lbl">Journey</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── ADD MORE SLIDES HERE — copy a tc-slide block above ── -->
+
       </div>
-      <p class="results-lede">
-        No filters. No paid actors. Just members who followed the plan and saw the scale move.
-      </p>
     </div>
 
-    <div class="stories-grid">
-      <article class="story">
-        <!-- ── TESTIMONIAL 1 — replace src with your own photo, or leave the Unsplash URL ── -->
-        <div class="story-avatar" style="background:linear-gradient(135deg,#FF5C7A,#FF914D)">
-          <img src="https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=92&h=110&fit=crop&crop=faces&q=85" alt="Sarah M." onerror="this.style.display='none'"/>
-        </div>
-        <div>
-          <div class="story-stars">★★★★★</div>
-          <p class="story-quote">"Lost 18 lbs in my first month without ever feeling starved. The structured plan took out all the guesswork."</p>
-          <div class="story-meta">
-            <div>
-              <div class="sname">Sarah M.</div>
-              <div class="splan">Basic · 30 days</div>
-            </div>
-            <div class="story-loss">−18 lbs</div>
-          </div>
-        </div>
-      </article>
-
-      <article class="story">
-        <!-- ── TESTIMONIAL 2 — replace src with your own photo, or leave the Unsplash URL ── -->
-        <div class="story-avatar" style="background:linear-gradient(135deg,#8b5cf6,#FF5C7A)">
-          <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=92&h=110&fit=crop&crop=faces&q=85" alt="Layla K." onerror="this.style.display='none'"/>
-        </div>
-        <div>
-          <div class="story-stars">★★★★★</div>
-          <p class="story-quote">"The fasting timer and daily check-ins keep me accountable in a way no other app ever has. My doctor is shocked."</p>
-          <div class="story-meta">
-            <div>
-              <div class="sname">Layla K.</div>
-              <div class="splan">Pro · Day 67</div>
-            </div>
-            <div class="story-loss">−31 lbs</div>
-          </div>
-        </div>
-      </article>
-
-      <article class="story">
-        <!-- ── TESTIMONIAL 3 — replace src with your own photo, or leave the Unsplash URL ── -->
-        <div class="story-avatar" style="background:linear-gradient(135deg,#0ea5e9,#B6FF3C)">
-          <img src="https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=92&h=110&fit=crop&crop=faces&q=85" alt="Emma L." onerror="this.style.display='none'"/>
-        </div>
-        <div>
-          <div class="story-stars">★★★★★</div>
-          <p class="story-quote">"The progress tracking kept me going. Seeing the chart move week after week made it feel real. I finally understood my own body."</p>
-          <div class="story-meta">
-            <div>
-              <div class="sname">Emma L.</div>
-              <div class="splan">Elite · Day 90</div>
-            </div>
-            <div class="story-loss">−24 lbs</div>
-          </div>
-        </div>
-      </article>
-
-      <article class="story">
-        <!-- ── TESTIMONIAL 4 — replace src with your own photo, or leave the Unsplash URL ── -->
-        <div class="story-avatar" style="background:linear-gradient(135deg,#FF914D,#f59e0b)">
-          <img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e0?w=92&h=110&fit=crop&crop=faces&q=85" alt="Amina B." onerror="this.style.display='none'"/>
-        </div>
-        <div>
-          <div class="story-stars">★★★★★</div>
-          <p class="story-quote">"Reached my goal weight in week 11. The progress charts showing ketones alongside weight loss were everything."</p>
-          <div class="story-meta">
-            <div>
-              <div class="sname">Amina B.</div>
-              <div class="splan">Pro · Week 11</div>
-            </div>
-            <div class="story-loss">Goal reached</div>
-          </div>
-        </div>
-      </article>
-
-      <!-- ── ADD MORE TESTIMONIALS HERE — copy an <article class="story"> block above and paste below ── -->
+    <div class="tc-controls">
+      <button class="tc-arrow" id="tcPrev" aria-label="Previous">←</button>
+      <div class="tc-dots" id="tcDots">
+        <button class="tc-dot active"></button>
+        <button class="tc-dot"></button>
+        <button class="tc-dot"></button>
+        <button class="tc-dot"></button>
+      </div>
+      <button class="tc-arrow" id="tcNext" aria-label="Next">→</button>
     </div>
+
   </div>
 </section>
+
+<script is:inline>
+(function () {
+  var track = document.getElementById('tcTrack');
+  var dots  = Array.from(document.querySelectorAll('.tc-dot'));
+  var total = 4;
+  var cur   = 0;
+  var timer;
+
+  function goTo(i) {
+    cur = (i + total) % total;
+    track.style.transform = 'translateX(-' + (cur * 100) + '%)';
+    dots.forEach(function (d, idx) { d.classList.toggle('active', idx === cur); });
+  }
+
+  function resetTimer() {
+    clearInterval(timer);
+    timer = setInterval(function () { goTo(cur + 1); }, 6000);
+  }
+
+  document.getElementById('tcPrev').addEventListener('click', function () { goTo(cur - 1); resetTimer(); });
+  document.getElementById('tcNext').addEventListener('click', function () { goTo(cur + 1); resetTimer(); });
+  dots.forEach(function (d, i) { d.addEventListener('click', function () { goTo(i); resetTimer(); }); });
+
+  resetTimer();
+})();
+</script>
 
 
 <!-- ══════════════════════════════════════
