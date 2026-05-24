@@ -1,6 +1,7 @@
 // Master sitemap index — lists all sub-sitemaps.
 // Google fetches this first, then follows each <loc> to crawl content.
-export const prerender = false;
+// prerender = true → static file on CDN; never hits a serverless function so Google can always fetch it.
+export const prerender = true;
 
 export async function GET() {
   const SITE = 'https://www.ketojourney.fun';

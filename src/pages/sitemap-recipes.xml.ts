@@ -1,8 +1,8 @@
-// Dynamic public recipes sitemap — queries blog_recipes table in real time.
-// Every published recipe appears here automatically; no rebuild needed.
+// Public recipes sitemap — queries blog_recipes table at build time.
+// Static file on CDN so Google can always fetch it; refreshes on every deploy.
 import { createClient } from '@supabase/supabase-js';
 
-export const prerender = false;
+export const prerender = true;
 
 const SITE = 'https://www.ketojourney.fun';
 

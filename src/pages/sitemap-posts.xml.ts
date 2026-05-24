@@ -1,8 +1,8 @@
-// Dynamic blog posts sitemap — queries blog_posts table in real time.
-// Every published post appears here automatically; no rebuild needed.
+// Blog posts sitemap — queries blog_posts table at build time.
+// Static file on CDN so Google can always fetch it; refreshes on every deploy.
 import { createClient } from '@supabase/supabase-js';
 
-export const prerender = false;
+export const prerender = true;
 
 const SITE = 'https://www.ketojourney.fun';
 

@@ -1,3 +1,6 @@
+// prerender = true → static file on CDN; always fetchable by Google.
+export const prerender = true;
+
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 
