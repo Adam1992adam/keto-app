@@ -1042,10 +1042,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                 Sign Out
               </a>
-              <button onclick="document.getElementById('deleteModal').classList.add('open')" class="rv-action-row danger" style="text-align:left;">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                Delete Account
-              </button>
+
             </div>
 
           </div>
@@ -1102,22 +1099,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
   </div>
 </div>
 
-<div class="rv-modal" id="deleteModal">
-  <div class="rv-modal-box">
-    <div class="rv-modal-head">
-      <span class="rv-modal-title" style="color:#ef4444;">Delete Account</span>
-      <button class="rv-modal-close" onclick="document.getElementById('deleteModal').classList.remove('open')">×</button>
-    </div>
-    <div class="rv-modal-body">
-      <p style="margin-bottom:1rem;font-size:.82rem;color:var(--rv-muted);line-height:1.6;">This permanently deletes your account and all data. This cannot be undone.</p>
-      <div class="rv-fg" style="margin-bottom:1rem;">
-        <label>Type DELETE to confirm</label>
-        <input class="rv-fi" id="deleteConfirm" placeholder="DELETE"/>
-      </div>
-      <button onclick="deleteAccount()" class="rv-btn rv-btn-danger" style="width:100%;justify-content:center;border-radius:10px;">Delete My Account</button>
-    </div>
-  </div>
-</div>
+
 
 <div class="rv-toast" id="toast"></div>
 
@@ -1271,15 +1253,7 @@ const allDietChips = ['Low-Carb', 'Dairy-Free', 'Nut-Free', 'Egg-Free', 'Vegetar
     });
   }
 
-  function deleteAccount() {
-    var conf = document.getElementById('deleteConfirm').value;
-    if (conf !== 'DELETE') { showToast('Type DELETE to confirm'); return; }
-    fetch('/api/auth/delete-account', { method: 'POST' })
-      .then(function(r) { return r.json(); }).then(function(d) {
-        if (d.success) { showToast('Account deleted'); location.href = '/'; }
-        else showToast('Error: ' + (d.error || 'Failed'));
-      });
-  }
+
 </script>
 
 </body>
